@@ -9,60 +9,64 @@ struct TerminalSearchBar: View {
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
-        HStack(spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11))
-                    .foregroundStyle(MuxyTheme.fgMuted)
-
-                TextField("Search", text: $searchState.needle)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(MuxyTheme.fg)
-                    .focused($isFieldFocused)
-                    .onSubmit { onNavigateNext() }
-                    .onChange(of: searchState.needle) {
-                        searchState.pushNeedle()
-                    }
-
-                if !searchState.displayText.isEmpty {
-                    Text(searchState.displayText)
-                        .font(.system(size: 10))
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11))
                         .foregroundStyle(MuxyTheme.fgMuted)
-                        .lineLimit(1)
-                        .fixedSize()
+
+                    TextField("Search", text: $searchState.needle)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .foregroundStyle(MuxyTheme.fg)
+                        .focused($isFieldFocused)
+                        .onSubmit { onNavigateNext() }
+                        .onChange(of: searchState.needle) {
+                            searchState.pushNeedle()
+                        }
+
+                    if !searchState.displayText.isEmpty {
+                        Text(searchState.displayText)
+                            .font(.system(size: 10))
+                            .foregroundStyle(MuxyTheme.fgMuted)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(MuxyTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(MuxyTheme.border, lineWidth: 1)
+                )
+
+                Button(action: onNavigatePrevious) {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .buttonStyle(SearchBarButtonStyle())
+
+                Button(action: onNavigateNext) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .buttonStyle(SearchBarButtonStyle())
+
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .buttonStyle(SearchBarButtonStyle())
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(MuxyTheme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(MuxyTheme.border, lineWidth: 1)
-            )
+            .frame(height: 32)
+            .background(MuxyTheme.bg.opacity(0.95))
 
-            Button(action: onNavigatePrevious) {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            .buttonStyle(SearchBarButtonStyle())
-
-            Button(action: onNavigateNext) {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            .buttonStyle(SearchBarButtonStyle())
-
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            .buttonStyle(SearchBarButtonStyle())
+            Rectangle().fill(MuxyTheme.border).frame(height: 1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(MuxyTheme.bg.opacity(0.95))
         .onAppear { isFieldFocused = true }
         .onKeyPress(.escape) {
             onClose()
