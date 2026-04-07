@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct VCSTabView: View {
@@ -25,28 +26,27 @@ struct VCSTabView: View {
                 state.refresh()
             }
         }
-        .alert("Discard All Changes?", isPresented: $showDiscardAllConfirmation) {
-            Button("Discard All", role: .destructive) { state.discardAll() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will discard all uncommitted changes. This cannot be undone.")
-        }
-        .alert(
-            "Discard Changes?",
-            isPresented: Binding(
-                get: { pendingDiscardPath != nil },
-                set: { if !$0 { pendingDiscardPath = nil } }
-            )
-        ) {
-            Button("Discard", role: .destructive) {
-                guard let path = pendingDiscardPath else { return }
-                state.discardFile(path)
-                pendingDiscardPath = nil
+        .onChange(of: showDiscardAllConfirmation) { _, show in
+            guard show else { return }
+            showDiscardAllConfirmation = false
+            presentDiscardConfirmation(
+                title: "Discard All Changes?",
+                message: "This will discard all uncommitted changes. This cannot be undone.",
+                buttonTitle: "Discard All"
+            ) {
+                state.discardAll()
             }
-            Button("Cancel", role: .cancel) { pendingDiscardPath = nil }
-        } message: {
-            if let path = pendingDiscardPath {
-                Text("Discard changes to \((path as NSString).lastPathComponent)?")
+        }
+        .onChange(of: pendingDiscardPath) { _, path in
+            guard let path else { return }
+            pendingDiscardPath = nil
+            let fileName = (path as NSString).lastPathComponent
+            presentDiscardConfirmation(
+                title: "Discard Changes?",
+                message: "Discard changes to \(fileName)?",
+                buttonTitle: "Discard"
+            ) {
+                state.discardFile(path)
             }
         }
         .alert(
@@ -434,6 +434,33 @@ struct VCSTabView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
                 .background(MuxyTheme.terminalBg)
+        }
+    }
+
+    private func presentDiscardConfirmation(
+        title: String,
+        message: String,
+        buttonTitle: String,
+        onConfirm: @escaping () -> Void
+    ) {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              window.attachedSheet == nil
+        else { return }
+
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: buttonTitle)
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.keyEquivalent = "\r"
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+
+        alert.beginSheetModal(for: window) { response in
+            if response == .alertFirstButtonReturn {
+                onConfirm()
+            }
         }
     }
 }
