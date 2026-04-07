@@ -104,7 +104,7 @@ final class VCSTabState {
 
     private func performRefresh(incremental: Bool) {
         loadFilesTask?.cancel()
-        if !incremental {
+        if !incremental, files.isEmpty {
             isLoadingFiles = true
         }
         isRefreshing = true
