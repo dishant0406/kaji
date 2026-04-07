@@ -213,12 +213,20 @@ struct MainWindow: View {
                     .allowsHitTesting(false)
                 }
                 .overlay(alignment: .trailing) {
-                    if let project = activeProject, activeProjectHasSplitWorkspace {
-                        FileDiffIconButton {
-                            openVCS(for: project)
+                    HStack(spacing: 0) {
+                        if let version = UpdateService.shared.availableUpdateVersion {
+                            UpdateBadge(version: version) {
+                                UpdateService.shared.checkForUpdates()
+                            }
+                            .padding(.trailing, 4)
                         }
-                        .padding(.trailing, 4)
+                        if let project = activeProject, activeProjectHasSplitWorkspace {
+                            FileDiffIconButton {
+                                openVCS(for: project)
+                            }
+                        }
                     }
+                    .padding(.trailing, 4)
                 }
         }
     }

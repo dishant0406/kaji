@@ -63,6 +63,12 @@ struct PaneTabStrip: View {
 
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
+                if isWindowTitleBar, let version = UpdateService.shared.availableUpdateVersion {
+                    UpdateBadge(version: version) {
+                        UpdateService.shared.checkForUpdates()
+                    }
+                    .padding(.trailing, 4)
+                }
                 IconButton(symbol: "square.split.2x1") { onSplit(.horizontal) }
                 IconButton(symbol: "square.split.1x2") { onSplit(.vertical) }
                 IconButton(symbol: "plus") { onCreateTab() }

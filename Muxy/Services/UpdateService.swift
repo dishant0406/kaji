@@ -13,6 +13,7 @@ final class UpdateService: NSObject {
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     private(set) var canCheckForUpdates = false
+    private(set) var availableUpdateVersion: String?
 
     private var updater: SPUUpdater {
         controller.updater
@@ -28,6 +29,8 @@ final class UpdateService: NSObject {
         controller.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: \.canCheckForUpdates, on: self)
             .store(in: &cancellables)
+        observeUpdateNotifications()
+        applyFeatureFlags()
     }
 
     func start() {
@@ -40,5 +43,30 @@ final class UpdateService: NSObject {
 
     func checkForUpdates() {
         controller.checkForUpdates(nil)
+    }
+
+    private func applyFeatureFlags() {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["FF_UPDATE_AVAILABLE"] != nil {
+            availableUpdateVersion = "0.0.0-dev"
+        }
+        #endif
+    }
+
+    private func observeUpdateNotifications() {
+        NotificationCenter.default.publisher(for: .SUUpdaterDidFindValidUpdate)
+            .compactMap { $0.userInfo?[SUUpdaterAppcastItemNotificationKey] as? SUAppcastItem }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] item in
+                self?.availableUpdateVersion = item.displayVersionString
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .SUUpdaterDidNotFindUpdate)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.availableUpdateVersion = nil
+            }
+            .store(in: &cancellables)
     }
 }
