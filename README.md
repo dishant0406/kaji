@@ -12,8 +12,8 @@
 
 ## Screenshots
 
-<img width="2908" height="1502" alt="image" src="https://github.com/user-attachments/assets/2d9608f4-b260-4bde-8f91-31a7ce166259" />
-<img width="2908" height="1502" alt="image" src="https://github.com/user-attachments/assets/d6e5f11f-919d-4663-82b0-1d778c480b6f" />
+![muxy-1](https://github.com/user-attachments/assets/c580b57e-f67e-4f0f-993f-162796f014ed)
+![muxy-2](https://github.com/user-attachments/assets/412c67e8-7ae3-401b-9fb3-7c9f80b957e0)
 
 ## Features
 
