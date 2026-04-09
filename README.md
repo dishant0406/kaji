@@ -27,6 +27,7 @@
 - **In-terminal search** — Find text in terminal output with match navigation
 - **Drag and drop** — Reorder tabs and projects, drag tabs between panes to create splits
 - **Auto-updates** — Built-in update checking via Sparkle
+- **Text Editor** - Native, Lightweight Text (not code) Editor with code highlight support for most of the programming languages
 
 ## Requirements
 
