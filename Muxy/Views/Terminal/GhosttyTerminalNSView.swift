@@ -127,7 +127,9 @@ final class GhosttyTerminalNSView: NSView {
             object: window,
             queue: .main
         ) { [weak self] _ in
-            self?.updateMetalLayerSize()
+            MainActor.assumeIsolated {
+                self?.updateMetalLayerSize()
+            }
         }
 
         updateMetalLayerSize()
