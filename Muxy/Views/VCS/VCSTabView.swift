@@ -23,7 +23,7 @@ struct VCSTabView: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onFocus)
         .onAppear {
-            if state.files.isEmpty, !state.isLoadingFiles {
+            if !state.hasCompletedInitialLoad, !state.isLoadingFiles {
                 state.refresh()
             }
         }
