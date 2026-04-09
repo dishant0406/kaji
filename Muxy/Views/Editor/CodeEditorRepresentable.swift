@@ -490,13 +490,15 @@ struct CodeEditorView: NSViewRepresentable {
             let charBefore = nsContent.character(at: cursorPos - 1)
 
             if charBefore == 0x0A {
-                textView.replaceCharacters(in: NSRange(location: cursorPos - 1, length: 1), with: "")
+                let deleteRange = NSRange(location: cursorPos - 1, length: 1)
+                textView.insertText("", replacementRange: deleteRange)
                 return true
             }
 
             let scalar = Unicode.Scalar(charBefore)
             if let scalar, CharacterSet.punctuationCharacters.union(.symbols).contains(scalar) {
-                textView.replaceCharacters(in: NSRange(location: cursorPos - 1, length: 1), with: "")
+                let deleteRange = NSRange(location: cursorPos - 1, length: 1)
+                textView.insertText("", replacementRange: deleteRange)
                 return true
             }
 
@@ -505,7 +507,8 @@ struct CodeEditorView: NSViewRepresentable {
             let textBeforeCursor = nsContent.substring(with: NSRange(location: lineStart, length: cursorPos - lineStart))
 
             if textBeforeCursor.allSatisfy({ $0 == " " || $0 == "\t" }) {
-                textView.replaceCharacters(in: NSRange(location: lineStart, length: cursorPos - lineStart), with: "")
+                let deleteRange = NSRange(location: lineStart, length: cursorPos - lineStart)
+                textView.insertText("", replacementRange: deleteRange)
                 return true
             }
 
