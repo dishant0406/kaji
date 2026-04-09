@@ -72,11 +72,16 @@ struct PaneTabStrip: View {
                 IconButton(symbol: "magnifyingglass", size: 12) {
                     NotificationCenter.default.post(name: .quickOpen, object: nil)
                 }
+                .help(shortcutTooltip("Quick Open", for: .quickOpen))
                 IconButton(symbol: "square.split.2x1") { onSplit(.horizontal) }
+                    .help(shortcutTooltip("Split Right", for: .splitRight))
                 IconButton(symbol: "square.split.1x2") { onSplit(.vertical) }
+                    .help(shortcutTooltip("Split Down", for: .splitDown))
                 IconButton(symbol: "plus") { onCreateTab() }
+                    .help(shortcutTooltip("New Tab", for: .newTab))
                 if showVCSButton {
                     FileDiffIconButton(action: onCreateVCSTab)
+                        .help(shortcutTooltip("Source Control", for: .openVCSTab))
                 }
             }
             .padding(.trailing, 4)
@@ -95,6 +100,10 @@ struct PaneTabStrip: View {
             dragState.frames = frames
         }
         .coordinateSpace(name: "tabstrip-\(area.id)")
+    }
+
+    private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {
+        "\(name) (\(KeyBindingStore.shared.combo(for: action).displayString))"
     }
 
     private func handleDragChanged(tab: TerminalTab, globalLocation: CGPoint) {

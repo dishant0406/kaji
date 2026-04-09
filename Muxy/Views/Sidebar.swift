@@ -5,37 +5,25 @@ struct SidebarToolbar: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
 
-    private var showHints: Bool { ModifierKeyMonitor.shared.showHints }
-
     var body: some View {
         HStack(spacing: 4) {
             Spacer()
             IconButton(symbol: "folder") { openProject() }
+                .help(shortcutTooltip("Open Project", for: .openProject))
             IconButton(symbol: "sidebar.left") {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     appState.sidebarVisible.toggle()
                 }
             }
+            .help(shortcutTooltip("Toggle Sidebar", for: .toggleSidebar))
         }
         .padding(.horizontal, 10)
         .frame(height: 32)
-        .overlay(alignment: .trailing) {
-            if showHints {
-                HStack(spacing: 3) {
-                    ShortcutBadge(
-                        label: KeyBindingStore.shared.combo(for: .openProject).displayString,
-                        compact: true
-                    )
-                    ShortcutBadge(
-                        label: KeyBindingStore.shared.combo(for: .toggleSidebar).displayString,
-                        compact: true
-                    )
-                }
-                .padding(.horizontal, 10)
-                .allowsHitTesting(false)
-            }
-        }
         .background(WindowDragRepresentable())
+    }
+
+    private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {
+        "\(name) (\(KeyBindingStore.shared.combo(for: action).displayString))"
     }
 
     private func openProject() {
@@ -172,6 +160,7 @@ struct SidebarFooter: View {
                     .foregroundStyle(MuxyTheme.fgMuted)
                 Spacer()
                 IconButton(symbol: "paintpalette") { showThemePicker.toggle() }
+                    .help("Theme Picker (\(KeyBindingStore.shared.combo(for: .toggleThemePicker).displayString))")
                     .popover(isPresented: $showThemePicker) { ThemePicker() }
             }
             .padding(.horizontal, 10)
