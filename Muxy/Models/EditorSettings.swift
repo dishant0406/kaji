@@ -13,7 +13,6 @@ final class EditorSettings {
     var wordWrap: Bool = true { didSet { save() } }
     var showLineNumbers: Bool = true { didSet { save() } }
     var tabSize: Int = 4 { didSet { save() } }
-    var showInvisibles: Bool = false { didSet { save() } }
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private var isBatchLoading = false
@@ -50,7 +49,6 @@ final class EditorSettings {
         wordWrap = true
         showLineNumbers = true
         tabSize = 4
-        showInvisibles = false
         isBatchLoading = false
         save()
     }
@@ -66,7 +64,6 @@ final class EditorSettings {
             wordWrap = snapshot.wordWrap ?? true
             showLineNumbers = snapshot.showLineNumbers ?? true
             tabSize = snapshot.tabSize ?? 4
-            showInvisibles = snapshot.showInvisibles ?? false
             isBatchLoading = false
         } catch {
             logger.error("Failed to load editor settings: \(error.localizedDescription)")
@@ -81,8 +78,7 @@ final class EditorSettings {
                 fontFamily: fontFamily,
                 wordWrap: wordWrap,
                 showLineNumbers: showLineNumbers,
-                tabSize: tabSize,
-                showInvisibles: showInvisibles
+                tabSize: tabSize
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -104,5 +100,4 @@ private struct Snapshot: Codable {
     let wordWrap: Bool?
     let showLineNumbers: Bool?
     let tabSize: Int?
-    let showInvisibles: Bool?
 }

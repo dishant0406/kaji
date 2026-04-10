@@ -193,7 +193,6 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         coordinator.tabSize = editorSettings.tabSize
-        coordinator.showInvisibles = editorSettings.showInvisibles
 
         if contentChanged {
             coordinator.resetHighlightedRange()
@@ -269,7 +268,6 @@ struct CodeEditorView: NSViewRepresentable {
         var lastHighlightedRange: NSRange = .init(location: 0, length: 0)
         private static let highlightBuffer = 2000
         var tabSize = 4
-        var showInvisibles = false
         var onLineLayoutChange: ([LineLayoutInfo]) -> Void = { _ in }
         private weak var observedContentView: NSClipView?
         private weak var observedTextView: NSTextView?
@@ -299,7 +297,6 @@ struct CodeEditorView: NSViewRepresentable {
             self.editorSettings = editorSettings
             self.lastWordWrap = editorSettings.wordWrap
             self.tabSize = editorSettings.tabSize
-            self.showInvisibles = editorSettings.showInvisibles
             super.init()
         }
 
