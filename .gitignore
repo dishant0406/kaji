@@ -16,3 +16,4 @@ GhosttyKit/ghostty.h
 appcast*.xml
 AGENTS.md
 CLAUDE.md
+.plans/
