@@ -16,14 +16,29 @@ final class EditorTabState: Identifiable {
     var isModified = false
     var isSaving = false
     var errorMessage: String?
+    var isReadOnly = false
     var cursorLine: Int = 1
     var cursorColumn: Int = 1
     var searchVisible = false
+    var searchFocusVersion = 0
     var searchNeedle = ""
     var searchMatchCount = 0
     var searchCurrentIndex = 0
     var searchNavigationVersion = 0
     var searchNavigationDirection: EditorSearchNavigationDirection = .next
+    var searchCaseSensitive = false
+    var searchUseRegex = false
+    var searchInvalidRegex = false
+    var replaceVisible = false
+    var replaceText = ""
+    var replaceVersion = 0
+    var replaceAllVersion = 0
+    var currentSelection = ""
+    var awaitingLargeFileConfirmation = false
+    var largeFileSize: Int64 = 0
+
+    static let largeFileWarningThreshold: Int64 = 5 * 1024 * 1024
+    static let largeFileRefuseThreshold: Int64 = 50 * 1024 * 1024
 
     var fileName: String {
         URL(fileURLWithPath: filePath).lastPathComponent
@@ -43,6 +58,17 @@ final class EditorTabState: Identifiable {
 
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
+    private enum SaveError: LocalizedError {
+        case fileIsReadOnly(String)
+
+        var errorDescription: String? {
+            switch self {
+            case let .fileIsReadOnly(path):
+                "File is read-only: \(URL(fileURLWithPath: path).lastPathComponent)"
+            }
+        }
+    }
+
     init(projectPath: String, filePath: String) {
         self.projectPath = projectPath
         self.filePath = filePath
@@ -55,6 +81,37 @@ final class EditorTabState: Identifiable {
 
     func loadFile() {
         guard !isLoading else { return }
+        errorMessage = nil
+        refreshReadOnlyStatus()
+
+        let size = fileSize(at: filePath)
+        if size >= Self.largeFileRefuseThreshold {
+            errorMessage = "File is too large to open (\(Self.formatBytes(size))). " +
+                "Use a dedicated editor for files over \(Self.formatBytes(Self.largeFileRefuseThreshold))."
+            isLoading = false
+            return
+        }
+        if size >= Self.largeFileWarningThreshold {
+            largeFileSize = size
+            awaitingLargeFileConfirmation = true
+            isLoading = false
+            return
+        }
+
+        performLoad()
+    }
+
+    func confirmLargeFileOpen() {
+        awaitingLargeFileConfirmation = false
+        performLoad()
+    }
+
+    func cancelLargeFileOpen() {
+        awaitingLargeFileConfirmation = false
+        errorMessage = "File load cancelled."
+    }
+
+    private func performLoad() {
         isLoading = true
         errorMessage = nil
         loadTask?.cancel()
@@ -64,6 +121,7 @@ final class EditorTabState: Identifiable {
                 let text = try await Self.readFile(at: path)
                 guard !Task.isCancelled, let self else { return }
                 content = text
+                refreshReadOnlyStatus()
                 isModified = false
                 isLoading = false
             } catch {
@@ -72,6 +130,20 @@ final class EditorTabState: Identifiable {
                 isLoading = false
             }
         }
+    }
+
+    private func fileSize(at path: String) -> Int64 {
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+              let size = attrs[.size] as? NSNumber
+        else { return 0 }
+        return size.int64Value
+    }
+
+    private static func formatBytes(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useMB, .useKB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
     }
 
     private static func readFile(at path: String) async throws -> String {
@@ -92,22 +164,39 @@ final class EditorTabState: Identifiable {
     }
 
     func saveFile() {
+        Task { [weak self] in
+            try? await self?.saveFileAsync()
+        }
+    }
+
+    func saveFileAsync() async throws {
         guard !isSaving else { return }
+        if !content.isEmpty, !content.hasSuffix("\n") {
+            content.append("\n")
+        }
         let textToSave = content
         let path = filePath
-        isSaving = true
-        Task { [weak self] in
-            do {
-                try await Self.writeFile(text: textToSave, path: path)
-                guard !Task.isCancelled, let self else { return }
-                isSaving = false
-                isModified = false
-            } catch {
-                guard !Task.isCancelled, let self else { return }
-                isSaving = false
-                errorMessage = error.localizedDescription
-            }
+        refreshReadOnlyStatus()
+        guard Self.canWriteFile(at: path) else {
+            throw SaveError.fileIsReadOnly(path)
         }
+        isSaving = true
+        do {
+            try await Self.writeFile(text: textToSave, path: path)
+            isSaving = false
+            isModified = false
+        } catch {
+            isSaving = false
+            throw error
+        }
+    }
+
+    private static func canWriteFile(at path: String) -> Bool {
+        FileManager.default.isWritableFile(atPath: path)
+    }
+
+    private func refreshReadOnlyStatus() {
+        isReadOnly = !Self.canWriteFile(at: filePath)
     }
 
     private static func writeFile(text: String, path: String) async throws {
@@ -131,5 +220,13 @@ final class EditorTabState: Identifiable {
     func navigateSearch(_ direction: EditorSearchNavigationDirection) {
         searchNavigationDirection = direction
         searchNavigationVersion += 1
+    }
+
+    func requestReplaceCurrent() {
+        replaceVersion += 1
+    }
+
+    func requestReplaceAll() {
+        replaceAllVersion += 1
     }
 }
