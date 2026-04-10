@@ -57,7 +57,6 @@ struct EditorSettingsView: View {
 
             toggleRow("Word Wrap", isOn: $settings.wordWrap)
             toggleRow("Show Line Numbers", isOn: $settings.showLineNumbers)
-            toggleRow("Show Invisibles", isOn: $settings.showInvisibles)
 
             Spacer()
 
