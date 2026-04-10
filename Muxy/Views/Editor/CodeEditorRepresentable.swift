@@ -354,6 +354,10 @@ struct CodeEditorView: NSViewRepresentable {
             super.init()
         }
 
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+
         func setScrollObserver(for scrollView: NSScrollView, onLineLayoutChange: @escaping ([LineLayoutInfo]) -> Void) {
             self.onLineLayoutChange = onLineLayoutChange
 

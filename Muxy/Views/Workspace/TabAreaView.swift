@@ -41,25 +41,27 @@ struct TabAreaView: View {
             ZStack {
                 ForEach(area.tabs) { tab in
                     let isActive = tab.id == area.activeTabID
-                    TabContentView(
-                        tab: tab,
-                        focused: isActive && isFocused && isActiveProject,
-                        visible: isActive,
-                        onFocus: onFocus,
-                        onProcessExit: { onForceCloseTab(tab.id) },
-                        onSplitRequest: { direction, position in
-                            appState.dispatch(.splitArea(.init(
-                                projectID: projectID,
-                                areaID: area.id,
-                                direction: direction,
-                                position: position,
-                                projectPath: area.projectPath
-                            )))
-                        }
-                    )
-                    .zIndex(isActive ? 1 : 0)
-                    .opacity(isActive ? 1 : 0)
-                    .allowsHitTesting(isActive)
+                    if shouldMount(tab: tab, isActive: isActive) {
+                        TabContentView(
+                            tab: tab,
+                            focused: isActive && isFocused && isActiveProject,
+                            visible: isActive,
+                            onFocus: onFocus,
+                            onProcessExit: { onForceCloseTab(tab.id) },
+                            onSplitRequest: { direction, position in
+                                appState.dispatch(.splitArea(.init(
+                                    projectID: projectID,
+                                    areaID: area.id,
+                                    direction: direction,
+                                    position: position,
+                                    projectPath: area.projectPath
+                                )))
+                            }
+                        )
+                        .zIndex(isActive ? 1 : 0)
+                        .opacity(isActive ? 1 : 0)
+                        .allowsHitTesting(isActive)
+                    }
                 }
             }
             .overlay {
@@ -97,6 +99,16 @@ struct TabAreaView: View {
                     appState.pendingSaveErrorMessage = error.localizedDescription
                 }
             }
+        }
+    }
+
+    private func shouldMount(tab: TerminalTab, isActive: Bool) -> Bool {
+        switch tab.content {
+        case .terminal:
+            true
+        case .vcs,
+             .editor:
+            isActive
         }
     }
 }

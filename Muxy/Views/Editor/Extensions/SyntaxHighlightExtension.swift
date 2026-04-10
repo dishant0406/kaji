@@ -13,9 +13,7 @@ final class SyntaxHighlightExtension {
         guard !text.isEmpty else { return }
         let rules = SyntaxRules.forExtension(fileExtension)
         for rule in rules {
-            guard let regex = try? NSRegularExpression(pattern: rule.pattern, options: rule.options) else {
-                continue
-            }
+            guard let regex = rule.regex else { continue }
             regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
                 guard let matchRange = match?.range(at: rule.captureGroup) else { return }
                 storage.addAttribute(.foregroundColor, value: rule.color(), range: matchRange)
@@ -27,8 +25,22 @@ final class SyntaxHighlightExtension {
 private struct SyntaxRule {
     let pattern: String
     let color: @MainActor () -> NSColor
-    var options: NSRegularExpression.Options = []
-    var captureGroup: Int = 0
+    let options: NSRegularExpression.Options
+    let captureGroup: Int
+    let regex: NSRegularExpression?
+
+    init(
+        pattern: String,
+        color: @escaping @MainActor () -> NSColor,
+        options: NSRegularExpression.Options = [],
+        captureGroup: Int = 0
+    ) {
+        self.pattern = pattern
+        self.color = color
+        self.options = options
+        self.captureGroup = captureGroup
+        self.regex = try? NSRegularExpression(pattern: pattern, options: options)
+    }
 }
 
 private enum SyntaxRules {
