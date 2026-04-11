@@ -38,7 +38,7 @@ struct WorktreeSwitcherOverlay: View {
     }
 }
 
-struct WorktreeSwitcherItem: Identifiable, Sendable {
+struct WorktreeSwitcherItem: Identifiable {
     let projectID: UUID
     let projectName: String
     let worktree: Worktree
