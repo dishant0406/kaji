@@ -718,33 +718,6 @@ final class VCSTabState {
         fetchPRInfo(branch: branch)
     }
 
-    func prefillFromLastCommit() async -> (title: String, body: String) {
-        async let subject = git.lastCommitSubject(repoPath: projectPath)
-        async let body = git.lastCommitBody(repoPath: projectPath)
-        return await (subject ?? "", body ?? "")
-    }
-
-    func suggestedBranchName(from title: String) -> String {
-        let base = Self.slugify(title)
-        if base.isEmpty { return "" }
-        let taken = Set(branches).union(remoteBranches)
-        if !taken.contains(base) { return base }
-        for suffix in 2 ... 99 {
-            let candidate = "\(base)-\(suffix)"
-            if !taken.contains(candidate) { return candidate }
-        }
-        return base
-    }
-
-    private static func slugify(_ title: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
-        let scalars = title.lowercased().unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
-        let collapsed = String(scalars)
-            .split(separator: "-", omittingEmptySubsequences: true)
-            .joined(separator: "-")
-        return String(collapsed.prefix(60))
-    }
-
     func openPullRequest(_ request: PRCreateRequest) {
         let trimmedTitle = request.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedBase = request.baseBranch.trimmingCharacters(in: .whitespacesAndNewlines)

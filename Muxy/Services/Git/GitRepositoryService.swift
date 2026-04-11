@@ -265,26 +265,6 @@ actor GitRepositoryService {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    func lastCommitSubject(repoPath: String) async -> String? {
-        let result = try? runGit(
-            repoPath: repoPath,
-            arguments: ["log", "-1", "--pretty=%s"]
-        )
-        guard let result, result.status == 0 else { return nil }
-        let subject = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-        return subject.isEmpty ? nil : subject
-    }
-
-    func lastCommitBody(repoPath: String) async -> String? {
-        let result = try? runGit(
-            repoPath: repoPath,
-            arguments: ["log", "-1", "--pretty=%b"]
-        )
-        guard let result, result.status == 0 else { return nil }
-        let body = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-        return body.isEmpty ? nil : body
-    }
-
     func defaultBranch(repoPath: String) async -> String? {
         let symbolic = try? runGit(
             repoPath: repoPath,
