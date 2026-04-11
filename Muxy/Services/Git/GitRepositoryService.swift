@@ -404,7 +404,7 @@ struct GitRepositoryService {
         }
     }
 
-    func changedFiles(repoPath: String, ignoreWhitespace: Bool = false) async throws -> [GitStatusFile] {
+    func changedFiles(repoPath: String) async throws -> [GitStatusFile] {
         let signpostID = GitSignpost.begin("changedFiles")
         defer { GitSignpost.end("changedFiles", signpostID) }
 
@@ -418,15 +418,13 @@ struct GitRepositoryService {
             throw GitError.notGitRepository
         }
 
-        let wsFlag = ignoreWhitespace ? ["-w"] : [String]()
-
         async let statusTask = GitProcessRunner.runGit(
             repoPath: repoPath,
             arguments: ["-c", "core.quotepath=false", "status", "--porcelain=1", "-z", "--untracked-files=all"]
         )
         async let numstatTask = GitProcessRunner.runGit(
             repoPath: repoPath,
-            arguments: ["-c", "core.quotepath=false", "diff", "--numstat", "--no-color", "--no-ext-diff"] + wsFlag
+            arguments: ["-c", "core.quotepath=false", "diff", "--numstat", "--no-color", "--no-ext-diff"]
         )
 
         let statusResult = try await statusTask
@@ -467,7 +465,6 @@ struct GitRepositoryService {
         repoPath: String,
         filePath: String,
         lineLimit: Int?,
-        ignoreWhitespace: Bool = false,
         hints: DiffHints = .unknown
     ) async throws -> PatchAndCompareResult {
         let signpostID = GitSignpost.begin("patchAndCompare", filePath)
@@ -481,17 +478,14 @@ struct GitRepositoryService {
             return try await resolveAndDiff(
                 repoPath: repoPath,
                 filePath: filePath,
-                lineLimit: lineLimit,
-                ignoreWhitespace: ignoreWhitespace
+                lineLimit: lineLimit
             )
         }
-
-        let wsFlag = ignoreWhitespace ? ["-w"] : [String]()
 
         async let stagedTask: GitProcessResult? = hints.hasStaged
             ? GitProcessRunner.runGit(
                 repoPath: repoPath,
-                arguments: ["-c", "core.quotepath=false", "diff", "--cached", "--no-color", "--no-ext-diff"] + wsFlag + ["--", filePath],
+                arguments: ["-c", "core.quotepath=false", "diff", "--cached", "--no-color", "--no-ext-diff", "--", filePath],
                 lineLimit: lineLimit
             )
             : nil
@@ -499,7 +493,7 @@ struct GitRepositoryService {
         async let unstagedTask: GitProcessResult? = hints.hasUnstaged
             ? GitProcessRunner.runGit(
                 repoPath: repoPath,
-                arguments: ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff"] + wsFlag + ["--", filePath],
+                arguments: ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--", filePath],
                 lineLimit: lineLimit
             )
             : nil
@@ -550,8 +544,7 @@ struct GitRepositoryService {
     private func resolveAndDiff(
         repoPath: String,
         filePath: String,
-        lineLimit: Int?,
-        ignoreWhitespace: Bool
+        lineLimit: Int?
     ) async throws -> PatchAndCompareResult {
         let statusResult = try await GitProcessRunner.runGit(
             repoPath: repoPath,
@@ -563,16 +556,14 @@ struct GitRepositoryService {
             return try untrackedOrNewFileDiff(repoPath: repoPath, filePath: filePath, lineLimit: lineLimit)
         }
 
-        let wsFlag = ignoreWhitespace ? ["-w"] : [String]()
-
         async let stagedTask = GitProcessRunner.runGit(
             repoPath: repoPath,
-            arguments: ["-c", "core.quotepath=false", "diff", "--cached", "--no-color", "--no-ext-diff"] + wsFlag + ["--", filePath],
+            arguments: ["-c", "core.quotepath=false", "diff", "--cached", "--no-color", "--no-ext-diff", "--", filePath],
             lineLimit: lineLimit
         )
         async let unstagedTask = GitProcessRunner.runGit(
             repoPath: repoPath,
-            arguments: ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff"] + wsFlag + ["--", filePath],
+            arguments: ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--", filePath],
             lineLimit: lineLimit
         )
 
