@@ -35,7 +35,12 @@ struct CreatePRSheet: View {
     @State private var draft = false
     @State private var didPrefill = false
     @State private var isProgrammaticBranchNameChange = false
+    @State private var initialCurrentBranch: String?
     @FocusState private var titleFocused: Bool
+
+    private var currentBranchSnapshot: String {
+        initialCurrentBranch ?? context.currentBranch
+    }
 
     private var trimmedTitle: String {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -50,7 +55,7 @@ struct CreatePRSheet: View {
     }
 
     private var needsNewBranch: Bool {
-        !baseBranch.isEmpty && baseBranch == context.currentBranch
+        !baseBranch.isEmpty && baseBranch == currentBranchSnapshot
     }
 
     private var includeMode: VCSTabState.PRIncludeMode {
@@ -180,7 +185,7 @@ struct CreatePRSheet: View {
                     }
                     userEditedBranchName = true
                 }
-            Text("A new branch will be created from \(context.currentBranch) for this pull request.")
+            Text("A new branch will be created from \(currentBranchSnapshot) for this pull request.")
                 .font(.system(size: 11))
                 .foregroundStyle(MuxyTheme.fgDim)
                 .fixedSize(horizontal: false, vertical: true)
@@ -239,9 +244,12 @@ struct CreatePRSheet: View {
     }
 
     private func applyPrefill() {
+        if initialCurrentBranch == nil {
+            initialCurrentBranch = context.currentBranch
+        }
         if baseBranch.isEmpty {
             baseBranch = context.defaultBranch
-                ?? context.availableBaseBranches.first(where: { $0 != context.currentBranch })
+                ?? context.availableBaseBranches.first(where: { $0 != currentBranchSnapshot })
                 ?? context.availableBaseBranches.first
                 ?? ""
         }
@@ -254,7 +262,7 @@ struct CreatePRSheet: View {
             }
             includeAll = true
             didPrefill = true
-            let seed = title.isEmpty ? context.currentBranch : title
+            let seed = title.isEmpty ? currentBranchSnapshot : title
             setSuggestedBranchName(from: seed)
         }
         titleFocused = true
