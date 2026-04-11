@@ -164,8 +164,8 @@ Pull request management lives entirely in the header via `PRPill`, not in the co
 `CreatePRSheet` drives the end-to-end flow via a `PRCreateRequest` passed to `VCSTabState.openPullRequest`:
 
 1. **Target branch** — picked from `GitRepositoryService.listRemoteBranches` (remote-only), pre-selecting the repo's default branch.
-2. **Title + description** — prefilled from the last commit's subject/body.
-3. **Branch strategy** — radio between "use current branch" (hidden when on the default branch or when current == target) and "create new branch" (with a live-generated slug preview from the title, collision-suffixed via `VCSTabState.suggestedBranchName`).
+2. **Title + description** — entered by the user; both fields start blank.
+3. **Branch strategy** — radio between "use current branch" (hidden when on the default branch or when current == target) and "create new branch" (starts blank, then auto-slugs from the title until the user edits the name manually).
 4. **Include** — radio between "all changes" (default) and "only staged"; hidden when there are no changes or only one kind.
 5. **Draft** — checkbox that adds `--draft` to `gh pr create`.
 

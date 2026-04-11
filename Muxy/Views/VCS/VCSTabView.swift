@@ -16,9 +16,6 @@ struct VCSTabView: View {
     @State private var showWorktreePopover = false
     @State private var isGitRepo = false
     @State private var pendingClosePR: GitRepositoryService.PRInfo?
-    @State private var prPrefillTitle: String = ""
-    @State private var prPrefillBody: String = ""
-
     private var commitEnabled: Bool {
         state.hasStagedChanges && !state.commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -165,15 +162,10 @@ struct VCSTabView: View {
                     availableBaseBranches: state.remoteBranches,
                     isLoadingBranches: state.isLoadingRemoteBranches,
                     hasStagedChanges: state.hasStagedChanges,
-                    hasUnstagedChanges: !state.unstagedFiles.isEmpty,
-                    prefillTitle: prPrefillTitle,
-                    prefillBody: prPrefillBody
+                    hasUnstagedChanges: !state.unstagedFiles.isEmpty
                 ),
                 inProgress: state.isOpeningPullRequest,
                 errorMessage: state.openPullRequestError,
-                suggestedBranchName: { title in
-                    state.suggestedBranchName(from: title)
-                },
                 onSubmit: { base, title, body, branchStrategy, includeMode, draft in
                     ToastState.shared.show("Creating pull request…")
                     state.openPullRequest(
@@ -202,12 +194,7 @@ struct VCSTabView: View {
     private func requestOpenPR() {
         state.openPullRequestError = nil
         state.loadRemoteBranches()
-        Task {
-            let prefill = await state.prefillFromLastCommit()
-            prPrefillTitle = prefill.title
-            prPrefillBody = prefill.body
-            showCreatePRSheet = true
-        }
+        showCreatePRSheet = true
     }
 
     private var settingsMenu: some View {

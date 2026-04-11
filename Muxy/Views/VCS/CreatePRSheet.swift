@@ -8,14 +8,11 @@ struct CreatePRSheet: View {
         let isLoadingBranches: Bool
         let hasStagedChanges: Bool
         let hasUnstagedChanges: Bool
-        let prefillTitle: String
-        let prefillBody: String
     }
 
     let context: Context
     let inProgress: Bool
     let errorMessage: String?
-    let suggestedBranchName: (String) -> String
     let onSubmit: (
         _ baseBranch: String,
         _ title: String,
@@ -31,10 +28,10 @@ struct CreatePRSheet: View {
     @State private var bodyText: String = ""
     @State private var newBranchName: String = ""
     @State private var userEditedBranchName = false
+    @State private var isProgrammaticBranchNameChange = false
     @State private var includeAll = true
     @State private var draft = false
-    @State private var didPrefill = false
-    @State private var isProgrammaticBranchNameChange = false
+    @State private var didApplyDefaults = false
     @State private var initialCurrentBranch: String?
     @FocusState private var titleFocused: Bool
 
@@ -95,12 +92,12 @@ struct CreatePRSheet: View {
         }
         .padding(20)
         .frame(width: 500)
-        .onAppear(perform: applyPrefill)
-        .onChange(of: context.availableBaseBranches) { _, _ in applyPrefill() }
-        .onChange(of: context.prefillTitle) { _, _ in applyPrefill() }
+        .onAppear(perform: applyDefaults)
+        .onChange(of: context.availableBaseBranches) { _, _ in applyDefaults() }
         .onChange(of: title) { _, newValue in
             guard !userEditedBranchName else { return }
-            setSuggestedBranchName(from: newValue)
+            isProgrammaticBranchNameChange = true
+            newBranchName = Self.slugify(newValue)
         }
     }
 
@@ -243,7 +240,7 @@ struct CreatePRSheet: View {
         }
     }
 
-    private func applyPrefill() {
+    private func applyDefaults() {
         if initialCurrentBranch == nil {
             initialCurrentBranch = context.currentBranch
         }
@@ -253,24 +250,11 @@ struct CreatePRSheet: View {
                 ?? context.availableBaseBranches.first
                 ?? ""
         }
-        if !didPrefill {
-            if title.isEmpty, !context.prefillTitle.isEmpty {
-                title = context.prefillTitle
-            }
-            if bodyText.isEmpty, !context.prefillBody.isEmpty {
-                bodyText = context.prefillBody
-            }
+        if !didApplyDefaults {
             includeAll = true
-            didPrefill = true
-            let seed = title.isEmpty ? currentBranchSnapshot : title
-            setSuggestedBranchName(from: seed)
+            didApplyDefaults = true
         }
         titleFocused = true
-    }
-
-    private func setSuggestedBranchName(from seed: String) {
-        isProgrammaticBranchNameChange = true
-        newBranchName = suggestedBranchName(seed)
     }
 
     private func submit() {
@@ -278,5 +262,14 @@ struct CreatePRSheet: View {
             ? .createNew(name: trimmedBranchName)
             : .useCurrent
         onSubmit(baseBranch, trimmedTitle, bodyText, strategy, includeMode, draft)
+    }
+
+    private static func slugify(_ title: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
+        let scalars = title.lowercased().unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
+        let collapsed = String(scalars)
+            .split(separator: "-", omittingEmptySubsequences: true)
+            .joined(separator: "-")
+        return String(collapsed.prefix(60))
     }
 }
