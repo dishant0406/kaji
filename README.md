@@ -33,6 +33,8 @@
 
 - macOS 14+
 - Swift 6.0+
+- Ghostty installed (optional for themes)
+- `gh` installed (optional for PR management)
 
 ## Download
 
