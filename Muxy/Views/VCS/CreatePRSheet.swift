@@ -34,6 +34,7 @@ struct CreatePRSheet: View {
     @State private var includeAll = true
     @State private var draft = false
     @State private var didPrefill = false
+    @State private var isProgrammaticBranchNameChange = false
     @FocusState private var titleFocused: Bool
 
     private var trimmedTitle: String {
@@ -94,7 +95,7 @@ struct CreatePRSheet: View {
         .onChange(of: context.prefillTitle) { _, _ in applyPrefill() }
         .onChange(of: title) { _, newValue in
             guard !userEditedBranchName else { return }
-            newBranchName = suggestedBranchName(newValue)
+            setSuggestedBranchName(from: newValue)
         }
     }
 
@@ -172,7 +173,13 @@ struct CreatePRSheet: View {
             TextField("branch-name", text: $newBranchName)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 11, design: .monospaced))
-                .onChange(of: newBranchName) { _, _ in userEditedBranchName = true }
+                .onChange(of: newBranchName) { _, _ in
+                    if isProgrammaticBranchNameChange {
+                        isProgrammaticBranchNameChange = false
+                        return
+                    }
+                    userEditedBranchName = true
+                }
             Text("A new branch will be created from \(context.currentBranch) for this pull request.")
                 .font(.system(size: 11))
                 .foregroundStyle(MuxyTheme.fgDim)
@@ -248,9 +255,14 @@ struct CreatePRSheet: View {
             includeAll = true
             didPrefill = true
             let seed = title.isEmpty ? context.currentBranch : title
-            newBranchName = suggestedBranchName(seed)
+            setSuggestedBranchName(from: seed)
         }
         titleFocused = true
+    }
+
+    private func setSuggestedBranchName(from seed: String) {
+        isProgrammaticBranchNameChange = true
+        newBranchName = suggestedBranchName(seed)
     }
 
     private func submit() {

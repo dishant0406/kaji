@@ -174,7 +174,6 @@ struct VCSTabView: View {
                     state.suggestedBranchName(from: title)
                 },
                 onSubmit: { base, title, body, branchStrategy, includeMode, draft in
-                    showCreatePRSheet = false
                     ToastState.shared.show("Creating pull request…")
                     state.openPullRequest(
                         VCSTabState.PRCreateRequest(
@@ -193,11 +192,9 @@ struct VCSTabView: View {
                 }
             )
         }
-        .onChange(of: state.openPullRequestError) { _, error in
-            if let error {
-                ToastState.shared.show("Failed to create PR: \(error)")
-                state.openPullRequestError = nil
-            }
+        .onChange(of: state.pullRequestInfo?.number) { _, number in
+            guard number != nil, showCreatePRSheet else { return }
+            showCreatePRSheet = false
         }
     }
 
