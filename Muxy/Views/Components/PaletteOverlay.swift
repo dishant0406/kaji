@@ -3,7 +3,7 @@ import SwiftUI
 /// A generic command-palette overlay with a search field, a scrollable
 /// results list, and keyboard navigation. Used by Quick Open (files) and
 /// the Worktree Switcher.
-struct PaletteOverlay<Item: Identifiable, Row: View>: View {
+struct PaletteOverlay<Item: Identifiable>: View {
     let placeholder: String
     let emptyLabel: String
     let noMatchLabel: String
@@ -11,7 +11,7 @@ struct PaletteOverlay<Item: Identifiable, Row: View>: View {
     let search: (String) async -> [Item]
     let onSelect: (Item) -> Void
     let onDismiss: () -> Void
-    @ViewBuilder let row: (Item, Bool) -> Row
+    let row: (Item, Bool) -> AnyView
 
     @State private var query = ""
     @State private var results: [Item] = []
@@ -41,7 +41,7 @@ struct PaletteOverlay<Item: Identifiable, Row: View>: View {
         }
         .onAppear {
             searchFieldFocused = true
-            performSearch()
+            performSearch(debounce: false)
         }
         .onDisappear {
             searchTask?.cancel()
@@ -118,15 +118,17 @@ struct PaletteOverlay<Item: Identifiable, Row: View>: View {
         .frame(maxHeight: .infinity)
     }
 
-    private func performSearch() {
+    private func performSearch(debounce: Bool = true) {
         searchTask?.cancel()
 
         let currentQuery = query
         isSearching = true
 
         searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(50))
-            guard !Task.isCancelled else { return }
+            if debounce {
+                try? await Task.sleep(for: .milliseconds(50))
+                guard !Task.isCancelled else { return }
+            }
 
             let found = await search(currentQuery)
             guard !Task.isCancelled else { return }

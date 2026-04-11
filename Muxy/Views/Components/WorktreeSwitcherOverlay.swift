@@ -9,7 +9,7 @@ struct WorktreeSwitcherOverlay: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        PaletteOverlay<WorktreeSwitcherItem, WorktreeSwitcherRow>(
+        PaletteOverlay<WorktreeSwitcherItem>(
             placeholder: "Search worktrees by name, branch, or project...",
             emptyLabel: "No worktrees",
             noMatchLabel: "No matching worktrees",
@@ -17,10 +17,12 @@ struct WorktreeSwitcherOverlay: View {
             onSelect: onSelect,
             onDismiss: onDismiss,
             row: { item, isHighlighted in
-                WorktreeSwitcherRow(
-                    item: item,
-                    isHighlighted: isHighlighted,
-                    isActive: item.key == activeKey
+                AnyView(
+                    WorktreeSwitcherRow(
+                        item: item,
+                        isHighlighted: isHighlighted,
+                        isActive: item.key == activeKey
+                    )
                 )
             }
         )
@@ -60,7 +62,7 @@ struct WorktreeSwitcherItem: Identifiable {
     }
 }
 
-struct WorktreeSwitcherRow: View {
+private struct WorktreeSwitcherRow: View {
     let item: WorktreeSwitcherItem
     let isHighlighted: Bool
     let isActive: Bool

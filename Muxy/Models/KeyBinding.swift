@@ -184,7 +184,7 @@ struct KeyBinding: Codable, Identifiable {
         Self(action: .newTab, combo: KeyCombo(key: "t", command: true)),
         Self(action: .closeTab, combo: KeyCombo(key: "w", command: true)),
         Self(action: .renameTab, combo: KeyCombo(key: "t", command: true, shift: true)),
-        Self(action: .pinUnpinTab, combo: KeyCombo(key: "p", shift: true, control: true)),
+        Self(action: .pinUnpinTab, combo: KeyCombo(key: "p", command: true, shift: true)),
         Self(action: .splitRight, combo: KeyCombo(key: "d", command: true)),
         Self(action: .splitDown, combo: KeyCombo(key: "d", command: true, shift: true)),
         Self(action: .closePane, combo: KeyCombo(key: "w", command: true, shift: true)),
@@ -221,7 +221,7 @@ struct KeyBinding: Codable, Identifiable {
         Self(action: .selectProject9, combo: KeyCombo(key: "9", control: true)),
         Self(action: .findInTerminal, combo: KeyCombo(key: "f", command: true)),
         Self(action: .quickOpen, combo: KeyCombo(key: "p", command: true)),
-        Self(action: .switchWorktree, combo: KeyCombo(key: "p", command: true, shift: true)),
+        Self(action: .switchWorktree, combo: KeyCombo(key: "o", command: true, shift: true)),
         Self(action: .saveFile, combo: KeyCombo(key: "s", command: true)),
     ]
 }

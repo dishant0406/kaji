@@ -6,7 +6,7 @@ struct QuickOpenOverlay: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        PaletteOverlay<FileSearchResult, FileResultRow>(
+        PaletteOverlay<FileSearchResult>(
             placeholder: "Search files by name...",
             emptyLabel: "No files found",
             noMatchLabel: "No matching files",
@@ -16,13 +16,13 @@ struct QuickOpenOverlay: View {
             onSelect: { result in onSelect(result.absolutePath) },
             onDismiss: onDismiss,
             row: { result, isHighlighted in
-                FileResultRow(result: result, isHighlighted: isHighlighted)
+                AnyView(FileResultRow(result: result, isHighlighted: isHighlighted))
             }
         )
     }
 }
 
-struct FileResultRow: View {
+private struct FileResultRow: View {
     let result: FileSearchResult
     let isHighlighted: Bool
     @State private var hovered = false
