@@ -278,11 +278,48 @@ struct VCSTabView: View {
     }
 
     private func performMerge(prInfo: GitRepositoryService.PRInfo) {
+        if prInfo.checks.status == .failure || prInfo.checks.status == .pending {
+            presentChecksMergeConfirmation(prInfo: prInfo)
+            return
+        }
+        continueMergeAfterChecks(prInfo: prInfo)
+    }
+
+    private func continueMergeAfterChecks(prInfo: GitRepositoryService.PRInfo) {
         if state.hasAnyChanges {
             presentDirtyMergeConfirmation(prInfo: prInfo)
             return
         }
         executeMerge(prInfo: prInfo)
+    }
+
+    private func presentChecksMergeConfirmation(prInfo: GitRepositoryService.PRInfo) {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              window.attachedSheet == nil
+        else { return }
+
+        let isFailure = prInfo.checks.status == .failure
+        let messageText = isFailure
+            ? "Merge PR #\(prInfo.number) with failing checks?"
+            : "Merge PR #\(prInfo.number) while checks are still running?"
+        let informativeText = isFailure
+            ? "\(prInfo.checks.failing) check(s) are failing. Merging now may introduce broken code into the base branch."
+            : "\(prInfo.checks.pending) check(s) are still running. Merging now will bypass them."
+
+        let alert = NSAlert()
+        alert.messageText = messageText
+        alert.informativeText = informativeText
+        alert.alertStyle = .warning
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Merge Anyway")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.keyEquivalent = ""
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            continueMergeAfterChecks(prInfo: prInfo)
+        }
     }
 
     private func executeMerge(prInfo: GitRepositoryService.PRInfo) {
@@ -725,7 +762,10 @@ struct PRPill: View {
                 state: state,
                 info: info,
                 onMerge: {
-                    if state.hasAnyChanges {
+                    let needsConfirmation = state.hasAnyChanges
+                        || info.checks.status == .failure
+                        || info.checks.status == .pending
+                    if needsConfirmation {
                         showPRPopover = false
                     }
                     onRequestMerge(info)
@@ -815,6 +855,8 @@ struct PRPopover: View {
     let onClose: () -> Void
     let onOpenInBrowser: () -> Void
     let onRefresh: () -> Void
+
+    private let autoRefreshTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -922,20 +964,22 @@ struct PRPopover: View {
         }
         .padding(12)
         .frame(width: 260)
+        .onReceive(autoRefreshTimer) { _ in
+            guard info.state == .open, !state.isMergingPullRequest, !state.isClosingPullRequest else { return }
+            onRefresh()
+        }
     }
 
     private var mergeDisabled: Bool {
         if state.isMergingPullRequest { return true }
         if info.mergeable == false { return true }
-        if info.checks.status == .failure { return true }
-        if info.checks.status == .pending { return true }
         return false
     }
 
     private var mergeHelp: String {
         if info.mergeable == false { return "This PR has conflicts and cannot be merged." }
-        if info.checks.status == .failure { return "Checks are failing. Fix them before merging." }
-        if info.checks.status == .pending { return "Checks are still running. Wait before merging." }
+        if info.checks.status == .failure { return "Checks are failing. You will be asked to confirm before merging." }
+        if info.checks.status == .pending { return "Checks are still running. You will be asked to confirm before merging." }
         return "Merge PR #\(info.number)"
     }
 

@@ -247,20 +247,21 @@ actor GitRepositoryService {
     func listRemoteBranches(repoPath: String) async throws -> [String] {
         let result = try runGit(
             repoPath: repoPath,
-            arguments: [
-                "for-each-ref",
-                "--format=%(refname:short)",
-                "refs/remotes/origin",
-            ]
+            arguments: ["ls-remote", "--heads", "origin"]
         )
         guard result.status == 0 else {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to list remote branches." : result.stderr)
         }
+        let prefix = "refs/heads/"
         return result.stdout
             .split(separator: "\n", omittingEmptySubsequences: true)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.hasSuffix("/HEAD") && $0.hasPrefix("origin/") }
-            .map { String($0.dropFirst("origin/".count)) }
+            .compactMap { line -> String? in
+                let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: true)
+                guard parts.count == 2 else { return nil }
+                let ref = parts[1].trimmingCharacters(in: .whitespaces)
+                guard ref.hasPrefix(prefix) else { return nil }
+                return String(ref.dropFirst(prefix.count))
+            }
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
