@@ -49,6 +49,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case findInTerminal
     case openVCSTab
     case quickOpen
+    case switchWorktree
     case saveFile
 
     static let allCases: [Self] = [
@@ -92,6 +93,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
         .findInTerminal,
         .openVCSTab,
         .quickOpen,
+        .switchWorktree,
         .saveFile,
     ]
 
@@ -135,6 +137,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
         case .findInTerminal: ShortcutMetadata(displayName: "Find", category: "Terminal", scope: .mainWindow)
         case .openVCSTab: ShortcutMetadata(displayName: "Source Control", category: "App", scope: .mainWindow)
         case .quickOpen: ShortcutMetadata(displayName: "Quick Open", category: "App", scope: .mainWindow)
+        case .switchWorktree: ShortcutMetadata(displayName: "Switch Worktree", category: "Project Navigation", scope: .mainWindow)
         case .saveFile: ShortcutMetadata(displayName: "Save File", category: "Editor", scope: .mainWindow)
         case .toggleSidebar: ShortcutMetadata(displayName: "Toggle Sidebar", category: "App", scope: .mainWindow)
         case .toggleThemePicker: ShortcutMetadata(displayName: "Theme Picker", category: "App", scope: .mainWindow)
@@ -218,6 +221,7 @@ struct KeyBinding: Codable, Identifiable {
         Self(action: .selectProject9, combo: KeyCombo(key: "9", control: true)),
         Self(action: .findInTerminal, combo: KeyCombo(key: "f", command: true)),
         Self(action: .quickOpen, combo: KeyCombo(key: "p", command: true)),
+        Self(action: .switchWorktree, combo: KeyCombo(key: "o", command: true, shift: true)),
         Self(action: .saveFile, combo: KeyCombo(key: "s", command: true)),
     ]
 }

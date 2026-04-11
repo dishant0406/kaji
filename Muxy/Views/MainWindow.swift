@@ -46,6 +46,7 @@ struct MainWindow: View {
     @State private var vcsPanelWidth: CGFloat = AttachedVCSLayout.defaultWidth
     @State private var vcsStates: [WorktreeKey: VCSTabState] = [:]
     @State private var showQuickOpen = false
+    @State private var showWorktreeSwitcher = false
     private let sidebarWidth: CGFloat = 180
 
     var body: some View {
@@ -151,7 +152,27 @@ struct MainWindow: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
+        .overlay {
+            if showWorktreeSwitcher {
+                WorktreeSwitcherOverlay(
+                    items: worktreeSwitcherItems,
+                    activeKey: activeWorktreeKey,
+                    onSelect: { item in
+                        showWorktreeSwitcher = false
+                        guard let project = projectStore.projects.first(where: { $0.id == item.projectID }) else { return }
+                        if appState.activeProjectID == item.projectID {
+                            appState.selectWorktree(projectID: item.projectID, worktree: item.worktree)
+                        } else {
+                            appState.selectProject(project, worktree: item.worktree)
+                        }
+                    },
+                    onDismiss: { showWorktreeSwitcher = false }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
         .animation(.easeInOut(duration: 0.15), value: showQuickOpen)
+        .animation(.easeInOut(duration: 0.15), value: showWorktreeSwitcher)
         .animation(.easeInOut(duration: 0.2), value: ToastState.shared.message != nil)
         .coordinateSpace(name: DragCoordinateSpace.mainWindow)
         .environment(dragCoordinator)
@@ -159,6 +180,9 @@ struct MainWindow: View {
         .edgesIgnoringSafeArea(.top)
         .onReceive(NotificationCenter.default.publisher(for: .quickOpen)) { _ in
             showQuickOpen.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
+            showWorktreeSwitcher.toggle()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openVCSWindow)) { _ in
             openWindow(id: "vcs")
@@ -266,6 +290,25 @@ struct MainWindow: View {
                     .padding(.trailing, 4)
                 }
         }
+    }
+
+    private var worktreeSwitcherItems: [WorktreeSwitcherItem] {
+        projectStore.projects.flatMap { project in
+            worktreeStore.list(for: project.id).map { worktree in
+                WorktreeSwitcherItem(
+                    projectID: project.id,
+                    projectName: project.name,
+                    worktree: worktree
+                )
+            }
+        }
+    }
+
+    private var activeWorktreeKey: WorktreeKey? {
+        guard let projectID = appState.activeProjectID,
+              let worktreeID = appState.activeWorktreeID[projectID]
+        else { return nil }
+        return WorktreeKey(projectID: projectID, worktreeID: worktreeID)
     }
 
     private var activeProject: Project? {
