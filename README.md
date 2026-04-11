@@ -12,8 +12,8 @@
 
 ## Screenshots
 
-![muxy-1](https://github.com/user-attachments/assets/c580b57e-f67e-4f0f-993f-162796f014ed)
-![muxy-2](https://github.com/user-attachments/assets/412c67e8-7ae3-401b-9fb3-7c9f80b957e0)
+<img width="2718" height="1636" alt="image" src="https://github.com/user-attachments/assets/fa74c3b0-8f09-4f78-b220-cbb7f9db4f1d" />
+<img width="2718" height="1636" alt="image" src="https://github.com/user-attachments/assets/19db3e88-6206-4f5b-8e53-ab264e90ad9c" />
 
 ## Features
 
