@@ -90,7 +90,7 @@ Muxy/
         SyntaxHighlightExtension.swift  Regex-based syntax highlighting rules for code editor
     VCS/
       VCSTabView.swift        Source control tab (commit, stage, diff, branch) + PRPill + PRPopover
-      BranchPicker.swift      Branch selection dropdown with filter
+      BranchPicker.swift      Branch selection dropdown with filter and right-click delete
       UnifiedDiffView.swift   Unified diff rendering
       SplitDiffView.swift     Side-by-side diff rendering
       DiffComponents.swift    Shared diff UI: line rows, highlighting, cache

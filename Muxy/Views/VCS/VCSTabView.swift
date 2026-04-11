@@ -112,7 +112,8 @@ struct VCSTabView: View {
                 isLoading: state.isLoadingBranches,
                 onSelect: { state.switchBranch($0) },
                 onRefresh: { state.loadBranches() },
-                onCreateBranch: { showCreateBranchSheet = true }
+                onCreateBranch: { showCreateBranchSheet = true },
+                onDeleteBranch: { branch in presentDeleteBranchConfirmation(branch) }
             )
 
             PRPill(
@@ -598,6 +599,27 @@ struct VCSTabView: View {
             if response == .alertFirstButtonReturn {
                 onConfirm()
             }
+        }
+    }
+
+    private func presentDeleteBranchConfirmation(_ branch: String) {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              window.attachedSheet == nil
+        else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Delete Branch?"
+        alert.informativeText = "This will permanently delete the local branch \"\(branch)\". Unmerged commits on this branch will be lost."
+        alert.alertStyle = .warning
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.keyEquivalent = "\r"
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            Task { await state.deleteLocalBranch(branch) }
         }
     }
 
