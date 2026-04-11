@@ -26,6 +26,33 @@ final class VCSTabState {
         let truncated: Bool
     }
 
+    enum PRLaunchState: Equatable {
+        case hidden
+        case ghMissing
+        case canCreate
+        case hasPR(GitRepositoryService.PRInfo)
+    }
+
+    enum PRBranchStrategy: Equatable {
+        case useCurrent
+        case createNew(name: String)
+    }
+
+    enum PRIncludeMode: Equatable {
+        case all
+        case stagedOnly
+        case none
+    }
+
+    struct PRCreateRequest {
+        let baseBranch: String
+        let title: String
+        let body: String
+        let branchStrategy: PRBranchStrategy
+        let includeMode: PRIncludeMode
+        let draft: Bool
+    }
+
     let projectPath: String
     var files: [GitStatusFile] = []
     var mode: ViewMode = .unified
@@ -38,6 +65,16 @@ final class VCSTabState {
     var diffErrorsByPath: [String: String] = [:]
     var branchName: String?
     var pullRequestInfo: GitRepositoryService.PRInfo?
+    var defaultBranch: String?
+    var remoteBranches: [String] = []
+    var isLoadingRemoteBranches = false
+    var isGhInstalled = true
+    var aheadBehind = GitRepositoryService.AheadBehind(ahead: 0, behind: 0, hasUpstream: false)
+    var isOpeningPullRequest = false
+    var openPullRequestError: String?
+    var isMergingPullRequest = false
+    var isClosingPullRequest = false
+    var hasFetchedPullRequestInfo = false
 
     var commitMessage = ""
     var branches: [String] = []
@@ -68,6 +105,30 @@ final class VCSTabState {
 
     var hasStagedChanges: Bool {
         !stagedFiles.isEmpty
+    }
+
+    var hasAnyChanges: Bool {
+        !files.isEmpty
+    }
+
+    var isOnDefaultBranch: Bool {
+        guard let branchName, let defaultBranch else { return false }
+        return branchName == defaultBranch
+    }
+
+    var prLaunchState: PRLaunchState {
+        if !isGhInstalled { return .ghMissing }
+        if branchName == nil || !hasFetchedPullRequestInfo { return .hidden }
+        if let info = pullRequestInfo { return .hasPR(info) }
+        guard canCreatePR else { return .hidden }
+        return .canCreate
+    }
+
+    var canCreatePR: Bool {
+        guard branchName != nil, pullRequestInfo == nil else { return false }
+        if hasAnyChanges { return true }
+        if isOnDefaultBranch { return false }
+        return true
     }
 
     @ObservationIgnored private let git = GitRepositoryService()
@@ -133,12 +194,21 @@ final class VCSTabState {
             do {
                 let branch = try await git.currentBranch(repoPath: projectPath)
                 guard !Task.isCancelled else { return }
+                if branchName != branch {
+                    hasFetchedPullRequestInfo = false
+                    pullRequestInfo = nil
+                }
                 branchName = branch
                 fetchPRInfo(branch: branch)
+                let counts = await git.aheadBehind(repoPath: projectPath, branch: branch)
+                guard !Task.isCancelled else { return }
+                aheadBehind = counts
             } catch {
                 guard !Task.isCancelled else { return }
                 branchName = nil
                 pullRequestInfo = nil
+                hasFetchedPullRequestInfo = false
+                aheadBehind = .init(ahead: 0, behind: 0, hasUpstream: false)
             }
         }
 
@@ -603,9 +673,252 @@ final class VCSTabState {
         prInfoTask?.cancel()
         prInfoTask = Task { [weak self] in
             guard let self else { return }
-            let prInfo = await git.pullRequestInfo(repoPath: projectPath, branch: branch)
+            async let ghInstalledValue = git.isGhInstalled()
+            async let defaultBranchValue = git.defaultBranch(repoPath: projectPath)
+            let ghInstalled = await ghInstalledValue
+            let defaultBranchResult = await defaultBranchValue
             guard !Task.isCancelled else { return }
-            pullRequestInfo = prInfo
+            isGhInstalled = ghInstalled
+            defaultBranch = defaultBranchResult
+
+            if remoteBranches.isEmpty {
+                loadRemoteBranches()
+            }
+
+            if ghInstalled {
+                let prInfo = await git.pullRequestInfo(repoPath: projectPath, branch: branch)
+                guard !Task.isCancelled else { return }
+                pullRequestInfo = prInfo
+            } else {
+                pullRequestInfo = nil
+            }
+            hasFetchedPullRequestInfo = true
+        }
+    }
+
+    func loadRemoteBranches() {
+        guard !isLoadingRemoteBranches else { return }
+        isLoadingRemoteBranches = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { isLoadingRemoteBranches = false }
+            do {
+                let result = try await git.listRemoteBranches(repoPath: projectPath)
+                guard !Task.isCancelled else { return }
+                remoteBranches = result
+            } catch {
+                guard !Task.isCancelled else { return }
+                remoteBranches = []
+            }
+        }
+    }
+
+    func refreshPullRequest() {
+        guard let branch = branchName else { return }
+        fetchPRInfo(branch: branch)
+    }
+
+    func prefillFromLastCommit() async -> (title: String, body: String) {
+        async let subject = git.lastCommitSubject(repoPath: projectPath)
+        async let body = git.lastCommitBody(repoPath: projectPath)
+        return await (subject ?? "", body ?? "")
+    }
+
+    func suggestedBranchName(from title: String) async -> String {
+        let base = Self.slugify(title)
+        if base.isEmpty { return "" }
+        if await !git.localBranchExists(repoPath: projectPath, name: base),
+           !remoteBranches.contains(base)
+        {
+            return base
+        }
+        for suffix in 2 ... 99 {
+            let candidate = "\(base)-\(suffix)"
+            if await !git.localBranchExists(repoPath: projectPath, name: candidate),
+               !remoteBranches.contains(candidate)
+            {
+                return candidate
+            }
+        }
+        return base
+    }
+
+    private static func slugify(_ title: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
+        let scalars = title.lowercased().unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
+        let collapsed = String(scalars)
+            .split(separator: "-", omittingEmptySubsequences: true)
+            .joined(separator: "-")
+        return String(collapsed.prefix(60))
+    }
+
+    func openPullRequest(_ request: PRCreateRequest) {
+        let trimmedTitle = request.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedBase = request.baseBranch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty, !trimmedBase.isEmpty else {
+            openPullRequestError = "Title and target branch are required."
+            return
+        }
+        guard branchName != nil else {
+            openPullRequestError = "No current branch."
+            return
+        }
+        guard !isOpeningPullRequest else { return }
+
+        isOpeningPullRequest = true
+        openPullRequestError = nil
+
+        let normalized = PRCreateRequest(
+            baseBranch: trimmedBase,
+            title: trimmedTitle,
+            body: request.body,
+            branchStrategy: request.branchStrategy,
+            includeMode: request.includeMode,
+            draft: request.draft
+        )
+
+        Task { [weak self] in
+            guard let self else { return }
+            defer { isOpeningPullRequest = false }
+            do {
+                try await performPRFlow(normalized)
+            } catch {
+                guard !Task.isCancelled else { return }
+                openPullRequestError = errorText(error)
+            }
+        }
+    }
+
+    private func performPRFlow(_ request: PRCreateRequest) async throws {
+        let targetBranch = try await resolvePRTargetBranch(
+            strategy: request.branchStrategy,
+            baseBranch: request.baseBranch
+        )
+
+        if Task.isCancelled { return }
+
+        try await stageAndCommitForPR(includeMode: request.includeMode, message: request.title)
+
+        if Task.isCancelled { return }
+
+        try await git.pushSetUpstream(repoPath: projectPath, branch: targetBranch)
+
+        if Task.isCancelled { return }
+
+        let info = try await git.createPullRequest(
+            repoPath: projectPath,
+            branch: targetBranch,
+            baseBranch: request.baseBranch,
+            title: request.title,
+            body: request.body,
+            draft: request.draft
+        )
+
+        if Task.isCancelled { return }
+
+        pullRequestInfo = info
+        commits = []
+        ToastState.shared.show("Pull request #\(info.number) opened")
+        loadBranches()
+        performRefresh(incremental: false)
+    }
+
+    private func resolvePRTargetBranch(
+        strategy: PRBranchStrategy,
+        baseBranch _: String
+    ) async throws -> String {
+        switch strategy {
+        case .useCurrent:
+            guard let current = branchName else {
+                throw GitRepositoryService.GitError.commandFailed("No current branch.")
+            }
+            return current
+        case let .createNew(name):
+            let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedName.isEmpty else {
+                throw GitRepositoryService.GitError.commandFailed("Branch name is required.")
+            }
+            try await git.createAndSwitchBranch(repoPath: projectPath, name: trimmedName)
+            branchName = trimmedName
+            return trimmedName
+        }
+    }
+
+    private func stageAndCommitForPR(includeMode: PRIncludeMode, message: String) async throws {
+        switch includeMode {
+        case .all:
+            try await git.stageAll(repoPath: projectPath)
+        case .stagedOnly,
+             .none:
+            break
+        }
+
+        if includeMode == .none { return }
+
+        let status = try await git.changedFiles(repoPath: projectPath, ignoreWhitespace: false)
+        if status.contains(where: \.isStaged) {
+            _ = try await git.commit(repoPath: projectPath, message: message)
+        }
+    }
+
+    func mergePullRequest(
+        method: GitRepositoryService.PRMergeMethod = .merge,
+        onSuccess: @escaping (GitRepositoryService.PRInfo, String) -> Void
+    ) {
+        guard let info = pullRequestInfo, !isMergingPullRequest else { return }
+        guard let branch = branchName else { return }
+        isMergingPullRequest = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { isMergingPullRequest = false }
+            do {
+                try await git.mergePullRequest(repoPath: projectPath, number: info.number, method: method)
+                guard !Task.isCancelled else { return }
+                pullRequestInfo = nil
+                onSuccess(info, branch)
+            } catch {
+                guard !Task.isCancelled else { return }
+                showStatus(errorText(error), isError: true)
+            }
+        }
+    }
+
+    func closePullRequest(onSuccess: @escaping () -> Void) {
+        guard let info = pullRequestInfo, !isClosingPullRequest else { return }
+        isClosingPullRequest = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { isClosingPullRequest = false }
+            do {
+                try await git.closePullRequest(repoPath: projectPath, number: info.number)
+                guard !Task.isCancelled else { return }
+                pullRequestInfo = nil
+                ToastState.shared.show("Closed PR #\(info.number)")
+                onSuccess()
+            } catch {
+                guard !Task.isCancelled else { return }
+                showStatus(errorText(error), isError: true)
+            }
+        }
+    }
+
+    func switchBranchAndRefresh(_ name: String) async {
+        do {
+            try await git.switchBranch(repoPath: projectPath, branch: name)
+            branchName = name
+            commits = []
+            performRefresh(incremental: false)
+        } catch {
+            showStatus(errorText(error), isError: true)
+        }
+    }
+
+    func deleteLocalBranch(_ name: String) async {
+        do {
+            try await GitWorktreeService.shared.deleteBranch(repoPath: projectPath, branch: name)
+            loadBranches()
+        } catch {
+            showStatus(errorText(error), isError: true)
         }
     }
 

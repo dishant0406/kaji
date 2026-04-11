@@ -12,8 +12,12 @@ struct VCSTabView: View {
     @State private var pendingDiscardPath: String?
     @State private var showCreateWorktreeSheet = false
     @State private var showCreateBranchSheet = false
+    @State private var showCreatePRSheet = false
     @State private var showWorktreePopover = false
     @State private var isGitRepo = false
+    @State private var pendingClosePR: GitRepositoryService.PRInfo?
+    @State private var prPrefillTitle: String = ""
+    @State private var prPrefillBody: String = ""
 
     private var commitEnabled: Bool {
         state.hasStagedChanges && !state.commitMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -78,6 +82,11 @@ struct VCSTabView: View {
                 state.discardFile(path)
             }
         }
+        .onChange(of: pendingClosePR?.number) { _, number in
+            guard number != nil, let prInfo = pendingClosePR else { return }
+            pendingClosePR = nil
+            presentClosePRConfirmation(prInfo: prInfo)
+        }
         .alert(
             "Error",
             isPresented: Binding(
@@ -106,9 +115,12 @@ struct VCSTabView: View {
                 onCreateBranch: { showCreateBranchSheet = true }
             )
 
-            if let prInfo = state.pullRequestInfo {
-                PRBadge(info: prInfo)
-            }
+            PRPill(
+                state: state,
+                onRequestCreate: { requestOpenPR() },
+                onRequestMerge: { prInfo in performMerge(prInfo: prInfo) },
+                onRequestClose: { prInfo in pendingClosePR = prInfo }
+            )
 
             Spacer(minLength: 0)
 
@@ -143,6 +155,57 @@ struct VCSTabView: View {
                 },
                 onCancel: { showCreateBranchSheet = false }
             )
+        }
+        .sheet(isPresented: $showCreatePRSheet) {
+            CreatePRSheet(
+                context: CreatePRSheet.Context(
+                    currentBranch: state.branchName ?? "",
+                    defaultBranch: state.defaultBranch,
+                    availableBaseBranches: state.remoteBranches,
+                    isLoadingBranches: state.isLoadingRemoteBranches,
+                    hasStagedChanges: state.hasStagedChanges,
+                    hasUnstagedChanges: !state.unstagedFiles.isEmpty,
+                    prefillTitle: prPrefillTitle,
+                    prefillBody: prPrefillBody
+                ),
+                inProgress: state.isOpeningPullRequest,
+                errorMessage: state.openPullRequestError,
+                suggestedBranchName: { title in
+                    await state.suggestedBranchName(from: title)
+                },
+                onSubmit: { base, title, body, branchStrategy, includeMode, draft in
+                    state.openPullRequest(
+                        VCSTabState.PRCreateRequest(
+                            baseBranch: base,
+                            title: title,
+                            body: body,
+                            branchStrategy: branchStrategy,
+                            includeMode: includeMode,
+                            draft: draft
+                        )
+                    )
+                },
+                onCancel: {
+                    state.openPullRequestError = nil
+                    showCreatePRSheet = false
+                }
+            )
+        }
+        .onChange(of: state.pullRequestInfo?.number) { _, number in
+            if number != nil, showCreatePRSheet {
+                showCreatePRSheet = false
+            }
+        }
+    }
+
+    private func requestOpenPR() {
+        state.openPullRequestError = nil
+        state.loadRemoteBranches()
+        Task {
+            let prefill = await state.prefillFromLastCommit()
+            prPrefillTitle = prefill.title
+            prPrefillBody = prefill.body
+            showCreatePRSheet = true
         }
     }
 
@@ -213,6 +276,79 @@ struct VCSTabView: View {
         return worktree.name
     }
 
+    private func performMerge(prInfo: GitRepositoryService.PRInfo) {
+        let project = owningProject
+        let worktree = activeWorktreeForTab
+        let defaultBranch = state.defaultBranch
+        state.mergePullRequest { _, mergedBranch in
+            ToastState.shared.show("Merged PR #\(prInfo.number)")
+            Task { @MainActor in
+                await cleanupAfterMerge(
+                    mergedBranch: mergedBranch,
+                    project: project,
+                    worktree: worktree,
+                    defaultBranch: defaultBranch
+                )
+            }
+        }
+    }
+
+    private func cleanupAfterMerge(
+        mergedBranch: String,
+        project: Project?,
+        worktree: Worktree?,
+        defaultBranch: String?
+    ) async {
+        if let project, let worktree, !worktree.isPrimary {
+            removeWorktreeAfterMerge(project: project, worktree: worktree)
+            return
+        }
+
+        if let defaultBranch, defaultBranch != mergedBranch {
+            await state.switchBranchAndRefresh(defaultBranch)
+        }
+        await state.deleteLocalBranch(mergedBranch)
+    }
+
+    private func removeWorktreeAfterMerge(project: Project, worktree: Worktree) {
+        let repoPath = project.path
+        let remaining = worktreeStore.list(for: project.id).filter { $0.id != worktree.id }
+        let replacement = remaining.first(where: { $0.isPrimary }) ?? remaining.first
+        appState.removeWorktree(
+            projectID: project.id,
+            worktree: worktree,
+            replacement: replacement
+        )
+        worktreeStore.remove(worktreeID: worktree.id, from: project.id)
+        Task.detached {
+            await WorktreeStore.cleanupOnDisk(
+                worktree: worktree,
+                repoPath: repoPath
+            )
+        }
+    }
+
+    private func presentClosePRConfirmation(prInfo: GitRepositoryService.PRInfo) {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              window.attachedSheet == nil
+        else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Close PR #\(prInfo.number)?"
+        alert.informativeText = "This will close the pull request on GitHub without merging. You can reopen it later."
+        alert.alertStyle = .warning
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Close PR")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.keyEquivalent = "\r"
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            state.closePullRequest {}
+        }
+    }
+
     private func handleCreateWorktreeResult(_ result: CreateWorktreeResult, project: Project) {
         switch result {
         case let .created(worktree, runSetup):
@@ -260,7 +396,7 @@ struct VCSTabView: View {
         VStack(spacing: 8) {
             ZStack(alignment: .topLeading) {
                 if state.commitMessage.isEmpty {
-                    Text("Commit message (Enter to commit on \(state.branchName ?? "branch"))")
+                    Text("Commit message (⌘↵ to commit on \(state.branchName ?? "branch"))")
                         .font(.system(size: 12))
                         .foregroundStyle(MuxyTheme.fgDim)
                         .padding(.horizontal, 10)
@@ -275,90 +411,128 @@ struct VCSTabView: View {
                     .padding(.vertical, 9)
                     .frame(minHeight: 54, maxHeight: 100)
                     .onKeyPress(.return, phases: .down) { keyPress in
-                        if keyPress.modifiers.contains(.shift) {
-                            return .ignored
+                        if keyPress.modifiers.contains(.command) {
+                            state.commit()
+                            return .handled
                         }
-                        state.commit()
-                        return .handled
+                        return .ignored
                     }
             }
             .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 6))
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(MuxyTheme.border, lineWidth: 1))
 
             HStack(spacing: 6) {
-                Button {
-                    state.commit()
-                } label: {
-                    HStack(spacing: 4) {
-                        if state.isCommitting {
-                            ProgressView()
-                                .controlSize(.mini)
-                        } else {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        Text("Commit")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundStyle(commitEnabled ? MuxyTheme.bg : MuxyTheme.fgDim)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(
-                        commitEnabled ? MuxyTheme.accent : MuxyTheme.surface,
-                        in: RoundedRectangle(cornerRadius: 6)
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(!commitEnabled || state.isCommitting)
-
-                Button {
-                    state.push()
-                } label: {
-                    HStack(spacing: 4) {
-                        if state.isPushing {
-                            ProgressView()
-                                .controlSize(.mini)
-                        } else {
-                            Image(systemName: "arrow.up")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        Text("Push")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundStyle(MuxyTheme.fg)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .disabled(state.isPushing)
-
-                Button {
-                    state.pull()
-                } label: {
-                    HStack(spacing: 4) {
-                        if state.isPulling {
-                            ProgressView()
-                                .controlSize(.mini)
-                        } else {
-                            Image(systemName: "arrow.down")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        Text("Pull")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundStyle(MuxyTheme.fg)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .disabled(state.isPulling)
+                commitButton
+                pullButton
+                pushButton
             }
         }
         .padding(10)
         .background(MuxyTheme.bg)
     }
+
+    private var commitButton: some View {
+        Button {
+            state.commit()
+        } label: {
+            HStack(spacing: 4) {
+                if state.isCommitting {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                Text("Commit")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .foregroundStyle(commitEnabled ? MuxyTheme.bg : MuxyTheme.fgDim)
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.actionButtonHeight)
+            .background(
+                commitEnabled ? MuxyTheme.accent : MuxyTheme.surface,
+                in: RoundedRectangle(cornerRadius: 6)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(MuxyTheme.border, lineWidth: commitEnabled ? 0 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!commitEnabled || state.isCommitting)
+        .help("Commit staged changes")
+    }
+
+    private var pullButton: some View {
+        Button {
+            state.pull()
+        } label: {
+            HStack(spacing: 4) {
+                if state.isPulling {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: "arrow.down")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                Text("Pull")
+                    .font(.system(size: 11, weight: .medium))
+                if state.aheadBehind.behind > 0 {
+                    Text("\(state.aheadBehind.behind)")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(MuxyTheme.bg)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(MuxyTheme.diffAddFg, in: Capsule())
+                }
+            }
+            .foregroundStyle(MuxyTheme.fg)
+            .padding(.horizontal, 10)
+            .frame(height: Self.actionButtonHeight)
+            .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(MuxyTheme.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(state.isPulling)
+        .help(state.aheadBehind.behind > 0
+            ? "Pull \(state.aheadBehind.behind) commit\(state.aheadBehind.behind == 1 ? "" : "s") from origin"
+            : "Pull from origin")
+    }
+
+    private var pushButton: some View {
+        Button {
+            state.push()
+        } label: {
+            HStack(spacing: 4) {
+                if state.isPushing {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                Text("Push")
+                    .font(.system(size: 11, weight: .medium))
+                if state.aheadBehind.ahead > 0 {
+                    Text("\(state.aheadBehind.ahead)")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(MuxyTheme.bg)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(MuxyTheme.accent, in: Capsule())
+                }
+            }
+            .foregroundStyle(MuxyTheme.fg)
+            .padding(.horizontal, 10)
+            .frame(height: Self.actionButtonHeight)
+            .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(MuxyTheme.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(state.isPushing)
+        .help(state.aheadBehind.ahead > 0
+            ? "Push \(state.aheadBehind.ahead) commit\(state.aheadBehind.ahead == 1 ? "" : "s") to origin"
+            : "Push to origin")
+    }
+
+    private static let actionButtonHeight: CGFloat = 28
 
     private func presentDiscardConfirmation(
         title: String,
@@ -416,6 +590,304 @@ struct VCSTabView: View {
             ? state.projectPath + relativePath
             : state.projectPath + "/" + relativePath
         appState.openFile(fullPath, projectID: projectID)
+    }
+}
+
+struct PRPill: View {
+    @Bindable var state: VCSTabState
+    let onRequestCreate: () -> Void
+    let onRequestMerge: (GitRepositoryService.PRInfo) -> Void
+    let onRequestClose: (GitRepositoryService.PRInfo) -> Void
+
+    @State private var showPRPopover = false
+
+    var body: some View {
+        switch state.prLaunchState {
+        case .hidden:
+            EmptyView()
+        case .ghMissing:
+            ghMissingPill
+        case .canCreate:
+            createPRPill
+        case let .hasPR(info):
+            hasPRPill(info: info)
+        }
+    }
+
+    private var ghMissingPill: some View {
+        pillContainer(
+            icon: "exclamationmark.triangle",
+            text: "Install gh",
+            tint: MuxyTheme.fgMuted,
+            disabled: true
+        ) {}
+            .help("Install GitHub CLI to create pull requests: brew install gh")
+    }
+
+    private var createPRPill: some View {
+        pillContainer(
+            icon: "arrow.triangle.pull",
+            text: "Create PR",
+            tint: MuxyTheme.accent,
+            disabled: state.isOpeningPullRequest,
+            action: onRequestCreate
+        )
+        .help("Create a pull request")
+    }
+
+    private func hasPRPill(info: GitRepositoryService.PRInfo) -> some View {
+        Button {
+            showPRPopover = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: prStateIcon(info))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(prStateColor(info))
+                Text("PR #\(info.number)")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(MuxyTheme.fg.opacity(0.85))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(MuxyTheme.fgDim)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(prStateColor(info).opacity(0.35), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .help("Pull request #\(info.number)")
+        .popover(isPresented: $showPRPopover, arrowEdge: .top) {
+            PRPopover(
+                state: state,
+                info: info,
+                onMerge: {
+                    showPRPopover = false
+                    onRequestMerge(info)
+                },
+                onClose: {
+                    showPRPopover = false
+                    onRequestClose(info)
+                },
+                onOpenInBrowser: {
+                    showPRPopover = false
+                    if let url = URL(string: info.url) {
+                        NSWorkspace.shared.open(url)
+                    }
+                },
+                onRefresh: {
+                    state.refreshPullRequest()
+                }
+            )
+        }
+    }
+
+    private func prStateIcon(_ info: GitRepositoryService.PRInfo) -> String {
+        switch info.state {
+        case .open: info.isDraft ? "pencil.circle" : "arrow.triangle.pull"
+        case .merged: "checkmark.circle.fill"
+        case .closed: "xmark.circle"
+        }
+    }
+
+    private func prStateColor(_ info: GitRepositoryService.PRInfo) -> Color {
+        switch info.state {
+        case .open: info.isDraft ? MuxyTheme.fgMuted : MuxyTheme.diffAddFg
+        case .merged: MuxyTheme.accent
+        case .closed: MuxyTheme.diffRemoveFg
+        }
+    }
+
+    private func pillContainer(
+        icon: String,
+        text: String,
+        tint: Color,
+        disabled: Bool,
+        action: @escaping () -> Void = {}
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 9, weight: .bold))
+                Text(text)
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(tint.opacity(0.35), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+}
+
+struct PRPopover: View {
+    @Bindable var state: VCSTabState
+    let info: GitRepositoryService.PRInfo
+    let onMerge: () -> Void
+    let onClose: () -> Void
+    let onOpenInBrowser: () -> Void
+    let onRefresh: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: stateIcon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(stateColor)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Pull Request #\(info.number)")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(stateLabel)
+                        .font(.system(size: 10))
+                        .foregroundStyle(MuxyTheme.fgMuted)
+                }
+                Spacer(minLength: 0)
+                Button {
+                    onRefresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(MuxyTheme.fgMuted)
+                        .frame(width: 20, height: 20)
+                }
+                .buttonStyle(.plain)
+                .help("Refresh")
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                infoRow(label: "Base", value: info.baseBranch)
+                if let mergeable = info.mergeable {
+                    infoRow(
+                        label: "Mergeable",
+                        value: mergeable ? "Yes" : "Conflicts",
+                        valueColor: mergeable ? MuxyTheme.diffAddFg : MuxyTheme.diffRemoveFg
+                    )
+                }
+            }
+
+            Divider()
+
+            Button(action: onOpenInBrowser) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Open on GitHub")
+                        .font(.system(size: 11, weight: .medium))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(MuxyTheme.fg)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 5))
+            }
+            .buttonStyle(.plain)
+
+            if info.state == .open {
+                Button(action: onMerge) {
+                    HStack(spacing: 6) {
+                        if state.isMergingPullRequest {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "arrow.triangle.merge")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        Text("Merge")
+                            .font(.system(size: 11, weight: .medium))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(mergeDisabled ? MuxyTheme.fgDim : MuxyTheme.bg)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        mergeDisabled ? MuxyTheme.surface : MuxyTheme.accent,
+                        in: RoundedRectangle(cornerRadius: 5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(mergeDisabled)
+                .help(mergeHelp)
+
+                Button(action: onClose) {
+                    HStack(spacing: 6) {
+                        if state.isClosingPullRequest {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "xmark.circle")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        Text("Close PR")
+                            .font(.system(size: 11, weight: .medium))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(MuxyTheme.diffRemoveFg)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .background(MuxyTheme.surface, in: RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .disabled(state.isClosingPullRequest)
+            }
+        }
+        .padding(12)
+        .frame(width: 260)
+    }
+
+    private var mergeDisabled: Bool {
+        if state.isMergingPullRequest { return true }
+        if info.mergeable == false { return true }
+        return false
+    }
+
+    private var mergeHelp: String {
+        if info.mergeable == false { return "This PR has conflicts and cannot be merged." }
+        return "Merge PR #\(info.number)"
+    }
+
+    private var stateIcon: String {
+        switch info.state {
+        case .open: info.isDraft ? "pencil.circle" : "arrow.triangle.pull"
+        case .merged: "checkmark.circle.fill"
+        case .closed: "xmark.circle"
+        }
+    }
+
+    private var stateColor: Color {
+        switch info.state {
+        case .open: info.isDraft ? MuxyTheme.fgMuted : MuxyTheme.diffAddFg
+        case .merged: MuxyTheme.accent
+        case .closed: MuxyTheme.diffRemoveFg
+        }
+    }
+
+    private var stateLabel: String {
+        switch info.state {
+        case .open: info.isDraft ? "Draft · Open" : "Open"
+        case .merged: "Merged"
+        case .closed: "Closed"
+        }
+    }
+
+    private func infoRow(label: String, value: String, valueColor: Color = MuxyTheme.fg) -> some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(MuxyTheme.fgMuted)
+                .frame(width: 70, alignment: .leading)
+            Text(value)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(valueColor)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 0)
+        }
     }
 }
 
