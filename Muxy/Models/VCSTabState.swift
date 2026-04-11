@@ -916,6 +916,7 @@ final class VCSTabState {
         do {
             try await GitWorktreeService.shared.deleteBranch(repoPath: projectPath, branch: name)
             loadBranches()
+            showStatus("Deleted branch \(name)", isError: false)
         } catch {
             showStatus(errorText(error), isError: true)
         }

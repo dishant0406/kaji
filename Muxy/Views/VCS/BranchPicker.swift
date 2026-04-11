@@ -7,6 +7,7 @@ struct BranchPicker: View {
     let onSelect: (String) -> Void
     let onRefresh: () -> Void
     let onCreateBranch: (() -> Void)?
+    let onDeleteBranch: ((String) -> Void)?
     @State private var showPopover = false
 
     private var branchItems: [BranchItem] {
@@ -64,6 +65,14 @@ struct BranchPicker: View {
                     )
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
+                    .contextMenu {
+                        if let onDeleteBranch, item.name != currentBranch {
+                            Button("Delete Branch", role: .destructive) {
+                                showPopover = false
+                                onDeleteBranch(item.name)
+                            }
+                        }
+                    }
                 }
             )
         }
