@@ -24,7 +24,6 @@ final class VCSTabState {
         let additions: Int
         let deletions: Int
         let truncated: Bool
-        let hideWhitespace: Bool
     }
 
     enum PRLaunchState: Equatable {
@@ -57,7 +56,6 @@ final class VCSTabState {
     let projectPath: String
     var files: [GitStatusFile] = []
     var mode: ViewMode = .unified
-    var hideWhitespace = false
     var expandedFilePaths: Set<String> = []
     var isLoadingFiles = false
     var errorMessage: String?
@@ -232,7 +230,7 @@ final class VCSTabState {
                 }
             }
             do {
-                let newFiles = try await git.changedFiles(repoPath: projectPath, ignoreWhitespace: hideWhitespace)
+                let newFiles = try await git.changedFiles(repoPath: projectPath)
                 guard !Task.isCancelled else { return }
 
                 let oldFilesByPath = Dictionary(files.map { ($0.path, $0) }, uniquingKeysWith: { _, b in b })
@@ -333,8 +331,7 @@ final class VCSTabState {
     }
 
     private func needsDiffReload(filePath: String) -> Bool {
-        guard let cached = diffsByPath[filePath] else { return true }
-        return cached.hideWhitespace != hideWhitespace
+        diffsByPath[filePath] == nil
     }
 
     private func touchCache(filePath: String) {
@@ -392,13 +389,6 @@ final class VCSTabState {
 
     func loadFullDiff(filePath: String) {
         loadDiff(filePath: filePath, forceFull: true)
-    }
-
-    func toggleWhitespace() {
-        hideWhitespace.toggle()
-        for path in expandedFilePaths where needsDiffReload(filePath: path) {
-            loadDiff(filePath: path, forceFull: false)
-        }
     }
 
     struct FileStats {
@@ -872,7 +862,7 @@ final class VCSTabState {
 
         if includeMode == .none { return }
 
-        let status = try await git.changedFiles(repoPath: projectPath, ignoreWhitespace: false)
+        let status = try await git.changedFiles(repoPath: projectPath)
         if status.contains(where: \.isStaged) {
             let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
             let message = trimmedBody.isEmpty ? title : "\(title)\n\n\(trimmedBody)"
@@ -976,7 +966,6 @@ final class VCSTabState {
         diffErrorsByPath[filePath] = nil
 
         let lineLimit = forceFull ? nil : 20000
-        let ignoreWhitespace = hideWhitespace
         let hints = diffHints(for: filePath)
 
         loadDiffTasks[filePath] = Task { [weak self] in
@@ -986,7 +975,6 @@ final class VCSTabState {
                     repoPath: projectPath,
                     filePath: filePath,
                     lineLimit: lineLimit,
-                    ignoreWhitespace: ignoreWhitespace,
                     hints: hints
                 )
                 guard !Task.isCancelled else { return }
@@ -996,8 +984,7 @@ final class VCSTabState {
                         rows: result.rows,
                         additions: result.additions,
                         deletions: result.deletions,
-                        truncated: result.truncated,
-                        hideWhitespace: ignoreWhitespace
+                        truncated: result.truncated
                     ),
                     for: filePath
                 )

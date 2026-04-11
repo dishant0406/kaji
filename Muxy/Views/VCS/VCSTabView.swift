@@ -122,8 +122,6 @@ struct VCSTabView: View {
 
             Spacer(minLength: 0)
 
-            settingsMenu
-
             IconButton(symbol: "arrow.clockwise") {
                 state.refresh()
             }
@@ -195,23 +193,6 @@ struct VCSTabView: View {
         state.openPullRequestError = nil
         state.loadRemoteBranches()
         showCreatePRSheet = true
-    }
-
-    private var settingsMenu: some View {
-        Menu {
-            Toggle("Hide Whitespace Changes", isOn: Binding(
-                get: { state.hideWhitespace },
-                set: { _ in state.toggleWhitespace() }
-            ))
-        } label: {
-            Image(systemName: "gearshape")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(MuxyTheme.fgMuted)
-                .frame(width: 24, height: 24)
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .frame(width: 24)
     }
 
     @ViewBuilder
