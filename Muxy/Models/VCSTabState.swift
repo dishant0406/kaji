@@ -724,21 +724,14 @@ final class VCSTabState {
         return await (subject ?? "", body ?? "")
     }
 
-    func suggestedBranchName(from title: String) async -> String {
+    func suggestedBranchName(from title: String) -> String {
         let base = Self.slugify(title)
         if base.isEmpty { return "" }
-        if await !git.localBranchExists(repoPath: projectPath, name: base),
-           !remoteBranches.contains(base)
-        {
-            return base
-        }
+        let taken = Set(branches).union(remoteBranches)
+        if !taken.contains(base) { return base }
         for suffix in 2 ... 99 {
             let candidate = "\(base)-\(suffix)"
-            if await !git.localBranchExists(repoPath: projectPath, name: candidate),
-               !remoteBranches.contains(candidate)
-            {
-                return candidate
-            }
+            if !taken.contains(candidate) { return candidate }
         }
         return base
     }
@@ -797,7 +790,11 @@ final class VCSTabState {
 
         if Task.isCancelled { return }
 
-        try await stageAndCommitForPR(includeMode: request.includeMode, message: request.title)
+        try await stageAndCommitForPR(
+            includeMode: request.includeMode,
+            title: request.title,
+            body: request.body
+        )
 
         if Task.isCancelled { return }
 
@@ -844,7 +841,7 @@ final class VCSTabState {
         }
     }
 
-    private func stageAndCommitForPR(includeMode: PRIncludeMode, message: String) async throws {
+    private func stageAndCommitForPR(includeMode: PRIncludeMode, title: String, body: String) async throws {
         switch includeMode {
         case .all:
             try await git.stageAll(repoPath: projectPath)
@@ -857,6 +854,8 @@ final class VCSTabState {
 
         let status = try await git.changedFiles(repoPath: projectPath, ignoreWhitespace: false)
         if status.contains(where: \.isStaged) {
+            let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            let message = trimmedBody.isEmpty ? title : "\(title)\n\n\(trimmedBody)"
             _ = try await git.commit(repoPath: projectPath, message: message)
         }
     }

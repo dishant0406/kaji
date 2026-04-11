@@ -171,7 +171,7 @@ struct VCSTabView: View {
                 inProgress: state.isOpeningPullRequest,
                 errorMessage: state.openPullRequestError,
                 suggestedBranchName: { title in
-                    await state.suggestedBranchName(from: title)
+                    state.suggestedBranchName(from: title)
                 },
                 onSubmit: { base, title, body, branchStrategy, includeMode, draft in
                     showCreatePRSheet = false
@@ -280,6 +280,14 @@ struct VCSTabView: View {
     }
 
     private func performMerge(prInfo: GitRepositoryService.PRInfo) {
+        if state.hasAnyChanges {
+            presentDirtyMergeConfirmation(prInfo: prInfo)
+            return
+        }
+        executeMerge(prInfo: prInfo)
+    }
+
+    private func executeMerge(prInfo: GitRepositoryService.PRInfo) {
         let project = owningProject
         let worktree = activeWorktreeForTab
         let defaultBranch = state.defaultBranch
@@ -293,6 +301,39 @@ struct VCSTabView: View {
                     defaultBranch: defaultBranch
                 )
             }
+        }
+    }
+
+    private func presentDirtyMergeConfirmation(prInfo: GitRepositoryService.PRInfo) {
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              window.attachedSheet == nil
+        else { return }
+
+        let worktree = activeWorktreeForTab
+        let willDiscard = worktree.map { !$0.isPrimary } ?? false
+
+        let worktreeWarning = """
+        You have uncommitted changes in this worktree. After the merge, the worktree will be \
+        removed and those changes will be lost permanently.
+        """
+        let branchWarning = """
+        You have uncommitted changes on this branch. After the merge, this branch will be \
+        deleted on the remote and those changes will no longer belong to any branch.
+        """
+
+        let alert = NSAlert()
+        alert.messageText = "Merge PR #\(prInfo.number) with uncommitted changes?"
+        alert.informativeText = willDiscard ? worktreeWarning : branchWarning
+        alert.alertStyle = .critical
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Merge Anyway")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.keyEquivalent = ""
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            executeMerge(prInfo: prInfo)
         }
     }
 
@@ -664,7 +705,12 @@ struct PRPill: View {
             PRPopover(
                 state: state,
                 info: info,
-                onMerge: { onRequestMerge(info) },
+                onMerge: {
+                    if state.hasAnyChanges {
+                        showPRPopover = false
+                    }
+                    onRequestMerge(info)
+                },
                 onClose: {
                     showPRPopover = false
                     onRequestClose(info)

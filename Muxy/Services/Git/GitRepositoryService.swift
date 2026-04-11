@@ -1,6 +1,6 @@
 import Foundation
 
-final class GitRepositoryService: Sendable {
+actor GitRepositoryService {
     struct PatchAndCompareResult {
         let rows: [DiffDisplayRow]
         let truncated: Bool
@@ -90,7 +90,7 @@ final class GitRepositoryService: Sendable {
         }
     }
 
-    nonisolated func currentBranch(repoPath: String) async throws -> String {
+    func currentBranch(repoPath: String) async throws -> String {
         let result = try runGit(repoPath: repoPath, arguments: ["rev-parse", "--abbrev-ref", "HEAD"])
         guard result.status == 0 else {
             throw GitError.commandFailed("Failed to get current branch.")
@@ -98,11 +98,11 @@ final class GitRepositoryService: Sendable {
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    nonisolated func isGhInstalled() async -> Bool {
+    func isGhInstalled() async -> Bool {
         resolveExecutable("gh") != nil
     }
 
-    nonisolated func pullRequestInfo(repoPath: String, branch: String) async -> PRInfo? {
+    func pullRequestInfo(repoPath: String, branch: String) async -> PRInfo? {
         guard let ghPath = resolveExecutable("gh") else { return nil }
         let result = try? runCommand(
             executable: ghPath,
@@ -207,7 +207,7 @@ final class GitRepositoryService: Sendable {
         return PRChecks(status: status, passing: passing, failing: failing, pending: pending, total: total)
     }
 
-    nonisolated func aheadBehind(repoPath: String, branch: String) async -> AheadBehind {
+    func aheadBehind(repoPath: String, branch: String) async -> AheadBehind {
         let upstreamResult = try? runGit(
             repoPath: repoPath,
             arguments: ["rev-parse", "--abbrev-ref", "\(branch)@{upstream}"]
@@ -284,7 +284,7 @@ final class GitRepositoryService: Sendable {
         return body.isEmpty ? nil : body
     }
 
-    nonisolated func defaultBranch(repoPath: String) async -> String? {
+    func defaultBranch(repoPath: String) async -> String? {
         let symbolic = try? runGit(
             repoPath: repoPath,
             arguments: ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]
@@ -661,14 +661,6 @@ final class GitRepositoryService: Sendable {
         guard result.status == 0 else {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to pull." : result.stderr)
         }
-    }
-
-    func localBranchExists(repoPath: String, name: String) async -> Bool {
-        let result = try? runGit(
-            repoPath: repoPath,
-            arguments: ["show-ref", "--verify", "--quiet", "refs/heads/\(name)"]
-        )
-        return result?.status == 0
     }
 
     func listBranches(repoPath: String) async throws -> [String] {

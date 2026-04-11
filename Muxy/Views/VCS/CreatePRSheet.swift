@@ -15,7 +15,7 @@ struct CreatePRSheet: View {
     let context: Context
     let inProgress: Bool
     let errorMessage: String?
-    let suggestedBranchName: (String) async -> String
+    let suggestedBranchName: (String) -> String
     let onSubmit: (
         _ baseBranch: String,
         _ title: String,
@@ -94,7 +94,7 @@ struct CreatePRSheet: View {
         .onChange(of: context.prefillTitle) { _, _ in applyPrefill() }
         .onChange(of: title) { _, newValue in
             guard !userEditedBranchName else { return }
-            Task { newBranchName = await suggestedBranchName(newValue) }
+            newBranchName = suggestedBranchName(newValue)
         }
     }
 
@@ -247,10 +247,8 @@ struct CreatePRSheet: View {
             }
             includeAll = true
             didPrefill = true
-            Task {
-                let seed = title.isEmpty ? context.currentBranch : title
-                newBranchName = await suggestedBranchName(seed)
-            }
+            let seed = title.isEmpty ? context.currentBranch : title
+            newBranchName = suggestedBranchName(seed)
         }
         titleFocused = true
     }
