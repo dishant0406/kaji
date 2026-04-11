@@ -187,6 +187,8 @@ final class VCSTabState {
         pendingRefresh = false
         errorMessage = nil
 
+        let refreshSignpost = GitSignpost.begin("performRefresh", incremental ? "incremental" : "full")
+
         branchTask?.cancel()
         prInfoTask?.cancel()
         branchTask = Task { [weak self] in
@@ -220,6 +222,7 @@ final class VCSTabState {
             guard let self else { return }
             defer {
                 self.isRefreshing = false
+                GitSignpost.end("performRefresh", refreshSignpost)
                 if self.pendingRefresh {
                     self.pendingRefresh = false
                     self.performRefresh(incremental: true)
@@ -246,8 +249,14 @@ final class VCSTabState {
                 }
 
                 var changedPaths: Set<String> = []
-                for file in newFiles where oldFilesByPath[file.path] != file {
-                    changedPaths.insert(file.path)
+                for file in newFiles {
+                    guard let old = oldFilesByPath[file.path] else {
+                        changedPaths.insert(file.path)
+                        continue
+                    }
+                    if Self.stagingStateChanged(old: old, new: file) {
+                        changedPaths.insert(file.path)
+                    }
                 }
 
                 let listChanged = files.map(\.path) != newFiles.map(\.path) || !changedPaths.isEmpty
@@ -279,6 +288,13 @@ final class VCSTabState {
                 isLoadingFiles = false
             }
         }
+    }
+
+    private static func stagingStateChanged(old: GitStatusFile, new: GitStatusFile) -> Bool {
+        old.xStatus != new.xStatus
+            || old.yStatus != new.yStatus
+            || old.isBinary != new.isBinary
+            || old.oldPath != new.oldPath
     }
 
     func toggleExpanded(filePath: String) {
@@ -908,6 +924,21 @@ final class VCSTabState {
         (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
+    private func diffHints(for filePath: String) -> GitRepositoryService.DiffHints {
+        guard let file = files.first(where: { $0.path == filePath }) else {
+            return .unknown
+        }
+        let untrackedOrNew = file.xStatus == "?" || (file.xStatus == "A" && file.yStatus == " ")
+        if untrackedOrNew {
+            return GitRepositoryService.DiffHints(hasStaged: false, hasUnstaged: false, isUntrackedOrNew: true)
+        }
+        return GitRepositoryService.DiffHints(
+            hasStaged: file.isStaged,
+            hasUnstaged: file.isUnstaged,
+            isUntrackedOrNew: false
+        )
+    }
+
     private func loadDiff(filePath: String, forceFull: Bool) {
         loadDiffTasks[filePath]?.cancel()
         loadingDiffPaths.insert(filePath)
@@ -915,6 +946,7 @@ final class VCSTabState {
 
         let lineLimit = forceFull ? nil : 20000
         let ignoreWhitespace = hideWhitespace
+        let hints = diffHints(for: filePath)
 
         loadDiffTasks[filePath] = Task { [weak self] in
             guard let self else { return }
@@ -923,7 +955,8 @@ final class VCSTabState {
                     repoPath: projectPath,
                     filePath: filePath,
                     lineLimit: lineLimit,
-                    ignoreWhitespace: ignoreWhitespace
+                    ignoreWhitespace: ignoreWhitespace,
+                    hints: hints
                 )
                 guard !Task.isCancelled else { return }
 
