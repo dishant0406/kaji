@@ -86,6 +86,26 @@ enum GitProcessRunner {
         }
     }
 
+    static func offMain<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                continuation.resume(returning: work())
+            }
+        }
+    }
+
+    static func offMainThrowing<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    try continuation.resume(returning: work())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     private static func runProcessSync(
         executable: String,
         arguments: [String],

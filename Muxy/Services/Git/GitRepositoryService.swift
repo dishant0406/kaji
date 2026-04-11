@@ -532,13 +532,19 @@ struct GitRepositoryService {
             combinedTruncated = unstagedTruncated
         }
 
-        let parsed = GitDiffParser.parseRows(combinedPatch)
-        return PatchAndCompareResult(
-            rows: GitDiffParser.collapseContextRows(parsed.rows),
-            truncated: combinedTruncated,
-            additions: parsed.additions,
-            deletions: parsed.deletions
-        )
+        return await Self.parsePatchOffMain(combinedPatch, truncated: combinedTruncated)
+    }
+
+    private static func parsePatchOffMain(_ patch: String, truncated: Bool) async -> PatchAndCompareResult {
+        await GitProcessRunner.offMain {
+            let parsed = GitDiffParser.parseRows(patch)
+            return PatchAndCompareResult(
+                rows: GitDiffParser.collapseContextRows(parsed.rows),
+                truncated: truncated,
+                additions: parsed.additions,
+                deletions: parsed.deletions
+            )
+        }
     }
 
     private func resolveAndDiff(
@@ -593,13 +599,7 @@ struct GitRepositoryService {
             combinedTruncated = unstagedResult.truncated
         }
 
-        let parsed = GitDiffParser.parseRows(combinedPatch)
-        return PatchAndCompareResult(
-            rows: GitDiffParser.collapseContextRows(parsed.rows),
-            truncated: combinedTruncated,
-            additions: parsed.additions,
-            deletions: parsed.deletions
-        )
+        return await Self.parsePatchOffMain(combinedPatch, truncated: combinedTruncated)
     }
 
     private func untrackedOrNewFileDiff(repoPath: String, filePath: String, lineLimit: Int?) throws -> PatchAndCompareResult {

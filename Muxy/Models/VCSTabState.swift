@@ -24,6 +24,7 @@ final class VCSTabState {
         let additions: Int
         let deletions: Int
         let truncated: Bool
+        let hideWhitespace: Bool
     }
 
     enum PRLaunchState: Equatable {
@@ -141,8 +142,10 @@ final class VCSTabState {
     @ObservationIgnored private var watcher: GitDirectoryWatcher?
     @ObservationIgnored private var isRefreshing = false
     @ObservationIgnored private var pendingRefresh = false
+    @ObservationIgnored private var diffAccessOrder: [String] = []
     private(set) var hasCompletedInitialLoad = false
     @ObservationIgnored private static let commitsPerPage = 100
+    @ObservationIgnored private static let diffCacheCap = 50
 
     init(projectPath: String) {
         self.projectPath = projectPath
@@ -240,11 +243,7 @@ final class VCSTabState {
                 if !removedPaths.isEmpty {
                     expandedFilePaths = expandedFilePaths.intersection(validPaths)
                     for path in removedPaths {
-                        diffsByPath.removeValue(forKey: path)
-                        loadingDiffPaths.remove(path)
-                        diffErrorsByPath.removeValue(forKey: path)
-                        loadDiffTasks[path]?.cancel()
-                        loadDiffTasks.removeValue(forKey: path)
+                        evictDiff(filePath: path)
                     }
                 }
 
@@ -256,6 +255,7 @@ final class VCSTabState {
                     }
                     if Self.stagingStateChanged(old: old, new: file) {
                         changedPaths.insert(file.path)
+                        evictDiff(filePath: file.path)
                     }
                 }
 
@@ -284,6 +284,7 @@ final class VCSTabState {
                 diffErrorsByPath = [:]
                 loadDiffTasks.values.forEach { $0.cancel() }
                 loadDiffTasks = [:]
+                diffAccessOrder = []
                 errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                 isLoadingFiles = false
             }
@@ -300,23 +301,26 @@ final class VCSTabState {
     func toggleExpanded(filePath: String) {
         if expandedFilePaths.contains(filePath) {
             expandedFilePaths.remove(filePath)
-            evictDiff(filePath: filePath)
+            loadDiffTasks[filePath]?.cancel()
+            loadDiffTasks.removeValue(forKey: filePath)
+            loadingDiffPaths.remove(filePath)
             return
         }
 
         expandedFilePaths.insert(filePath)
-        if diffsByPath[filePath] == nil {
+        if needsDiffReload(filePath: filePath) {
             loadDiff(filePath: filePath, forceFull: false)
+        } else {
+            touchCache(filePath: filePath)
         }
     }
 
     func collapseAll() {
         expandedFilePaths.removeAll()
-        diffsByPath.removeAll()
-        diffErrorsByPath.removeAll()
         loadDiffTasks.values.forEach { $0.cancel() }
         loadDiffTasks.removeAll()
         loadingDiffPaths.removeAll()
+        diffErrorsByPath.removeAll()
     }
 
     private func evictDiff(filePath: String) {
@@ -325,6 +329,32 @@ final class VCSTabState {
         loadDiffTasks[filePath]?.cancel()
         loadDiffTasks.removeValue(forKey: filePath)
         loadingDiffPaths.remove(filePath)
+        diffAccessOrder.removeAll { $0 == filePath }
+    }
+
+    private func needsDiffReload(filePath: String) -> Bool {
+        guard let cached = diffsByPath[filePath] else { return true }
+        return cached.hideWhitespace != hideWhitespace
+    }
+
+    private func touchCache(filePath: String) {
+        diffAccessOrder.removeAll { $0 == filePath }
+        diffAccessOrder.append(filePath)
+    }
+
+    private func storeDiff(_ diff: LoadedDiff, for filePath: String) {
+        diffsByPath[filePath] = diff
+        touchCache(filePath: filePath)
+        enforceDiffCacheCap()
+    }
+
+    private func enforceDiffCacheCap() {
+        while diffAccessOrder.count > Self.diffCacheCap {
+            let oldest = diffAccessOrder.removeFirst()
+            if expandedFilePaths.contains(oldest) { continue }
+            diffsByPath.removeValue(forKey: oldest)
+            diffErrorsByPath.removeValue(forKey: oldest)
+        }
     }
 
     func expandAll() {
@@ -337,8 +367,10 @@ final class VCSTabState {
             var toLoad: [String] = []
             for file in files where !updated.contains(file.path) {
                 updated.insert(file.path)
-                if diffsByPath[file.path] == nil {
+                if needsDiffReload(filePath: file.path) {
                     toLoad.append(file.path)
+                } else {
+                    touchCache(filePath: file.path)
                 }
             }
             expandedFilePaths = updated
@@ -351,8 +383,6 @@ final class VCSTabState {
         var updated = expandedFilePaths
         for file in files where updated.contains(file.path) {
             updated.remove(file.path)
-            diffsByPath.removeValue(forKey: file.path)
-            diffErrorsByPath.removeValue(forKey: file.path)
             loadDiffTasks[file.path]?.cancel()
             loadDiffTasks.removeValue(forKey: file.path)
             loadingDiffPaths.remove(file.path)
@@ -366,8 +396,9 @@ final class VCSTabState {
 
     func toggleWhitespace() {
         hideWhitespace.toggle()
-        diffsByPath.removeAll()
-        performRefresh(incremental: false)
+        for path in expandedFilePaths where needsDiffReload(filePath: path) {
+            loadDiff(filePath: path, forceFull: false)
+        }
     }
 
     struct FileStats {
@@ -960,11 +991,15 @@ final class VCSTabState {
                 )
                 guard !Task.isCancelled else { return }
 
-                diffsByPath[filePath] = LoadedDiff(
-                    rows: result.rows,
-                    additions: result.additions,
-                    deletions: result.deletions,
-                    truncated: result.truncated
+                storeDiff(
+                    LoadedDiff(
+                        rows: result.rows,
+                        additions: result.additions,
+                        deletions: result.deletions,
+                        truncated: result.truncated,
+                        hideWhitespace: ignoreWhitespace
+                    ),
+                    for: filePath
                 )
                 loadingDiffPaths.remove(filePath)
                 loadDiffTasks.removeValue(forKey: filePath)
