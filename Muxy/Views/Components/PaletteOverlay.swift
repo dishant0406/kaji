@@ -3,7 +3,7 @@ import SwiftUI
 /// A generic command-palette overlay with a search field, a scrollable
 /// results list, and keyboard navigation. Used by Quick Open (files) and
 /// the Worktree Switcher.
-struct PaletteOverlay<Item: Identifiable>: View {
+struct PaletteOverlay<Item: Identifiable & Sendable>: View {
     let placeholder: String
     let emptyLabel: String
     let noMatchLabel: String

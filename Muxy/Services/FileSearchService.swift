@@ -1,6 +1,6 @@
 import Foundation
 
-struct FileSearchResult: Identifiable, Equatable {
+struct FileSearchResult: Identifiable, Equatable, Sendable {
     let id: String
     let relativePath: String
     let absolutePath: String
