@@ -25,9 +25,69 @@ actor GitRepositoryService {
         }
     }
 
-    struct PRInfo {
+    struct PRInfo: Equatable {
         let url: String
         let number: Int
+        let state: PRState
+        let isDraft: Bool
+        let baseBranch: String
+        let mergeable: Bool?
+        let checks: PRChecks
+    }
+
+    enum PRState: String {
+        case open = "OPEN"
+        case closed = "CLOSED"
+        case merged = "MERGED"
+    }
+
+    struct PRChecks: Equatable {
+        let status: PRChecksStatus
+        let passing: Int
+        let failing: Int
+        let pending: Int
+        let total: Int
+    }
+
+    enum PRChecksStatus: Equatable {
+        case none
+        case pending
+        case success
+        case failure
+    }
+
+    struct AheadBehind: Equatable {
+        let ahead: Int
+        let behind: Int
+        let hasUpstream: Bool
+    }
+
+    enum PRCreateError: LocalizedError {
+        case ghNotInstalled
+        case commandFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .ghNotInstalled:
+                "GitHub CLI (gh) is not installed. Install it with `brew install gh`."
+            case let .commandFailed(message):
+                message
+            }
+        }
+    }
+
+    enum PRMergeMethod {
+        case merge
+        case squash
+        case rebase
+
+        var ghFlag: String {
+            switch self {
+            case .merge: "--merge"
+            case .squash: "--squash"
+            case .rebase: "--rebase"
+            }
+        }
     }
 
     func currentBranch(repoPath: String) async throws -> String {
@@ -38,19 +98,315 @@ actor GitRepositoryService {
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    func isGhInstalled() async -> Bool {
+        resolveExecutable("gh") != nil
+    }
+
     func pullRequestInfo(repoPath: String, branch: String) async -> PRInfo? {
         guard let ghPath = resolveExecutable("gh") else { return nil }
         let result = try? runCommand(
             executable: ghPath,
-            arguments: ["pr", "view", branch, "--json", "url,number", "-q", ".url + \"\\n\" + (.number | tostring)"],
+            arguments: [
+                "pr", "view", branch,
+                "--json", "url,number,state,isDraft,baseRefName,mergeable,statusCheckRollup",
+            ],
             workingDirectory: repoPath
         )
-        guard let result, result.status == 0 else { return nil }
-        let lines = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\n")
-        guard lines.count >= 2,
-              let number = Int(lines[1])
+        guard let result, result.status == 0,
+              let data = result.stdout.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
-        return PRInfo(url: String(lines[0]), number: number)
+
+        guard let url = json["url"] as? String,
+              let number = json["number"] as? Int,
+              let stateRaw = json["state"] as? String
+        else { return nil }
+
+        let state = PRState(rawValue: stateRaw) ?? .open
+        let isDraft = json["isDraft"] as? Bool ?? false
+        let baseBranch = json["baseRefName"] as? String ?? ""
+        let mergeableRaw = json["mergeable"] as? String
+        let mergeable: Bool? = switch mergeableRaw {
+        case "MERGEABLE": true
+        case "CONFLICTING": false
+        default: nil
+        }
+
+        let rollup = json["statusCheckRollup"] as? [[String: Any]] ?? []
+        let checks = Self.parseStatusChecks(rollup)
+
+        return PRInfo(
+            url: url,
+            number: number,
+            state: state,
+            isDraft: isDraft,
+            baseBranch: baseBranch,
+            mergeable: mergeable,
+            checks: checks
+        )
+    }
+
+    private static func parseStatusChecks(_ rollup: [[String: Any]]) -> PRChecks {
+        if rollup.isEmpty {
+            return PRChecks(status: .none, passing: 0, failing: 0, pending: 0, total: 0)
+        }
+
+        var passing = 0
+        var failing = 0
+        var pending = 0
+
+        for entry in rollup {
+            let typename = entry["__typename"] as? String ?? ""
+            let outcome: String
+            if typename == "CheckRun" {
+                let status = (entry["status"] as? String ?? "").uppercased()
+                let conclusion = (entry["conclusion"] as? String ?? "").uppercased()
+                if status != "COMPLETED" {
+                    outcome = "PENDING"
+                } else {
+                    outcome = conclusion
+                }
+            } else {
+                outcome = (entry["state"] as? String ?? "").uppercased()
+            }
+
+            switch outcome {
+            case "SUCCESS",
+                 "NEUTRAL",
+                 "SKIPPED":
+                passing += 1
+            case "FAILURE",
+                 "ERROR",
+                 "CANCELLED",
+                 "TIMED_OUT",
+                 "ACTION_REQUIRED",
+                 "STARTUP_FAILURE":
+                failing += 1
+            case "PENDING",
+                 "QUEUED",
+                 "IN_PROGRESS",
+                 "WAITING",
+                 "REQUESTED",
+                 "EXPECTED":
+                pending += 1
+            default:
+                pending += 1
+            }
+        }
+
+        let total = passing + failing + pending
+        let status: PRChecksStatus = if failing > 0 {
+            .failure
+        } else if pending > 0 {
+            .pending
+        } else if passing > 0 {
+            .success
+        } else {
+            .none
+        }
+        return PRChecks(status: status, passing: passing, failing: failing, pending: pending, total: total)
+    }
+
+    func aheadBehind(repoPath: String, branch: String) async -> AheadBehind {
+        let upstreamResult = try? runGit(
+            repoPath: repoPath,
+            arguments: ["rev-parse", "--abbrev-ref", "\(branch)@{upstream}"]
+        )
+        guard let upstreamResult, upstreamResult.status == 0 else {
+            return AheadBehind(ahead: 0, behind: 0, hasUpstream: false)
+        }
+
+        let countsResult = try? runGit(
+            repoPath: repoPath,
+            arguments: ["rev-list", "--left-right", "--count", "\(branch)...\(branch)@{upstream}"]
+        )
+        guard let countsResult, countsResult.status == 0 else {
+            return AheadBehind(ahead: 0, behind: 0, hasUpstream: true)
+        }
+        let parts = countsResult.stdout
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(whereSeparator: { $0 == "\t" || $0 == " " })
+        guard parts.count == 2,
+              let ahead = Int(parts[0]),
+              let behind = Int(parts[1])
+        else {
+            return AheadBehind(ahead: 0, behind: 0, hasUpstream: true)
+        }
+        return AheadBehind(ahead: ahead, behind: behind, hasUpstream: true)
+    }
+
+    func hasRemoteBranch(repoPath: String, branch: String) async -> Bool {
+        let result = try? runGit(
+            repoPath: repoPath,
+            arguments: ["ls-remote", "--heads", "origin", branch]
+        )
+        guard let result, result.status == 0 else { return false }
+        return !result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    func listRemoteBranches(repoPath: String) async throws -> [String] {
+        let result = try runGit(
+            repoPath: repoPath,
+            arguments: [
+                "for-each-ref",
+                "--format=%(refname:short)",
+                "refs/remotes/origin",
+            ]
+        )
+        guard result.status == 0 else {
+            throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to list remote branches." : result.stderr)
+        }
+        return result.stdout
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.hasSuffix("/HEAD") && $0.hasPrefix("origin/") }
+            .map { String($0.dropFirst("origin/".count)) }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    func lastCommitSubject(repoPath: String) async -> String? {
+        let result = try? runGit(
+            repoPath: repoPath,
+            arguments: ["log", "-1", "--pretty=%s"]
+        )
+        guard let result, result.status == 0 else { return nil }
+        let subject = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return subject.isEmpty ? nil : subject
+    }
+
+    func lastCommitBody(repoPath: String) async -> String? {
+        let result = try? runGit(
+            repoPath: repoPath,
+            arguments: ["log", "-1", "--pretty=%b"]
+        )
+        guard let result, result.status == 0 else { return nil }
+        let body = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return body.isEmpty ? nil : body
+    }
+
+    func defaultBranch(repoPath: String) async -> String? {
+        let symbolic = try? runGit(
+            repoPath: repoPath,
+            arguments: ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]
+        )
+        if let symbolic, symbolic.status == 0 {
+            let value = symbolic.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            if value.hasPrefix("origin/") {
+                return String(value.dropFirst("origin/".count))
+            }
+            if !value.isEmpty { return value }
+        }
+
+        if let ghPath = resolveExecutable("gh") {
+            let result = try? runCommand(
+                executable: ghPath,
+                arguments: ["repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name"],
+                workingDirectory: repoPath
+            )
+            if let result, result.status == 0 {
+                let trimmed = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { return trimmed }
+            }
+        }
+
+        return nil
+    }
+
+    func createPullRequest(
+        repoPath: String,
+        branch: String,
+        baseBranch: String,
+        title: String,
+        body: String,
+        draft: Bool = false
+    ) async throws -> PRInfo {
+        guard let ghPath = resolveExecutable("gh") else {
+            throw PRCreateError.ghNotInstalled
+        }
+
+        var arguments: [String] = [
+            "pr", "create",
+            "--head", branch,
+            "--base", baseBranch,
+            "--title", title,
+        ]
+        arguments.append("--body")
+        arguments.append(body)
+        if draft {
+            arguments.append("--draft")
+        }
+
+        let createResult = try runCommand(
+            executable: ghPath,
+            arguments: arguments,
+            workingDirectory: repoPath
+        )
+        guard createResult.status == 0 else {
+            let message = createResult.stderr.isEmpty ? createResult.stdout : createResult.stderr
+            throw PRCreateError.commandFailed(
+                message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "Failed to create pull request."
+                    : message.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }
+
+        if let info = await pullRequestInfo(repoPath: repoPath, branch: branch) {
+            return info
+        }
+
+        let fallbackURL = createResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        throw PRCreateError.commandFailed(
+            fallbackURL.isEmpty
+                ? "Pull request created but could not be read back."
+                : "Pull request created at \(fallbackURL) but could not be read back."
+        )
+    }
+
+    func mergePullRequest(
+        repoPath: String,
+        number: Int,
+        method: PRMergeMethod = .merge,
+        deleteBranch: Bool = true
+    ) async throws {
+        guard let ghPath = resolveExecutable("gh") else {
+            throw PRCreateError.ghNotInstalled
+        }
+        var arguments = ["pr", "merge", String(number), method.ghFlag]
+        if deleteBranch {
+            arguments.append("--delete-branch")
+        }
+        let result = try runCommand(
+            executable: ghPath,
+            arguments: arguments,
+            workingDirectory: repoPath
+        )
+        guard result.status == 0 else {
+            let message = result.stderr.isEmpty ? result.stdout : result.stderr
+            throw PRCreateError.commandFailed(
+                message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "Failed to merge pull request."
+                    : message.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }
+    }
+
+    func closePullRequest(repoPath: String, number: Int) async throws {
+        guard let ghPath = resolveExecutable("gh") else {
+            throw PRCreateError.ghNotInstalled
+        }
+        let result = try runCommand(
+            executable: ghPath,
+            arguments: ["pr", "close", String(number)],
+            workingDirectory: repoPath
+        )
+        guard result.status == 0 else {
+            let message = result.stderr.isEmpty ? result.stdout : result.stderr
+            throw PRCreateError.commandFailed(
+                message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "Failed to close pull request."
+                    : message.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }
     }
 
     func changedFiles(repoPath: String, ignoreWhitespace: Bool = false) async throws -> [GitStatusFile] {
@@ -518,7 +874,7 @@ actor GitRepositoryService {
         let truncated: Bool
     }
 
-    private func runGit(repoPath: String, arguments: [String], lineLimit: Int? = nil) throws -> GitRunResult {
+    nonisolated private func runGit(repoPath: String, arguments: [String], lineLimit: Int? = nil) throws -> GitRunResult {
         let args = ["git", "-C", repoPath] + arguments
         return try runGitSync(arguments: args, lineLimit: lineLimit)
     }
