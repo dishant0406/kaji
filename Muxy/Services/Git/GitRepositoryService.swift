@@ -32,12 +32,28 @@ final class GitRepositoryService: Sendable {
         let isDraft: Bool
         let baseBranch: String
         let mergeable: Bool?
+        let checks: PRChecks
     }
 
     enum PRState: String {
         case open = "OPEN"
         case closed = "CLOSED"
         case merged = "MERGED"
+    }
+
+    struct PRChecks: Equatable {
+        let status: PRChecksStatus
+        let passing: Int
+        let failing: Int
+        let pending: Int
+        let total: Int
+    }
+
+    enum PRChecksStatus: Equatable {
+        case none
+        case pending
+        case success
+        case failure
     }
 
     struct AheadBehind: Equatable {
@@ -88,49 +104,107 @@ final class GitRepositoryService: Sendable {
 
     nonisolated func pullRequestInfo(repoPath: String, branch: String) async -> PRInfo? {
         guard let ghPath = resolveExecutable("gh") else { return nil }
-        let separator = "\u{1F}"
-        let query = [
-            ".url",
-            "(.number | tostring)",
-            ".state",
-            "(.isDraft | tostring)",
-            ".baseRefName",
-            "(.mergeable // \"\")",
-        ].joined(separator: " + \"\(separator)\" + ")
         let result = try? runCommand(
             executable: ghPath,
             arguments: [
                 "pr", "view", branch,
-                "--json", "url,number,state,isDraft,baseRefName,mergeable",
-                "-q", query,
+                "--json", "url,number,state,isDraft,baseRefName,mergeable,statusCheckRollup",
             ],
             workingDirectory: repoPath
         )
-        guard let result, result.status == 0 else { return nil }
-        let fields = result.stdout
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: Character(separator), omittingEmptySubsequences: false)
-            .map(String.init)
-        guard fields.count >= 6,
-              let number = Int(fields[1])
+        guard let result, result.status == 0,
+              let data = result.stdout.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
 
-        let state = PRState(rawValue: fields[2]) ?? .open
-        let isDraft = fields[3] == "true"
-        let mergeable: Bool? = switch fields[5] {
+        guard let url = json["url"] as? String,
+              let number = json["number"] as? Int,
+              let stateRaw = json["state"] as? String
+        else { return nil }
+
+        let state = PRState(rawValue: stateRaw) ?? .open
+        let isDraft = json["isDraft"] as? Bool ?? false
+        let baseBranch = json["baseRefName"] as? String ?? ""
+        let mergeableRaw = json["mergeable"] as? String
+        let mergeable: Bool? = switch mergeableRaw {
         case "MERGEABLE": true
         case "CONFLICTING": false
         default: nil
         }
 
+        let rollup = json["statusCheckRollup"] as? [[String: Any]] ?? []
+        let checks = Self.parseStatusChecks(rollup)
+
         return PRInfo(
-            url: fields[0],
+            url: url,
             number: number,
             state: state,
             isDraft: isDraft,
-            baseBranch: fields[4],
-            mergeable: mergeable
+            baseBranch: baseBranch,
+            mergeable: mergeable,
+            checks: checks
         )
+    }
+
+    private static func parseStatusChecks(_ rollup: [[String: Any]]) -> PRChecks {
+        if rollup.isEmpty {
+            return PRChecks(status: .none, passing: 0, failing: 0, pending: 0, total: 0)
+        }
+
+        var passing = 0
+        var failing = 0
+        var pending = 0
+
+        for entry in rollup {
+            let typename = entry["__typename"] as? String ?? ""
+            let outcome: String
+            if typename == "CheckRun" {
+                let status = (entry["status"] as? String ?? "").uppercased()
+                let conclusion = (entry["conclusion"] as? String ?? "").uppercased()
+                if status != "COMPLETED" {
+                    outcome = "PENDING"
+                } else {
+                    outcome = conclusion
+                }
+            } else {
+                outcome = (entry["state"] as? String ?? "").uppercased()
+            }
+
+            switch outcome {
+            case "SUCCESS",
+                 "NEUTRAL",
+                 "SKIPPED":
+                passing += 1
+            case "FAILURE",
+                 "ERROR",
+                 "CANCELLED",
+                 "TIMED_OUT",
+                 "ACTION_REQUIRED",
+                 "STARTUP_FAILURE":
+                failing += 1
+            case "PENDING",
+                 "QUEUED",
+                 "IN_PROGRESS",
+                 "WAITING",
+                 "REQUESTED",
+                 "EXPECTED":
+                pending += 1
+            default:
+                pending += 1
+            }
+        }
+
+        let total = passing + failing + pending
+        let status: PRChecksStatus = if failing > 0 {
+            .failure
+        } else if pending > 0 {
+            .pending
+        } else if passing > 0 {
+            .success
+        } else {
+            .none
+        }
+        return PRChecks(status: status, passing: passing, failing: failing, pending: pending, total: total)
     }
 
     nonisolated func aheadBehind(repoPath: String, branch: String) async -> AheadBehind {
@@ -291,14 +365,19 @@ final class GitRepositoryService: Sendable {
     func mergePullRequest(
         repoPath: String,
         number: Int,
-        method: PRMergeMethod = .merge
+        method: PRMergeMethod = .merge,
+        deleteBranch: Bool = true
     ) async throws {
         guard let ghPath = resolveExecutable("gh") else {
             throw PRCreateError.ghNotInstalled
         }
+        var arguments = ["pr", "merge", String(number), method.ghFlag]
+        if deleteBranch {
+            arguments.append("--delete-branch")
+        }
         let result = try runCommand(
             executable: ghPath,
-            arguments: ["pr", "merge", String(number), method.ghFlag],
+            arguments: arguments,
             workingDirectory: repoPath
         )
         guard result.status == 0 else {

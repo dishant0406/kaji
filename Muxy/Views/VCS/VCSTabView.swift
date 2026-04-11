@@ -174,6 +174,8 @@ struct VCSTabView: View {
                     await state.suggestedBranchName(from: title)
                 },
                 onSubmit: { base, title, body, branchStrategy, includeMode, draft in
+                    showCreatePRSheet = false
+                    ToastState.shared.show("Creating pull request…")
                     state.openPullRequest(
                         VCSTabState.PRCreateRequest(
                             baseBranch: base,
@@ -191,9 +193,10 @@ struct VCSTabView: View {
                 }
             )
         }
-        .onChange(of: state.pullRequestInfo?.number) { _, number in
-            if number != nil, showCreatePRSheet {
-                showCreatePRSheet = false
+        .onChange(of: state.openPullRequestError) { _, error in
+            if let error {
+                ToastState.shared.show("Failed to create PR: \(error)")
+                state.openPullRequestError = nil
             }
         }
     }
@@ -307,7 +310,6 @@ struct VCSTabView: View {
         if let defaultBranch, defaultBranch != mergedBranch {
             await state.switchBranchAndRefresh(defaultBranch)
         }
-        await state.deleteLocalBranch(mergedBranch)
     }
 
     private func removeWorktreeAfterMerge(project: Project, worktree: Worktree) {
@@ -662,10 +664,7 @@ struct PRPill: View {
             PRPopover(
                 state: state,
                 info: info,
-                onMerge: {
-                    showPRPopover = false
-                    onRequestMerge(info)
-                },
+                onMerge: { onRequestMerge(info) },
                 onClose: {
                     showPRPopover = false
                     onRequestClose(info)
@@ -681,21 +680,40 @@ struct PRPill: View {
                 }
             )
         }
+        .onChange(of: state.pullRequestInfo?.number) { _, number in
+            if number == nil, showPRPopover {
+                showPRPopover = false
+            }
+        }
     }
 
     private func prStateIcon(_ info: GitRepositoryService.PRInfo) -> String {
+        if info.state == .open {
+            switch info.checks.status {
+            case .failure: return "xmark.octagon.fill"
+            case .pending: return "clock"
+            default: break
+            }
+        }
         switch info.state {
-        case .open: info.isDraft ? "pencil.circle" : "arrow.triangle.pull"
-        case .merged: "checkmark.circle.fill"
-        case .closed: "xmark.circle"
+        case .open: return info.isDraft ? "pencil.circle" : "arrow.triangle.pull"
+        case .merged: return "checkmark.circle.fill"
+        case .closed: return "xmark.circle"
         }
     }
 
     private func prStateColor(_ info: GitRepositoryService.PRInfo) -> Color {
+        if info.state == .open {
+            switch info.checks.status {
+            case .failure: return MuxyTheme.diffRemoveFg
+            case .pending: return MuxyTheme.fgMuted
+            default: break
+            }
+        }
         switch info.state {
-        case .open: info.isDraft ? MuxyTheme.fgMuted : MuxyTheme.diffAddFg
-        case .merged: MuxyTheme.accent
-        case .closed: MuxyTheme.diffRemoveFg
+        case .open: return info.isDraft ? MuxyTheme.fgMuted : MuxyTheme.diffAddFg
+        case .merged: return MuxyTheme.accent
+        case .closed: return MuxyTheme.diffRemoveFg
         }
     }
 
@@ -768,6 +786,7 @@ struct PRPopover: View {
                         valueColor: mergeable ? MuxyTheme.diffAddFg : MuxyTheme.diffRemoveFg
                     )
                 }
+                checksRow
             }
 
             Divider()
@@ -797,7 +816,7 @@ struct PRPopover: View {
                             Image(systemName: "arrow.triangle.merge")
                                 .font(.system(size: 11, weight: .bold))
                         }
-                        Text("Merge")
+                        Text(state.isMergingPullRequest ? "Merging…" : "Merge")
                             .font(.system(size: 11, weight: .medium))
                         Spacer(minLength: 0)
                     }
@@ -843,27 +862,71 @@ struct PRPopover: View {
     private var mergeDisabled: Bool {
         if state.isMergingPullRequest { return true }
         if info.mergeable == false { return true }
+        if info.checks.status == .failure { return true }
+        if info.checks.status == .pending { return true }
         return false
     }
 
     private var mergeHelp: String {
         if info.mergeable == false { return "This PR has conflicts and cannot be merged." }
+        if info.checks.status == .failure { return "Checks are failing. Fix them before merging." }
+        if info.checks.status == .pending { return "Checks are still running. Wait before merging." }
         return "Merge PR #\(info.number)"
     }
 
+    @ViewBuilder
+    private var checksRow: some View {
+        switch info.checks.status {
+        case .none:
+            EmptyView()
+        case .success:
+            infoRow(
+                label: "Checks",
+                value: "\(info.checks.passing)/\(info.checks.total) passing",
+                valueColor: MuxyTheme.diffAddFg
+            )
+        case .pending:
+            infoRow(
+                label: "Checks",
+                value: "\(info.checks.pending) running",
+                valueColor: MuxyTheme.fgMuted
+            )
+        case .failure:
+            infoRow(
+                label: "Checks",
+                value: "\(info.checks.failing) failing",
+                valueColor: MuxyTheme.diffRemoveFg
+            )
+        }
+    }
+
     private var stateIcon: String {
+        if info.state == .open {
+            switch info.checks.status {
+            case .failure: return "xmark.octagon.fill"
+            case .pending: return "clock"
+            default: break
+            }
+        }
         switch info.state {
-        case .open: info.isDraft ? "pencil.circle" : "arrow.triangle.pull"
-        case .merged: "checkmark.circle.fill"
-        case .closed: "xmark.circle"
+        case .open: return info.isDraft ? "pencil.circle" : "arrow.triangle.pull"
+        case .merged: return "checkmark.circle.fill"
+        case .closed: return "xmark.circle"
         }
     }
 
     private var stateColor: Color {
+        if info.state == .open {
+            switch info.checks.status {
+            case .failure: return MuxyTheme.diffRemoveFg
+            case .pending: return MuxyTheme.fgMuted
+            default: break
+            }
+        }
         switch info.state {
-        case .open: info.isDraft ? MuxyTheme.fgMuted : MuxyTheme.diffAddFg
-        case .merged: MuxyTheme.accent
-        case .closed: MuxyTheme.diffRemoveFg
+        case .open: return info.isDraft ? MuxyTheme.fgMuted : MuxyTheme.diffAddFg
+        case .merged: return MuxyTheme.accent
+        case .closed: return MuxyTheme.diffRemoveFg
         }
     }
 
