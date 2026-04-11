@@ -4,6 +4,7 @@ import SwiftUI
 struct MuxyCommands: Commands {
     let appState: AppState
     let projectStore: ProjectStore
+    let worktreeStore: WorktreeStore
     let keyBindings: KeyBindingStore
     let config: MuxyConfig
     let ghostty: GhosttyService
@@ -57,7 +58,11 @@ struct MuxyCommands: Commands {
 
         CommandGroup(replacing: .newItem) {
             Button("Open Project...") {
-                openProject()
+                ProjectOpenService.openProject(
+                    appState: appState,
+                    projectStore: projectStore,
+                    worktreeStore: worktreeStore
+                )
             }
             .shortcut(for: .openProject, store: keyBindings)
 
@@ -141,7 +146,7 @@ struct MuxyCommands: Commands {
             Button("Close Pane") {
                 guard isMainWindowFocused else { return }
                 guard let projectID = appState.activeProjectID,
-                      let areaID = appState.focusedAreaID[projectID]
+                      let areaID = appState.focusedAreaID(for: projectID)
                 else { return }
                 appState.closeArea(areaID, projectID: projectID)
             }
@@ -208,13 +213,19 @@ struct MuxyCommands: Commands {
         CommandGroup(after: .sidebar) {
             Button("Next Project") {
                 guard isMainWindowFocused else { return }
-                appState.selectNextProject(projects: projectStore.projects)
+                appState.selectNextProject(
+                    projects: projectStore.projects,
+                    worktrees: worktreeStore.worktrees
+                )
             }
             .shortcut(for: .nextProject, store: keyBindings)
 
             Button("Previous Project") {
                 guard isMainWindowFocused else { return }
-                appState.selectPreviousProject(projects: projectStore.projects)
+                appState.selectPreviousProject(
+                    projects: projectStore.projects,
+                    worktrees: worktreeStore.worktrees
+                )
             }
             .shortcut(for: .previousProject, store: keyBindings)
 
@@ -224,7 +235,11 @@ struct MuxyCommands: Commands {
                 if let action = ShortcutAction.projectAction(for: index) {
                     Button("Project \(index)") {
                         guard isMainWindowFocused else { return }
-                        appState.selectProjectByIndex(index - 1, projects: projectStore.projects)
+                        appState.selectProjectByIndex(
+                            index - 1,
+                            projects: projectStore.projects,
+                            worktrees: worktreeStore.worktrees
+                        )
                     }
                     .shortcut(for: action, store: keyBindings)
                 }
@@ -246,21 +261,5 @@ struct MuxyCommands: Commands {
             }
             .shortcut(for: .toggleThemePicker, store: keyBindings)
         }
-    }
-
-    private func openProject() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.message = "Select a project folder"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        let project = Project(
-            name: url.lastPathComponent,
-            path: url.path(percentEncoded: false),
-            sortOrder: projectStore.projects.count
-        )
-        projectStore.add(project)
-        appState.selectProject(project)
     }
 }
