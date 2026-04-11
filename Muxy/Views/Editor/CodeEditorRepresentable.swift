@@ -551,6 +551,8 @@ struct CodeEditorView: NSViewRepresentable {
             resetPendingEditState()
             state.markModified()
             isUpdating = false
+            resetHighlightedRange()
+            highlightVisibleRange(force: true)
         }
 
         func textView(
