@@ -1,0 +1,155 @@
+import SwiftUI
+
+/// A generic command-palette overlay with a search field, a scrollable
+/// results list, and keyboard navigation. Used by Quick Open (files) and
+/// the Worktree Switcher.
+struct PaletteOverlay<Item: Identifiable, Row: View>: View {
+    let placeholder: String
+    let emptyLabel: String
+    let noMatchLabel: String
+    /// Provides items for a given query. Called on every query change.
+    let search: (String) async -> [Item]
+    let onSelect: (Item) -> Void
+    let onDismiss: () -> Void
+    @ViewBuilder let row: (Item, Bool) -> Row
+
+    @State private var query = ""
+    @State private var results: [Item] = []
+    @State private var highlightedIndex: Int? = 0
+    @State private var isSearching = false
+    @FocusState private var searchFieldFocused: Bool
+    @State private var searchTask: Task<Void, Never>?
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            VStack(spacing: 0) {
+                searchField
+                Divider().overlay(MuxyTheme.border)
+                resultsList
+            }
+            .frame(width: 500, height: 380)
+            .background(MuxyTheme.bg)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(MuxyTheme.border, lineWidth: 1))
+            .shadow(color: .black.opacity(0.4), radius: 20, y: 8)
+            .padding(.top, 60)
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+        .onAppear {
+            searchFieldFocused = true
+            performSearch()
+        }
+        .onDisappear {
+            searchTask?.cancel()
+        }
+        .onKeyPress(.escape) {
+            onDismiss()
+            return .handled
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(MuxyTheme.fgMuted)
+                .font(.system(size: 13))
+            ZStack(alignment: .leading) {
+                if query.isEmpty {
+                    Text(placeholder)
+                        .font(.system(size: 13))
+                        .foregroundStyle(MuxyTheme.fgDim)
+                }
+                TextField("", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .foregroundStyle(MuxyTheme.fg)
+                    .focused($searchFieldFocused)
+                    .onSubmit { confirmSelection() }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .onChange(of: query) {
+            performSearch()
+        }
+        .onKeyPress(.upArrow) {
+            moveHighlight(-1)
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            moveHighlight(1)
+            return .handled
+        }
+    }
+
+    private var resultsList: some View {
+        Group {
+            if results.isEmpty, !isSearching {
+                VStack {
+                    Spacer()
+                    Text(query.isEmpty ? emptyLabel : noMatchLabel)
+                        .font(.system(size: 12))
+                        .foregroundStyle(MuxyTheme.fgMuted)
+                    Spacer()
+                }
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
+                                row(item, index == highlightedIndex)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { onSelect(item) }
+                                    .id(item.id)
+                            }
+                        }
+                    }
+                    .onChange(of: highlightedIndex) { _, newIndex in
+                        guard let newIndex, newIndex < results.count else { return }
+                        proxy.scrollTo(results[newIndex].id, anchor: nil)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private func performSearch() {
+        searchTask?.cancel()
+
+        let currentQuery = query
+        isSearching = true
+
+        searchTask = Task {
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+
+            let found = await search(currentQuery)
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                results = found
+                highlightedIndex = found.isEmpty ? nil : 0
+                isSearching = false
+            }
+        }
+    }
+
+    private func moveHighlight(_ delta: Int) {
+        guard !results.isEmpty else { return }
+        guard let current = highlightedIndex else {
+            highlightedIndex = delta > 0 ? 0 : results.count - 1
+            return
+        }
+        highlightedIndex = max(0, min(results.count - 1, current + delta))
+    }
+
+    private func confirmSelection() {
+        guard let index = highlightedIndex, index < results.count else { return }
+        onSelect(results[index])
+    }
+}

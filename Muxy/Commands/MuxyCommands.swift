@@ -211,6 +211,14 @@ struct MuxyCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
+            Button("Switch Worktree...") {
+                guard isMainWindowFocused else { return }
+                NotificationCenter.default.post(name: .switchWorktree, object: nil)
+            }
+            .shortcut(for: .switchWorktree, store: keyBindings)
+
+            Divider()
+
             Button("Next Project") {
                 guard isMainWindowFocused else { return }
                 appState.selectNextProject(

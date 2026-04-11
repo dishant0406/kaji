@@ -126,6 +126,12 @@ private struct WorktreePopoverRow: View {
         return worktree.name
     }
 
+    private var branchSubtitle: String? {
+        guard let branch = worktree.branch, !branch.isEmpty else { return nil }
+        guard branch.caseInsensitiveCompare(displayName) != .orderedSame else { return nil }
+        return branch
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             indicator
@@ -156,7 +162,7 @@ private struct WorktreePopoverRow: View {
                         }
                     }
                 }
-                if let branch = worktree.branch, !branch.isEmpty, !isRenaming {
+                if let branch = branchSubtitle, !isRenaming {
                     Text(branch)
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(MuxyTheme.fgDim)
