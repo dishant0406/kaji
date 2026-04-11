@@ -242,12 +242,36 @@ final class VCSTabState {
     }
 
     func expandAll() {
-        for file in files {
-            expandedFilePaths.insert(file.path)
-            if diffsByPath[file.path] == nil {
-                loadDiff(filePath: file.path, forceFull: false)
+        setExpanded(files: files, expanded: true)
+    }
+
+    func setExpanded(files: [GitStatusFile], expanded: Bool) {
+        if expanded {
+            var updated = expandedFilePaths
+            var toLoad: [String] = []
+            for file in files where !updated.contains(file.path) {
+                updated.insert(file.path)
+                if diffsByPath[file.path] == nil {
+                    toLoad.append(file.path)
+                }
             }
+            expandedFilePaths = updated
+            for path in toLoad {
+                loadDiff(filePath: path, forceFull: false)
+            }
+            return
         }
+
+        var updated = expandedFilePaths
+        for file in files where updated.contains(file.path) {
+            updated.remove(file.path)
+            diffsByPath.removeValue(forKey: file.path)
+            diffErrorsByPath.removeValue(forKey: file.path)
+            loadDiffTasks[file.path]?.cancel()
+            loadDiffTasks.removeValue(forKey: file.path)
+            loadingDiffPaths.remove(file.path)
+        }
+        expandedFilePaths = updated
     }
 
     func loadFullDiff(filePath: String) {
@@ -305,6 +329,28 @@ final class VCSTabState {
                 branchName = name
                 commits = []
                 showStatus("Switched to \(name)", isError: false)
+                performRefresh(incremental: false)
+            } catch {
+                guard !Task.isCancelled else { return }
+                showStatus(errorText(error), isError: true)
+            }
+        }
+    }
+
+    func createAndSwitchBranch(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isSwitchingBranch = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { isSwitchingBranch = false }
+            do {
+                try await git.createAndSwitchBranch(repoPath: projectPath, name: trimmed)
+                guard !Task.isCancelled else { return }
+                branchName = trimmed
+                commits = []
+                showStatus("Created and switched to \(trimmed)", isError: false)
+                loadBranches()
                 performRefresh(incremental: false)
             } catch {
                 guard !Task.isCancelled else { return }
