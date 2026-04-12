@@ -11,6 +11,34 @@ private final class CodeEditorTextView: NSTextView {
     override func paste(_ sender: Any?) {
         pasteAsPlainText(sender)
     }
+
+    override func scrollRangeToVisible(_ range: NSRange) {
+        guard let layoutManager, let textContainer, let scrollView = enclosingScrollView else {
+            super.scrollRangeToVisible(range)
+            return
+        }
+
+        let glyphRange = layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+        rect.origin.y += textContainerOrigin.y
+        rect.origin.x += textContainerOrigin.x
+
+        let clipBounds = scrollView.contentView.bounds
+        let visibleMinY = clipBounds.origin.y
+        let visibleMaxY = visibleMinY + clipBounds.height
+
+        let cursorMinY = rect.origin.y
+        let cursorMaxY = rect.origin.y + rect.height
+
+        if cursorMaxY > visibleMaxY {
+            let newY = cursorMaxY - clipBounds.height
+            scrollView.contentView.setBoundsOrigin(NSPoint(x: clipBounds.origin.x, y: newY))
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+        } else if cursorMinY < visibleMinY {
+            scrollView.contentView.setBoundsOrigin(NSPoint(x: clipBounds.origin.x, y: cursorMinY))
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+        }
+    }
 }
 
 private final class CodeEditorLayoutManager: NSLayoutManager {
