@@ -109,8 +109,41 @@ struct GitRepositoryService {
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    func headSha(repoPath: String) async -> String? {
+        let result = try? await GitProcessRunner.runGit(
+            repoPath: repoPath,
+            arguments: ["rev-parse", "HEAD"]
+        )
+        guard let result, result.status == 0 else { return nil }
+        let trimmed = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     func isGhInstalled() async -> Bool {
-        GitProcessRunner.resolveExecutable("gh") != nil
+        if let cached = GitMetadataCache.shared.cachedGhInstalled() {
+            return cached
+        }
+        let installed = GitProcessRunner.resolveExecutable("gh") != nil
+        GitMetadataCache.shared.storeGhInstalled(installed)
+        return installed
+    }
+
+    func cachedPullRequestInfo(
+        repoPath: String,
+        branch: String,
+        headSha: String,
+        forceFresh: Bool
+    ) async -> PRInfo? {
+        if !forceFresh, let cached = GitMetadataCache.shared.cachedPRInfo(
+            repoPath: repoPath,
+            branch: branch,
+            headSha: headSha
+        ) {
+            return cached
+        }
+        let info = await pullRequestInfo(repoPath: repoPath, branch: branch)
+        GitMetadataCache.shared.storePRInfo(info, repoPath: repoPath, branch: branch, headSha: headSha)
+        return info
     }
 
     func pullRequestInfo(repoPath: String, branch: String) async -> PRInfo? {
@@ -280,6 +313,17 @@ struct GitRepositoryService {
     }
 
     func defaultBranch(repoPath: String) async -> String? {
+        if let cached = GitMetadataCache.shared.cachedDefaultBranch(repoPath: repoPath) {
+            return cached
+        }
+        let resolved = await resolveDefaultBranch(repoPath: repoPath)
+        if resolved != nil {
+            GitMetadataCache.shared.storeDefaultBranch(resolved, repoPath: repoPath)
+        }
+        return resolved
+    }
+
+    private func resolveDefaultBranch(repoPath: String) async -> String? {
         let symbolic = try? await GitProcessRunner.runGit(
             repoPath: repoPath,
             arguments: ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]
@@ -345,6 +389,8 @@ struct GitRepositoryService {
             )
         }
 
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath, branch: branch)
+
         if let info = await pullRequestInfo(repoPath: repoPath, branch: branch) {
             return info
         }
@@ -383,6 +429,7 @@ struct GitRepositoryService {
                     : message.trimmingCharacters(in: .whitespacesAndNewlines)
             )
         }
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
     }
 
     func deleteRemoteBranch(repoPath: String, branch: String, remote: String = "origin") async throws {
@@ -414,6 +461,7 @@ struct GitRepositoryService {
                     : message.trimmingCharacters(in: .whitespacesAndNewlines)
             )
         }
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
     }
 
     func changedFiles(repoPath: String) async throws -> [GitStatusFile] {
@@ -726,6 +774,8 @@ struct GitRepositoryService {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to commit." : result.stderr)
         }
 
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
+
         let hashResult = try await GitProcessRunner.runGit(repoPath: repoPath, arguments: ["rev-parse", "--short", "HEAD"])
         guard hashResult.status == 0 else { return "" }
         return hashResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -739,6 +789,7 @@ struct GitRepositoryService {
             }
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to push." : result.stderr)
         }
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
     }
 
     func pushSetUpstream(repoPath: String, branch: String) async throws {
@@ -746,6 +797,7 @@ struct GitRepositoryService {
         guard result.status == 0 else {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to push." : result.stderr)
         }
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath, branch: branch)
     }
 
     func pull(repoPath: String) async throws {
@@ -753,6 +805,7 @@ struct GitRepositoryService {
         guard result.status == 0 else {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to pull." : result.stderr)
         }
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
     }
 
     func listBranches(repoPath: String) async throws -> [String] {

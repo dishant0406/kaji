@@ -141,6 +141,7 @@ final class VCSTabState {
     @ObservationIgnored private var isRefreshing = false
     @ObservationIgnored private var pendingRefresh = false
     @ObservationIgnored private var diffAccessOrder: [String] = []
+    @ObservationIgnored private var lastFetchedHeadSha: String?
     private(set) var hasCompletedInitialLoad = false
     @ObservationIgnored private static let commitsPerPage = 100
     @ObservationIgnored private static let diffCacheCap = 50
@@ -179,7 +180,7 @@ final class VCSTabState {
         performRefresh(incremental: false)
     }
 
-    private func performRefresh(incremental: Bool) {
+    private func performRefresh(incremental: Bool, forcePRFetch: Bool = false) {
         loadFilesTask?.cancel()
         if !incremental, files.isEmpty {
             isLoadingFiles = true
@@ -192,17 +193,30 @@ final class VCSTabState {
 
         branchTask?.cancel()
         prInfoTask?.cancel()
+        let shouldForcePR = forcePRFetch || !incremental
         branchTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let branch = try await git.currentBranch(repoPath: projectPath)
+                async let branchValue = git.currentBranch(repoPath: projectPath)
+                async let headValue = git.headSha(repoPath: projectPath)
+                let branch = try await branchValue
+                let head = await headValue
                 guard !Task.isCancelled else { return }
-                if branchName != branch {
+
+                let branchChanged = branchName != branch
+                if branchChanged {
                     hasFetchedPullRequestInfo = false
                     pullRequestInfo = nil
+                    lastFetchedHeadSha = nil
                 }
                 branchName = branch
-                fetchPRInfo(branch: branch)
+
+                let headChanged = head != lastFetchedHeadSha
+                let neverFetched = !hasFetchedPullRequestInfo
+                if shouldForcePR || branchChanged || headChanged || neverFetched {
+                    fetchPRInfo(branch: branch, headSha: head, forceFresh: shouldForcePR)
+                }
+
                 let counts = await git.aheadBehind(repoPath: projectPath, branch: branch)
                 guard !Task.isCancelled else { return }
                 aheadBehind = counts
@@ -211,6 +225,7 @@ final class VCSTabState {
                 branchName = nil
                 pullRequestInfo = nil
                 hasFetchedPullRequestInfo = false
+                lastFetchedHeadSha = nil
                 aheadBehind = .init(ahead: 0, behind: 0, hasUpstream: false)
             }
         }
@@ -545,6 +560,7 @@ final class VCSTabState {
                 try await git.push(repoPath: projectPath)
                 guard !Task.isCancelled else { return }
                 showStatus("Pushed", isError: false)
+                performRefresh(incremental: false, forcePRFetch: true)
             } catch GitRepositoryService.GitError.noUpstreamBranch {
                 guard !Task.isCancelled else { return }
                 showPushUpstreamConfirmation = true
@@ -565,6 +581,7 @@ final class VCSTabState {
                 try await git.pushSetUpstream(repoPath: projectPath, branch: branch)
                 guard !Task.isCancelled else { return }
                 showStatus("Pushed to origin/\(branch)", isError: false)
+                performRefresh(incremental: false, forcePRFetch: true)
             } catch {
                 guard !Task.isCancelled else { return }
                 showStatus(errorText(error), isError: true)
@@ -706,7 +723,7 @@ final class VCSTabState {
         }
     }
 
-    private func fetchPRInfo(branch: String) {
+    private func fetchPRInfo(branch: String, headSha: String?, forceFresh: Bool) {
         prInfoTask?.cancel()
         prInfoTask = Task { [weak self] in
             guard let self else { return }
@@ -718,18 +735,29 @@ final class VCSTabState {
             isGhInstalled = ghInstalled
             defaultBranch = defaultBranchResult
 
-            if remoteBranches.isEmpty {
-                loadRemoteBranches()
+            guard ghInstalled else {
+                pullRequestInfo = nil
+                hasFetchedPullRequestInfo = true
+                lastFetchedHeadSha = headSha
+                return
             }
 
-            if ghInstalled {
-                let prInfo = await git.pullRequestInfo(repoPath: projectPath, branch: branch)
-                guard !Task.isCancelled else { return }
-                pullRequestInfo = prInfo
-            } else {
+            guard let headSha else {
                 pullRequestInfo = nil
+                hasFetchedPullRequestInfo = true
+                return
             }
+
+            let prInfo = await git.cachedPullRequestInfo(
+                repoPath: projectPath,
+                branch: branch,
+                headSha: headSha,
+                forceFresh: forceFresh
+            )
+            guard !Task.isCancelled else { return }
+            pullRequestInfo = prInfo
             hasFetchedPullRequestInfo = true
+            lastFetchedHeadSha = headSha
         }
     }
 
@@ -752,7 +780,12 @@ final class VCSTabState {
 
     func refreshPullRequest() {
         guard let branch = branchName else { return }
-        fetchPRInfo(branch: branch)
+        Task { [weak self] in
+            guard let self else { return }
+            let head = await git.headSha(repoPath: projectPath)
+            guard !Task.isCancelled else { return }
+            fetchPRInfo(branch: branch, headSha: head, forceFresh: true)
+        }
     }
 
     func openPullRequest(_ request: PRCreateRequest) {
