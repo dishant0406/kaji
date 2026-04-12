@@ -57,6 +57,9 @@ struct EditorSettingsView: View {
 
             toggleRow("Word Wrap", isOn: $settings.wordWrap)
             toggleRow("Show Line Numbers", isOn: $settings.showLineNumbers)
+            toggleRow("Syntax Highlighting", isOn: $settings.syntaxHighlighting)
+            toggleRow("Bracket Matching", isOn: $settings.bracketMatching)
+            toggleRow("Current Line Highlight", isOn: $settings.currentLineHighlight)
 
             Spacer()
 
