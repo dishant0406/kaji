@@ -157,6 +157,13 @@ struct DiffContentBridge: NSViewRepresentable {
         let side = backgroundSide
         let theme = DiffRenderTheme.current()
 
+        let maxColumns = Self.maxDisplayColumns(in: capturedRows)
+        nsView.prepareSize(
+            rowCount: capturedRows.count,
+            maxColumns: maxColumns,
+            lineHeight: diffLineHeight
+        )
+
         context.coordinator.buildTask = Task { [weak nsView] in
             let rendered = await GitProcessRunner.offMain {
                 let block = buildDiffAttributedString(from: capturedRows, theme: theme)
@@ -171,6 +178,20 @@ struct DiffContentBridge: NSViewRepresentable {
                 lineHeight: diffLineHeight
             )
         }
+    }
+
+    private static func maxDisplayColumns(in rows: [DiffDisplayRow]) -> Int {
+        var maxColumns = 0
+        for row in rows {
+            let text: String = switch row.kind {
+            case .deletion: row.oldText ?? ""
+            case .addition: row.newText ?? ""
+            default: row.newText ?? row.oldText ?? ""
+            }
+            let count = text.utf16.count
+            if count > maxColumns { maxColumns = count }
+        }
+        return maxColumns
     }
 
     private var contentSignature: Int {
