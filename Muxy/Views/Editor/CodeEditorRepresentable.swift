@@ -317,8 +317,6 @@ struct CodeEditorView: NSViewRepresentable {
         let shouldInvalidateLayouts = themeChanged || fontChanged || wrapChanged || replacedFullContent
         if shouldInvalidateLayouts || incrementalFinished {
             coordinator.invalidateAndReportLayouts()
-        } else if !(state.isIncrementalLoading && appendedChunk) {
-            coordinator.reportLineLayouts()
         }
     }
 
@@ -395,10 +393,6 @@ struct CodeEditorView: NSViewRepresentable {
         coordinator.onLineLayoutChange = onLineLayoutChange
         coordinator.onTotalLineCountChange = onTotalLineCountChange
         coordinator.reportTotalLineCountViewport()
-
-        if !state.isIncrementalLoading {
-            coordinator.reportLineLayoutsViewport()
-        }
     }
 
     // MARK: - Shared helpers
@@ -541,7 +535,9 @@ struct CodeEditorView: NSViewRepresentable {
         private var hasMultiplePendingEdits = false
         private var lastReportedLayouts: [LineLayoutInfo] = []
         private var highlightDebounceWork: DispatchWorkItem?
-        private static let highlightDebounceDelay: TimeInterval = 0.05
+        private var pendingHighlightEditLocation: Int?
+        private static let highlightDebounceDelay: TimeInterval = 0.15
+        private static let highlightEditLineRadius = 3
         private let lineHighlightView: NSView = {
             let view = NSView()
             view.wantsLayer = true
@@ -1451,11 +1447,15 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         func scheduleHighlight() {
+            if let textView {
+                let loc = textView.selectedRange().location
+                pendingHighlightEditLocation = loc
+            }
             highlightDebounceWork?.cancel()
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }
-                resetHighlightedRange()
-                highlightVisibleRange(force: true)
+                self.applyEditHighlight()
+                self.pendingHighlightEditLocation = nil
             }
             highlightDebounceWork = work
             DispatchQueue.main.asyncAfter(
@@ -1464,17 +1464,40 @@ struct CodeEditorView: NSViewRepresentable {
             )
         }
 
-        func scheduleHighlightViewport() {
-            highlightDebounceWork?.cancel()
-            let work = DispatchWorkItem { [weak self] in
-                guard let self else { return }
-                refreshViewport(force: true)
+        private func applyEditHighlight() {
+            guard let textView, let storage = textView.textStorage else { return }
+            guard storage.length > 0 else { return }
+            let content = storage.string as NSString
+            let editLoc = pendingHighlightEditLocation ?? textView.selectedRange().location
+            let safeLoc = min(editLoc, content.length)
+
+            let editLineRange = content.lineRange(for: NSRange(location: safeLoc, length: 0))
+            var startLoc = editLineRange.location
+            var endLoc = NSMaxRange(editLineRange)
+
+            for _ in 0 ..< Coordinator.highlightEditLineRadius {
+                if startLoc > 0 {
+                    let prev = content.lineRange(for: NSRange(location: max(0, startLoc - 1), length: 0))
+                    startLoc = prev.location
+                }
+                if endLoc < content.length {
+                    let next = content.lineRange(for: NSRange(location: min(endLoc, content.length - 1), length: 0))
+                    endLoc = NSMaxRange(next)
+                }
             }
-            highlightDebounceWork = work
-            DispatchQueue.main.asyncAfter(
-                deadline: .now() + Coordinator.highlightDebounceDelay,
-                execute: work
-            )
+
+            let range = NSRange(location: startLoc, length: endLoc - startLoc)
+            guard range.length > 0 else { return }
+
+            let font = editorSettings.resolvedFont
+            textView.undoManager?.disableUndoRegistration()
+            storage.beginEditing()
+            storage.addAttribute(.font, value: font, range: range)
+            storage.addAttribute(.foregroundColor, value: GhosttyService.shared.foregroundColor, range: range)
+            SyntaxHighlightExtension(fileExtension: state.fileExtension)
+                .applyTextAttributes(to: storage, fullRange: range)
+            storage.endEditing()
+            textView.undoManager?.enableUndoRegistration()
         }
 
         private func rangeContains(_ outer: NSRange, other: NSRange) -> Bool {
