@@ -80,6 +80,24 @@ func buildLineBackgrounds(
     }
 }
 
+@MainActor
+enum DiffMetrics {
+    static let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+    static let glyphAdvance: CGFloat = {
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let sample = NSAttributedString(string: "M", attributes: attrs)
+        let size = sample.size()
+        return size.width > 0 ? size.width : 7.2
+    }()
+
+    static let horizontalPadding: CGFloat = 12
+
+    static func expectedWidth(maxColumns: Int) -> CGFloat {
+        let columns = max(maxColumns, 1)
+        return ceil(CGFloat(columns) * glyphAdvance) + horizontalPadding
+    }
+}
+
 final class DiffContentNSView: NSView {
     override var isFlipped: Bool { true }
 
@@ -87,6 +105,8 @@ final class DiffContentNSView: NSView {
     let backgroundLayoutManager: DiffBackgroundLayoutManager
     var lineMetadata: [DiffLineMetadata] = []
     var diffLineHeight: CGFloat = 20
+    private var expectedRowCount: Int = 0
+    private var expectedWidth: CGFloat = 100
 
     override init(frame frameRect: NSRect) {
         backgroundLayoutManager = DiffBackgroundLayoutManager()
@@ -120,6 +140,20 @@ final class DiffContentNSView: NSView {
         fatalError("Not supported")
     }
 
+    func prepareSize(rowCount: Int, maxColumns: Int, lineHeight: CGFloat) {
+        diffLineHeight = lineHeight
+        expectedRowCount = rowCount
+        expectedWidth = DiffMetrics.expectedWidth(maxColumns: maxColumns)
+
+        let height = CGFloat(max(rowCount, 1)) * lineHeight
+        let size = NSSize(width: expectedWidth, height: height)
+        textView.setFrameSize(size)
+        if let container = textView.textContainer {
+            container.size = size
+        }
+        invalidateIntrinsicContentSize()
+    }
+
     func configure(
         attributedString: NSAttributedString,
         metadata: [DiffLineMetadata],
@@ -137,7 +171,10 @@ final class DiffContentNSView: NSView {
 
         let usedRect = backgroundLayoutManager.usedRect(for: container)
         let height = CGFloat(max(metadata.count, 1)) * lineHeight
-        let width = max(usedRect.width + 12, 100)
+        let measuredWidth = usedRect.width + DiffMetrics.horizontalPadding
+        let width = max(measuredWidth, expectedWidth, 100)
+        expectedWidth = width
+        expectedRowCount = metadata.count
 
         textView.setFrameSize(NSSize(width: width, height: height))
         container.size = NSSize(width: width, height: height)
@@ -145,12 +182,14 @@ final class DiffContentNSView: NSView {
     }
 
     override var intrinsicContentSize: NSSize {
-        let height = CGFloat(max(lineMetadata.count, 1)) * diffLineHeight
+        let rowCount = max(lineMetadata.count, expectedRowCount, 1)
+        let height = CGFloat(rowCount) * diffLineHeight
         guard let container = textView.textContainer else {
-            return NSSize(width: 100, height: height)
+            return NSSize(width: max(expectedWidth, 100), height: height)
         }
         let usedRect = backgroundLayoutManager.usedRect(for: container)
-        return NSSize(width: max(usedRect.width + 12, 100), height: height)
+        let measuredWidth = usedRect.width + DiffMetrics.horizontalPadding
+        return NSSize(width: max(measuredWidth, expectedWidth, 100), height: height)
     }
 
     override func layout() {

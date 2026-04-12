@@ -78,7 +78,7 @@ struct DiffRenderTheme: @unchecked Sendable {
             deletionBackground: MuxyTheme.nsDiffRemove.withAlphaComponent(0.16),
             hunkBackground: MuxyTheme.nsDiffHunk.withAlphaComponent(0.1),
             collapsedBackground: MuxyTheme.nsBg,
-            font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            font: DiffMetrics.font
         )
     }
 
