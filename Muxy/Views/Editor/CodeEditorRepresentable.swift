@@ -7,9 +7,52 @@ struct LineLayoutInfo: Equatable {
     let height: CGFloat
 }
 
-private final class PlainPasteTextView: NSTextView {
+@MainActor
+protocol CodeEditorTextViewDelegate: AnyObject {
+    func codeEditorTextView(_ textView: NSTextView, shouldHandleInsertionOf string: String, replacementRange: NSRange) -> Bool
+}
+
+private final class CodeEditorTextView: NSTextView {
+    weak var codeEditorDelegate: CodeEditorTextViewDelegate?
+
     override func paste(_ sender: Any?) {
         pasteAsPlainText(sender)
+    }
+
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        if let text = string as? String,
+           let codeEditorDelegate,
+           codeEditorDelegate.codeEditorTextView(self, shouldHandleInsertionOf: text, replacementRange: replacementRange)
+        {
+            return
+        }
+        if let attributed = string as? NSAttributedString,
+           let codeEditorDelegate,
+           codeEditorDelegate.codeEditorTextView(self, shouldHandleInsertionOf: attributed.string, replacementRange: replacementRange)
+        {
+            return
+        }
+        super.insertText(string, replacementRange: replacementRange)
+    }
+}
+
+private final class CodeEditorLayoutManager: NSLayoutManager {
+    override func setGlyphs(
+        _ glyphs: UnsafePointer<CGGlyph>,
+        properties props: UnsafePointer<NSLayoutManager.GlyphProperty>,
+        characterIndexes charIndexes: UnsafePointer<Int>,
+        font aFont: NSFont,
+        forGlyphRange glyphRange: NSRange
+    ) {
+        guard aFont.isFixedPitch else {
+            super.setGlyphs(glyphs, properties: props, characterIndexes: charIndexes, font: aFont, forGlyphRange: glyphRange)
+            return
+        }
+        let mutableProps = UnsafeMutablePointer(mutating: props)
+        for index in 0 ..< glyphRange.length {
+            mutableProps[index].subtract(.elastic)
+        }
+        super.setGlyphs(glyphs, properties: mutableProps, characterIndexes: charIndexes, font: aFont, forGlyphRange: glyphRange)
     }
 }
 
@@ -27,6 +70,7 @@ struct CodeEditorView: NSViewRepresentable {
     let replaceVersion: Int
     let replaceAllVersion: Int
     let onLineLayoutChange: ([LineLayoutInfo]) -> Void
+    let onTotalLineCountChange: (Int) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(state: state, editorSettings: editorSettings)
@@ -39,7 +83,7 @@ struct CodeEditorView: NSViewRepresentable {
         scrollView.autoresizingMask = [.width, .height]
 
         let textStorage = NSTextStorage()
-        let layoutManager = NSLayoutManager()
+        let layoutManager = CodeEditorLayoutManager()
         textStorage.addLayoutManager(layoutManager)
 
         let textContainer = NSTextContainer(containerSize: NSSize(
@@ -50,7 +94,8 @@ struct CodeEditorView: NSViewRepresentable {
         textContainer.lineFragmentPadding = 8
         layoutManager.addTextContainer(textContainer)
 
-        let textView = PlainPasteTextView(frame: NSRect(origin: .zero, size: scrollView.contentSize), textContainer: textContainer)
+        let textView = CodeEditorTextView(frame: NSRect(origin: .zero, size: scrollView.contentSize), textContainer: textContainer)
+        textView.codeEditorDelegate = context.coordinator
         textView.minSize = NSSize(width: 0, height: 0)
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.isVerticallyResizable = true
@@ -168,6 +213,7 @@ struct CodeEditorView: NSViewRepresentable {
             coordinator.isUpdating = false
             coordinator.rebuildLineStartOffsets(using: state.content as NSString)
             coordinator.lastSyncedContentVersion = state.contentVersion
+            coordinator.invalidateCachedIndentUnit()
             replacedFullContent = true
         }
 
@@ -281,6 +327,8 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         coordinator.onLineLayoutChange = onLineLayoutChange
+        coordinator.onTotalLineCountChange = onTotalLineCountChange
+        coordinator.reportTotalLineCount()
 
         let shouldInvalidateLayouts = themeChanged || fontChanged || wrapChanged || replacedFullContent
         if shouldInvalidateLayouts || incrementalFinished {
@@ -291,7 +339,7 @@ struct CodeEditorView: NSViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, CodeEditorTextViewDelegate {
         let state: EditorTabState
         let editorSettings: EditorSettings
         weak var textView: NSTextView? {
@@ -317,7 +365,9 @@ struct CodeEditorView: NSViewRepresentable {
         var lastHighlightedRange: NSRange = .init(location: 0, length: 0)
         private static let highlightBuffer = 2000
         var tabSize = 4
+        private var cachedIndentUnit: String?
         var onLineLayoutChange: ([LineLayoutInfo]) -> Void = { _ in }
+        var onTotalLineCountChange: (Int) -> Void = { _ in }
         private weak var observedContentView: NSClipView?
         private weak var observedTextView: NSTextView?
         private var lineStartOffsets: [Int] = [0]
@@ -549,6 +599,7 @@ struct CodeEditorView: NSViewRepresentable {
                 rebuildLineStartOffsets(using: textView.string as NSString)
             }
             resetPendingEditState()
+            cachedIndentUnit = nil
             state.markModified()
             isUpdating = false
             resetHighlightedRange()
@@ -993,6 +1044,11 @@ struct CodeEditorView: NSViewRepresentable {
             }
 
             lineStartOffsets = offsets
+            reportTotalLineCount()
+        }
+
+        func reportTotalLineCount() {
+            onTotalLineCountChange(max(1, lineStartOffsets.count))
         }
 
         private func applyPendingLineStartOffsetEdit() -> Bool {
@@ -1036,6 +1092,7 @@ struct CodeEditorView: NSViewRepresentable {
             }
 
             lineStartOffsets = updated
+            reportTotalLineCount()
             return true
         }
 
@@ -1107,6 +1164,7 @@ struct CodeEditorView: NSViewRepresentable {
                 searchRange.location = found.location + found.length
                 searchRange.length = nsChunk.length - searchRange.location
             }
+            reportTotalLineCount()
         }
 
         private func expandReplacement(
@@ -1129,21 +1187,58 @@ struct CodeEditorView: NSViewRepresentable {
 
         @objc
         func handleReturn(_ textView: NSTextView) -> Bool {
-            textView.breakUndoCoalescing()
             let content = textView.string as NSString
-            let range = textView.selectedRange()
-            let loc = min(range.location, content.length)
-            let lineRange = content.lineRange(for: NSRange(location: loc, length: 0))
-            let linePrefixRange = NSRange(location: lineRange.location, length: loc - lineRange.location)
-            let lineText = content.substring(with: linePrefixRange)
-            let leading = String(lineText.prefix(while: { $0 == " " || $0 == "\t" }))
-            let trimmed = lineText.trimmingCharacters(in: .whitespaces)
-            let extra = trimmed.hasSuffix("{") || trimmed.hasSuffix("(")
-                || trimmed.hasSuffix("[")
-            let indentUnit = String(repeating: " ", count: tabSize)
-            let indent = extra ? leading + indentUnit : leading
-            textView.insertText("\n" + indent, replacementRange: range)
+            let selection = textView.selectedRange()
+            let edit = AutoIndentExtension.edit(
+                forReturnIn: content,
+                selection: selection,
+                tabSize: tabSize,
+                indentUnit: resolvedIndentUnit(for: content)
+            )
+            applyAutoIndentEdit(edit, in: textView)
             return true
+        }
+
+        func codeEditorTextView(
+            _ textView: NSTextView,
+            shouldHandleInsertionOf string: String,
+            replacementRange: NSRange
+        ) -> Bool {
+            guard string.count == 1, let char = string.first else { return false }
+            guard char == "}" || char == ")" || char == "]" else { return false }
+            let selection = replacementRange.location == NSNotFound ? textView.selectedRange() : replacementRange
+            let content = textView.string as NSString
+            guard let edit = AutoIndentExtension.edit(
+                forClosing: char,
+                in: content,
+                selection: selection,
+                indentUnit: resolvedIndentUnit(for: content)
+            )
+            else { return false }
+            applyAutoIndentEdit(edit, in: textView)
+            return true
+        }
+
+        private func applyAutoIndentEdit(_ edit: AutoIndentExtension.Edit, in textView: NSTextView) {
+            textView.breakUndoCoalescing()
+            guard textView.shouldChangeText(in: edit.replaceRange, replacementString: edit.replacement) else { return }
+            let attributed = NSAttributedString(string: edit.replacement, attributes: textView.typingAttributes)
+            textView.textStorage?.replaceCharacters(in: edit.replaceRange, with: attributed)
+            textView.didChangeText()
+            let newSelection = NSRange(location: edit.selectionAfter, length: 0)
+            textView.setSelectedRange(newSelection)
+            textView.scrollRangeToVisible(newSelection)
+        }
+
+        func invalidateCachedIndentUnit() {
+            cachedIndentUnit = nil
+        }
+
+        private func resolvedIndentUnit(for content: NSString) -> String {
+            if let cached = cachedIndentUnit { return cached }
+            let unit = AutoIndentExtension.detectIndentUnit(in: content, tabSize: tabSize)
+            cachedIndentUnit = unit
+            return unit
         }
 
         func textView(_: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
