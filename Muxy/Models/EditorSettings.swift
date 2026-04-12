@@ -13,6 +13,9 @@ final class EditorSettings {
     var wordWrap: Bool = true { didSet { save() } }
     var showLineNumbers: Bool = true { didSet { save() } }
     var tabSize: Int = 4 { didSet { save() } }
+    var syntaxHighlighting: Bool = true { didSet { save() } }
+    var bracketMatching: Bool = true { didSet { save() } }
+    var currentLineHighlight: Bool = true { didSet { save() } }
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private var isBatchLoading = false
@@ -49,6 +52,9 @@ final class EditorSettings {
         wordWrap = true
         showLineNumbers = true
         tabSize = 4
+        syntaxHighlighting = true
+        bracketMatching = true
+        currentLineHighlight = true
         isBatchLoading = false
         save()
     }
@@ -64,6 +70,9 @@ final class EditorSettings {
             wordWrap = snapshot.wordWrap ?? true
             showLineNumbers = snapshot.showLineNumbers ?? true
             tabSize = snapshot.tabSize ?? 4
+            syntaxHighlighting = snapshot.syntaxHighlighting ?? true
+            bracketMatching = snapshot.bracketMatching ?? true
+            currentLineHighlight = snapshot.currentLineHighlight ?? true
             isBatchLoading = false
         } catch {
             logger.error("Failed to load editor settings: \(error.localizedDescription)")
@@ -78,7 +87,10 @@ final class EditorSettings {
                 fontFamily: fontFamily,
                 wordWrap: wordWrap,
                 showLineNumbers: showLineNumbers,
-                tabSize: tabSize
+                tabSize: tabSize,
+                syntaxHighlighting: syntaxHighlighting,
+                bracketMatching: bracketMatching,
+                currentLineHighlight: currentLineHighlight
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -100,4 +112,7 @@ private struct Snapshot: Codable {
     let wordWrap: Bool?
     let showLineNumbers: Bool?
     let tabSize: Int?
+    let syntaxHighlighting: Bool?
+    let bracketMatching: Bool?
+    let currentLineHighlight: Bool?
 }

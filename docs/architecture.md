@@ -24,8 +24,10 @@ Muxy/
     KeyBinding.swift          ShortcutAction enum + KeyBinding defaults
     KeyCombo.swift            Key combo encoding, display, matching
     VCSTabState.swift         Git diff viewer state + loading orchestration
-    EditorTabState.swift      Code editor tab state (file content, cursor, save)
-    EditorSettings.swift      @Observable editor preferences (font, word wrap, tab size)
+    EditorTabState.swift      Code editor tab state (file content, cursor, save, viewport mode)
+    EditorSettings.swift      @Observable editor preferences (font, wrap, tab size, feature toggles)
+    TextBackingStore.swift    Line-array backing store for large files (viewport mode)
+    ViewportState.swift       Viewport window computation and line mapping for large files
     Project.swift             Project folder metadata
     Worktree.swift            Per-project worktree slot (primary or git worktree)
     WorktreeKey.swift         Hashable (projectID, worktreeID) key for workspace maps
@@ -86,10 +88,9 @@ Muxy/
       TerminalSearchBar.swift Find-in-terminal UI
       TerminalViewRegistry.swift  Terminal view lifecycle management
     Editor/
-      CodeEditorRepresentable.swift  NSViewRepresentable bridge for code editor
+      CodeEditorRepresentable.swift  NSViewRepresentable bridge for code editor (direct + viewport modes)
       EditorPane.swift        SwiftUI wrapper for editor tab (breadcrumb + editor)
       Extensions/
-        AutoIndentExtension.swift  Pure auto-indent engine (return, electric close brackets, comment/list continuation)
         SyntaxHighlightExtension.swift  Regex-based syntax highlighting rules for code editor
     VCS/
       VCSTabView.swift        Source control tab (commit, stage, diff, branch) + PRPill + PRPopover
@@ -109,7 +110,7 @@ Muxy/
     Settings/
       SettingsView.swift      Settings window layout
       AppearanceSettingsView.swift  Theme settings tab
-      EditorSettingsView.swift  Editor preferences tab (font, wrap, tab size)
+      EditorSettingsView.swift  Editor preferences tab (font, wrap, tab size, feature toggles)
       KeyboardShortcutsSettingsView.swift  Shortcut config tab
       ShortcutRecorderView.swift  Shortcut capture field
       ShortcutBadge.swift     Shortcut label display

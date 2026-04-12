@@ -186,15 +186,19 @@ private struct LineNumberGutter: View {
             let font = Font.custom(fontFamily, size: gutterFontSize)
             let dimColor = Color(MuxyTheme.fgDim)
             let activeColor = Color(MuxyTheme.fgMuted)
+            let sampleResolved = context.resolve(Text(verbatim: "0").font(font).foregroundStyle(dimColor))
+            let charHeight = sampleResolved.measure(in: size).height
+
             for layout in layouts {
                 let isActive = layout.lineNumber == activeLine
-                let text = Text(verbatim: "\(layout.lineNumber)")
-                    .font(font)
-                    .foregroundStyle(isActive ? activeColor : dimColor)
-                let resolved = context.resolve(text)
-                let textSize = resolved.measure(in: size)
-                let x = size.width - textSize.width - 8
-                let y = layout.yOffset + (layout.height - textSize.height) / 2
+                let resolved = context.resolve(
+                    Text(verbatim: "\(layout.lineNumber)")
+                        .font(font)
+                        .foregroundStyle(isActive ? activeColor : dimColor)
+                )
+                let textWidth = resolved.measure(in: size).width
+                let x = size.width - textWidth - 8
+                let y = layout.yOffset + (layout.height - charHeight) / 2
                 context.draw(resolved, at: CGPoint(x: x, y: y), anchor: .topLeading)
             }
         }
