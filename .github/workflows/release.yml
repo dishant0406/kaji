@@ -10,7 +10,7 @@ on:
 
 jobs:
   validate:
-    runs-on: macos-15
+    runs-on: macos-26
     outputs:
       version: ${{ steps.validate.outputs.version }}
       build_number: ${{ steps.validate.outputs.build_number }}
@@ -33,7 +33,7 @@ jobs:
 
   build:
     needs: validate
-    runs-on: macos-15
+    runs-on: macos-26
     strategy:
       matrix:
         arch: [arm64, x86_64]
@@ -128,7 +128,7 @@ jobs:
 
   release:
     needs: [validate, build]
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: write
     steps:
