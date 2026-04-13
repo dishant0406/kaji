@@ -30,7 +30,7 @@ final class VCSTabState {
         case hidden
         case ghMissing
         case canCreate
-        case hasPR(PRInfo)
+        case hasPR(GitRepositoryService.PRInfo)
     }
 
     enum PRBranchStrategy: Equatable {
@@ -63,12 +63,12 @@ final class VCSTabState {
     var loadingDiffPaths: Set<String> = []
     var diffErrorsByPath: [String: String] = [:]
     var branchName: String?
-    var pullRequestInfo: PRInfo?
+    var pullRequestInfo: GitRepositoryService.PRInfo?
     var defaultBranch: String?
     var remoteBranches: [String] = []
     var isLoadingRemoteBranches = false
     var isGhInstalled = true
-    var aheadBehind = GitAheadBehind(ahead: 0, behind: 0, hasUpstream: false)
+    var aheadBehind = GitRepositoryService.AheadBehind(ahead: 0, behind: 0, hasUpstream: false)
     var isOpeningPullRequest = false
     var openPullRequestError: String?
     var isMergingPullRequest = false
@@ -561,7 +561,7 @@ final class VCSTabState {
                 guard !Task.isCancelled else { return }
                 showStatus("Pushed", isError: false)
                 performRefresh(incremental: false, forcePRFetch: true)
-            } catch GitError.noUpstreamBranch {
+            } catch GitRepositoryService.GitError.noUpstreamBranch {
                 guard !Task.isCancelled else { return }
                 showPushUpstreamConfirmation = true
             } catch {
@@ -870,13 +870,13 @@ final class VCSTabState {
         switch strategy {
         case .useCurrent:
             guard let current = branchName else {
-                throw GitError.commandFailed("No current branch.")
+                throw GitRepositoryService.GitError.commandFailed("No current branch.")
             }
             return current
         case let .createNew(name):
             let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedName.isEmpty else {
-                throw GitError.commandFailed("Branch name is required.")
+                throw GitRepositoryService.GitError.commandFailed("Branch name is required.")
             }
             try await git.createAndSwitchBranch(repoPath: projectPath, name: trimmedName)
             branchName = trimmedName
@@ -904,9 +904,9 @@ final class VCSTabState {
     }
 
     func mergePullRequest(
-        method: PRMergeMethod = .squash,
+        method: GitRepositoryService.PRMergeMethod = .squash,
         deleteBranch: Bool = true,
-        onSuccess: @escaping (PRInfo, String) -> Void
+        onSuccess: @escaping (GitRepositoryService.PRInfo, String) -> Void
     ) {
         guard let info = pullRequestInfo, !isMergingPullRequest else { return }
         guard let branch = branchName else { return }
@@ -984,15 +984,15 @@ final class VCSTabState {
         (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
-    private func diffHints(for filePath: String) -> GitDiffService.DiffHints {
+    private func diffHints(for filePath: String) -> GitRepositoryService.DiffHints {
         guard let file = files.first(where: { $0.path == filePath }) else {
             return .unknown
         }
         let untrackedOrNew = file.xStatus == "?" || (file.xStatus == "A" && file.yStatus == " ")
         if untrackedOrNew {
-            return GitDiffService.DiffHints(hasStaged: false, hasUnstaged: false, isUntrackedOrNew: true)
+            return GitRepositoryService.DiffHints(hasStaged: false, hasUnstaged: false, isUntrackedOrNew: true)
         }
-        return GitDiffService.DiffHints(
+        return GitRepositoryService.DiffHints(
             hasStaged: file.isStaged,
             hasUnstaged: file.isUnstaged,
             isUntrackedOrNew: false
