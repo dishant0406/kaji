@@ -34,6 +34,9 @@ struct TerminalPane: View {
                     onClose: {
                         let view = TerminalViewRegistry.shared.existingView(for: state.id)
                         view?.endSearch()
+                        DispatchQueue.main.async {
+                            view?.window?.makeFirstResponder(view)
+                        }
                     }
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -123,6 +126,7 @@ struct TerminalBridge: NSViewRepresentable {
                 searchState.needle = needle
             }
             searchState.isVisible = true
+            searchState.focusVersion += 1
             searchState.startPublishing { [weak view] query in
                 view?.sendSearchQuery(query)
             }
