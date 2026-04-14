@@ -41,6 +41,9 @@ struct MuxyApp: App {
                 .environment(ThemeService.shared)
                 .preferredColorScheme(MuxyTheme.colorScheme)
                 .onAppear {
+                    NotificationStore.shared.appState = appState
+                    NotificationStore.shared.worktreeStore = worktreeStore
+                    NotificationStore.shared.markAllAsRead()
                     appDelegate.onTerminate = { [appState] in
                         appState.saveWorkspaces()
                     }
@@ -107,6 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ThemeService.shared.applyDefaultThemeIfNeeded()
         UpdateService.shared.start()
         ModifierKeyMonitor.shared.start()
+        NotificationSocketServer.shared.start()
+        AIProviderRegistry.shared.installAll()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -169,6 +174,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         onTerminate?()
+        NotificationStore.shared.saveToDisk()
+        NotificationSocketServer.shared.stop()
+        AIProviderRegistry.shared.uninstallAll()
     }
 
     @MainActor

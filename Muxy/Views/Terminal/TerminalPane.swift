@@ -51,6 +51,7 @@ struct TerminalBridge: NSViewRepresentable {
     let onProcessExit: () -> Void
     let onSplitRequest: (SplitDirection, SplitPosition) -> Void
     @Environment(\.overlayActive) private var overlayActive
+    @Environment(\.activeWorktreeKey) private var worktreeKey
 
     final class Coordinator {
         var wasFocused = false
@@ -64,6 +65,9 @@ struct TerminalBridge: NSViewRepresentable {
     func makeNSView(context: Context) -> GhosttyTerminalNSView {
         let registry = TerminalViewRegistry.shared
         let view = registry.view(for: state.id, workingDirectory: state.projectPath)
+        if view.envVars.isEmpty, let key = worktreeKey {
+            view.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key)
+        }
         view.isFocused = focused
         view.overlayActive = overlayActive
         view.onFocus = onFocus
@@ -85,6 +89,9 @@ struct TerminalBridge: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: GhosttyTerminalNSView, context: Context) {
+        if nsView.envVars.isEmpty, nsView.surface == nil, let key = worktreeKey {
+            nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key)
+        }
         nsView.overlayActive = overlayActive
         nsView.onFocus = onFocus
         nsView.onProcessExit = onProcessExit
@@ -116,6 +123,19 @@ struct TerminalBridge: NSViewRepresentable {
         } else if !focused, wasFocused {
             nsView.notifySurfaceUnfocused()
         }
+    }
+
+    private static func buildEnvVars(paneID: UUID, worktreeKey key: WorktreeKey) -> [(key: String, value: String)] {
+        var vars: [(key: String, value: String)] = [
+            (key: "MUXY_PANE_ID", value: paneID.uuidString),
+            (key: "MUXY_PROJECT_ID", value: key.projectID.uuidString),
+            (key: "MUXY_WORKTREE_ID", value: key.worktreeID.uuidString),
+            (key: "MUXY_SOCKET_PATH", value: NotificationSocketServer.socketPath),
+        ]
+        if let hookPath = MuxyNotificationHooks.hookScriptPath {
+            vars.append((key: "MUXY_HOOK_SCRIPT", value: hookPath))
+        }
+        return vars
     }
 
     private func configureSearchCallbacks(_ view: GhosttyTerminalNSView) {

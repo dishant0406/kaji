@@ -48,6 +48,7 @@ struct PaneTabStrip: View {
                     tab: tab,
                     active: tab.id == activeTabID,
                     paneFocused: isFocused,
+                    hasUnread: NotificationStore.shared.hasUnread(tabID: tab.id),
                     isAnyDragging: dragState.draggedID != nil,
                     shortcutIndex: index < 9 ? index + 1 : nil,
                     onSelect: {
@@ -206,6 +207,7 @@ private struct TabCell: View {
     let tab: PaneTabStrip.TabSnapshot
     let active: Bool
     let paneFocused: Bool
+    var hasUnread: Bool = false
     var isAnyDragging: Bool = false
     var shortcutIndex: Int?
     let onSelect: () -> Void
@@ -233,6 +235,14 @@ private struct TabCell: View {
             HStack(spacing: 6) {
                 tabIconView
                     .foregroundStyle(active ? MuxyTheme.fg : MuxyTheme.fgMuted)
+                    .overlay(alignment: .topTrailing) {
+                        if hasUnread, !active {
+                            Circle()
+                                .fill(MuxyTheme.accent)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 3, y: -3)
+                        }
+                    }
 
                 if isRenaming {
                     TextField("", text: $renameText)
