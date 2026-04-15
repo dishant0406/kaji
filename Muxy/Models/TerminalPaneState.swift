@@ -6,17 +6,21 @@ final class TerminalPaneState: Identifiable {
     let id = UUID()
     let projectPath: String
     var title: String
+    let startupCommand: String?
+    let externalEditorFilePath: String?
     let searchState = TerminalSearchState()
     @ObservationIgnored private var titleDebounceTask: Task<Void, Never>?
 
-    init(projectPath: String) {
-        self.projectPath = projectPath
-        self.title = "Terminal"
-    }
-
-    init(projectPath: String, title: String) {
+    init(
+        projectPath: String,
+        title: String = "Terminal",
+        startupCommand: String? = nil,
+        externalEditorFilePath: String? = nil
+    ) {
         self.projectPath = projectPath
         self.title = title
+        self.startupCommand = startupCommand
+        self.externalEditorFilePath = externalEditorFilePath
     }
 
     func setTitle(_ newTitle: String) {

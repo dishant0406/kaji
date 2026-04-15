@@ -8,6 +8,22 @@ private let logger = Logger(subsystem: "app.muxy", category: "EditorSettings")
 final class EditorSettings {
     static let shared = EditorSettings()
 
+    enum DefaultEditor: String, Codable, CaseIterable, Identifiable {
+        case builtIn
+        case terminalCommand
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .builtIn:
+                "Built-in Editor"
+            case .terminalCommand:
+                "Terminal Command"
+            }
+        }
+    }
+
     var fontSize: CGFloat = 13 { didSet { save() } }
     var fontFamily: String = "SF Mono" { didSet { save() } }
     var wordWrap: Bool = true { didSet { save() } }
@@ -16,6 +32,8 @@ final class EditorSettings {
     var syntaxHighlighting: Bool = true { didSet { save() } }
     var bracketMatching: Bool = true { didSet { save() } }
     var currentLineHighlight: Bool = true { didSet { save() } }
+    var defaultEditor: DefaultEditor = .builtIn { didSet { save() } }
+    var externalEditorCommand: String = "vim" { didSet { save() } }
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private var isBatchLoading = false
@@ -55,6 +73,8 @@ final class EditorSettings {
         syntaxHighlighting = true
         bracketMatching = true
         currentLineHighlight = true
+        defaultEditor = .builtIn
+        externalEditorCommand = "vim"
         isBatchLoading = false
         save()
     }
@@ -73,6 +93,8 @@ final class EditorSettings {
             syntaxHighlighting = snapshot.syntaxHighlighting ?? true
             bracketMatching = snapshot.bracketMatching ?? true
             currentLineHighlight = snapshot.currentLineHighlight ?? true
+            defaultEditor = snapshot.defaultEditor ?? snapshot.quickOpenEditor ?? .builtIn
+            externalEditorCommand = snapshot.externalEditorCommand ?? "vim"
             isBatchLoading = false
         } catch {
             logger.error("Failed to load editor settings: \(error.localizedDescription)")
@@ -90,7 +112,10 @@ final class EditorSettings {
                 tabSize: tabSize,
                 syntaxHighlighting: syntaxHighlighting,
                 bracketMatching: bracketMatching,
-                currentLineHighlight: currentLineHighlight
+                currentLineHighlight: currentLineHighlight,
+                defaultEditor: defaultEditor,
+                quickOpenEditor: nil,
+                externalEditorCommand: externalEditorCommand
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -115,4 +140,7 @@ private struct Snapshot: Codable {
     let syntaxHighlighting: Bool?
     let bracketMatching: Bool?
     let currentLineHighlight: Bool?
+    let defaultEditor: EditorSettings.DefaultEditor?
+    let quickOpenEditor: EditorSettings.DefaultEditor?
+    let externalEditorCommand: String?
 }
