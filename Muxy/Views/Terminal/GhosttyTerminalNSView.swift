@@ -38,11 +38,36 @@ final class GhosttyTerminalNSView: NSView {
         wantsLayer = true
         setupTrackingArea()
         registerForDraggedTypes([.fileURL])
+        setAccessibilityRole(.textArea)
+        setAccessibilityRoleDescription("Terminal")
+        let directoryName = URL(fileURLWithPath: workingDirectory).lastPathComponent
+        let label = directoryName.isEmpty ? "Terminal" : "Terminal — \(directoryName)"
+        setAccessibilityLabel(label)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
+    }
+
+    override func accessibilitySelectedText() -> String? {
+        readSelectionText()
+    }
+
+    private func readSelectionText() -> String? {
+        guard let surface, ghostty_surface_has_selection(surface) else { return nil }
+        var text = ghostty_text_s()
+        guard ghostty_surface_read_selection(surface, &text) else { return nil }
+        defer { ghostty_surface_free_text(surface, &text) }
+        return extractString(from: text)
+    }
+
+    private func extractString(from text: ghostty_text_s) -> String? {
+        guard let ptr = text.text, text.text_len > 0 else { return nil }
+        let len = Int(text.text_len)
+        return ptr.withMemoryRebound(to: UInt8.self, capacity: len) { rawPtr in
+            String(bytes: UnsafeBufferPointer(start: rawPtr, count: len), encoding: .utf8)
+        }
     }
 
     private var pendingSurfaceCreation = false
