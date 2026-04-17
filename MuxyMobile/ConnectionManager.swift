@@ -4,7 +4,7 @@ import os
 import SwiftUI
 import UIKit
 
-private let logger = Logger(subsystem: "app.muxy.mobile", category: "Connection")
+private let logger = Logger(subsystem: "app.muxy", category: "Connection")
 
 @MainActor
 @Observable
@@ -105,18 +105,25 @@ final class ConnectionManager {
 
         Task {
             try? await Task.sleep(for: .milliseconds(500))
-            await registerSelf()
+            guard await registerSelf() else { return }
             await refreshProjects()
-            state = .connected
+            if case .connecting = state {
+                state = .connected
+            }
         }
     }
 
-    private func registerSelf() async {
+    private func registerSelf() async -> Bool {
         let params = RegisterDeviceParams(deviceName: deviceName)
-        guard let response = await send(.registerDevice, params: .registerDevice(params)) else { return }
+        guard let response = await send(.registerDevice, params: .registerDevice(params)) else { return false }
+        if let error = response.error {
+            state = .error(error.message)
+            return false
+        }
         if case let .deviceInfo(info) = response.result {
             myClientID = info.clientID
         }
+        return true
     }
 
     func takeOverPane(paneID: UUID, cols: UInt32, rows: UInt32) async {
@@ -275,9 +282,17 @@ final class ConnectionManager {
                     self.handleMessage(message)
                     self.receiveLoop()
                 case let .failure(error):
-                    guard case .connected = self.state else { return }
-                    logger.error("Receive failed: \(error)")
-                    self.state = .error("Connection lost")
+                    switch self.state {
+                    case .disconnected,
+                         .error:
+                        return
+                    case .connecting:
+                        logger.error("Connect failed: \(error)")
+                        self.state = .error("Could not reach device")
+                    case .connected:
+                        logger.error("Receive failed: \(error)")
+                        self.state = .error("Connection lost")
+                    }
                 }
             }
         }
