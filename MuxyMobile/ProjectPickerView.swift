@@ -88,6 +88,17 @@ struct ProjectIcon: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: size * 0.22))
+        } else if let swatch = ProjectIconColor.swatch(for: project.iconColor),
+                  let fill = Color(hex: swatch.hex)
+        {
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.22)
+                    .fill(fill)
+                    .frame(width: size, height: size)
+                Text(project.name.prefix(1).uppercased())
+                    .font(.system(size: size * 0.4, weight: .bold, design: .rounded))
+                    .foregroundStyle(swatch.prefersDarkForeground ? Color.black : Color.white)
+            }
         } else {
             ZStack {
                 RoundedRectangle(cornerRadius: size * 0.22)
@@ -98,5 +109,12 @@ struct ProjectIcon: View {
                     .foregroundStyle(.tint)
             }
         }
+    }
+}
+
+private extension Color {
+    init?(hex: String) {
+        guard let rgb = ProjectIconColor.rgb(fromHex: hex) else { return nil }
+        self = Color(.sRGB, red: rgb.0, green: rgb.1, blue: rgb.2, opacity: 1)
     }
 }
