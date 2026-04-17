@@ -22,7 +22,6 @@ struct ProjectPickerView: View {
         .onChange(of: path) { _, newValue in
             if newValue.isEmpty, connection.activeProjectID != nil {
                 connection.activeProjectID = nil
-                connection.workspace = nil
             }
         }
         .onAppear {
@@ -42,28 +41,49 @@ struct ProjectPickerView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(project.name)
                             .font(.body.weight(.medium))
+                            .foregroundStyle(themeFg)
                         Text(worktreeSubtitle(for: project.id))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(themeFg.opacity(0.6))
                             .lineLimit(1)
                     }
                 }
             }
-            .foregroundStyle(.primary)
+            .listRowBackground(themeFg.opacity(0.06))
+            .listRowSeparatorTint(themeFg.opacity(0.15))
         }
+        .scrollContentBackground(.hidden)
+        .background(themeBg)
         .navigationTitle("Projects")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Projects")
+                    .font(.headline)
+                    .foregroundStyle(themeFg)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     connection.disconnect()
                 } label: {
-                    Image(systemName: "xmark")
+                    Label("Disconnect", systemImage: "xmark")
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(themeFg)
                 }
             }
         }
+        .tint(themeFg)
         .refreshable {
             await connection.refreshProjects()
         }
+    }
+
+    private var themeFg: Color {
+        connection.deviceTheme?.fgColor ?? .primary
+    }
+
+    private var themeBg: Color {
+        connection.deviceTheme?.bgColor ?? Color(.systemBackground)
     }
 
     private func worktreeSubtitle(for projectID: UUID) -> String {

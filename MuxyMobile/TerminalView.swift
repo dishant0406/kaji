@@ -75,7 +75,7 @@ struct TerminalView: View {
     @State private var pendingGridSize: (cols: UInt32, rows: UInt32)?
 
     private var themeBg: Color {
-        connection.terminalTheme?.bgColor ?? .black
+        connection.deviceTheme?.bgColor ?? .black
     }
 
     private var isOwnedBySelf: Bool {
@@ -91,7 +91,7 @@ struct TerminalView: View {
             if !isOwnedBySelf {
                 MobileTakeOverOverlay(
                     ownerName: ownerDisplayName,
-                    theme: connection.terminalTheme,
+                    theme: connection.deviceTheme,
                     takeOver: takeOverCurrentPane
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -104,6 +104,11 @@ struct TerminalView: View {
                 Task { await connection.sendTerminalInput(paneID: paneID, text: text) }
             }
             startPolling()
+            if isOwnedBySelf {
+                Task { @MainActor in
+                    inputCoordinator.becomeFirstResponder()
+                }
+            }
         }
         .onDisappear {
             stopPolling()
@@ -113,6 +118,16 @@ struct TerminalView: View {
             cells = nil
             stopPolling()
             startPolling()
+        }
+        .onChange(of: isOwnedBySelf) { _, newValue in
+            if newValue {
+                inputCoordinator.becomeFirstResponder()
+            }
+        }
+        .onChange(of: connection.activeProjectID) { _, newValue in
+            if newValue == nil {
+                stopPolling()
+            }
         }
     }
 
@@ -153,7 +168,7 @@ struct TerminalView: View {
                 }
             )
 
-            TerminalInputField(coordinator: inputCoordinator, theme: connection.terminalTheme)
+            TerminalInputField(coordinator: inputCoordinator, theme: connection.deviceTheme)
                 .frame(height: 1)
                 .opacity(0.01)
         }
@@ -183,7 +198,7 @@ struct TerminalView: View {
 
 struct MobileTakeOverOverlay: View {
     let ownerName: String
-    let theme: ConnectionManager.TerminalTheme?
+    let theme: ConnectionManager.DeviceTheme?
     let takeOver: () -> Void
 
     var body: some View {
@@ -202,15 +217,26 @@ struct MobileTakeOverOverlay: View {
             Button(action: takeOver) {
                 Text("Take Over")
                     .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(buttonForeground)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(accentColor)
+                    )
             }
-            .buttonStyle(.glass)
-            .tint(accentColor)
+            .buttonStyle(.plain)
         }
         .padding(24)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20))
         .frame(maxWidth: 340)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(panelBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(accentColor.opacity(0.2), lineWidth: 1)
+                )
+        )
         .padding(.horizontal, 24)
     }
 
@@ -219,11 +245,19 @@ struct MobileTakeOverOverlay: View {
     }
 
     private var primaryColor: Color {
-        theme?.fgColor ?? .primary
+        theme?.fgColor ?? .white
     }
 
     private var secondaryColor: Color {
-        (theme?.fgColor ?? .primary).opacity(0.7)
+        (theme?.fgColor ?? .white).opacity(0.7)
+    }
+
+    private var buttonForeground: Color {
+        theme?.bgColor ?? .black
+    }
+
+    private var panelBackground: Color {
+        (theme?.fgColor ?? .white).opacity(0.08)
     }
 }
 
@@ -606,7 +640,7 @@ final class TerminalInputCoordinator {
 
 struct TerminalInputField: UIViewRepresentable {
     let coordinator: TerminalInputCoordinator
-    let theme: ConnectionManager.TerminalTheme?
+    let theme: ConnectionManager.DeviceTheme?
 
     func makeUIView(context _: Context) -> TerminalUITextField {
         let field = TerminalUITextField(frame: .zero)
@@ -621,9 +655,6 @@ struct TerminalInputField: UIViewRepresentable {
         }
         field.applyTheme(theme)
         coordinator.textField = field
-        DispatchQueue.main.async {
-            field.becomeFirstResponder()
-        }
         return field
     }
 
@@ -641,6 +672,15 @@ enum TerminalModifier: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     var title: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .ctrl: "Control"
+        case .shift: "Shift"
+        case .alt: "Option"
+        case .cmd: "Command"
+        }
+    }
 
     var glyph: String {
         switch self {
@@ -704,7 +744,7 @@ final class TerminalUITextField: UIView, UIKeyInput, UITextInputTraits {
 
     override var inputAccessoryView: UIView? { accessoryBar }
 
-    func applyTheme(_ theme: ConnectionManager.TerminalTheme?) {
+    func applyTheme(_ theme: ConnectionManager.DeviceTheme?) {
         accessoryBar.applyTheme(theme)
     }
 
@@ -757,7 +797,7 @@ final class TerminalUITextField: UIView, UIKeyInput, UITextInputTraits {
 
 @MainActor
 final class TerminalAccessoryModel: ObservableObject {
-    @Published var theme: ConnectionManager.TerminalTheme?
+    @Published var theme: ConnectionManager.DeviceTheme?
     @Published var modifierArmed: Bool = false
     @Published var activeModifier: TerminalModifier = .ctrl
     @Published var keyboardVisible: Bool = true
@@ -818,7 +858,7 @@ final class TerminalAccessoryBar: UIInputView {
     init() {
         hostingController = UIHostingController(rootView: TerminalAccessoryView(model: model))
         super.init(
-            frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 72),
+            frame: CGRect(x: 0, y: 0, width: 0, height: 72),
             inputViewStyle: .keyboard
         )
         autoresizingMask = [.flexibleWidth]
@@ -845,7 +885,7 @@ final class TerminalAccessoryBar: UIInputView {
         ])
     }
 
-    func applyTheme(_ theme: ConnectionManager.TerminalTheme?) {
+    func applyTheme(_ theme: ConnectionManager.DeviceTheme?) {
         model.theme = theme
         overrideUserInterfaceStyle = (theme?.isDark ?? true) ? .dark : .light
     }
@@ -907,18 +947,10 @@ struct TerminalAccessoryView: View {
 
     private var modifierKey: some View {
         Menu {
-            ForEach(TerminalModifier.allCases) { modifier in
-                Button {
-                    model.selectModifier(modifier)
-                } label: {
-                    HStack {
-                        Text(modifier.glyph)
-                        Text(modifier.title)
-                        if modifier == model.activeModifier {
-                            Spacer()
-                            Image(systemName: "checkmark")
-                        }
-                    }
+            Picker("Modifier", selection: modifierSelection) {
+                ForEach(TerminalModifier.allCases) { modifier in
+                    Text("\(modifier.glyph)  \(modifier.displayName)")
+                        .tag(modifier)
                 }
             }
         } label: {
@@ -928,6 +960,13 @@ struct TerminalAccessoryView: View {
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
+    }
+
+    private var modifierSelection: Binding<TerminalModifier> {
+        Binding(
+            get: { model.activeModifier },
+            set: { model.selectModifier($0) }
+        )
     }
 
     private var modifierLabel: some View {
