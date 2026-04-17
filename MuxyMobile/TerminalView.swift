@@ -1011,9 +1011,9 @@ struct DPadControl: View {
     let tint: Color
     let onDirection: (String) -> Void
 
-    private let outerSize: CGFloat = 56
-    private let thumbSize: CGFloat = 22
-    private let deadZone: CGFloat = 6
+    private let outerSize: CGFloat = 44
+    private let thumbSize: CGFloat = 18
+    private let deadZone: CGFloat = 5
 
     @State private var thumbOffset: CGSize = .zero
     @State private var activeDirection: Direction?
