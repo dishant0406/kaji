@@ -187,6 +187,9 @@ struct MainWindow: View {
         .animation(.easeInOut(duration: 0.2), value: ToastState.shared.message != nil)
         .coordinateSpace(name: DragCoordinateSpace.mainWindow)
         .environment(dragCoordinator)
+        .background(MainWindowShortcutInterceptor { action in
+            handleShortcutAction(action)
+        })
         .background(WindowConfigurator(configVersion: ghostty.configVersion))
         .background(WindowTitleUpdater(title: windowTitle))
         .ignoresSafeArea(.container, edges: .top)
@@ -402,10 +405,25 @@ struct MainWindow: View {
         return project
     }
 
+    private var shortcutDispatcher: ShortcutActionDispatcher {
+        ShortcutActionDispatcher(
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            ghostty: ghostty
+        )
+    }
+
     private func mountedWorktreeKeys(for project: Project) -> [WorktreeKey] {
         appState.workspaceRoots.keys
             .filter { $0.projectID == project.id }
             .sorted { $0.worktreeID.uuidString < $1.worktreeID.uuidString }
+    }
+
+    private func handleShortcutAction(_ action: ShortcutAction) -> Bool {
+        shortcutDispatcher.perform(action, activeProject: activeProject) { project in
+            openVCS(for: project)
+        }
     }
 
     private var activeProjectHasSplitWorkspace: Bool {
@@ -580,5 +598,40 @@ private struct WindowTitleUpdater: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let window = nsView.window, window.title != title else { return }
         window.title = title
+    }
+}
+
+private struct MainWindowShortcutInterceptor: NSViewRepresentable {
+    let onShortcut: (ShortcutAction) -> Bool
+
+    func makeNSView(context: Context) -> ShortcutInterceptingView {
+        let view = ShortcutInterceptingView()
+        view.onShortcut = onShortcut
+        return view
+    }
+
+    func updateNSView(_ nsView: ShortcutInterceptingView, context: Context) {
+        nsView.onShortcut = onShortcut
+    }
+}
+
+private final class ShortcutInterceptingView: NSView {
+    var onShortcut: ((ShortcutAction) -> Bool)?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.type == .keyDown,
+              ShortcutContext.isMainWindow(window)
+        else { return super.performKeyEquivalent(with: event) }
+
+        let scopes = ShortcutContext.activeScopes(for: window)
+        guard let action = KeyBindingStore.shared.action(for: event, scopes: scopes) else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        if onShortcut?(action) == true {
+            return true
+        }
+
+        return super.performKeyEquivalent(with: event)
     }
 }
