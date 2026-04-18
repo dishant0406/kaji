@@ -50,6 +50,20 @@ brew install --cask muxy
 
 Download the latest release from the [releases page](https://github.com/muxy-app/muxy/releases)
 
+### iOS app (Testing)
+
+The iOS app is available for testers on TestFlight
+
+- Install the iOS app via TestFlight (https://testflight.apple.com/join/7t1AaYHW)
+- Open Muxy on your Mac
+- Go to Settings (Cmd + `,`)
+- Go to Mobile tab
+- Toggle the `Allow mobile device connection`
+- Open the iOS app
+- Enter the IP and Port
+- Approve the connection on your Mac
+- Test and open issues for the bugs
+
 ## Local Development
 
 ```bash
