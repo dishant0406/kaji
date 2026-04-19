@@ -6,6 +6,7 @@ struct MobileSettingsView: View {
     @State private var deviceToRevoke: ApprovedDevice?
     @State private var portText: String = ""
     @State private var portValidationError: String?
+    @State private var showFreePortConfirmation = false
 
     private var enabledBinding: Binding<Bool> {
         Binding(
@@ -31,6 +32,7 @@ struct MobileSettingsView: View {
                         .font(.system(size: SettingsMetrics.labelFontSize, design: .monospaced))
                         .frame(width: SettingsMetrics.controlWidth)
                         .onChange(of: portText) { _, _ in
+                            guard portText != String(service.port) else { return }
                             portValidationError = nil
                             if service.isEnabled {
                                 service.setEnabled(false)
@@ -40,12 +42,22 @@ struct MobileSettingsView: View {
                 }
 
                 if let error = portValidationError ?? service.lastError {
-                    Text(error)
-                        .font(.system(size: SettingsMetrics.footnoteFontSize))
-                        .foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, SettingsMetrics.horizontalPadding)
-                        .padding(.vertical, SettingsMetrics.rowVerticalPadding)
+                    HStack(spacing: 6) {
+                        Text(error)
+                            .font(.system(size: SettingsMetrics.footnoteFontSize))
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if service.isPortInUse {
+                            Button("Free Port") {
+                                showFreePortConfirmation = true
+                            }
+                            .font(.system(size: SettingsMetrics.footnoteFontSize, weight: .medium))
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(MuxyTheme.accent)
+                        }
+                    }
+                    .padding(.horizontal, SettingsMetrics.horizontalPadding)
+                    .padding(.vertical, SettingsMetrics.rowVerticalPadding)
                 }
             }
 
@@ -71,6 +83,17 @@ struct MobileSettingsView: View {
         .onChange(of: service.port) { _, newValue in
             let text = String(newValue)
             if portText != text { portText = text }
+        }
+        .alert(
+            "Free port \(String(service.port))?",
+            isPresented: $showFreePortConfirmation
+        ) {
+            Button("Free Port", role: .destructive) {
+                service.freePort()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will terminate any process currently listening on port \(String(service.port)).")
         }
         .alert(
             "Revoke \(deviceToRevoke?.name ?? "device")?",
