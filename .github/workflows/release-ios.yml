@@ -1,0 +1,146 @@
+name: Release iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (format: X.Y.Z)"
+        required: true
+        type: string
+      build_number:
+        description: "Build number (defaults to run number)"
+        required: false
+        type: string
+
+jobs:
+  release-ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      APP_SCHEME: MuxyMobile
+      APP_PROJECT: MuxyMobile.xcodeproj
+      APP_ARCHIVE_PATH: build/MuxyMobile.xcarchive
+      APP_EXPORT_PATH: build/export
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        id: validate
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in X.Y.Z format"
+            exit 1
+          fi
+
+          if [[ -n "${{ inputs.build_number }}" ]]; then
+            BUILD_NUMBER="${{ inputs.build_number }}"
+          else
+            BUILD_NUMBER="${{ github.run_number }}"
+          fi
+
+          if ! [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Error: Build number must be numeric"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Import distribution certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$CERTIFICATE_P12" | base64 --decode > certificate.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security import certificate.p12 \
+            -k build.keychain \
+            -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm certificate.p12
+
+      - name: Install App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          mkdir -p private_keys
+          echo "$APP_STORE_CONNECT_API_KEY" > private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
+
+      - name: Archive app
+        run: |
+          xcodebuild \
+            -project "$APP_PROJECT" \
+            -scheme "$APP_SCHEME" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$APP_ARCHIVE_PATH" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$GITHUB_WORKSPACE/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            MARKETING_VERSION="${{ steps.validate.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.validate.outputs.build_number }}" \
+            clean archive
+
+      - name: Export IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cat > ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$APP_ARCHIVE_PATH" \
+            -exportPath "$APP_EXPORT_PATH" \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$GITHUB_WORKSPACE/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Upload to App Store Connect
+        run: |
+          IPA_FILES=("$APP_EXPORT_PATH"/*.ipa)
+          if [[ ! -e "${IPA_FILES[0]}" ]]; then
+            echo "Error: IPA not found in $APP_EXPORT_PATH"
+            exit 1
+          fi
+          IPA_PATH="${IPA_FILES[0]}"
+
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-${{ steps.validate.outputs.version }}-${{ steps.validate.outputs.build_number }}
+          path: |
+            build/MuxyMobile.xcarchive
+            build/export/*.ipa
