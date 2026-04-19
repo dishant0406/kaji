@@ -94,6 +94,12 @@ jobs:
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PROFILE_PLIST_PATH")
           PROFILE_APP_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$PROFILE_PLIST_PATH")
           PROFILE_GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:get-task-allow" "$PROFILE_PLIST_PATH")
+          DISTRIBUTION_CERT_SHA1=$(security find-certificate -Z -c "Apple Distribution" -a build.keychain | awk '/SHA-1 hash:/ {print tolower($3); exit}')
+
+          if [[ -z "$DISTRIBUTION_CERT_SHA1" ]]; then
+            echo "Error: Apple Distribution certificate not found in imported keychain"
+            exit 1
+          fi
 
           if [[ "$PROFILE_GET_TASK_ALLOW" == "true" ]]; then
             echo "Error: Provisioning profile '$PROFILE_NAME' is a development profile. Use an App Store profile for com.muxy.app."
@@ -104,6 +110,32 @@ jobs:
             echo "Error: Provisioning profile app id '$PROFILE_APP_ID' does not match com.muxy.app"
             exit 1
           fi
+
+          PROFILE_PLIST_PATH="$PROFILE_PLIST_PATH" DISTRIBUTION_CERT_SHA1="$DISTRIBUTION_CERT_SHA1" python3 - <<'PY'
+          import hashlib
+          import os
+          import plistlib
+          import sys
+
+          profile_plist_path = os.environ["PROFILE_PLIST_PATH"]
+          distribution_cert_sha1 = os.environ["DISTRIBUTION_CERT_SHA1"].lower().replace(":", "")
+
+          with open(profile_plist_path, "rb") as profile_file:
+              profile = plistlib.load(profile_file)
+
+          profile_cert_hashes = [
+              hashlib.sha1(certificate).hexdigest()
+              for certificate in profile.get("DeveloperCertificates", [])
+          ]
+
+          if distribution_cert_sha1 not in profile_cert_hashes:
+              print("Error: Provisioning profile does not include the imported Apple Distribution certificate.")
+              print(f"Imported certificate SHA-1: {distribution_cert_sha1}")
+              print("Profile certificate SHA-1 values:")
+              for profile_hash in profile_cert_hashes:
+                  print(f"- {profile_hash}")
+              sys.exit(1)
+          PY
 
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_SOURCE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
