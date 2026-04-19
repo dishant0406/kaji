@@ -13,7 +13,7 @@
 
 ## Screenshots
 
-<img width="3144" alt="image" src="https://github.com/user-attachments/assets/4836ae50-7ea9-486b-a0e4-70b75b43d9c3" />
+<img width="3004" alt="image" src="https://github.com/user-attachments/assets/721c6b4a-bd9c-4e4e-ade0-cd2597399801" />
 
 ## Features
 
