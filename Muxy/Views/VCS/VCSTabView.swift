@@ -848,12 +848,19 @@ struct PRPopover: View {
                 Button {
                     onRefresh()
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(MuxyTheme.fgMuted)
-                        .frame(width: 20, height: 20)
+                    Group {
+                        if state.isRefreshingPullRequest {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(MuxyTheme.fgMuted)
+                        }
+                    }
+                    .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
+                .disabled(state.isRefreshingPullRequest)
                 .help("Refresh")
             }
 
@@ -943,25 +950,7 @@ struct PRPopover: View {
         .padding(12)
         .frame(width: 260)
         .task(id: info.number) {
-            await pollLoop()
-        }
-    }
-
-    private func pollLoop() async {
-        var intervalSeconds: UInt64 = 5
-        let maxIntervalSeconds: UInt64 = 60
-        while !Task.isCancelled {
-            do {
-                try await Task.sleep(nanoseconds: intervalSeconds * 1_000_000_000)
-            } catch {
-                return
-            }
-            guard state.pullRequestInfo?.state == .open,
-                  !state.isMergingPullRequest,
-                  !state.isClosingPullRequest
-            else { return }
             onRefresh()
-            intervalSeconds = min(intervalSeconds * 2, maxIntervalSeconds)
         }
     }
 
