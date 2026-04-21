@@ -16,6 +16,8 @@ jobs:
   release-ios:
     runs-on: macos-26
     timeout-minutes: 45
+    permissions:
+      contents: write
     env:
       APP_SCHEME: MuxyMobile
       APP_PROJECT: MuxyMobile.xcodeproj
@@ -23,6 +25,8 @@ jobs:
       APP_EXPORT_PATH: build/export
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Validate inputs
         id: validate
@@ -228,3 +232,34 @@ jobs:
           path: |
             build/MuxyMobile.xcarchive
             build/export/*.ipa
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV_TAG=$(gh release list \
+            --repo "${{ github.repository }}" \
+            --limit 100 \
+            --json tagName \
+            -q '[.[] | select(.tagName | startswith("ios-v"))][0].tagName')
+
+          if [[ -n "$PREV_TAG" ]]; then
+            RANGE="$PREV_TAG..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          git log --no-merges -i --grep='^ios:' --format='%s' "$RANGE" \
+            | sed -E 's/^[Ii][Oo][Ss]:[[:space:]]*/- /' \
+            > notes.md
+
+          if [[ ! -s notes.md ]]; then
+            echo "- No iOS-facing changes since ${PREV_TAG:-initial release}" > notes.md
+          fi
+
+          gh release create "ios-v${{ steps.validate.outputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --title "iOS v${{ steps.validate.outputs.version }}" \
+            --notes-file notes.md \
+            --latest=false \
+            --target "${{ github.sha }}"
