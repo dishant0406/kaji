@@ -398,6 +398,7 @@ final class AppState {
     }
 
     private func needsProcessConfirmation(tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
+        guard TabCloseConfirmationPreferences.confirmRunningProcess else { return false }
         guard let key = activeWorktreeKey(for: projectID),
               let root = workspaceRoots[key],
               let area = root.findArea(id: areaID),

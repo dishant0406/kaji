@@ -673,6 +673,11 @@ struct MainWindow: View {
             alert.buttons[1].keyEquivalent = "\u{1b}"
         }
 
+        if kind == .runningProcess {
+            alert.showsSuppressionButton = true
+            alert.suppressionButton?.title = "Don't ask again"
+        }
+
         alert.beginSheetModal(for: window) { response in
             switch kind {
             case .lastTab:
@@ -692,6 +697,9 @@ struct MainWindow: View {
                 }
             case .runningProcess:
                 if response == .alertFirstButtonReturn {
+                    if alert.suppressionButton?.state == .on {
+                        TabCloseConfirmationPreferences.confirmRunningProcess = false
+                    }
                     appState.confirmCloseRunningTab()
                 } else {
                     appState.cancelCloseRunningTab()
