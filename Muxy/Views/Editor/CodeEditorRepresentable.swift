@@ -161,7 +161,6 @@ struct CodeEditorView: NSViewRepresentable {
     @Bindable var state: EditorTabState
     let editorSettings: EditorSettings
     let themeVersion: Int
-    let focused: Bool
     let searchNeedle: String
     let searchNavigationVersion: Int
     let searchNavigationDirection: EditorSearchNavigationDirection
@@ -237,6 +236,7 @@ struct CodeEditorView: NSViewRepresentable {
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
         scrollView.contentView.postsBoundsChangedNotifications = true
+        scrollView.contentView.postsFrameChangedNotifications = true
 
         let coordinator = context.coordinator
         textView.delegate = coordinator
@@ -276,20 +276,6 @@ struct CodeEditorView: NSViewRepresentable {
         coordinator.textView?.delegate = nil
     }
 
-    private static func claimFirstResponder(textView: NSTextView, attemptsRemaining: Int) {
-        guard attemptsRemaining > 0 else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { [weak textView] in
-            guard let textView else { return }
-            guard let window = textView.window else {
-                claimFirstResponder(textView: textView, attemptsRemaining: attemptsRemaining - 1)
-                return
-            }
-            window.makeFirstResponder(textView)
-            textView.setSelectedRange(NSRange(location: 0, length: 0))
-            textView.scrollRangeToVisible(NSRange(location: 0, length: 0))
-        }
-    }
-
     // MARK: - updateNSView
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
@@ -325,9 +311,6 @@ struct CodeEditorView: NSViewRepresentable {
         if !coordinator.hasAppliedInitialContent, viewport.backingStore.lineCount > 1 || backingStoreChanged {
             coordinator.hasAppliedInitialContent = true
             coordinator.refreshViewport(force: true)
-            if focused {
-                Self.claimFirstResponder(textView: textView, attemptsRemaining: 20)
-            }
         }
 
         let themeChanged = coordinator.lastThemeVersion != themeVersion
@@ -584,7 +567,7 @@ struct CodeEditorView: NSViewRepresentable {
 
             let container = ViewportContainerView()
             container.wantsLayer = true
-            let height = viewport.totalDocumentHeight
+            let height = max(viewport.totalDocumentHeight, scrollView.contentView.bounds.height)
             let width = max(scrollView.contentSize.width, textView.frame.width)
             container.frame = NSRect(x: 0, y: 0, width: width, height: height)
             container.autoresizingMask = []
@@ -603,7 +586,7 @@ struct CodeEditorView: NSViewRepresentable {
 
         func updateContainerHeight() {
             guard let viewport = viewportState, let container = containerView, let scrollView else { return }
-            let height = viewport.totalDocumentHeight
+            let height = max(viewport.totalDocumentHeight, scrollView.contentView.bounds.height)
             let width = max(scrollView.contentSize.width, textView?.frame.width ?? scrollView.contentSize.width)
             container.frame = NSRect(x: 0, y: 0, width: width, height: height)
         }
@@ -988,11 +971,12 @@ struct CodeEditorView: NSViewRepresentable {
             }
 
             if let container = containerView {
+                let containerHeight = max(viewport.totalDocumentHeight, scrollView.contentView.bounds.height)
                 let newContainerFrame = NSRect(
                     x: 0,
                     y: 0,
                     width: viewportWidth,
-                    height: viewport.totalDocumentHeight
+                    height: containerHeight
                 )
                 if container.frame != newContainerFrame {
                     container.frame = newContainerFrame
@@ -1015,7 +999,7 @@ struct CodeEditorView: NSViewRepresentable {
                 x: 0,
                 y: 0,
                 width: width,
-                height: viewport.totalDocumentHeight
+                height: max(viewport.totalDocumentHeight, scrollView.contentView.bounds.height)
             )
         }
 
@@ -1032,6 +1016,12 @@ struct CodeEditorView: NSViewRepresentable {
                 name: NSView.boundsDidChangeNotification,
                 object: scrollView.contentView
             )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleClipFrameChange),
+                name: NSView.frameDidChangeNotification,
+                object: scrollView.contentView
+            )
         }
 
         private func removeScrollObserver() {
@@ -1040,18 +1030,34 @@ struct CodeEditorView: NSViewRepresentable {
                 name: NSView.boundsDidChangeNotification,
                 object: observedContentView
             )
+            NotificationCenter.default.removeObserver(
+                self,
+                name: NSView.frameDidChangeNotification,
+                object: observedContentView
+            )
             observedContentView = nil
             lastObservedClipSize = .zero
         }
 
         @objc
         private func handleScrollBoundsChange() {
-            if let observedContentView {
-                let boundsSize = observedContentView.bounds.size
-                if boundsSize.width != lastObservedClipSize.width {
+            reconcileClipSize(observedContentView?.bounds.size)
+        }
+
+        @objc
+        private func handleClipFrameChange() {
+            reconcileClipSize(observedContentView?.frame.size)
+        }
+
+        private func reconcileClipSize(_ size: CGSize?) {
+            if let size {
+                if size.width != lastObservedClipSize.width {
                     ensureViewportMinimumWidth()
                 }
-                lastObservedClipSize = boundsSize
+                if size.height != lastObservedClipSize.height {
+                    updateContainerHeight()
+                }
+                lastObservedClipSize = size
             }
             if !isEditingViewport {
                 refreshViewport(force: false)
