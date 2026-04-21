@@ -337,7 +337,9 @@ final class AppState {
     }
 
     private func closeTabWithLastCheck(_ tabID: UUID, areaID: UUID, projectID: UUID) {
-        if isLastTabInProject(tabID, areaID: areaID, projectID: projectID) {
+        if !ProjectLifecyclePreferences.keepOpenWhenNoTabs,
+           isLastTabInProject(tabID, areaID: areaID, projectID: projectID)
+        {
             pendingLastTabClose = PendingTabClose(projectID: projectID, areaID: areaID, tabID: tabID)
             return
         }
@@ -456,7 +458,8 @@ final class AppState {
             activeWorktreeID: activeWorktreeID,
             workspaceRoots: workspaceRoots,
             focusedAreaID: focusedAreaID,
-            focusHistory: focusHistory
+            focusHistory: focusHistory,
+            keepProjectOpenWhenEmpty: ProjectLifecyclePreferences.keepOpenWhenNoTabs
         )
         let effects = WorkspaceReducer.reduce(action: action, state: &workspace)
         if activeProjectID != workspace.activeProjectID {

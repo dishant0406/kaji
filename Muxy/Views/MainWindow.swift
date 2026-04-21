@@ -94,7 +94,14 @@ struct MainWindow: View {
 
                 ZStack {
                     MuxyTheme.bg
-                    if projectsWithWorkspaces.isEmpty {
+                    if let project = activeProject,
+                       appState.workspaceRoot(for: project.id) == nil,
+                       let worktree = resolvedActiveWorktree(for: project)
+                    {
+                        EmptyProjectPlaceholder(project: project) {
+                            appState.selectWorktree(projectID: project.id, worktree: worktree)
+                        }
+                    } else if projectsWithWorkspaces.isEmpty {
                         WelcomeView()
                     } else if let project = activeProjectWithWorkspace,
                               let activeKey = appState.activeWorktreeKey(for: project.id)
@@ -456,6 +463,10 @@ struct MainWindow: View {
               appState.workspaceRoot(for: project.id) != nil
         else { return nil }
         return project
+    }
+
+    private func resolvedActiveWorktree(for project: Project) -> Worktree? {
+        worktreeStore.preferred(for: project.id, matching: appState.activeWorktreeID[project.id])
     }
 
     private var shortcutDispatcher: ShortcutActionDispatcher {
