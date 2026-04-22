@@ -111,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var onTerminate: (() -> Void)?
     var hasUnsavedEditorTabs: (() -> [EditorTabState])?
 
+    @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
@@ -121,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ModifierKeyMonitor.shared.start()
         NotificationSocketServer.shared.start()
         AIProviderRegistry.shared.installAll()
+        _ = AIUsageSettingsStore.isUsageEnabled()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

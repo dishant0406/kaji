@@ -2,6 +2,7 @@
 /.build
 /Packages
 /.vscode
+.idea/
 xcuserdata/
 DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata

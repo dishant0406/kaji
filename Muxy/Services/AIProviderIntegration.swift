@@ -40,9 +40,23 @@ extension AIProviderIntegration {
 final class AIProviderRegistry {
     static let shared = AIProviderRegistry()
 
-    let providers: [AIProviderIntegration] = [
-        ClaudeCodeProvider(),
-        OpenCodeProvider(),
+    private let claudeCodeProvider = ClaudeCodeProvider()
+    private let openCodeProvider = OpenCodeProvider()
+
+    lazy var providers: [AIProviderIntegration] = [
+        claudeCodeProvider,
+        openCodeProvider,
+    ]
+
+    lazy var usageProviders: [any AIUsageProvider] = [
+        claudeCodeProvider,
+        CodexUsageProvider(),
+        CopilotUsageProvider(),
+        AmpUsageProvider(),
+        ZaiUsageProvider(),
+        MiniMaxUsageProvider(),
+        KimiUsageProvider(),
+        FactoryUsageProvider(),
     ]
 
     private init() {}
