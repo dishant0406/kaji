@@ -136,10 +136,17 @@ final class GhosttyTerminalNSView: NSView {
         }
 
         ghostty_surface_set_focus(surface, isFocused)
+
+        if let paneID = TerminalViewRegistry.shared.paneID(for: self) {
+            RemoteTerminalStreamer.shared.attach(paneID: paneID, surface: surface)
+        }
     }
 
     func destroySurface() {
         if let surface {
+            if let paneID = TerminalViewRegistry.shared.paneID(for: self) {
+                RemoteTerminalStreamer.shared.detach(paneID: paneID, surface: surface)
+            }
             ghostty_surface_free(surface)
         }
         surface = nil
@@ -694,70 +701,11 @@ final class GhosttyTerminalNSView: NSView {
         sendKeyPress(codepoint: 13, keycode: 36)
     }
 
-    func sendRemoteText(_ text: String) {
-        if let arrowKey = Self.ansiArrowKey(text) {
-            sendKeyPress(codepoint: arrowKey.codepoint, keycode: arrowKey.keycode, mods: arrowKey.mods)
-            return
-        }
-
-        var buffer = ""
-        for character in text {
-            let scalar = character.unicodeScalars.first?.value ?? 0
-            if let keyEvent = Self.specialKeyEvent(scalar) {
-                if !buffer.isEmpty {
-                    sendText(buffer)
-                    buffer = ""
-                }
-                sendKeyPress(
-                    codepoint: keyEvent.codepoint,
-                    keycode: keyEvent.keycode,
-                    mods: keyEvent.mods
-                )
-            } else if character == "\r" || character == "\n" {
-                if !buffer.isEmpty {
-                    sendText(buffer)
-                    buffer = ""
-                }
-                sendReturnKey()
-            } else {
-                buffer.append(character)
-            }
-        }
-        if !buffer.isEmpty {
-            sendText(buffer)
-        }
-    }
-
-    private struct RemoteKeyEvent {
-        let codepoint: UInt32
-        let keycode: UInt32
-        let mods: ghostty_input_mods_e
-    }
-
-    private static func ansiArrowKey(_ text: String) -> RemoteKeyEvent? {
-        switch text {
-        case "\u{1B}[A": RemoteKeyEvent(codepoint: 0, keycode: 126, mods: GHOSTTY_MODS_NONE)
-        case "\u{1B}[B": RemoteKeyEvent(codepoint: 0, keycode: 125, mods: GHOSTTY_MODS_NONE)
-        case "\u{1B}[C": RemoteKeyEvent(codepoint: 0, keycode: 124, mods: GHOSTTY_MODS_NONE)
-        case "\u{1B}[D": RemoteKeyEvent(codepoint: 0, keycode: 123, mods: GHOSTTY_MODS_NONE)
-        default: nil
-        }
-    }
-
-    private static func specialKeyEvent(_ scalar: UInt32) -> RemoteKeyEvent? {
-        switch scalar {
-        case 0x01: RemoteKeyEvent(codepoint: 97, keycode: 0, mods: GHOSTTY_MODS_CTRL)
-        case 0x02: RemoteKeyEvent(codepoint: 98, keycode: 11, mods: GHOSTTY_MODS_CTRL)
-        case 0x03: RemoteKeyEvent(codepoint: 99, keycode: 8, mods: GHOSTTY_MODS_CTRL)
-        case 0x04: RemoteKeyEvent(codepoint: 100, keycode: 2, mods: GHOSTTY_MODS_CTRL)
-        case 0x05: RemoteKeyEvent(codepoint: 101, keycode: 14, mods: GHOSTTY_MODS_CTRL)
-        case 0x06: RemoteKeyEvent(codepoint: 102, keycode: 3, mods: GHOSTTY_MODS_CTRL)
-        case 0x0C: RemoteKeyEvent(codepoint: 108, keycode: 37, mods: GHOSTTY_MODS_CTRL)
-        case 0x1A: RemoteKeyEvent(codepoint: 122, keycode: 6, mods: GHOSTTY_MODS_CTRL)
-        case 0x09: RemoteKeyEvent(codepoint: 9, keycode: 48, mods: GHOSTTY_MODS_NONE)
-        case 0x1B: RemoteKeyEvent(codepoint: 27, keycode: 53, mods: GHOSTTY_MODS_NONE)
-        case 0x7F: RemoteKeyEvent(codepoint: 8, keycode: 51, mods: GHOSTTY_MODS_NONE)
-        default: nil
+    func sendRemoteBytes(_ bytes: Data) {
+        guard let surface, !bytes.isEmpty else { return }
+        bytes.withUnsafeBytes { raw in
+            guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return }
+            ghostty_surface_send_input_raw(surface, base, UInt(bytes.count))
         }
     }
 
