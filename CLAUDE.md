@@ -63,6 +63,7 @@ The xcframework is built via GitHub Actions on the [muxy-app/ghostty](https://gi
 ## Top Level Rules
 
 - Security first
+- Native Only
 - Maintainability
 - Scalability
 - Clean Code
