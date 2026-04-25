@@ -1,3 +1,5 @@
+import AppKit
+import CoreGraphics
 import Foundation
 
 enum EditorSearchNavigationDirection {
@@ -5,13 +7,43 @@ enum EditorSearchNavigationDirection {
     case previous
 }
 
+enum EditorMarkdownViewMode: String, CaseIterable {
+    case code
+    case preview
+    case split
+
+    var title: String {
+        switch self {
+        case .code: "Code"
+        case .preview: "Preview"
+        case .split: "Split"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .code: "curlybraces"
+        case .preview: "doc.richtext"
+        case .split: "rectangle.split.2x1"
+        }
+    }
+}
+
+enum EditorMarkdownScrollDriver {
+    case editor
+    case preview
+}
+
 @MainActor
 @Observable
 final class EditorTabState: Identifiable {
+    private static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd"]
+
     let id = UUID()
     let projectPath: String
     private(set) var filePath: String
     var backingStoreVersion = 0
+    var previewRefreshVersion = 0
     var isLoading = false
     var isIncrementalLoading = false
     var isModified = false
@@ -39,6 +71,25 @@ final class EditorTabState: Identifiable {
     var awaitingLargeFileConfirmation = false
     var largeFileSize: Int64 = 0
     var backingStore: TextBackingStore?
+    var markdownViewMode: EditorMarkdownViewMode = .code
+    var markdownScrollPosition: CGFloat = 0
+    var markdownEditorScrollY: CGFloat = 0
+    var markdownEditorMaxScrollY: CGFloat = 0
+    var markdownScrollSyncEnabled = true
+    var markdownScrollDriver: EditorMarkdownScrollDriver = .editor
+    var markdownActiveAnchorID: String?
+    var markdownActiveAnchorLocalProgress: Double = 0
+
+    var markdownPreviewScrollRequestVersion: Int = 0
+    var markdownPreviewScrollRequest: MarkdownSyncPoint?
+    var markdownEditorScrollRequestVersion: Int = 0
+    var markdownEditorScrollRequestLine: Int?
+
+    @ObservationIgnored private weak var linkedMarkdownEditorScrollView: NSScrollView?
+
+    @ObservationIgnored let markdownSyncCoordinator = MarkdownSyncCoordinator()
+    @ObservationIgnored private var markdownSyncAnchorsCache: [MarkdownSyncAnchor] = []
+    @ObservationIgnored private var markdownSyncAnchorsCacheVersion: Int = -1
     @ObservationIgnored private(set) var syntaxHighlighter: SyntaxHighlighter?
 
     static let largeFileWarningThreshold: Int64 = 5 * 1024 * 1024
@@ -63,6 +114,10 @@ final class EditorTabState: Identifiable {
         return isModified ? "\(name) \u{2022}" : name
     }
 
+    var isMarkdownFile: Bool {
+        Self.markdownExtensions.contains(fileExtension)
+    }
+
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
     private enum FileLoadEvent {
@@ -85,6 +140,9 @@ final class EditorTabState: Identifiable {
     init(projectPath: String, filePath: String) {
         self.projectPath = projectPath
         self.filePath = filePath
+        if isMarkdownFile {
+            markdownViewMode = .preview
+        }
         syntaxHighlighter = Self.makeSyntaxHighlighter(for: filePath)
         loadFile()
     }
@@ -94,6 +152,55 @@ final class EditorTabState: Identifiable {
         filePath = newPath
         syntaxHighlighter = Self.makeSyntaxHighlighter(for: newPath)
         refreshReadOnlyStatus()
+    }
+
+    func registerLinkedMarkdownEditorScrollView(_ scrollView: NSScrollView) {
+        linkedMarkdownEditorScrollView = scrollView
+    }
+
+    func unregisterLinkedMarkdownEditorScrollView(_ scrollView: NSScrollView) {
+        guard linkedMarkdownEditorScrollView === scrollView else { return }
+        linkedMarkdownEditorScrollView = nil
+    }
+
+    func forwardLinkedMarkdownScroll(deltaY: CGFloat) {
+        guard let scrollView = linkedMarkdownEditorScrollView else { return }
+
+        let visibleHeight = scrollView.contentView.bounds.height
+        let documentHeight = scrollView.documentView?.bounds.height ?? 0
+        let maxScrollY = max(0, documentHeight - visibleHeight)
+        let currentY = scrollView.contentView.bounds.origin.y
+        let targetY = min(maxScrollY, max(0, currentY + deltaY))
+
+        guard abs(targetY - currentY) > 0.1 else { return }
+
+        markdownScrollDriver = .preview
+        scrollView.contentView.setBoundsOrigin(NSPoint(x: scrollView.contentView.bounds.origin.x, y: targetY))
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+    }
+
+    func markdownSyncAnchors() -> [MarkdownSyncAnchor] {
+        guard isMarkdownFile else { return [] }
+        guard let backingStore else { return [] }
+        guard markdownSyncAnchorsCacheVersion != backingStoreVersion else {
+            return markdownSyncAnchorsCache
+        }
+        markdownSyncAnchorsCache = MarkdownAnchorParser.parseAnchors(in: backingStore.fullText())
+        markdownSyncAnchorsCacheVersion = backingStoreVersion
+        return markdownSyncAnchorsCache
+    }
+
+    func applyMarkdownSyncOutput(_ output: MarkdownSyncCoordinator.Output) {
+        if let point = output.requestPreviewScroll {
+            markdownScrollDriver = .editor
+            markdownPreviewScrollRequest = point
+            markdownPreviewScrollRequestVersion += 1
+        }
+        if let line = output.requestEditorScrollLine {
+            markdownScrollDriver = .preview
+            markdownEditorScrollRequestLine = line
+            markdownEditorScrollRequestVersion += 1
+        }
     }
 
     private static func makeSyntaxHighlighter(for filePath: String) -> SyntaxHighlighter? {
