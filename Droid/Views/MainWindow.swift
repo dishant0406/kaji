@@ -91,12 +91,14 @@ struct MainWindow: View {
                 .overlay {
                     createThemeOverlay
                 }
-                .animation(.easeInOut(duration: 0.15), value: showQuickOpen)
-                .animation(.easeInOut(duration: 0.15), value: showWorktreeSwitcher)
                 .animation(.easeInOut(duration: 0.15), value: showSettings)
                 .animation(.easeInOut(duration: 0.15), value: showCreateThemeModal)
                 .animation(.easeInOut(duration: 0.15), value: createWorktreeProjectID)
                 .animation(.easeInOut(duration: 0.2), value: ToastState.shared.message != nil)
+                .task(id: activeQuickOpenProjectPath) {
+                    guard let path = activeQuickOpenProjectPath else { return }
+                    await FileSearchService.warm(projectPath: path)
+                }
                 .coordinateSpace(name: DragCoordinateSpace.mainWindow)
                 .environment(dragCoordinator)
                 .background(MainWindowShortcutInterceptor(
@@ -341,7 +343,6 @@ struct MainWindow: View {
                 },
                 onDismiss: { showQuickOpen = false }
             )
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -573,6 +574,11 @@ struct MainWindow: View {
     private var activeProject: Project? {
         guard let pid = appState.activeProjectID else { return nil }
         return projectStore.projects.first { $0.id == pid }
+    }
+
+    private var activeQuickOpenProjectPath: String? {
+        guard let project = activeProject else { return nil }
+        return activeWorktreePath(for: project)
     }
 
     private var windowTitle: String {

@@ -7,7 +7,7 @@ struct QuickOpenOverlay: View {
 
     var body: some View {
         PaletteOverlay<FileSearchResult>(
-            placeholder: "Search files by name...",
+            placeholder: "Type a file name or path",
             emptyLabel: "No files found",
             noMatchLabel: "No matching files",
             search: { query in
@@ -26,6 +26,26 @@ private struct FileResultRow: View {
     let result: FileSearchResult
     let isHighlighted: Bool
     @State private var hovered = false
+
+    private var directoryPath: String {
+        let url = URL(fileURLWithPath: result.relativePath)
+        let directory = url.deletingLastPathComponent().path
+        return directory == "." ? projectRootLabel : directory
+    }
+
+    private var projectRootLabel: String {
+        "/"
+    }
+
+    private var rowBackground: Color {
+        if isHighlighted {
+            return DroidTheme.secondaryBackground
+        }
+        if hovered {
+            return DroidTheme.chrome.opacity(0.72)
+        }
+        return .clear
+    }
 
     private var fileIcon: String {
         let ext = URL(fileURLWithPath: result.absolutePath).pathExtension.lowercased()
@@ -56,26 +76,31 @@ private struct FileResultRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             DroidIcon(systemName: fileIcon, size: 12)
-                .foregroundStyle(DroidTheme.fgMuted)
+                .foregroundStyle(isHighlighted ? DroidTheme.fg : DroidTheme.fgMuted)
                 .frame(width: 16)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(result.fileName)
-                    .droidFont(size: 12, weight: .medium)
-                    .foregroundStyle(DroidTheme.fg)
-                    .lineLimit(1)
-                Text(result.relativePath)
-                    .droidFont(size: 10)
-                    .foregroundStyle(DroidTheme.fgDim)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer()
+            Text(result.fileName)
+                .droidFont(size: 13, weight: .medium)
+                .foregroundStyle(DroidTheme.fg)
+                .lineLimit(1)
+            Spacer(minLength: 12)
+            Text(directoryPath)
+                .droidFont(size: 11, design: .monospaced)
+                .foregroundStyle(isHighlighted ? DroidTheme.fgMuted : DroidTheme.fgDim)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(isHighlighted ? DroidTheme.surface : hovered ? DroidTheme.hover : .clear)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: DroidShape.panelRadius)
+                .fill(rowBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DroidShape.panelRadius)
+                .stroke(isHighlighted ? DroidTheme.borderStrong : .clear, lineWidth: 1)
+        )
         .onHover { isHovered in
             hovered = isHovered
         }
