@@ -1,0 +1,92 @@
+import AppKit
+import SwiftUI
+
+struct PaletteSearchField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    var fontSize: CGFloat = 13
+    let onSubmit: () -> Void
+    let onEscape: () -> Void
+    let onArrowUp: () -> Void
+    let onArrowDown: () -> Void
+    @Environment(AppTypographySettings.self) private var typography
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = PaletteNSTextField()
+        field.delegate = context.coordinator
+        field.isBordered = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = typography.nsFont(size: fontSize)
+        field.textColor = NSColor(DroidTheme.fg)
+        field.placeholderString = placeholder
+        field.cell?.sendsActionOnEndEditing = false
+        field.onEscape = onEscape
+        field.maximumNumberOfLines = 1
+        field.usesSingleLineMode = true
+        DispatchQueue.main.async {
+            field.window?.makeFirstResponder(field)
+        }
+        return field
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        context.coordinator.parent = self
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        nsView.font = typography.nsFont(size: fontSize)
+        if let field = nsView as? PaletteNSTextField {
+            field.onEscape = onEscape
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: PaletteSearchField
+
+        init(parent: PaletteSearchField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            guard let field = obj.object as? NSTextField else { return }
+            parent.text = field.stringValue
+        }
+
+        func control(
+            _ control: NSControl,
+            textView _: NSTextView,
+            doCommandBy commandSelector: Selector
+        ) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                parent.onSubmit()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveUp(_:)) {
+                parent.onArrowUp()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveDown(_:)) {
+                parent.onArrowDown()
+                return true
+            }
+            return false
+        }
+    }
+}
+
+private final class PaletteNSTextField: NSTextField {
+    var onEscape: (() -> Void)?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.keyCode == 53 {
+            onEscape?()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
