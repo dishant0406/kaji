@@ -58,7 +58,7 @@ Droid stores app data under `~/Library/Application Support/Droid/`.
 - `worktrees/*.json`: per-project worktree metadata
 - workspace persistence files: tabs, splits, and selection state
 - notification persistence files used by `NotificationStore`
-- `ghostty.conf`: Droid-managed Ghostty config snapshot with theme and default terminal typography
+- `ghostty.conf`: Droid-managed Ghostty config snapshot with theme, default terminal typography, and editor-like cursor interaction defaults
 - `~/.config/ghostty/themes/*`: imported and user-created Ghostty theme files managed by `ThemeService`
 - `cli-launchers.json`: enabled CLI footer launchers and their commands
 

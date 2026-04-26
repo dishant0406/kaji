@@ -42,7 +42,8 @@ extension ThemeService {
 
         let preserved = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         let typographyLines = GhosttyTypographyDefaults.linesIfMissing(in: preserved)
-        return (themeLines + typographyLines + preserved).joined(separator: "\n")
+        let interactionLines = GhosttyInteractionDefaults.linesIfMissing(in: preserved)
+        return (themeLines + typographyLines + interactionLines + preserved).joined(separator: "\n")
     }
 
     nonisolated static func userThemesDirectoryURL() throws -> URL {

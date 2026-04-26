@@ -56,8 +56,7 @@ final class ThemeService {
 
     func applyDefaultThemeIfNeeded() {
         if let current = currentThemeIdentifier(),
-           let theme = Self.discoverTheme(identifier: current),
-           theme.source == .bundled
+           let theme = Self.discoverTheme(identifier: current)
         {
             let existing = config.readGhosttyConfig().trimmingCharacters(in: .whitespacesAndNewlines)
             let expected = Self.updatedConfigContent(from: existing, themeIdentifier: current, theme: theme)
