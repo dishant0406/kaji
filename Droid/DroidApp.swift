@@ -80,16 +80,6 @@ struct DroidApp: App {
                 updateService: .shared
             )
         }
-
-        Window("Source Control", id: "vcs") {
-            VCSWindowView()
-                .environment(appState)
-                .environment(projectStore)
-                .environment(worktreeStore)
-                .environment(GhosttyService.shared)
-                .preferredColorScheme(DroidTheme.colorScheme)
-        }
-        .defaultSize(width: 700, height: 600)
     }
 }
 

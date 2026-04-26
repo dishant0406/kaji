@@ -30,11 +30,7 @@ struct DroidCommands: Commands {
 
     private func performShortcutAction(_ action: ShortcutAction) {
         _ = shortcutDispatcher.perform(action, activeProject: activeProject) { project in
-            VCSDisplayMode.current.route(
-                tab: { appState.createVCSTab(projectID: project.id) },
-                window: { NotificationCenter.default.post(name: .openVCSWindow, object: nil) },
-                attached: { NotificationCenter.default.post(name: .toggleAttachedVCS, object: nil) }
-            )
+            NotificationCenter.default.post(name: .toggleAttachedVCS, object: project.id)
         }
     }
 

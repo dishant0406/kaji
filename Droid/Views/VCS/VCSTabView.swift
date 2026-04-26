@@ -10,8 +10,8 @@ struct VCSTabView: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var showDiscardAllConfirmation = false
     @State private var pendingDiscardPath: String?
-    @State private var showCreateBranchSheet = false
-    @State private var showCreatePRSheet = false
+    @State private var showCreateBranchModal = false
+    @State private var showCreatePRModal = false
     @State private var showWorktreePopover = false
     @State private var pendingClosePR: GitRepositoryService.PRInfo?
     private var commitEnabled: Bool {
@@ -39,6 +39,8 @@ struct VCSTabView: View {
         .background(DroidTheme.bg)
         .contentShape(Rectangle())
         .onTapGesture(perform: onFocus)
+        .overlay { branchModalOverlay }
+        .overlay { prModalOverlay }
         .onAppear {
             if !state.hasCompletedInitialLoad, !state.isLoadingFiles {
                 state.refresh()
@@ -98,7 +100,7 @@ struct VCSTabView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             worktreeTrigger
 
             BranchPicker(
@@ -107,7 +109,7 @@ struct VCSTabView: View {
                 isLoading: state.isLoadingBranches,
                 onSelect: { state.switchBranch($0) },
                 onRefresh: { state.loadBranches() },
-                onCreateBranch: { showCreateBranchSheet = true },
+                onCreateBranch: { showCreateBranchModal = true },
                 onDeleteBranch: { branch in presentDeleteBranchConfirmation(branch) }
             )
 
@@ -124,60 +126,19 @@ struct VCSTabView: View {
                 state.refresh()
             }
         }
-        .padding(.horizontal, 8)
-        .frame(height: 32)
-        .background(DroidTheme.bg)
-        .sheet(isPresented: $showCreateBranchSheet) {
-            CreateBranchSheet(
-                currentBranch: state.branchName,
-                onCreate: { name in
-                    showCreateBranchSheet = false
-                    state.createAndSwitchBranch(name)
-                },
-                onCancel: { showCreateBranchSheet = false }
-            )
-        }
-        .sheet(isPresented: $showCreatePRSheet) {
-            CreatePRSheet(
-                context: CreatePRSheet.Context(
-                    currentBranch: state.branchName ?? "",
-                    defaultBranch: state.defaultBranch,
-                    availableBaseBranches: state.remoteBranches,
-                    isLoadingBranches: state.isLoadingRemoteBranches,
-                    hasStagedChanges: state.hasStagedChanges,
-                    hasUnstagedChanges: !state.unstagedFiles.isEmpty
-                ),
-                inProgress: state.isOpeningPullRequest,
-                errorMessage: state.openPullRequestError,
-                onSubmit: { base, title, body, branchStrategy, includeMode, draft in
-                    ToastState.shared.show("Creating pull request…")
-                    state.openPullRequest(
-                        VCSTabState.PRCreateRequest(
-                            baseBranch: base,
-                            title: title,
-                            body: body,
-                            branchStrategy: branchStrategy,
-                            includeMode: includeMode,
-                            draft: draft
-                        )
-                    )
-                },
-                onCancel: {
-                    state.openPullRequestError = nil
-                    showCreatePRSheet = false
-                }
-            )
-        }
+        .padding(.horizontal, 10)
+        .frame(height: 38)
+        .background(DroidTheme.secondaryBackground)
         .onChange(of: state.pullRequestInfo?.number) { _, number in
-            guard number != nil, showCreatePRSheet else { return }
-            showCreatePRSheet = false
+            guard number != nil, showCreatePRModal else { return }
+            showCreatePRModal = false
         }
     }
 
     private func requestOpenPR() {
         state.openPullRequestError = nil
         state.loadRemoteBranches()
-        showCreatePRSheet = true
+        showCreatePRModal = true
     }
 
     @ViewBuilder
@@ -189,18 +150,18 @@ struct VCSTabView: View {
                 HStack(spacing: 4) {
                     DroidIcon(systemName: "square.stack.3d.up", size: 9)
                     Text(worktreeTriggerLabel)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: 120, alignment: .leading)
                     DroidIcon(systemName: "chevron.down", size: 8)
                         .foregroundStyle(DroidTheme.fgDim)
                 }
-                .foregroundStyle(DroidTheme.fg.opacity(0.85))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 5))
-                .contentShape(RoundedRectangle(cornerRadius: 5))
+                .foregroundStyle(DroidTheme.fg)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(DroidTheme.surfaceMuted, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+                .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
             }
             .buttonStyle(.plain)
             .help(worktreeTriggerLabel)
@@ -218,6 +179,61 @@ struct VCSTabView: View {
                 .environment(worktreeStore)
             }
         }
+    }
+
+    @ViewBuilder
+    private var branchModalOverlay: some View {
+        if showCreateBranchModal {
+            DroidModalOverlay(onDismiss: { showCreateBranchModal = false }) {
+                CreateBranchModal(
+                    currentBranch: state.branchName,
+                    onCreate: { name in
+                        showCreateBranchModal = false
+                        state.createAndSwitchBranch(name)
+                    },
+                    onCancel: { showCreateBranchModal = false }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var prModalOverlay: some View {
+        if showCreatePRModal {
+            DroidModalOverlay(onDismiss: dismissPRModal) {
+                CreatePRModal(
+                    context: .init(
+                        currentBranch: state.branchName ?? "",
+                        defaultBranch: state.defaultBranch,
+                        availableBaseBranches: state.remoteBranches,
+                        isLoadingBranches: state.isLoadingRemoteBranches,
+                        hasStagedChanges: state.hasStagedChanges,
+                        hasUnstagedChanges: !state.unstagedFiles.isEmpty
+                    ),
+                    inProgress: state.isOpeningPullRequest,
+                    errorMessage: state.openPullRequestError,
+                    onSubmit: { base, title, body, branchStrategy, includeMode, draft in
+                        ToastState.shared.show("Creating pull request…")
+                        state.openPullRequest(
+                            VCSTabState.PRCreateRequest(
+                                baseBranch: base,
+                                title: title,
+                                body: body,
+                                branchStrategy: branchStrategy,
+                                includeMode: includeMode,
+                                draft: draft
+                            )
+                        )
+                    },
+                    onCancel: dismissPRModal
+                )
+            }
+        }
+    }
+
+    private func dismissPRModal() {
+        state.openPullRequestError = nil
+        showCreatePRModal = false
     }
 
     private var worktreeTriggerLabel: String {
@@ -398,10 +414,10 @@ struct VCSTabView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if state.files.isEmpty, state.errorMessage != nil {
-            Text(state.errorMessage ?? "")
-                .font(.system(size: 12))
-                .foregroundStyle(DroidTheme.fgMuted)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(state.errorMessage ?? "")
+                    .font(.system(size: 12))
+                    .foregroundStyle(DroidTheme.fgMuted)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(spacing: 0) {
                 commitArea
@@ -418,70 +434,48 @@ struct VCSTabView: View {
     }
 
     private var commitArea: some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .topLeading) {
-                if state.commitMessage.isEmpty {
-                    Text("Commit message (⌘↵ to commit on \(state.branchName ?? "branch"))")
-                        .font(.system(size: 12))
-                        .foregroundStyle(DroidTheme.fgDim)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
-                        .allowsHitTesting(false)
-                }
-                TextEditor(text: $state.commitMessage)
-                    .font(.system(size: 12))
-                    .foregroundStyle(DroidTheme.fg)
-                    .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 9)
-                    .frame(minHeight: 54, maxHeight: 100)
-                    .onKeyPress(.return, phases: .down) { keyPress in
-                        if keyPress.modifiers.contains(.command) {
-                            state.commit()
-                            return .handled
-                        }
-                        return .ignored
-                    }
-            }
-            .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(DroidTheme.border, lineWidth: 1))
-
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Commit")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(DroidTheme.fgDim)
+            DroidTextArea(
+                placeholder: "Commit message. Use ⌘↵ to commit on \(state.branchName ?? "branch").",
+                text: $state.commitMessage,
+                minHeight: 64,
+                maxHeight: 104,
+                onCommandEnter: { state.commit() }
+            )
+            HStack(spacing: 8) {
                 commitButton
                 pullButton
                 pushButton
             }
         }
-        .padding(10)
-        .background(DroidTheme.bg)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(DroidTheme.secondaryBackground)
     }
 
     private var commitButton: some View {
         Button {
             state.commit()
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 if state.isCommitting {
-                    ProgressView().controlSize(.mini)
+                    DroidSpinner(size: 11, lineWidth: 1.4, color: DroidTheme.bg)
                 } else {
-                    DroidIcon(systemName: "checkmark", size: 10)
+                    DroidIcon(systemName: "checkmark", size: 11)
                 }
                 Text("Commit")
-                    .font(.system(size: 11, weight: .medium))
+                if state.hasStagedChanges {
+                    Text("\(state.stagedFiles.count)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                }
             }
-            .foregroundStyle(commitEnabled ? DroidTheme.bg : DroidTheme.fgDim)
             .frame(maxWidth: .infinity)
-            .frame(height: Self.actionButtonHeight)
-            .background(
-                commitEnabled ? DroidTheme.accent : DroidTheme.surface,
-                in: RoundedRectangle(cornerRadius: 6)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(DroidTheme.border, lineWidth: commitEnabled ? 0 : 1)
-            )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DroidButtonStyle(commitEnabled ? .primary : .secondary, size: .small))
+        .opacity(commitEnabled || state.isCommitting ? 1 : 0.46)
         .disabled(!commitEnabled || state.isCommitting)
         .help("Commit staged changes")
     }
@@ -490,30 +484,21 @@ struct VCSTabView: View {
         Button {
             state.pull()
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 if state.isPulling {
-                    ProgressView().controlSize(.mini)
+                    DroidSpinner(size: 11, lineWidth: 1.4, color: DroidTheme.fg)
                 } else {
-                    DroidIcon(systemName: "arrow.down", size: 10)
+                    DroidIcon(systemName: "arrow.down", size: 11)
                 }
                 Text("Pull")
-                    .font(.system(size: 11, weight: .medium))
                 if state.aheadBehind.behind > 0 {
                     Text("\(state.aheadBehind.behind)")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DroidTheme.bg)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(DroidTheme.diffAddFg, in: Capsule())
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 }
             }
-            .foregroundStyle(DroidTheme.fg)
-            .padding(.horizontal, 10)
-            .frame(height: Self.actionButtonHeight)
-            .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(DroidTheme.border, lineWidth: 1))
+            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DroidButtonStyle(.secondary, size: .small))
         .disabled(state.isPulling)
         .help(state.aheadBehind.behind > 0
             ? "Pull \(state.aheadBehind.behind) commit\(state.aheadBehind.behind == 1 ? "" : "s") from origin"
@@ -524,30 +509,21 @@ struct VCSTabView: View {
         Button {
             state.push()
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 if state.isPushing {
-                    ProgressView().controlSize(.mini)
+                    DroidSpinner(size: 11, lineWidth: 1.4, color: DroidTheme.fg)
                 } else {
-                    DroidIcon(systemName: "arrow.up", size: 10)
+                    DroidIcon(systemName: "arrow.up", size: 11)
                 }
                 Text("Push")
-                    .font(.system(size: 11, weight: .medium))
                 if state.aheadBehind.ahead > 0 {
                     Text("\(state.aheadBehind.ahead)")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DroidTheme.bg)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(DroidTheme.accent, in: Capsule())
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 }
             }
-            .foregroundStyle(DroidTheme.fg)
-            .padding(.horizontal, 10)
-            .frame(height: Self.actionButtonHeight)
-            .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(DroidTheme.border, lineWidth: 1))
+            .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DroidButtonStyle(.secondary, size: .small))
         .disabled(state.isPushing)
         .help(state.aheadBehind.ahead > 0
             ? "Push \(state.aheadBehind.ahead) commit\(state.aheadBehind.ahead == 1 ? "" : "s") to origin"
@@ -687,20 +663,20 @@ struct PRPill: View {
         Button {
             showPRPopover = true
         } label: {
-            HStack(spacing: 4) {
-                DroidIcon(systemName: prStateIcon(info), size: 9)
+            HStack(spacing: 6) {
+                DroidIcon(systemName: prStateIcon(info), size: 10)
                     .foregroundStyle(prStateColor(info))
                 Text("PR #\(info.number)")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(DroidTheme.fg.opacity(0.85))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(DroidTheme.fg)
                 DroidIcon(systemName: "chevron.down", size: 8)
                     .foregroundStyle(DroidTheme.fgDim)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 5))
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(prStateColor(info).opacity(0.35), lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 5))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(DroidTheme.surfaceMuted, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .overlay(RoundedRectangle(cornerRadius: DroidShape.tileRadius).stroke(prStateColor(info).opacity(0.24), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
         .help("Pull request #\(info.number)")
@@ -777,17 +753,17 @@ struct PRPill: View {
         action: @escaping () -> Void = {}
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                DroidIcon(systemName: icon, size: 9)
+            HStack(spacing: 6) {
+                DroidIcon(systemName: icon, size: 10)
                 Text(text)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
             }
             .foregroundStyle(tint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 5))
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(tint.opacity(0.35), lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 5))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(DroidTheme.surfaceMuted, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .overlay(RoundedRectangle(cornerRadius: DroidShape.tileRadius).stroke(tint.opacity(0.24), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
         .disabled(disabled)
@@ -1268,8 +1244,8 @@ private struct SectionSplitLayout: View {
 
         return HStack(spacing: 6) {
             Button {
-                toggleCollapsed(section)
-            } label: {
+                    toggleCollapsed(section)
+                } label: {
                 HStack(spacing: 6) {
                     DroidIcon(systemName: isCollapsedState ? "chevron.right" : "chevron.down", size: 9)
                         .foregroundStyle(DroidTheme.fgDim)
@@ -1283,11 +1259,8 @@ private struct SectionSplitLayout: View {
             .buttonStyle(.plain)
 
             Text("\(sectionCount(for: section))")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(DroidTheme.bg)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(DroidTheme.fgMuted, in: Capsule())
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(DroidTheme.fgDim)
 
             Spacer(minLength: 0)
 
@@ -1295,7 +1268,7 @@ private struct SectionSplitLayout: View {
         }
         .padding(.horizontal, 10)
         .frame(height: Self.sectionHeaderHeight)
-        .background(DroidTheme.bg)
+        .background(DroidTheme.secondaryBackground)
     }
 
     private func sectionCount(for section: SectionKind) -> Int {
@@ -1344,7 +1317,7 @@ private struct SectionSplitLayout: View {
         } label: {
             DroidIcon(systemName: state.mode == .unified ? "rectangle.split.2x1" : "rectangle", size: 10)
                 .foregroundStyle(DroidTheme.fgMuted)
-                .frame(width: 18, height: 18)
+                .frame(width: 22, height: 20)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1362,7 +1335,7 @@ private struct SectionSplitLayout: View {
                 size: 10
             )
                 .foregroundStyle(DroidTheme.fgMuted)
-                .frame(width: 18, height: 18)
+                .frame(width: 22, height: 20)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1507,9 +1480,9 @@ private struct FileRow: View {
                 }
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 34)
-        .background(DroidTheme.bg)
+        .padding(.horizontal, 12)
+        .frame(height: 36)
+        .background(hovered ? DroidTheme.hover : Color.clear)
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
         .onTapGesture(perform: onToggle)
