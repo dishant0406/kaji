@@ -68,7 +68,7 @@ struct CreateWorktreeModal: View {
                         VStack(alignment: .leading, spacing: 0) {
                             Rectangle().fill(DroidTheme.border).frame(height: 1)
                             Text(errorMessage)
-                                .font(.system(size: 11))
+                                .droidFont(size: 11)
                                 .foregroundStyle(DroidTheme.diffRemoveFg)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 18)
@@ -115,10 +115,10 @@ struct CreateWorktreeModal: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Create Worktree")
-                    .font(.system(size: 13, weight: .semibold))
+                    .droidFont(size: 13, weight: .semibold)
                     .foregroundStyle(DroidTheme.fg)
                 Text(project.name)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .lineLimit(1)
             }

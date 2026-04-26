@@ -65,7 +65,7 @@ struct SidebarWorktreeRow: View {
             if isRenaming {
                 TextField("", text: $renameText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fg)
                     .focused($renameFieldFocused)
                     .onSubmit { commitRename() }
@@ -73,12 +73,12 @@ struct SidebarWorktreeRow: View {
             } else {
                 HStack(spacing: 6) {
                     Text(displayName)
-                        .font(.system(size: 12, weight: selected ? .semibold : .regular))
+                        .droidFont(size: 12, weight: selected ? .semibold : .regular)
                         .foregroundStyle(selected ? DroidTheme.fg : DroidTheme.fgMuted)
                         .lineLimit(1)
                     if let detailLabel {
                         Text(detailLabel)
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .droidFont(size: 11, weight: .regular, design: .monospaced)
                             .foregroundStyle(DroidTheme.fgDim)
                             .lineLimit(1)
                             .truncationMode(.middle)
@@ -106,7 +106,7 @@ struct SidebarWorktreeRow: View {
         }
         .contextMenu {
             if worktree.isPrimary {
-                Text("Primary worktree").font(.system(size: 11))
+                Text("Primary worktree").droidFont(size: 11)
             } else if let onRemove {
                 Button("Rename") { startRename() }
                 Divider()
@@ -114,7 +114,7 @@ struct SidebarWorktreeRow: View {
             } else {
                 Button("Rename") { startRename() }
                 Divider()
-                Text("External worktree").font(.system(size: 11))
+                Text("External worktree").droidFont(size: 11)
             }
         }
     }
@@ -157,7 +157,7 @@ struct SidebarNewWorktreeRow: View {
                 DroidIcon(systemName: "plus", size: 11)
                     .foregroundStyle(hovered ? DroidTheme.fg : DroidTheme.fgDim)
                 Text("New Worktree")
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(hovered ? DroidTheme.fg : DroidTheme.fgMuted)
                 Spacer()
             }

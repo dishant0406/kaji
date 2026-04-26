@@ -18,7 +18,7 @@ struct AIUsagePanel: View {
 
             if snapshots.isEmpty {
                 Text(isRefreshing ? "Refreshing usage data..." : "No usage data yet.")
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgDim)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
@@ -38,7 +38,7 @@ struct AIUsagePanel: View {
             DroidIcon(systemName: "sparkles", size: 12)
                 .foregroundStyle(DroidTheme.fgMuted)
             Text("AI Usage")
-                .font(.system(size: 12, weight: .semibold))
+                .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(DroidTheme.fgMuted)
             Spacer()
             Button(action: onRefresh) {
@@ -58,7 +58,7 @@ struct AIUsagePanel: View {
 
             if let lastRefreshDate {
                 Text(Self.relativeFormatter.localizedString(for: lastRefreshDate, relativeTo: Date()))
-                    .font(.system(size: 11))
+                    .droidFont(size: 11)
                     .foregroundStyle(DroidTheme.fgDim)
             }
         }
@@ -75,7 +75,7 @@ private struct AIProviderUsageView: View {
             HStack(spacing: 6) {
                 ProviderIconView(iconName: snapshot.providerIconName, size: 14, style: .monochrome(DroidTheme.fg))
                 Text(snapshot.providerName)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fg)
                 Spacer(minLength: 4)
             }
@@ -99,7 +99,7 @@ private struct AIProviderUsageView: View {
             case let .unavailable(message),
                  let .error(message):
                 Text(message)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgDim)
             }
         }

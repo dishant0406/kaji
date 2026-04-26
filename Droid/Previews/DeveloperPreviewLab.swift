@@ -25,9 +25,9 @@ private struct DeveloperPreviewLab: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 Text("Developer Preview")
-                    .font(.system(size: 28, weight: .semibold))
+                    .droidFont(size: 28, weight: .semibold)
                 Text("Use this canvas for fast SwiftUI iteration while the real Droid app runs from start.sh.")
-                    .font(.system(size: 14))
+                    .droidFont(size: 14)
                     .foregroundStyle(DroidTheme.fgMuted)
                 Spacer()
             }
@@ -36,6 +36,7 @@ private struct DeveloperPreviewLab: View {
             .background(DroidTheme.bg)
         }
         .frame(width: 1100, height: 720)
+        .environment(AppTypographySettings.shared)
         .preferredColorScheme(DroidTheme.colorScheme)
         .background(DroidTheme.bg)
     }
@@ -47,5 +48,6 @@ private struct DeveloperPreviewLab: View {
 
 #Preview("Settings") {
     SettingsView()
+        .environment(AppTypographySettings.shared)
         .preferredColorScheme(DroidTheme.colorScheme)
 }

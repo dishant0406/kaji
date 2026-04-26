@@ -28,7 +28,7 @@ struct CreateBranchModal: View {
                 }
                 if let currentBranch {
                     Text("Created from \(currentBranch)")
-                        .font(.system(size: 11))
+                        .droidFont(size: 11)
                         .foregroundStyle(DroidTheme.fgDim)
                 }
             }
@@ -55,7 +55,7 @@ struct CreateBranchModal: View {
     private var header: some View {
         HStack {
             Text("New Branch")
-                .font(.system(size: 13, weight: .semibold))
+                .droidFont(size: 13, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             IconButton(symbol: "xmark", accessibilityLabel: "Close Branch Modal", action: onCancel)

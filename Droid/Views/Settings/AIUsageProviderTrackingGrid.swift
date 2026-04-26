@@ -33,13 +33,13 @@ private struct AIUsageProviderTrackingCard: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(provider.displayName)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fg)
                     .lineLimit(1)
 
                 if provider.hasNotificationIntegration {
                     Text("Integrated")
-                        .font(.system(size: 9, weight: .semibold))
+                        .droidFont(size: 9, weight: .semibold)
                         .foregroundStyle(DroidTheme.fgDim)
                 }
             }

@@ -36,15 +36,15 @@ struct EmptyProjectPlaceholder: View {
                 }
             }
             Text("No tabs in \(project.name)")
-                .font(.system(size: 14, weight: .semibold))
+                .droidFont(size: 14, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Text(descriptionText)
-                .font(.system(size: 12))
+                .droidFont(size: 12)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
             Text("Terminal: \(KeyBindingStore.shared.combo(for: .newTab).displayString)")
-                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .droidFont(size: 11, weight: .medium, design: .rounded)
                 .foregroundStyle(DroidTheme.fgDim)
             Spacer()
         }

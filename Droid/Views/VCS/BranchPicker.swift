@@ -22,7 +22,7 @@ struct BranchPicker: View {
             HStack(spacing: 6) {
                 DroidIcon(systemName: "arrow.triangle.branch", size: 10)
                 Text(currentBranch ?? "detached")
-                    .font(.system(size: 11, weight: .medium))
+                    .droidFont(size: 11, weight: .medium)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: 140, alignment: .leading)
@@ -97,7 +97,7 @@ private struct BranchRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(name)
-                .font(.system(size: 12, weight: isActive ? .semibold : .medium, design: .monospaced))
+                .droidFont(size: 12, weight: isActive ? .semibold : .medium, design: .monospaced)
                 .foregroundStyle(isActive ? DroidTheme.fg : DroidTheme.fg.opacity(0.9))
                 .lineLimit(1)
                 .truncationMode(.middle)

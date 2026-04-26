@@ -39,7 +39,7 @@ struct SidebarAddProjectButton: View {
             .frame(width: 28, height: 28)
 
             Text("Add Project")
-                .font(.system(size: 12, weight: .medium))
+                .droidFont(size: 12, weight: .medium)
                 .foregroundStyle(hovered ? DroidTheme.fg : DroidTheme.fgMuted)
                 .lineLimit(1)
 

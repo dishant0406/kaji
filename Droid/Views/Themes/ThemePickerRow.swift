@@ -11,11 +11,11 @@ struct ThemePickerRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(theme.name)
-                    .font(.system(size: 12, weight: isActive ? .semibold : .medium))
+                    .droidFont(size: 12, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(DroidTheme.fg)
                     .lineLimit(1)
                 Text(theme.sourceLabel)
-                    .font(.system(size: 11))
+                    .droidFont(size: 11)
                     .foregroundStyle(DroidTheme.fgDim)
                     .lineLimit(1)
             }

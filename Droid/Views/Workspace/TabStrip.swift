@@ -360,14 +360,14 @@ private struct TabCell: View {
                 if isRenaming {
                     TextField("", text: $renameText)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 12))
+                        .droidFont(size: 12)
                         .foregroundStyle(DroidTheme.fg)
                         .focused($renameFieldFocused)
                         .onSubmit { commitRename() }
                         .onExitCommand { cancelRename() }
                 } else if !titleHidden {
                     Text(tab.title)
-                        .font(.system(size: 12))
+                        .droidFont(size: 12)
                         .foregroundStyle(active ? DroidTheme.fg : DroidTheme.fgMuted)
                         .lineLimit(1)
                         .truncationMode(.head)

@@ -102,7 +102,7 @@ private struct ShortcutRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(action.displayName)
-                    .font(.system(size: SettingsMetrics.labelFontSize))
+                    .droidFont(size: SettingsMetrics.labelFontSize)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if isRecording {
@@ -114,7 +114,7 @@ private struct ShortcutRow: View {
 
             if let conflictAction {
                 Text("Conflicts with \"\(conflictAction.displayName)\" — press a different shortcut or Esc to cancel")
-                    .font(.system(size: 10))
+                    .droidFont(size: 10)
                     .foregroundStyle(.orange)
             }
         }
@@ -136,7 +136,7 @@ private struct ShortcutRow: View {
 
             Button(action: onStartRecording) {
                 Text(combo.displayString)
-                    .font(.system(size: SettingsMetrics.footnoteFontSize, weight: .medium, design: .rounded))
+                    .droidFont(size: SettingsMetrics.footnoteFontSize, weight: .medium, design: .rounded)
             }
             .buttonStyle(DroidButtonStyle(.secondary, size: .small))
         }
@@ -149,7 +149,7 @@ private struct ShortcutRow: View {
                 .opacity(0)
 
             Text("Press shortcut…")
-                .font(.system(size: SettingsMetrics.footnoteFontSize, weight: .medium))
+                .droidFont(size: SettingsMetrics.footnoteFontSize, weight: .medium)
                 .foregroundStyle(DroidTheme.diffHunkFg)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)

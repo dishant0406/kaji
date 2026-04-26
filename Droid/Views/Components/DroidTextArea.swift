@@ -14,7 +14,7 @@ struct DroidTextArea: View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
                 Text(placeholder)
-                    .font(textFont)
+                    .droidFont(size: 12, design: monospaced ? .monospaced : .default)
                     .foregroundStyle(DroidTheme.fgDim)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 9)
@@ -22,7 +22,7 @@ struct DroidTextArea: View {
             }
 
             TextEditor(text: $text)
-                .font(textFont)
+                .droidFont(size: 12, design: monospaced ? .monospaced : .default)
                 .foregroundStyle(DroidTheme.fg)
                 .scrollContentBackground(.hidden)
                 .padding(.horizontal, 4)
@@ -42,12 +42,6 @@ struct DroidTextArea: View {
             RoundedRectangle(cornerRadius: DroidShape.controlRadius)
                 .stroke(isFocused ? DroidTheme.accent.opacity(0.55) : DroidTheme.borderStrong.opacity(0.9), lineWidth: 1)
         )
-    }
-
-    private var textFont: Font {
-        monospaced
-            ? .system(size: 12, weight: .regular, design: .monospaced)
-            : .system(size: 12, weight: .regular)
     }
 
     private var controlBackground: Color {

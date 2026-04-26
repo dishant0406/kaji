@@ -1,30 +1,24 @@
 import Foundation
 
 enum GhosttyTypographyDefaults {
-    private static let fontSizeKey = "font-size"
-    private static let fontFamilyKey = "font-family"
+    static let managedKeys = ["font-size", "font-family"]
 
-    static func linesIfMissing(in lines: [String]) -> [String] {
-        var defaults: [String] = []
+    static func lines(fontSize: CGFloat, fontFamily: String) -> [String] {
+        let normalizedFamily = fontFamily.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedFamily = normalizedFamily.isEmpty ? AppTypographySettings.defaultFontFamily : normalizedFamily
+        let resolvedSize = max(10, min(36, fontSize))
 
-        if !hasConfigLine(for: fontSizeKey, in: lines) {
-            defaults.append("font-size = 15")
+        if resolvedFamily == "Menlo" {
+            return [
+                "font-size = \(Int(resolvedSize.rounded()))",
+                "font-family = \"Menlo\"",
+            ]
         }
 
-        if !hasConfigLine(for: fontFamilyKey, in: lines) {
-            defaults.append("font-family = \"SF Mono\"")
-            defaults.append("font-family = \"Menlo\"")
-        }
-
-        return defaults
-    }
-
-    private static func hasConfigLine(for key: String, in lines: [String]) -> Bool {
-        lines.contains { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix(key) else { return false }
-            let suffix = trimmed.dropFirst(key.count).trimmingCharacters(in: .whitespaces)
-            return suffix.hasPrefix("=")
-        }
+        return [
+            "font-size = \(Int(resolvedSize.rounded()))",
+            "font-family = \"\(resolvedFamily)\"",
+            "font-family = \"Menlo\"",
+        ]
     }
 }

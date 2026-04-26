@@ -27,7 +27,7 @@ struct CreateThemeModal: View {
                     if let errorMessage {
                         Rectangle().fill(DroidTheme.border).frame(height: 1)
                         Text(errorMessage)
-                            .font(.system(size: 11))
+                            .droidFont(size: 11)
                             .foregroundStyle(DroidTheme.diffRemoveFg)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 18)
@@ -100,7 +100,7 @@ struct CreateThemeModal: View {
     private var header: some View {
         HStack(spacing: 12) {
             Text("New Theme")
-                .font(.system(size: 13, weight: .semibold))
+                .droidFont(size: 13, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             IconButton(symbol: "xmark", accessibilityLabel: "Close Theme Modal") { onFinish() }

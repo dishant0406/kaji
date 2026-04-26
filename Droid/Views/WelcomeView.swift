@@ -10,10 +10,10 @@ struct WelcomeView: View {
                 DroidIcon(systemName: "folder", size: 20)
                     .foregroundStyle(DroidTheme.fgDim)
                 Text("Select a project")
-                    .font(.system(size: 14, weight: .semibold))
+                    .droidFont(size: 14, weight: .semibold)
                     .foregroundStyle(DroidTheme.fg)
                 Text("Use the sidebar to open a repository and start working.")
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgDim)
             }
             Spacer()

@@ -62,11 +62,11 @@ private struct FileResultRow: View {
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 1) {
                 Text(result.fileName)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fg)
                     .lineLimit(1)
                 Text(result.relativePath)
-                    .font(.system(size: 10))
+                    .droidFont(size: 10)
                     .foregroundStyle(DroidTheme.fgDim)
                     .lineLimit(1)
                     .truncationMode(.middle)

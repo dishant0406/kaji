@@ -14,7 +14,7 @@ struct ThemeFormSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .droidFont(size: 11, weight: .semibold)
                 .foregroundStyle(DroidTheme.fgDim)
                 .padding(.horizontal, 18)
                 .padding(.top, 16)

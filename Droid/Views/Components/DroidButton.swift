@@ -29,12 +29,12 @@ enum DroidButtonSize {
         }
     }
 
-    var font: Font {
+    var baseFontSize: CGFloat {
         switch self {
         case .regular:
-            .system(size: 12, weight: .medium)
+            12
         case .small:
-            .system(size: 11, weight: .medium)
+            11
         }
     }
 }
@@ -51,7 +51,7 @@ struct DroidButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(size.font)
+            .droidFont(size: size.baseFontSize, weight: .medium)
             .foregroundStyle(foregroundColor(isPressed: configuration.isPressed))
             .padding(.horizontal, size.horizontalPadding)
             .padding(.vertical, size.verticalPadding)

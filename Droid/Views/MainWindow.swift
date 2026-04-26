@@ -312,7 +312,7 @@ struct MainWindow: View {
                 DroidIcon(systemName: "checkmark.circle.fill", size: 12)
                     .foregroundStyle(DroidTheme.diffAddFg)
                 Text(toast)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fg)
             }
             .padding(.horizontal, 12)
@@ -476,7 +476,7 @@ struct MainWindow: View {
                     HStack {
                         if let project = activeProject {
                             Text(project.name)
-                                .font(.system(size: 13, weight: .semibold))
+                                .droidFont(size: 13, weight: .semibold)
                                 .foregroundStyle(DroidTheme.fgMuted)
                                 .padding(.leading, 14)
                         }

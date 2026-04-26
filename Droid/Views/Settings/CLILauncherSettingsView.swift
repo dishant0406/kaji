@@ -62,10 +62,10 @@ private struct CLILauncherRow: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(launcher.definition.displayName)
-                        .font(.system(size: SettingsMetrics.labelFontSize, weight: .medium))
+                        .droidFont(size: SettingsMetrics.labelFontSize, weight: .medium)
                         .foregroundStyle(DroidTheme.fg)
                     Text("Default: \(launcher.definition.defaultCommand)")
-                        .font(.system(size: SettingsMetrics.footnoteFontSize))
+                        .droidFont(size: SettingsMetrics.footnoteFontSize)
                         .foregroundStyle(DroidTheme.fgMuted)
                 }
 

@@ -159,7 +159,7 @@ final class ViewportContainerView: NSView {
 
 struct CodeEditorView: NSViewRepresentable {
     @Bindable var state: EditorTabState
-    let editorSettings: EditorSettings
+    let typography: AppTypographySettings
     let themeVersion: Int
     let showsVerticalScroller: Bool
     let focused: Bool
@@ -175,7 +175,7 @@ struct CodeEditorView: NSViewRepresentable {
     let onFocus: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(state: state, editorSettings: editorSettings)
+        Coordinator(state: state, typography: typography)
     }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -222,7 +222,7 @@ struct CodeEditorView: NSViewRepresentable {
         textView.isContinuousSpellCheckingEnabled = false
         textView.textContainerInset = NSSize(width: 0, height: 4)
 
-        let font = editorSettings.resolvedFont
+        let font = typography.nsFont(size: AppTypographySettings.defaultFontSize)
         textView.font = font
         textView.backgroundColor = GhosttyService.shared.backgroundColor
         textView.insertionPointColor = GhosttyService.shared.foregroundColor
@@ -338,7 +338,7 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         let themeChanged = coordinator.lastThemeVersion != themeVersion
-        let font = editorSettings.resolvedFont
+        let font = typography.nsFont(size: AppTypographySettings.defaultFontSize)
         let fontChanged = textView.font != font
 
         applyThemeAndFont(textView: textView, font: font)
@@ -480,7 +480,7 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         let state: EditorTabState
-        let editorSettings: EditorSettings
+        let typography: AppTypographySettings
         weak var textView: NSTextView?
 
         weak var scrollView: NSScrollView?
@@ -535,9 +535,9 @@ struct CodeEditorView: NSViewRepresentable {
         private var previewRefreshTask: Task<Void, Never>?
         private var pendingCascadeReapplyGeneration: UInt64 = 0
 
-        init(state: EditorTabState, editorSettings: EditorSettings) {
+        init(state: EditorTabState, typography: AppTypographySettings) {
             self.state = state
-            self.editorSettings = editorSettings
+            self.typography = typography
             super.init()
         }
 
@@ -591,7 +591,7 @@ struct CodeEditorView: NSViewRepresentable {
             clearViewportHistory()
 
             let viewport = ViewportState(backingStore: store)
-            viewport.updateEstimatedLineHeight(font: editorSettings.resolvedFont)
+            viewport.updateEstimatedLineHeight(font: typography.nsFont(size: AppTypographySettings.defaultFontSize))
             viewportState = viewport
             invalidateRenderedViewportText()
             lastRenderedViewportRange = nil
@@ -680,7 +680,7 @@ struct CodeEditorView: NSViewRepresentable {
                 needsViewportTextReload = false
                 rebuildLineStartOffsetsForViewport()
             }
-            let font = editorSettings.resolvedFont
+            let font = typography.nsFont(size: AppTypographySettings.defaultFontSize)
             if let storage = textView.textStorage, storage.length > 0 {
                 let fullRange = NSRange(location: 0, length: storage.length)
                 storage.beginEditing()

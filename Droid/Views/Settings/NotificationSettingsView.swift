@@ -60,7 +60,7 @@ private struct ProviderToggleRow: View {
             ProviderIconView(iconName: provider.iconName, size: 12, style: .monochrome(.secondary))
                 .frame(width: 16)
             Text(provider.displayName)
-                .font(.system(size: SettingsMetrics.labelFontSize))
+                .droidFont(size: SettingsMetrics.labelFontSize)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             if enabled {

@@ -167,7 +167,7 @@ private struct WorktreePopoverRow: View {
                 if isRenaming {
                     TextField("", text: $renameText)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 12, weight: .semibold))
+                        .droidFont(size: 12, weight: .semibold)
                         .foregroundStyle(DroidTheme.fg)
                         .focused($renameFieldFocused)
                         .onSubmit { commitRename() }
@@ -175,13 +175,13 @@ private struct WorktreePopoverRow: View {
                 } else {
                     HStack(spacing: 6) {
                         Text(displayName)
-                            .font(.system(size: 12, weight: selected ? .semibold : .medium))
+                            .droidFont(size: 12, weight: selected ? .semibold : .medium)
                             .foregroundStyle(selected ? DroidTheme.fg : DroidTheme.fg.opacity(0.9))
                             .lineLimit(1)
                             .truncationMode(.middle)
                         if worktree.isPrimary {
                             Text("primary")
-                                .font(.system(size: 9, weight: .medium))
+                                .droidFont(size: 9, weight: .medium)
                                 .foregroundStyle(DroidTheme.fgDim)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
@@ -194,7 +194,7 @@ private struct WorktreePopoverRow: View {
                 }
                 if let branch = branchSubtitle, !isRenaming {
                     Text(branch)
-                        .font(.system(size: 10, design: .monospaced))
+                        .droidFont(size: 10, design: .monospaced)
                         .foregroundStyle(DroidTheme.fgDim)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -217,7 +217,7 @@ private struct WorktreePopoverRow: View {
         }
         .contextMenu {
             if worktree.isPrimary {
-                Text("Primary worktree").font(.system(size: 11))
+                Text("Primary worktree").droidFont(size: 11)
             } else if let onRemove {
                 Button("Rename") { startRename() }
                 Divider()
@@ -225,7 +225,7 @@ private struct WorktreePopoverRow: View {
             } else {
                 Button("Rename") { startRename() }
                 Divider()
-                Text("External worktree").font(.system(size: 11))
+                Text("External worktree").droidFont(size: 11)
             }
         }
     }

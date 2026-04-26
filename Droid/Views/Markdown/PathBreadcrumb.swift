@@ -15,7 +15,7 @@ struct PathBreadcrumb: View {
                         .foregroundStyle(DroidTheme.fgDim)
                 }
                 Text(component)
-                    .font(.system(size: 10))
+                    .droidFont(size: 10)
                     .foregroundStyle(index == components.count - 1 ? DroidTheme.fg : DroidTheme.fgMuted)
                     .lineLimit(1)
             }

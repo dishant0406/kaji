@@ -64,14 +64,14 @@ struct NotificationPanel: View {
     private var header: some View {
         HStack {
             Text("Notifications")
-                .font(.system(size: 12, weight: .semibold))
+                .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             Button {
                 NotificationStore.shared.clear()
             } label: {
                 Text("Clear All")
-                    .font(.system(size: 11))
+                    .droidFont(size: 11)
                     .foregroundStyle(DroidTheme.fgMuted)
             }
             .buttonStyle(.plain)
@@ -103,7 +103,7 @@ struct NotificationPanel: View {
         VStack(spacing: 0) {
             HStack {
                 Text("Notifications")
-                    .font(.system(size: 12, weight: .semibold))
+                    .droidFont(size: 12, weight: .semibold)
                     .foregroundStyle(DroidTheme.fg)
                 Spacer()
             }
@@ -117,7 +117,7 @@ struct NotificationPanel: View {
                 DroidIcon(systemName: "bell.slash", size: 24)
                     .foregroundStyle(DroidTheme.fgMuted)
                 Text("No notifications")
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fgMuted)
                 Spacer()
             }
@@ -168,12 +168,12 @@ private struct NotificationRow: View {
                             .foregroundStyle(DroidTheme.fgMuted)
                     }
                     Text(item.title)
-                        .font(.system(size: 12, weight: .semibold))
+                        .droidFont(size: 12, weight: .semibold)
                         .foregroundStyle(DroidTheme.fg)
                         .lineLimit(1)
                     Spacer()
                     Text(item.relativeTimestamp)
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgMuted)
                     if hovered {
                         dismissButton
@@ -182,7 +182,7 @@ private struct NotificationRow: View {
 
                 if !item.body.isEmpty {
                     Text(item.body)
-                        .font(.system(size: 11))
+                        .droidFont(size: 11)
                         .foregroundStyle(DroidTheme.fgMuted)
                         .lineLimit(2)
                 }

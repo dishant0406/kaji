@@ -29,7 +29,7 @@ struct AppearanceSettingsView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Text(currentTheme ?? "Default")
-                                .font(.system(size: SettingsMetrics.labelFontSize))
+                                .droidFont(size: SettingsMetrics.labelFontSize)
                                 .lineLimit(1)
                             DroidIcon(systemName: "chevron.up.chevron.down", size: 10)
                         }

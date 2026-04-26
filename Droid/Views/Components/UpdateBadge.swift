@@ -10,7 +10,7 @@ struct UpdateBadge: View {
             HStack(spacing: 4) {
                 DroidIcon(systemName: "arrow.down.circle.fill", size: 9)
                 Text("Update \(version)")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .droidFont(size: 10, weight: .semibold, design: .monospaced)
                     .lineLimit(1)
             }
             .foregroundStyle(hovered ? DroidTheme.accent : DroidTheme.fgMuted)

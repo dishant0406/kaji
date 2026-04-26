@@ -4,6 +4,7 @@ import Testing
 
 struct ThemeServiceStorageTests {
     @Test
+    @MainActor
     func addsTerminalWritingDefaultsToGeneratedConfig() {
         let preview = ThemePreview(
             identifier: "noir",
@@ -16,12 +17,13 @@ struct ThemeServiceStorageTests {
         let content = ThemeService.updatedConfigContent(
             from: "font-size = 16",
             themeIdentifier: preview.identifier,
-            theme: preview
+            theme: preview,
+            typographyLines: GhosttyTypographyDefaults.lines(fontSize: 18, fontFamily: "JetBrains Mono")
         )
 
         #expect(content.contains("theme = \"noir\""))
-        #expect(content.contains("font-size = 16"))
-        #expect(content.contains("font-family = \"SF Mono\""))
+        #expect(content.contains("font-size = 18"))
+        #expect(content.contains("font-family = \"JetBrains Mono\""))
         #expect(content.contains("cursor-style = bar"))
         #expect(content.contains("cursor-style-blink = true"))
         #expect(content.contains("cursor-click-to-move = true"))

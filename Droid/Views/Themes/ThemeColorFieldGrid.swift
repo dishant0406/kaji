@@ -37,7 +37,7 @@ struct ThemeColorFieldGrid: View {
             ForEach(rows) { row in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(row.label)
-                        .font(.system(size: 11, weight: .medium))
+                        .droidFont(size: 11, weight: .medium)
                         .foregroundStyle(DroidTheme.fgMuted)
                     DroidInput(
                         placeholder: row.placeholder,
@@ -74,7 +74,7 @@ struct ThemePaletteGrid: View {
     private func paletteField(index: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(ThemePaletteSlot.labels[index])
-                .font(.system(size: 11, weight: .medium))
+                .droidFont(size: 11, weight: .medium)
                 .foregroundStyle(DroidTheme.fgMuted)
             DroidInput(
                 placeholder: "#000000",

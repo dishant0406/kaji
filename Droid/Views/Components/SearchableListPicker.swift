@@ -39,7 +39,7 @@ struct SearchableListPicker<Item: Identifiable, RowContent: View>: View {
 
             if filteredItems.isEmpty {
                 Text(emptyLabel)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

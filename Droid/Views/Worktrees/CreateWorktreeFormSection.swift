@@ -23,11 +23,11 @@ struct CreateWorktreeFormSection<Content: View>: View {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 11, weight: .semibold))
+                        .droidFont(size: 11, weight: .semibold)
                         .foregroundStyle(DroidTheme.fgDim)
                     if let detail {
                         Text(detail)
-                            .font(.system(size: 11))
+                            .droidFont(size: 11)
                             .foregroundStyle(DroidTheme.fgDim)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -59,7 +59,7 @@ struct CreateWorktreeLabeledField<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .droidFont(size: 11, weight: .semibold)
                 .foregroundStyle(DroidTheme.fgMuted)
             content
         }

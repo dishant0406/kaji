@@ -26,7 +26,7 @@ struct CommitHistoryView: View {
                 .padding(20)
         } else if state.commits.isEmpty {
             Text("No commits")
-                .font(.system(size: 12))
+                .droidFont(size: 12)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
@@ -61,7 +61,7 @@ struct CommitHistoryView: View {
                             .padding(.vertical, 10)
                     } else {
                         Text("Load more")
-                            .font(.system(size: 11, weight: .medium))
+                            .droidFont(size: 11, weight: .medium)
                             .foregroundStyle(DroidTheme.accent)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -160,7 +160,7 @@ private struct CommitRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(commit.subject)
-                    .font(.system(size: 12, weight: .regular))
+                    .droidFont(size: 12, weight: .regular)
                     .foregroundStyle(DroidTheme.fg)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -171,12 +171,12 @@ private struct CommitRow: View {
                     }
 
                     Text(commit.authorName)
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgDim)
                         .lineLimit(1)
 
                     Text(relativeDate(commit.authorDate))
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgDim)
                 }
             }
@@ -185,7 +185,7 @@ private struct CommitRow: View {
 
             if hovered {
                 Text(commit.shortHash)
-                    .font(.system(size: 10, design: .monospaced))
+                    .droidFont(size: 10, design: .monospaced)
                     .foregroundStyle(DroidTheme.fgDim)
                     .padding(.trailing, 2)
             }
@@ -248,7 +248,7 @@ private struct CommitRow: View {
         return HStack(spacing: 2) {
             DroidIcon(systemName: icon, size: 8)
             Text(ref.name)
-                .font(.system(size: 9, weight: .semibold))
+                .droidFont(size: 9, weight: .semibold)
                 .lineLimit(1)
         }
         .foregroundStyle(color)
@@ -358,7 +358,7 @@ private struct NameInputSheet: View {
         VStack(spacing: 0) {
             HStack {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .droidFont(size: 13, weight: .semibold)
                     .foregroundStyle(DroidTheme.fg)
                 Spacer()
             }

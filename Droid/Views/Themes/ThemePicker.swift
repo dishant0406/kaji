@@ -43,7 +43,7 @@ struct ThemePicker: View {
                     .frame(height: 1)
                 HStack {
                     Text(statusMessage)
-                        .font(.system(size: 11))
+                        .droidFont(size: 11)
                         .foregroundStyle(statusIsError ? DroidTheme.diffRemoveFg : DroidTheme.fgDim)
                     Spacer(minLength: 0)
                 }
@@ -79,11 +79,11 @@ struct ThemePicker: View {
         VStack(spacing: 6) {
             Spacer()
             Text("No themes found")
-                .font(.system(size: 12, weight: .medium))
+                .droidFont(size: 12, weight: .medium)
                 .foregroundStyle(DroidTheme.fgMuted)
             if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text("Try a different name.")
-                    .font(.system(size: 11))
+                    .droidFont(size: 11)
                     .foregroundStyle(DroidTheme.fgDim)
             }
             Spacer()

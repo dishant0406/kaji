@@ -27,7 +27,7 @@ struct LogoCropperSheet: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Crop Logo")
-                .font(.system(size: 14, weight: .semibold))
+                .droidFont(size: 14, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
 
             ZStack {
@@ -66,10 +66,10 @@ struct LogoCropperSheet: View {
                 previewIcon
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Preview")
-                        .font(.system(size: 11, weight: .medium))
+                        .droidFont(size: 11, weight: .medium)
                         .foregroundStyle(DroidTheme.fgMuted)
                     Text("Drag to reposition, scroll to zoom")
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgDim)
                 }
                 Spacer()
