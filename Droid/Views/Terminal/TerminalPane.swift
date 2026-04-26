@@ -74,6 +74,7 @@ struct TerminalBridge: NSViewRepresentable {
         if view.envVars.isEmpty, let key = worktreeKey {
             view.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key)
         }
+        view.setInjectedCommand(state.injectedCommand)
         view.isFocused = focused
         view.overlayActive = overlayActive
         view.onFocus = onFocus
@@ -98,6 +99,7 @@ struct TerminalBridge: NSViewRepresentable {
         if nsView.envVars.isEmpty, nsView.surface == nil, let key = worktreeKey {
             nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key)
         }
+        nsView.setInjectedCommand(state.injectedCommand)
         nsView.overlayActive = overlayActive
         nsView.onFocus = onFocus
         nsView.onProcessExit = onProcessExit

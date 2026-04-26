@@ -44,6 +44,18 @@ struct TabAreaTests {
         #expect(area.activeTab?.kind == .vcs)
     }
 
+    @Test("createCommandTab adds terminal tab with injected command")
+    func createCommandTab() {
+        let area = TabArea(projectPath: testPath)
+        area.createCommandTab(title: "OpenCode", command: "opencode")
+
+        let pane = area.activeTab?.content.pane
+        #expect(area.activeTab?.kind == .terminal)
+        #expect(pane?.startupCommand == nil)
+        #expect(pane?.injectedCommand == "opencode")
+        #expect(pane?.title == "OpenCode")
+    }
+
     @Test("createEditorTab adds tab with editor content")
     func createEditorTab() {
         let area = TabArea(projectPath: testPath)
