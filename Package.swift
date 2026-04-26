@@ -3,45 +3,27 @@
 import PackageDescription
 
 let package = Package(
-    name: "Muxy",
+    name: "Droid",
     platforms: [
         .macOS(.v14),
-        .iOS(.v17),
-    ],
-    products: [
-        .library(name: "MuxyShared", targets: ["MuxyShared"]),
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.1"),
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0"),
     ],
     targets: [
-        .target(
-            name: "MuxyShared",
-            path: "MuxyShared"
-        ),
         .target(
             name: "GhosttyKit",
             path: "GhosttyKit",
             publicHeadersPath: "."
         ),
-        .target(
-            name: "MuxyServer",
-            dependencies: [
-                "MuxyShared",
-            ],
-            path: "MuxyServer"
-        ),
         .executableTarget(
-            name: "Muxy",
+            name: "Droid",
             dependencies: [
                 "GhosttyKit",
-                "MuxyShared",
-                "MuxyServer",
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
-            path: "Muxy",
-            exclude: ["Info.plist", "Muxy.entitlements"],
+            path: "Droid",
+            exclude: ["Info.plist", "Droid.entitlements"],
             resources: [
                 .process("Resources"),
             ],
@@ -62,13 +44,11 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "MuxyTests",
+            name: "DroidTests",
             dependencies: [
-                "Muxy",
-                "MuxyShared",
-                "MuxyServer",
+                "Droid",
             ],
-            path: "Tests/MuxyTests",
+            path: "Tests/DroidTests",
             linkerSettings: [
                 .unsafeFlags([
                     "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",

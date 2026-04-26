@@ -25,7 +25,7 @@ if [[ ! -x "$SIGN_UPDATE" ]]; then
   exit 1
 fi
 
-DOWNLOAD_URL_PREFIX="${DOWNLOAD_URL_PREFIX:-https://github.com/muxy-app/muxy/releases/download/$TAG/}"
+DOWNLOAD_URL_PREFIX="${DOWNLOAD_URL_PREFIX:-https://github.com/droid-app/droid/releases/download/$TAG/}"
 
 VERSION="${TAG#v}"
 SIG=$(echo "$SPARKLE_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - -p "$DMG")
@@ -37,9 +37,9 @@ cat > "$OUT_PATH" << EOF
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
-    <title>Muxy Updates</title>
-    <link>https://github.com/muxy-app/muxy</link>
-    <description>Updates for Muxy</description>
+    <title>Droid Updates</title>
+    <link>https://github.com/droid-app/droid</link>
+    <description>Updates for Droid</description>
     <language>en</language>
     <item>
       <title>Version ${VERSION}</title>
@@ -47,7 +47,7 @@ cat > "$OUT_PATH" << EOF
       <sparkle:version>${BUILD_NUMBER}</sparkle:version>
       <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <sparkle:fullReleaseNotesLink>https://github.com/muxy-app/muxy/releases/tag/${TAG}</sparkle:fullReleaseNotesLink>
+      <sparkle:fullReleaseNotesLink>https://github.com/droid-app/droid/releases/tag/${TAG}</sparkle:fullReleaseNotesLink>
       <enclosure url="${DOWNLOAD_URL_PREFIX}${FILENAME}" sparkle:edSignature="${SIG}" length="${SIZE}" type="application/octet-stream" />
     </item>
   </channel>

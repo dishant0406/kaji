@@ -11,9 +11,10 @@ GhosttyKit.xcframework
 GhosttyKit/ghostty.h
 /ghostty
 /build
+/dist
 .agents/
 .claude/
 *.dmg
 appcast*.xml
 .plans/
-/muxy-markdown-remote-image-urlcache
+/droid-markdown-remote-image-urlcache

@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="Muxy/Resources/Assets.xcassets/AppIcon.appiconset/icon_128@2x.png" alt="Muxy" width="128" height="128">
+  <img src="Droid/Resources/Assets.xcassets/AppIcon.appiconset/icon_128@2x.png" alt="Droid" width="128" height="128">
 </p>
 
-<h1 align="center">Muxy</h1>
+<h1 align="center">Droid</h1>
 
 <p align="center">Lightweight and Memory efficient terminal for Mac built with SwiftUI and <a href="https://github.com/ghostty-org/ghostty">libghostty</a>.</p>
-<p align="center"><a href="#ios-app-testing">Available on iOS</a> | <a href="https://discord.gg/4eMXAmJQ2n">Discord</a></p>
+<p align="center"><a href="https://discord.gg/4eMXAmJQ2n">Discord</a></p>
 
 <div align="center">
-  <img src="https://img.shields.io/github/downloads/muxy-app/muxy/total" />
-  <img src="https://img.shields.io/github/v/release/muxy-app/muxy" />
-  <img src="https://img.shields.io/github/license/muxy-app/muxy" />
-  <img src="https://img.shields.io/github/commit-activity/m/muxy-app/muxy" />
+  <img src="https://img.shields.io/github/downloads/droid-app/droid/total" />
+  <img src="https://img.shields.io/github/v/release/droid-app/droid" />
+  <img src="https://img.shields.io/github/license/droid-app/droid" />
+  <img src="https://img.shields.io/github/commit-activity/m/droid-app/droid" />
 </div>
 
 ## Screenshots
@@ -44,37 +44,33 @@
 ### Homebrew
 
 ```bash
-brew tap muxy-app/tap
-brew install --cask muxy
+brew tap droid-app/tap
+brew install --cask droid
 ```
 
 ### Manual
 
-Download the latest release from the [releases page](https://github.com/muxy-app/muxy/releases)
-
-### iOS app (Testing)
-
-The iOS app is available for testers on TestFlight
-
-- Install the iOS app via TestFlight (https://testflight.apple.com/join/7t1AaYHW)
-- Open Muxy on your Mac
-- Go to Settings (Cmd + `,`)
-- Go to Mobile tab
-- Toggle the `Allow mobile device connection`
-- Open the iOS app
-- Enter the IP and Port
-- Approve the connection on your Mac
-- Test and open issues for the bugs
-
-**The iOS app is also open-source and the source is in this repo**
+Download the latest release from the [releases page](https://github.com/droid-app/droid/releases)
 
 ## Local Development
 
 ```bash
-scripts/setup.sh          # downloads GhosttyKit.xcframework
+scripts/setup.sh          # builds GhosttyKit.xcframework from ghostty-org/ghostty
 swift build               # debug build
-swift run Muxy             # run
+swift run Droid           # run
+./start.sh                # opens the preview lab in Xcode and launches the app bundle
 ```
+
+`scripts/setup.sh` requires Xcode and `gettext`. If a matching Zig toolchain is not already installed, the script downloads the Ghostty-required Zig version temporarily. See [docs/building-ghostty.md](docs/building-ghostty.md) for details.
+
+## Dev Loop
+
+`./start.sh` is the fastest supported macOS workflow in this repo:
+
+- it opens [`Droid/Previews/DeveloperPreviewLab.swift`](Droid/Previews/DeveloperPreviewLab.swift) in Xcode for live SwiftUI previews
+- it launches a real `Droid.app` bundle from [`script/build_and_run.sh`](script/build_and_run.sh)
+
+This is not a web-style dev server. The live updates come from Xcode's preview canvas, while the running app stays available as a separate real app window.
 
 ## License
 

@@ -1,13 +1,13 @@
-# Muxy
+# Droid
 
 
 ## Build & Run
 
 ```bash
-scripts/setup.sh         # First-time setup (downloads GhosttyKit.xcframework)
+scripts/setup.sh         # First-time setup (builds GhosttyKit.xcframework from upstream Ghostty)
 swift build              # Debug build
 swift build -c release   # Release build
-swift run Muxy            # Run the app
+swift run Droid            # Run the app
 ```
 
 Requires macOS 14+ and Swift 6.0+. No external dependency managers needed — everything is SPM-based.
@@ -27,7 +27,7 @@ Run `scripts/checks.sh --fix` after every task.
 
 ## Architecture
 
-- Muxy is a macOS terminal multiplexer built with SwiftUI that uses [libghostty](https://github.com/ghostty-org/ghostty) for terminal emulation and rendering via Metal.
+- Droid is a macOS terminal multiplexer built with SwiftUI that uses [libghostty](https://github.com/ghostty-org/ghostty) for terminal emulation and rendering via Metal.
 - The architecture of the app is documented at `./docs/architecture.md` and must always be up to date.
 
 ### Core Components
@@ -38,19 +38,19 @@ Run `scripts/checks.sh --fix` after every task.
 
 - **AppState** (@Observable) — Manages the mapping of projects → tabs → split pane trees. Tracks active project, active tab per project, and provides tab lifecycle operations (create, close, select).
 
-- **ProjectStore** (@Observable) — Persists projects as JSON to `~/Library/Application Support/Muxy/projects.json`. Projects are directories the user adds via NSOpenPanel.
+- **ProjectStore** (@Observable) — Persists projects as JSON to `~/Library/Application Support/Droid/projects.json`. Projects are directories the user adds via NSOpenPanel.
 
 ## GhosttyKit Integration
 
-`GhosttyKit/` is a C module wrapping `ghostty.h` — the libghostty API. The precompiled static library lives in `GhosttyKit.xcframework/` (gitignored, downloaded via `scripts/setup.sh`).
+`GhosttyKit/` is a C module wrapping `ghostty.h` — the libghostty API. The precompiled static library lives in `GhosttyKit.xcframework/` (gitignored, built via `scripts/setup.sh`).
 
 Key libghostty types: `ghostty_app_t` (app), `ghostty_surface_t` (terminal surface), `ghostty_config_t` (configuration). Surfaces are created when terminal views move to a window and destroyed on removal.
 
-The xcframework is built via GitHub Actions on the [muxy-app/ghostty](https://github.com/muxy-app/ghostty) fork. See [docs/building-ghostty.md](docs/building-ghostty.md) for details.
+The xcframework is built from the official [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty) source. See [docs/building-ghostty.md](docs/building-ghostty.md) for details.
 
 ## Data Persistence
 
-- **Projects:** `~/Library/Application Support/Muxy/projects.json`
+- **Projects:** `~/Library/Application Support/Droid/projects.json`
 - **Ghostty config:** `~/.config/ghostty/config`
 - **Terminal state (tabs, splits):** in-memory only, lost on app close
 

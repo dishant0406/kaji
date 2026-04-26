@@ -57,8 +57,8 @@ fi
 
 TRIPLE="${ARCH}-apple-macosx14.0"
 BUILD_NUMBER=$(git -C "$PROJECT_ROOT" rev-list --count HEAD)
-APP_BUNDLE="$BUILD_DIR/Muxy.app"
-DMG_NAME="Muxy-${VERSION}-${ARCH}.dmg"
+APP_BUNDLE="$BUILD_DIR/Droid.app"
+DMG_NAME="Droid-${VERSION}-${ARCH}.dmg"
 
 rm -rf "$APP_BUNDLE"
 
@@ -72,17 +72,17 @@ echo "==> Creating app bundle"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-cp "$SPM_BUILD_DIR/Muxy" "$APP_BUNDLE/Contents/MacOS/Muxy"
-install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Muxy"
+cp "$SPM_BUILD_DIR/Droid" "$APP_BUNDLE/Contents/MacOS/Droid"
+install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Droid"
 
 echo "==> Stripping local and debug symbols"
-strip -Sx "$APP_BUNDLE/Contents/MacOS/Muxy"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/Droid"
 
-if [[ -d "$SPM_BUILD_DIR/Muxy_Muxy.bundle" ]]; then
-    cp -R "$SPM_BUILD_DIR/Muxy_Muxy.bundle" "$APP_BUNDLE/Contents/Resources/Muxy_Muxy.bundle"
+if [[ -d "$SPM_BUILD_DIR/Droid_Droid.bundle" ]]; then
+    cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Contents/Resources/Droid_Droid.bundle"
 fi
 
-cp "$PROJECT_ROOT/Muxy/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+cp "$PROJECT_ROOT/Droid/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
 
@@ -133,7 +133,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
 
     echo "==> Signing app bundle"
     /usr/bin/codesign --force --options runtime \
-        --entitlements "$PROJECT_ROOT/Muxy/Muxy.entitlements" \
+        --entitlements "$PROJECT_ROOT/Droid/Droid.entitlements" \
         --sign "$SIGN_IDENTITY" \
         "$APP_BUNDLE"
 fi
@@ -147,7 +147,7 @@ fi
 cd "$BUILD_DIR"
 create-dmg "$APP_BUNDLE" "$BUILD_DIR" || true
 
-GENERATED_DMG=$(find "$BUILD_DIR" -maxdepth 1 -name "Muxy*.dmg" -not -name "$DMG_NAME" | head -1)
+GENERATED_DMG=$(find "$BUILD_DIR" -maxdepth 1 -name "Droid*.dmg" -not -name "$DMG_NAME" | head -1)
 if [[ -n "$GENERATED_DMG" ]]; then
     mv "$GENERATED_DMG" "$BUILD_DIR/$DMG_NAME"
 fi

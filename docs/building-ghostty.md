@@ -1,6 +1,13 @@
 # GhosttyKit
 
-Muxy depends on libghostty compiled as a static library inside `GhosttyKit.xcframework/`. The xcframework is built and released via GitHub Actions on the [muxy-app/ghostty](https://github.com/muxy-app/ghostty) fork.
+Droid embeds libghostty through `GhosttyKit.xcframework/`. The repo now builds that xcframework directly from the official upstream source at [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty).
+
+## Requirements
+
+- Xcode selected as the active developer directory
+- `gettext` installed locally
+
+Ghostty's current official build docs list Zig `0.15.2` for `1.3.x` and `tip`, and require Xcode plus the macOS/iOS SDKs and Metal Toolchain on macOS. `scripts/setup.sh` uses a matching local Zig when present and otherwise downloads Zig `0.15.2` temporarily for the build.
 
 ## Local Setup
 
@@ -8,48 +15,37 @@ Muxy depends on libghostty compiled as a static library inside `GhosttyKit.xcfra
 scripts/setup.sh
 ```
 
-This downloads the latest pre-built `GhosttyKit.xcframework` from the fork's releases and syncs the header into `GhosttyKit/ghostty.h`.
+The setup script:
 
-## Rebuilding GhosttyKit
+1. Clones `ghostty-org/ghostty` at `main` by default
+2. Builds `macos/GhosttyKit.xcframework` with Zig
+3. Copies the xcframework into this repo
+4. Syncs `include/ghostty.h` into `GhosttyKit/ghostty.h`
 
-To build a new version of the xcframework (e.g. after ghostty updates):
+## Pinning Upstream
 
-1. Go to [muxy-app/ghostty Actions](https://github.com/muxy-app/ghostty/actions)
-2. Run the "Build GhosttyKit" workflow
-3. Once complete, re-run `scripts/setup.sh` locally (delete the old xcframework first)
+If you want to build against a specific upstream tag or branch, set `GHOSTTY_REF`:
 
 ```bash
-rm -rf GhosttyKit.xcframework
-scripts/setup.sh
+GHOSTTY_REF=v1.3.0 scripts/setup.sh
 ```
 
-## How it works
+You can also override the repo slug entirely:
 
-1. The fork's "Build GhosttyKit" workflow builds libghostty with Zig on a macOS runner
-2. It produces a universal xcframework (arm64 + x86_64) and publishes it as a GitHub release
-3. `scripts/setup.sh` downloads the latest release and extracts it
-4. `Package.swift` links against `GhosttyKit.xcframework/macos-arm64_x86_64/libghostty.a`
+```bash
+GHOSTTY_REPO=ghostty-org/ghostty GHOSTTY_REF=main scripts/setup.sh
+```
 
-## Syncing the fork
+## Build Command
 
-The fork auto-syncs from upstream ghostty daily via the "Sync Upstream" workflow.
+`scripts/setup.sh` uses the upstream xcframework build path exposed by Ghostty's macOS build:
 
-## Muxy-specific patches
+```bash
+zig build \
+  -Doptimize=ReleaseFast \
+  -Demit-xcframework=true \
+  -Dxcframework-target=universal \
+  -Demit-macos-app=false
+```
 
-The fork carries two additive exports used by the mobile remote-server
-integration. Both live near `ghostty_surface_text` in the embedded apprt so
-they're easy to keep on top of upstream:
-
-- `ghostty_surface_set_data_callback(surface, cb, userdata)` — registers a
-  per-surface callback that fires on the termio thread with raw PTY bytes
-  before Ghostty's emulator parses them. Used by `RemoteTerminalStreamer` to
-  tee output to remote clients.
-- `ghostty_surface_send_input_raw(surface, ptr, len)` — writes bytes straight
-  to the PTY, bypassing the paste pipeline (no bracketed-paste wrapping, no
-  newline filtering). Used by `GhosttyTerminalNSView.sendRemoteText` so
-  remote-client keystrokes, escape sequences, and mouse reports reach the
-  child process verbatim.
-
-The patch touches three Zig files (`src/Surface.zig`, `src/termio/Termio.zig`,
-`src/apprt/embedded.zig`) plus `include/ghostty.h`. Everything is strictly
-additive except a three-line tee at the top of `Termio.processOutput`.
+`Package.swift` links against `GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a`.
