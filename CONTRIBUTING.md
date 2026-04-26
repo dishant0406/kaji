@@ -1,10 +1,10 @@
-# Contributing to Muxy
+# Contributing to Droid
 
-Thank you for your interest in contributing to Muxy! This guide will help you get started.
+Thank you for your interest in contributing to Droid! This guide will help you get started.
 
 ## Humans Only Policy
 
-Muxy is a community project and we want communication to stay between humans. **AI-generated text is not allowed** in:
+Droid is a community project and we want communication to stay between humans. **AI-generated text is not allowed** in:
 
 - Issue descriptions and comments
 - Pull request titles, descriptions, summaries, and comments
@@ -23,16 +23,18 @@ You are welcome to use AI to help you write code, but the text you post on GitHu
 ### Setup
 
 ```bash
-git clone https://github.com/muxy-app/muxy.git
-cd muxy
-scripts/setup.sh          # downloads GhosttyKit.xcframework
+git clone https://github.com/droid-app/droid.git
+cd droid
+scripts/setup.sh          # builds GhosttyKit.xcframework from ghostty-org/ghostty
 swift build               # verify everything compiles
 ```
+
+`scripts/setup.sh` expects Xcode and `gettext`. It will use a local Zig `0.15.2` when available or download that version temporarily if needed.
 
 ### Running
 
 ```bash
-swift run Muxy
+swift run Droid
 ```
 
 ## Development Workflow
@@ -79,17 +81,6 @@ Tool versions are pinned in `.tool-versions` and the script validates them on st
 - Write a clear title and description explaining the "why"
 - Ensure all checks pass before requesting review
 - Link any related issues
-
-### Commit & PR Titles
-
-For changes that affect the iOS app (`MuxyMobile/`), prefix the PR title (which becomes the squash commit subject) with `ios:`. Example:
-
-```
-ios: fix ctrl button dropdown
-ios: add git diff viewer tab
-```
-
-The iOS release workflow builds its changelog from commit subjects matching `ios: …` between iOS tags, so any iOS-facing change without this prefix will be missing from the release notes.
 
 ## Reporting Issues
 

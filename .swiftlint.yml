@@ -1,5 +1,5 @@
 included:
-  - Muxy
+  - Droid
 
 excluded:
   - .build

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ICON_SOURCE="$PROJECT_ROOT/Muxy/Resources/Assets.xcassets/AppIcon.appiconset"
+ICON_SOURCE="$PROJECT_ROOT/Droid/Resources/Assets.xcassets/AppIcon.appiconset"
 OUTPUT_PATH="${1:-$PROJECT_ROOT/build/AppIcon.icns}"
 
 ICONSET_DIR=$(mktemp -d)/AppIcon.iconset
