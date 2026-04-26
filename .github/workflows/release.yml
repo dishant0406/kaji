@@ -8,6 +8,11 @@ on:
         required: true
         type: string
 
+env:
+  APP_NAME: Droid
+  REPOSITORY_SLUG: ${{ github.repository }}
+  REPOSITORY_OWNER: ${{ github.repository_owner }}
+
 jobs:
   validate:
     runs-on: macos-26
@@ -101,7 +106,7 @@ jobs:
             --version "${{ needs.validate.outputs.version }}" \
             --sign-identity "${{ steps.identity.outputs.name }}" \
             --sparkle-public-key "${{ steps.sparkle.outputs.public_key }}" \
-            --sparkle-feed-url "https://github.com/droid-app/droid/releases/latest/download/appcast-${{ matrix.arch }}.xml"
+            --sparkle-feed-url "https://github.com/${{ github.repository }}/releases/latest/download/appcast-${{ matrix.arch }}.xml"
 
       - name: Notarize DMG
         env:
@@ -148,12 +153,12 @@ jobs:
         run: |
           chmod +x scripts/generate-appcast.sh
           scripts/generate-appcast.sh \
-            "artifacts/dmg-arm64/Droid-${{ needs.validate.outputs.version }}-arm64.dmg" \
+            "artifacts/dmg-arm64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-arm64.dmg" \
             "v${{ needs.validate.outputs.version }}" \
             "${{ needs.validate.outputs.build_number }}" \
             appcast-arm64.xml
           scripts/generate-appcast.sh \
-            "artifacts/dmg-x86_64/Droid-${{ needs.validate.outputs.version }}-x86_64.dmg" \
+            "artifacts/dmg-x86_64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-x86_64.dmg" \
             "v${{ needs.validate.outputs.version }}" \
             "${{ needs.validate.outputs.build_number }}" \
             appcast-x86_64.xml
@@ -165,7 +170,7 @@ jobs:
         run: |
           gh release create "v${{ needs.validate.outputs.version }}" \
             --repo "${{ github.repository }}" \
-            --title "Droid v${{ needs.validate.outputs.version }}" \
+            --title "${{ env.APP_NAME }} v${{ needs.validate.outputs.version }}" \
             --draft \
             --generate-notes \
             artifacts/dmg-arm64/*.dmg \
@@ -185,19 +190,24 @@ jobs:
       - name: Compute SHA256 checksums
         id: sha256
         run: |
-          ARM64_SHA=$(shasum -a 256 artifacts/dmg-arm64/Droid-${{ needs.validate.outputs.version }}-arm64.dmg | awk '{print $1}')
-          X86_64_SHA=$(shasum -a 256 artifacts/dmg-x86_64/Droid-${{ needs.validate.outputs.version }}-x86_64.dmg | awk '{print $1}')
+          ARM64_SHA=$(shasum -a 256 artifacts/dmg-arm64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-arm64.dmg | awk '{print $1}')
+          X86_64_SHA=$(shasum -a 256 artifacts/dmg-x86_64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-x86_64.dmg | awk '{print $1}')
           echo "arm64=$ARM64_SHA" >> "$GITHUB_OUTPUT"
           echo "x86_64=$X86_64_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Update Homebrew tap
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ needs.validate.outputs.version }}
           SHA256_ARM64: ${{ steps.sha256.outputs.arm64 }}
           SHA256_X86_64: ${{ steps.sha256.outputs.x86_64 }}
+          HOMEBREW_TAP_REPOSITORY: ${{ vars.HOMEBREW_TAP_REPOSITORY }}
         run: |
-          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/droid-app/homebrew-tap.git tap
+          TAP_REPOSITORY="${HOMEBREW_TAP_REPOSITORY:-${REPOSITORY_OWNER}/homebrew-droid}"
+          if ! gh repo view "$TAP_REPOSITORY" >/dev/null 2>&1; then
+            gh repo create "$TAP_REPOSITORY" --public --description "Homebrew tap for ${APP_NAME}" --disable-issues
+          fi
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${TAP_REPOSITORY}.git" tap
           mkdir -p tap/Casks
           cat > tap/Casks/droid.rb <<EOF
           cask "droid" do
@@ -205,24 +215,24 @@ jobs:
 
             on_arm do
               sha256 "${SHA256_ARM64}"
-              url "https://github.com/droid-app/droid/releases/download/v#{version}/Droid-#{version}-arm64.dmg"
+              url "https://github.com/${REPOSITORY_SLUG}/releases/download/v#{version}/${APP_NAME}-#{version}-arm64.dmg"
             end
 
             on_intel do
               sha256 "${SHA256_X86_64}"
-              url "https://github.com/droid-app/droid/releases/download/v#{version}/Droid-#{version}-x86_64.dmg"
+              url "https://github.com/${REPOSITORY_SLUG}/releases/download/v#{version}/${APP_NAME}-#{version}-x86_64.dmg"
             end
 
-            name "Droid"
+            name "${APP_NAME}"
             desc "Terminal multiplexer for macOS"
-            homepage "https://github.com/droid-app/droid"
+            homepage "https://github.com/${REPOSITORY_SLUG}"
 
             livecheck do
               url :url
               strategy :github_latest
             end
 
-            app "Droid.app"
+            app "${APP_NAME}.app"
 
             zap trash: [
               "~/Library/Application Support/Droid",
