@@ -228,7 +228,8 @@ struct WorkspaceReducerTests {
         #expect(state.focusedAreaID[key] != originalAreaID)
         let newArea = focusedArea(in: state, projectID: projectID)
         #expect(newArea?.activeTab?.kind == .terminal)
-        #expect(newArea?.activeTab?.content.pane?.startupCommand == "codex")
+        #expect(newArea?.activeTab?.content.pane?.startupCommand == nil)
+        #expect(newArea?.activeTab?.content.pane?.injectedCommand == "codex")
         #expect(newArea?.activeTab?.content.pane?.title == "Codex")
     }
 

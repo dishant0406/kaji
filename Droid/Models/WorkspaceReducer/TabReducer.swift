@@ -78,7 +78,7 @@ enum TabReducer {
                     existingTab: TerminalTab(pane: TerminalPaneState(
                         projectPath: path,
                         title: title,
-                        startupCommand: trimmed
+                        injectedCommand: trimmed
                     ))
                 )
             }
@@ -115,7 +115,7 @@ enum TabReducer {
         let tab = TerminalTab(pane: TerminalPaneState(
             projectPath: area.projectPath,
             title: title,
-            startupCommand: trimmed
+            injectedCommand: trimmed
         ))
         let (newRoot, newAreaID) = root.splittingWithTab(
             areaID: area.id,

@@ -73,7 +73,7 @@ final class TabArea: Identifiable {
         insertTab(TerminalTab(pane: TerminalPaneState(
             projectPath: projectPath,
             title: title,
-            startupCommand: trimmed
+            injectedCommand: trimmed
         )))
     }
 

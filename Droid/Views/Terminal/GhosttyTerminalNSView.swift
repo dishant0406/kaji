@@ -5,6 +5,8 @@ final class GhosttyTerminalNSView: NSView {
     nonisolated(unsafe) private(set) var surface: ghostty_surface_t?
     private let workingDirectory: String
     private let command: String?
+    private var injectedCommand: String?
+    private var injectedCommandSent = false
     var envVars: [(key: String, value: String)] = []
     var onTitleChange: ((String) -> Void)?
     var onFocus: (() -> Void)?
@@ -136,6 +138,7 @@ final class GhosttyTerminalNSView: NSView {
         }
 
         ghostty_surface_set_focus(surface, isFocused)
+        flushInjectedCommandIfNeeded()
     }
 
     func destroySurface() {
@@ -162,6 +165,18 @@ final class GhosttyTerminalNSView: NSView {
         delayedResizeWorkItem = nil
         destroySurface()
         removeFromSuperview()
+    }
+
+    func setInjectedCommand(_ command: String?) {
+        let trimmed = command?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = trimmed?.isEmpty == false ? trimmed : nil
+        guard injectedCommand != normalized else {
+            flushInjectedCommandIfNeeded()
+            return
+        }
+        injectedCommand = normalized
+        injectedCommandSent = false
+        flushInjectedCommandIfNeeded()
     }
 
     deinit {
@@ -253,6 +268,7 @@ final class GhosttyTerminalNSView: NSView {
         }
 
         ghostty_surface_set_size(surface, backingSize.width, backingSize.height)
+        flushInjectedCommandIfNeeded()
     }
 
     private func backingPixelSize() -> (width: UInt32, height: UInt32)? {
@@ -693,6 +709,17 @@ final class GhosttyTerminalNSView: NSView {
 
     func sendReturnKey() {
         sendKeyPress(codepoint: 13, keycode: 36)
+    }
+
+    private func flushInjectedCommandIfNeeded() {
+        guard surface != nil else { return }
+        guard let injectedCommand, !injectedCommandSent else { return }
+        injectedCommandSent = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self, self.surface != nil else { return }
+            self.sendText(injectedCommand)
+            self.sendReturnKey()
+        }
     }
 
     func sendKeyPress(codepoint: UInt32, keycode: UInt32 = 0, mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE) {
