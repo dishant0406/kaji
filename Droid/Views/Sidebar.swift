@@ -318,7 +318,15 @@ struct SidebarFooter: View {
                 }
             IconButton(symbol: "paintbrush", accessibilityLabel: "Theme Picker") { showThemePicker.toggle() }
                 .help("Theme Picker (\(KeyBindingStore.shared.combo(for: .toggleThemePicker).displayString))")
-                .droidPopover(isPresented: $showThemePicker, preferredEdge: .top) { ThemePicker() }
+                .droidPopover(isPresented: $showThemePicker, preferredEdge: .top) {
+                    ThemePicker(
+                        onRequestCreate: {
+                            showThemePicker = false
+                            NotificationCenter.default.post(name: .requestCreateThemeModal, object: nil)
+                        },
+                        onDismiss: { showThemePicker = false }
+                    )
+                }
             IconButton(symbol: sidebarToggleIcon, accessibilityLabel: sidebarToggleLabel) { postToggleSidebar() }
                 .help("\(sidebarToggleLabel) (\(KeyBindingStore.shared.combo(for: .toggleSidebar).displayString))")
         }
@@ -348,7 +356,15 @@ struct SidebarFooter: View {
                 }
             IconButton(symbol: "paintbrush", accessibilityLabel: "Theme Picker") { showThemePicker.toggle() }
                 .help("Theme Picker (\(KeyBindingStore.shared.combo(for: .toggleThemePicker).displayString))")
-                .droidPopover(isPresented: $showThemePicker, preferredEdge: .top) { ThemePicker() }
+                .droidPopover(isPresented: $showThemePicker, preferredEdge: .top) {
+                    ThemePicker(
+                        onRequestCreate: {
+                            showThemePicker = false
+                            NotificationCenter.default.post(name: .requestCreateThemeModal, object: nil)
+                        },
+                        onDismiss: { showThemePicker = false }
+                    )
+                }
         }
         .padding(.horizontal, 10)
         .frame(height: DroidLayout.footerBarHeight)

@@ -6,7 +6,6 @@ struct MainWindow: View {
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
     @Environment(GhosttyService.self) private var ghostty
-    @Environment(\.openWindow) private var openWindow
     @State private var dragCoordinator = TabDragCoordinator()
     private enum AttachedVCSLayout {
         static let minWidth: CGFloat = 200
@@ -57,6 +56,7 @@ struct MainWindow: View {
     @State private var showQuickOpen = false
     @State private var showWorktreeSwitcher = false
     @State private var showSettings = false
+    @State private var showCreateThemeModal = false
     @State private var createWorktreeProjectID: UUID?
     @State private var showSidebarAIUsagePopover = false
     @State private var isFullScreen = false
@@ -72,7 +72,7 @@ struct MainWindow: View {
     private var configuredMainLayout: AnyView {
         let base = AnyView(
             mainLayout
-                .environment(\.overlayActive, showQuickOpen || showWorktreeSwitcher || showSettings || createWorktreeProjectID != nil)
+                .environment(\.overlayActive, showQuickOpen || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID != nil)
                 .overlay(alignment: toastAlignment) {
                     toastOverlay
                 }
@@ -88,9 +88,13 @@ struct MainWindow: View {
                 .overlay {
                     createWorktreeOverlay
                 }
+                .overlay {
+                    createThemeOverlay
+                }
                 .animation(.easeInOut(duration: 0.15), value: showQuickOpen)
                 .animation(.easeInOut(duration: 0.15), value: showWorktreeSwitcher)
                 .animation(.easeInOut(duration: 0.15), value: showSettings)
+                .animation(.easeInOut(duration: 0.15), value: showCreateThemeModal)
                 .animation(.easeInOut(duration: 0.15), value: createWorktreeProjectID)
                 .animation(.easeInOut(duration: 0.2), value: ToastState.shared.message != nil)
                 .coordinateSpace(name: DragCoordinateSpace.mainWindow)
@@ -132,6 +136,9 @@ struct MainWindow: View {
                     guard let projectID = notification.userInfo?["projectID"] as? UUID else { return }
                     requestCreateWorktree(projectID: projectID)
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .requestCreateThemeModal)) { _ in
+                    showCreateThemeModal = true
+                }
         )
 
         let receives2 = AnyView(
@@ -151,9 +158,6 @@ struct MainWindow: View {
 
         let receives3 = AnyView(
             receives2
-                .onReceive(NotificationCenter.default.publisher(for: .openVCSWindow)) { _ in
-                    openWindow(id: "vcs")
-                }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleAttachedVCS)) { _ in
                     toggleAttachedVCSPanel()
                 }
@@ -170,7 +174,7 @@ struct MainWindow: View {
                 }
                 .onChange(of: vcsEnsureSignature) {
                     guard let project = activeProject else { return }
-                    if vcsPanelVisible, VCSDisplayMode.current == .attached {
+                    if vcsPanelVisible {
                         ensureVCSState(for: project)
                     }
                     if fileTreePanelVisible {
@@ -255,7 +259,7 @@ struct MainWindow: View {
                     }
                 }
 
-                if vcsPanelVisible, VCSDisplayMode.current == .attached, let state = activeVCSState {
+                if vcsPanelVisible, let state = activeVCSState {
                     HStack(spacing: 0) {
                         sidePanelResizeHandle { delta in
                             vcsPanelWidth = max(
@@ -394,6 +398,19 @@ struct MainWindow: View {
                     handleCreateWorktreeResult(result, project: project)
                 }
                 .environment(worktreeStore)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var createThemeOverlay: some View {
+        if showCreateThemeModal {
+            DroidModalOverlay {
+                showCreateThemeModal = false
+            } content: {
+                CreateThemeModal {
+                    showCreateThemeModal = false
+                }
             }
         }
     }
@@ -665,9 +682,7 @@ struct MainWindow: View {
     }
 
     private func toggleAttachedVCSPanel() {
-        guard VCSDisplayMode.current == .attached,
-              let project = activeProject
-        else {
+        guard let project = activeProject else {
             vcsPanelVisible = false
             return
         }
@@ -715,16 +730,13 @@ struct MainWindow: View {
     }
 
     private func openVCS(for project: Project, preferredAreaID: UUID? = nil) {
-        VCSDisplayMode.current.route(
-            tab: {
-                let areaID = preferredAreaID ?? appState.focusedAreaID(for: project.id)
-                appState.dispatch(.createVCSTab(projectID: project.id, areaID: areaID))
-            },
-            window: { openWindow(id: "vcs") },
-            attached: {
-                toggleAttachedVCSPanel()
-            }
-        )
+        _ = preferredAreaID
+        ensureVCSState(for: project)
+        let isShowing = !vcsPanelVisible
+        vcsPanelVisible = isShowing
+        if isShowing {
+            fileTreePanelVisible = false
+        }
     }
 
     private func requestCreateWorktree(projectID: UUID) {

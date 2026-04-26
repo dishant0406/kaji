@@ -19,21 +19,21 @@ struct BranchPicker: View {
             onRefresh()
             showPopover.toggle()
         } label: {
-            HStack(spacing: 4) {
-                DroidIcon(systemName: "arrow.triangle.branch", size: 9)
+            HStack(spacing: 6) {
+                DroidIcon(systemName: "arrow.triangle.branch", size: 10)
                 Text(currentBranch ?? "detached")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .frame(maxWidth: 120, alignment: .leading)
+                    .frame(maxWidth: 140, alignment: .leading)
                 DroidIcon(systemName: "chevron.down", size: 8)
                     .foregroundStyle(DroidTheme.fgDim)
             }
-            .foregroundStyle(DroidTheme.fg.opacity(0.85))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(DroidTheme.surface, in: RoundedRectangle(cornerRadius: 5))
-            .contentShape(RoundedRectangle(cornerRadius: 5))
+            .foregroundStyle(DroidTheme.fg)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(DroidTheme.surfaceMuted, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
         .help(currentBranch ?? "detached")
@@ -48,8 +48,8 @@ struct BranchPicker: View {
                 footerActions: onCreateBranch.map { action in
                     [
                         PopoverFooterAction(
-                            title: "New Branch…",
-                            icon: "plus.square.dashed",
+                            title: "New Branch",
+                            icon: "plus",
                             action: {
                                 showPopover = false
                                 action()
@@ -96,11 +96,6 @@ private struct BranchRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(isActive ? DroidTheme.accent : DroidTheme.fgDim.opacity(0.35))
-                .frame(width: 7, height: 7)
-                .frame(width: 10)
-
             Text(name)
                 .font(.system(size: 12, weight: isActive ? .semibold : .medium, design: .monospaced))
                 .foregroundStyle(isActive ? DroidTheme.fg : DroidTheme.fg.opacity(0.9))
@@ -114,9 +109,9 @@ private struct BranchRow: View {
                     .foregroundStyle(DroidTheme.accent)
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(rowBackground, in: RoundedRectangle(cornerRadius: 6))
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         .onHover { hovered = $0 }
     }
 

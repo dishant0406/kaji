@@ -6,7 +6,6 @@ struct TerminalArea: View {
     let isActiveProject: Bool
     @Environment(AppState.self) private var appState
     @Environment(TabDragCoordinator.self) private var dragCoordinator
-    @Environment(\.openWindow) private var openWindow
 
     private var root: SplitNode? {
         appState.workspaceRoots[worktreeKey]
@@ -42,11 +41,8 @@ struct TerminalArea: View {
                         appState.dispatch(.createTab(projectID: project.id, areaID: areaID))
                     },
                     onCreateVCSTab: { areaID in
-                        VCSDisplayMode.current.route(
-                            tab: { appState.dispatch(.createVCSTab(projectID: project.id, areaID: areaID)) },
-                            window: { openWindow(id: "vcs") },
-                            attached: { NotificationCenter.default.post(name: .toggleAttachedVCS, object: nil) }
-                        )
+                        _ = areaID
+                        NotificationCenter.default.post(name: .toggleAttachedVCS, object: project.id)
                     },
                     onCloseTab: { areaID, tabID in
                         appState.closeTab(tabID, areaID: areaID, projectID: project.id)

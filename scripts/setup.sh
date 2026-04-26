@@ -8,6 +8,7 @@ GHOSTTY_REF="${GHOSTTY_REF:-main}"
 GHOSTTY_URL="https://github.com/${GHOSTTY_REPO}.git"
 XCFRAMEWORK_DIR="$PROJECT_ROOT/GhosttyKit.xcframework"
 HEADER_PATH="$PROJECT_ROOT/GhosttyKit/ghostty.h"
+RUNTIME_RESOURCES_DIR="$PROJECT_ROOT/Droid/Resources/ghostty"
 STAMP_FILE="$PROJECT_ROOT/.ghostty-source"
 REQUIRED_ZIG_VERSION="${REQUIRED_ZIG_VERSION:-0.15.2}"
 EXPECTED_STAMP="repo=${GHOSTTY_REPO}
@@ -32,7 +33,10 @@ if ! xcode-select --print-path | grep -q "/Applications/Xcode.app/Contents/Devel
     exit 1
 fi
 
-if [[ -d "$XCFRAMEWORK_DIR" && -f "$STAMP_FILE" ]] && [[ "$(cat "$STAMP_FILE")" == "$EXPECTED_STAMP" ]]; then
+if [[ -d "$XCFRAMEWORK_DIR" && -f "$STAMP_FILE" ]] \
+    && [[ "$(cat "$STAMP_FILE")" == "$EXPECTED_STAMP" ]] \
+    && [[ -d "$RUNTIME_RESOURCES_DIR/shell-integration" ]] \
+    && [[ -d "$RUNTIME_RESOURCES_DIR/terminfo" ]]; then
     echo "==> GhosttyKit.xcframework already matches $GHOSTTY_REPO@$GHOSTTY_REF"
     exit 0
 fi
@@ -83,6 +87,8 @@ echo "==> Building GhosttyKit.xcframework from upstream source"
 
 SOURCE_XCFRAMEWORK="$WORK_DIR/ghostty/macos/GhosttyKit.xcframework"
 SOURCE_HEADER="$WORK_DIR/ghostty/include/ghostty.h"
+SOURCE_RUNTIME_DIR="$WORK_DIR/ghostty/zig-out/share/ghostty"
+SOURCE_TERMINFO_DIR="$WORK_DIR/ghostty/zig-out/share/terminfo"
 
 if [[ ! -d "$SOURCE_XCFRAMEWORK" ]]; then
     echo "Error: Expected GhosttyKit.xcframework at $SOURCE_XCFRAMEWORK"
@@ -94,9 +100,23 @@ if [[ ! -f "$SOURCE_HEADER" ]]; then
     exit 1
 fi
 
+if [[ ! -d "$SOURCE_RUNTIME_DIR/shell-integration" ]]; then
+    echo "Error: Expected Ghostty shell integration at $SOURCE_RUNTIME_DIR/shell-integration"
+    exit 1
+fi
+
+if [[ ! -d "$SOURCE_TERMINFO_DIR" ]]; then
+    echo "Error: Expected Ghostty terminfo at $SOURCE_TERMINFO_DIR"
+    exit 1
+fi
+
 echo "==> Installing GhosttyKit.xcframework"
 cp -R "$SOURCE_XCFRAMEWORK" "$XCFRAMEWORK_DIR"
 cp "$SOURCE_HEADER" "$HEADER_PATH"
+rm -rf "$RUNTIME_RESOURCES_DIR"
+mkdir -p "$RUNTIME_RESOURCES_DIR"
+cp -R "$SOURCE_RUNTIME_DIR/shell-integration" "$RUNTIME_RESOURCES_DIR/shell-integration"
+cp -R "$SOURCE_TERMINFO_DIR" "$RUNTIME_RESOURCES_DIR/terminfo"
 printf "%s\n" "$EXPECTED_STAMP" > "$STAMP_FILE"
 
 echo "==> Done"

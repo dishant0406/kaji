@@ -8,7 +8,6 @@ struct AppearanceSettingsView: View {
     @State private var themeService = ThemeService.shared
     @State private var showThemePicker = false
     @State private var currentTheme: String?
-    @AppStorage("droid.vcsDisplayMode") private var vcsDisplayMode = VCSDisplayMode.attached.rawValue
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
 
     var body: some View {
@@ -37,27 +36,23 @@ struct AppearanceSettingsView: View {
                     }
                     .buttonStyle(DroidButtonStyle(.secondary, size: .regular))
                     .droidPopover(isPresented: $showThemePicker, preferredEdge: .bottom) {
-                        ThemePicker()
+                        ThemePicker(
+                            onRequestCreate: {
+                                showThemePicker = false
+                                NotificationCenter.default.post(name: .requestCreateThemeModal, object: nil)
+                            },
+                            onDismiss: { showThemePicker = false }
+                        )
                             .environment(themeService)
                     }
                 }
             }
-
-            SettingsSection("Source Control", showsDivider: false) {
-                SettingsRow("Display Mode") {
-                    SegmentedPicker(
-                        selection: $vcsDisplayMode,
-                        options: VCSDisplayMode.allCases.map { ($0.rawValue, $0.title) }
-                    )
-                    .frame(width: SettingsMetrics.controlWidth)
-                }
-            }
         }
         .task {
-            currentTheme = themeService.currentThemeName()
+            currentTheme = themeService.currentThemeDisplayName()
         }
         .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
-            currentTheme = themeService.currentThemeName()
+            currentTheme = themeService.currentThemeDisplayName()
         }
     }
 }

@@ -9,8 +9,12 @@ struct CommitHistoryView: View {
     @State private var pendingTagHash: String?
 
     var body: some View {
-        ScrollView {
-            historyContent
+        ZStack {
+            ScrollView {
+                historyContent
+            }
+            branchPromptOverlay
+            tagPromptOverlay
         }
     }
 
@@ -66,48 +70,58 @@ struct CommitHistoryView: View {
                 .buttonStyle(.plain)
             }
         }
-        .sheet(item: Binding(
-            get: { pendingBranchHash.map { NamePrompt(hash: $0) } },
-            set: { pendingBranchHash = $0?.hash }
-        )) { prompt in
-            NameInputSheet(
-                title: "Create Branch",
-                placeholder: "Branch name",
-                actionTitle: "Create",
-                name: $branchNameInput,
-                onSubmit: {
-                    let trimmedName = branchNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                    state.createBranch(name: trimmedName, from: prompt.hash)
-                    branchNameInput = ""
-                    pendingBranchHash = nil
-                },
-                onCancel: {
-                    branchNameInput = ""
-                    pendingBranchHash = nil
-                }
-            )
+    }
+
+    @ViewBuilder
+    private var branchPromptOverlay: some View {
+        if let prompt = pendingBranchHash.map({ NamePrompt(hash: $0) }) {
+            DroidModalOverlay(onDismiss: dismissBranchPrompt) {
+                NameInputSheet(
+                    title: "Create Branch",
+                    placeholder: "Branch name",
+                    actionTitle: "Create",
+                    fieldLabel: "Branch name",
+                    name: $branchNameInput,
+                    onSubmit: {
+                        let trimmedName = branchNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        state.createBranch(name: trimmedName, from: prompt.hash)
+                        dismissBranchPrompt()
+                    },
+                    onCancel: dismissBranchPrompt
+                )
+            }
         }
-        .sheet(item: Binding(
-            get: { pendingTagHash.map { NamePrompt(hash: $0) } },
-            set: { pendingTagHash = $0?.hash }
-        )) { prompt in
-            NameInputSheet(
-                title: "Create Tag",
-                placeholder: "Tag name",
-                actionTitle: "Create",
-                name: $tagNameInput,
-                onSubmit: {
-                    let trimmedName = tagNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                    state.createTag(name: trimmedName, at: prompt.hash)
-                    tagNameInput = ""
-                    pendingTagHash = nil
-                },
-                onCancel: {
-                    tagNameInput = ""
-                    pendingTagHash = nil
-                }
-            )
+    }
+
+    @ViewBuilder
+    private var tagPromptOverlay: some View {
+        if let prompt = pendingTagHash.map({ NamePrompt(hash: $0) }) {
+            DroidModalOverlay(onDismiss: dismissTagPrompt) {
+                NameInputSheet(
+                    title: "Create Tag",
+                    placeholder: "Tag name",
+                    actionTitle: "Create",
+                    fieldLabel: "Tag name",
+                    name: $tagNameInput,
+                    onSubmit: {
+                        let trimmedName = tagNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        state.createTag(name: trimmedName, at: prompt.hash)
+                        dismissTagPrompt()
+                    },
+                    onCancel: dismissTagPrompt
+                )
+            }
         }
+    }
+
+    private func dismissBranchPrompt() {
+        branchNameInput = ""
+        pendingBranchHash = nil
+    }
+
+    private func dismissTagPrompt() {
+        tagNameInput = ""
+        pendingTagHash = nil
     }
 }
 
@@ -239,8 +253,8 @@ private struct CommitRow: View {
         }
         .foregroundStyle(color)
         .padding(.horizontal, 5)
-        .padding(.vertical, 1)
-        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 3))
+        .padding(.vertical, 2)
+        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: DroidShape.badgeRadius))
     }
 
     @ViewBuilder
@@ -331,6 +345,7 @@ private struct NameInputSheet: View {
     let title: String
     let placeholder: String
     let actionTitle: String
+    let fieldLabel: String
     @Binding var name: String
     let onSubmit: () -> Void
     let onCancel: () -> Void
@@ -340,30 +355,59 @@ private struct NameInputSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(DroidTheme.fg)
+        VStack(spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DroidTheme.fg)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(DroidTheme.chrome.opacity(0.42))
 
-            TextField(placeholder, text: $name)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit {
-                    guard isValid else { return }
-                    onSubmit()
+            Rectangle().fill(DroidTheme.border).frame(height: 1)
+
+            VStack(alignment: .leading, spacing: 12) {
+                CreateWorktreeLabeledField(fieldLabel) {
+                    DroidInput(placeholder: placeholder, text: $name, monospaced: true)
+                        .onSubmit {
+                            guard isValid else { return }
+                            onSubmit()
+                        }
                 }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+
+            Rectangle().fill(DroidTheme.border).frame(height: 1)
 
             HStack(spacing: 8) {
+                Spacer()
                 Button("Cancel", action: onCancel)
-                    .keyboardShortcut(.cancelAction)
-
-                Button(actionTitle) {
-                    onSubmit()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
+                    .buttonStyle(DroidButtonStyle(.secondary))
+                Button(actionTitle, action: onSubmit)
+                    .buttonStyle(DroidButtonStyle(.primary))
+                    .opacity(isValid ? 1 : 0.42)
+                    .disabled(!isValid)
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(DroidTheme.chrome.opacity(0.42))
         }
-        .padding(20)
-        .frame(width: 300)
+        .frame(width: 360)
+        .background(
+            TranslucentSurface(
+                base: DroidTheme.tertiaryBackground,
+                material: .hudWindow,
+                tintOpacity: 0.66,
+                gradientOpacity: 0.08
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: DroidShape.modalRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: DroidShape.modalRadius)
+                .stroke(DroidTheme.border, lineWidth: 1)
+        )
     }
 }

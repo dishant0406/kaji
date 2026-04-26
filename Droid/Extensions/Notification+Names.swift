@@ -7,7 +7,6 @@ extension Notification.Name {
     static let dismissSettings = Notification.Name("DroidDismissSettings")
     static let themeDidChange = Notification.Name("DroidThemeDidChange")
     static let findInTerminal = Notification.Name("DroidFindInTerminal")
-    static let openVCSWindow = Notification.Name("DroidOpenVCSWindow")
     static let toggleAttachedVCS = Notification.Name("DroidToggleAttachedVCS")
     static let toggleFileTree = Notification.Name("DroidToggleFileTree")
     static let quickOpen = Notification.Name("DroidQuickOpen")
@@ -19,4 +18,5 @@ extension Notification.Name {
     static let toggleAIUsage = Notification.Name("DroidToggleAIUsage")
     static let vcsRepoDidChange = Notification.Name("DroidVCSRepoDidChange")
     static let requestCreateWorktreeModal = Notification.Name("DroidRequestCreateWorktreeModal")
+    static let requestCreateThemeModal = Notification.Name("DroidRequestCreateThemeModal")
 }
