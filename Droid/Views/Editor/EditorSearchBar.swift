@@ -59,14 +59,14 @@ struct EditorSearchBar: View {
 
                 TextField("Search", text: $state.searchNeedle)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fg)
                     .focused($isFieldFocused)
                     .onSubmit { onNext() }
 
                 if !displayText.isEmpty {
                     Text(displayText)
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgMuted)
                         .lineLimit(1)
                         .fixedSize()
@@ -122,7 +122,7 @@ struct EditorSearchBar: View {
 
                 TextField("Replace", text: $state.replaceText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fg)
                     .onSubmit(onReplace)
             }
@@ -162,7 +162,7 @@ private struct EditorSearchTextButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .medium))
+            .droidFont(size: 11, weight: .medium)
             .foregroundStyle(isEnabled ? DroidTheme.fg : DroidTheme.fgDim)
             .padding(.horizontal, 8)
             .frame(height: 22)
@@ -185,7 +185,7 @@ private struct EditorSearchOptionToggle: View {
             isOn.toggle()
         } label: {
             Text(label)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .droidFont(size: 10, weight: .semibold, design: .monospaced)
                 .foregroundStyle(isOn ? DroidTheme.fg : DroidTheme.fgMuted)
                 .frame(width: 20, height: 18)
                 .background(isOn ? DroidTheme.border : .clear)

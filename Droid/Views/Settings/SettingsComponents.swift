@@ -45,7 +45,7 @@ struct SettingsSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .font(.system(size: SettingsMetrics.footnoteFontSize, weight: .semibold))
+                .droidFont(size: SettingsMetrics.footnoteFontSize, weight: .semibold)
                 .foregroundStyle(DroidTheme.fgDim)
                 .padding(.horizontal, SettingsMetrics.horizontalPadding)
                 .padding(.top, SettingsMetrics.sectionHeaderTopPadding)
@@ -55,7 +55,7 @@ struct SettingsSection<Content: View>: View {
 
             if let footer {
                 Text(footer)
-                    .font(.system(size: SettingsMetrics.footnoteFontSize))
+                    .droidFont(size: SettingsMetrics.footnoteFontSize)
                     .foregroundStyle(DroidTheme.fgDim)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, SettingsMetrics.horizontalPadding)
@@ -85,7 +85,7 @@ struct SettingsRow<Content: View>: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.system(size: SettingsMetrics.labelFontSize))
+                .droidFont(size: SettingsMetrics.labelFontSize)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             content
@@ -115,10 +115,10 @@ struct SettingsDetailToggleRow: View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.system(size: SettingsMetrics.labelFontSize, weight: .medium))
+                    .droidFont(size: SettingsMetrics.labelFontSize, weight: .medium)
                     .foregroundStyle(DroidTheme.fg)
                 Text(detail)
-                    .font(.system(size: SettingsMetrics.footnoteFontSize))
+                    .droidFont(size: SettingsMetrics.footnoteFontSize)
                     .foregroundStyle(DroidTheme.fgDim)
                     .fixedSize(horizontal: false, vertical: true)
             }

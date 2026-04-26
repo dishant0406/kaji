@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EditorSettingsView: View {
     @State private var settings = EditorSettings.shared
+    @State private var typography = AppTypographySettings.shared
     @State private var monoFonts: [String] = []
     @State private var allowMarkdownRemoteImages = MarkdownPreviewPreferences.allowRemoteImages
 
@@ -48,30 +49,30 @@ struct EditorSettingsView: View {
                             options: monoFonts.map {
                                 DroidSelectOption(id: $0, title: $0, value: $0)
                             },
-                            selection: $settings.fontFamily,
+                            selection: $typography.fontFamily,
                             width: SettingsMetrics.controlWidth
                         )
                     }
 
-                    SettingsRow("Font Size") {
+                    SettingsRow("Base Font Size") {
                         HStack(spacing: 8) {
                             Button {
-                                guard settings.fontSize > 8 else { return }
-                                settings.fontSize -= 1
+                                guard typography.fontSize > 10 else { return }
+                                typography.fontSize -= 1
                             } label: {
                                 DroidIcon(systemName: "minus", size: 10)
                                     .frame(width: 20, height: 20)
                             }
                             .buttonStyle(DroidButtonStyle(.secondary, size: .small))
 
-                            Text("\(Int(settings.fontSize)) pt")
-                                .font(.system(size: SettingsMetrics.labelFontSize, design: .monospaced))
+                            Text("\(Int(typography.fontSize)) pt")
+                                .droidFont(size: SettingsMetrics.labelFontSize, design: .monospaced)
                                 .foregroundStyle(DroidTheme.fg)
                                 .frame(width: 44)
 
                             Button {
-                                guard settings.fontSize < 36 else { return }
-                                settings.fontSize += 1
+                                guard typography.fontSize < 36 else { return }
+                                typography.fontSize += 1
                             } label: {
                                 DroidIcon(systemName: "plus", size: 10)
                                     .frame(width: 20, height: 20)
@@ -88,6 +89,7 @@ struct EditorSettingsView: View {
                 Spacer()
                 Button("Reset to Defaults") {
                     settings.resetToDefaults()
+                    typography.resetToDefaults()
                 }
                 .buttonStyle(DroidButtonStyle(.ghost, size: .small))
             }
@@ -95,7 +97,7 @@ struct EditorSettingsView: View {
             .padding(.bottom, SettingsMetrics.verticalPadding)
         }
         .task {
-            monoFonts = EditorSettings.availableMonospacedFonts
+            monoFonts = AppTypographySettings.availableMonospacedFonts
         }
     }
 }

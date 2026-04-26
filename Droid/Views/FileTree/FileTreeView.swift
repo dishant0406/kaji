@@ -108,7 +108,7 @@ struct FileTreeView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Text((state.rootPath as NSString).lastPathComponent)
-                .font(.system(size: 12, weight: .semibold))
+                .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
                 .lineLimit(1)
                 .truncationMode(.head)
@@ -290,7 +290,7 @@ private struct FileTreeRow: View {
                 )
             } else {
                 Text(entry.name)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(textColor)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -460,7 +460,7 @@ private struct FileTreeRenameField: View {
     var body: some View {
         TextField("", text: $text)
             .textFieldStyle(.plain)
-            .font(.system(size: 12))
+            .droidFont(size: 12)
             .foregroundStyle(DroidTheme.fg)
             .focused($focused)
             .onAppear {

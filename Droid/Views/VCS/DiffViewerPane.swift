@@ -42,7 +42,7 @@ private struct DiffViewerBreadcrumb: View {
                 .frame(width: 11, height: 11)
 
             Text(state.filePath)
-                .font(.system(size: 11))
+                .droidFont(size: 11)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -50,7 +50,7 @@ private struct DiffViewerBreadcrumb: View {
 
             if state.isStaged {
                 Text("Staged")
-                    .font(.system(size: 10, weight: .semibold))
+                    .droidFont(size: 10, weight: .semibold)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
@@ -60,12 +60,12 @@ private struct DiffViewerBreadcrumb: View {
             if let diff = loadedDiff {
                 if diff.additions > 0 {
                     Text("+\(diff.additions)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 11, weight: .semibold, design: .monospaced)
                         .foregroundStyle(DroidTheme.diffAddFg)
                 }
                 if diff.deletions > 0 {
                     Text("-\(diff.deletions)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 11, weight: .semibold, design: .monospaced)
                         .foregroundStyle(DroidTheme.diffRemoveFg)
                 }
             }

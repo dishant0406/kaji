@@ -4,13 +4,21 @@ import Testing
 
 struct GhosttyTypographyDefaultsTests {
     @Test
-    func addsDefaultFontSizeAndFamiliesWhenMissing() {
-        let defaults = GhosttyTypographyDefaults.linesIfMissing(in: [
-            "background = #0F1419",
-            "foreground = #E6E1CF",
-        ])
+    func buildsConfiguredFontSizeAndFamilyLines() {
+        let lines = GhosttyTypographyDefaults.lines(fontSize: 16, fontFamily: "JetBrains Mono")
 
-        #expect(defaults == [
+        #expect(lines == [
+            "font-size = 16",
+            "font-family = \"JetBrains Mono\"",
+            "font-family = \"Menlo\"",
+        ])
+    }
+
+    @Test
+    func trimsEmptyFamilyToAppDefault() {
+        let lines = GhosttyTypographyDefaults.lines(fontSize: 15, fontFamily: "   ")
+
+        #expect(lines == [
             "font-size = 15",
             "font-family = \"SF Mono\"",
             "font-family = \"Menlo\"",
@@ -18,23 +26,11 @@ struct GhosttyTypographyDefaultsTests {
     }
 
     @Test
-    func keepsExistingFontSettingsUntouched() {
-        let defaults = GhosttyTypographyDefaults.linesIfMissing(in: [
-            "font-size = 17",
-            "font-family = \"JetBrains Mono\"",
-        ])
+    func avoidsDuplicatingMenloFallback() {
+        let lines = GhosttyTypographyDefaults.lines(fontSize: 14, fontFamily: "Menlo")
 
-        #expect(defaults.isEmpty)
-    }
-
-    @Test
-    func fillsOnlyTheMissingTypographyKey() {
-        let defaults = GhosttyTypographyDefaults.linesIfMissing(in: [
-            "font-size = 16",
-        ])
-
-        #expect(defaults == [
-            "font-family = \"SF Mono\"",
+        #expect(lines == [
+            "font-size = 14",
             "font-family = \"Menlo\"",
         ])
     }

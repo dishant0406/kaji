@@ -150,7 +150,7 @@ struct VCSTabView: View {
                 HStack(spacing: 4) {
                     DroidIcon(systemName: "square.stack.3d.up", size: 9)
                     Text(worktreeTriggerLabel)
-                        .font(.system(size: 11, weight: .medium))
+                        .droidFont(size: 11, weight: .medium)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: 120, alignment: .leading)
@@ -415,7 +415,7 @@ struct VCSTabView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if state.files.isEmpty, state.errorMessage != nil {
                 Text(state.errorMessage ?? "")
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -436,7 +436,7 @@ struct VCSTabView: View {
     private var commitArea: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Commit")
-                .font(.system(size: 11, weight: .semibold))
+                .droidFont(size: 11, weight: .semibold)
                 .foregroundStyle(DroidTheme.fgDim)
             DroidTextArea(
                 placeholder: "Commit message. Use ⌘↵ to commit on \(state.branchName ?? "branch").",
@@ -469,7 +469,7 @@ struct VCSTabView: View {
                 Text("Commit")
                 if state.hasStagedChanges {
                     Text("\(state.stagedFiles.count)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 11, weight: .semibold, design: .monospaced)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -493,7 +493,7 @@ struct VCSTabView: View {
                 Text("Pull")
                 if state.aheadBehind.behind > 0 {
                     Text("\(state.aheadBehind.behind)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 11, weight: .semibold, design: .monospaced)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -518,7 +518,7 @@ struct VCSTabView: View {
                 Text("Push")
                 if state.aheadBehind.ahead > 0 {
                     Text("\(state.aheadBehind.ahead)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 11, weight: .semibold, design: .monospaced)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -667,7 +667,7 @@ struct PRPill: View {
                 DroidIcon(systemName: prStateIcon(info), size: 10)
                     .foregroundStyle(prStateColor(info))
                 Text("PR #\(info.number)")
-                    .font(.system(size: 11, weight: .semibold))
+                    .droidFont(size: 11, weight: .semibold)
                     .foregroundStyle(DroidTheme.fg)
                 DroidIcon(systemName: "chevron.down", size: 8)
                     .foregroundStyle(DroidTheme.fgDim)
@@ -756,7 +756,7 @@ struct PRPill: View {
             HStack(spacing: 6) {
                 DroidIcon(systemName: icon, size: 10)
                 Text(text)
-                    .font(.system(size: 11, weight: .semibold))
+                    .droidFont(size: 11, weight: .semibold)
             }
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
@@ -787,9 +787,9 @@ struct PRPopover: View {
                     .foregroundStyle(stateColor)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Pull Request #\(info.number)")
-                        .font(.system(size: 12, weight: .semibold))
+                        .droidFont(size: 12, weight: .semibold)
                     Text(stateLabel)
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgMuted)
                 }
                 Spacer(minLength: 0)
@@ -829,7 +829,7 @@ struct PRPopover: View {
                 HStack(spacing: 6) {
                     DroidIcon(systemName: "arrow.up.right.square", size: 11)
                     Text("Open on GitHub")
-                        .font(.system(size: 11, weight: .medium))
+                        .droidFont(size: 11, weight: .medium)
                     Spacer(minLength: 0)
                 }
                 .foregroundStyle(DroidTheme.fg)
@@ -854,7 +854,7 @@ struct PRPopover: View {
                             DroidIcon(systemName: "arrow.triangle.merge", size: 11)
                         }
                         Text(state.isMergingPullRequest ? "Merging…" : mergeMethod.label)
-                            .font(.system(size: 11, weight: .medium))
+                            .droidFont(size: 11, weight: .medium)
                         Spacer(minLength: 0)
                     }
                     .foregroundStyle(mergeDisabled ? DroidTheme.fgDim : DroidTheme.bg)
@@ -878,7 +878,7 @@ struct PRPopover: View {
                             DroidIcon(systemName: "xmark.circle", size: 11)
                         }
                         Text("Close PR")
-                            .font(.system(size: 11, weight: .medium))
+                            .droidFont(size: 11, weight: .medium)
                         Spacer(minLength: 0)
                     }
                     .foregroundStyle(DroidTheme.diffRemoveFg)
@@ -1024,11 +1024,11 @@ struct PRPopover: View {
     private func infoRow(label: String, value: String, valueColor: Color = DroidTheme.fg) -> some View {
         HStack(spacing: 6) {
             Text(label)
-                .font(.system(size: 11))
+                .droidFont(size: 11)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .frame(width: 70, alignment: .leading)
             Text(value)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .droidFont(size: 11, weight: .medium, design: .monospaced)
                 .foregroundStyle(valueColor)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -1214,7 +1214,7 @@ private struct SectionSplitLayout: View {
                 sectionHeader(for: .changes, collapsed: false)
                 if state.files.isEmpty {
                     Text("No changes")
-                        .font(.system(size: 12))
+                        .droidFont(size: 12)
                         .foregroundStyle(DroidTheme.fgMuted)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -1252,14 +1252,14 @@ private struct SectionSplitLayout: View {
                         .frame(width: 10)
 
                     Text(section.title)
-                        .font(.system(size: 11, weight: .semibold))
+                        .droidFont(size: 11, weight: .semibold)
                         .foregroundStyle(DroidTheme.fgMuted)
                 }
             }
             .buttonStyle(.plain)
 
             Text("\(sectionCount(for: section))")
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .droidFont(size: 11, weight: .semibold, design: .monospaced)
                 .foregroundStyle(DroidTheme.fgDim)
 
             Spacer(minLength: 0)
@@ -1444,7 +1444,7 @@ private struct FileRow: View {
                 .frame(width: 12)
 
             Text(statusText)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .droidFont(size: 11, weight: .bold, design: .monospaced)
                 .foregroundStyle(statusColor)
                 .frame(width: 14)
 
@@ -1453,7 +1453,7 @@ private struct FileRow: View {
                 .frame(width: 11, height: 11)
 
             Text(file.path)
-                .font(.system(size: 12, weight: .medium))
+                .droidFont(size: 12, weight: .medium)
                 .foregroundStyle(DroidTheme.fg)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -1465,17 +1465,17 @@ private struct FileRow: View {
 
             if stats.binary {
                 Text("Binary")
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.fgMuted)
             } else {
                 if let additions = stats.additions {
                     Text("+\(additions)")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 12, weight: .semibold, design: .monospaced)
                         .foregroundStyle(DroidTheme.diffAddFg)
                 }
                 if let deletions = stats.deletions {
                     Text("-\(deletions)")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .droidFont(size: 12, weight: .semibold, design: .monospaced)
                         .foregroundStyle(DroidTheme.diffRemoveFg)
                 }
             }

@@ -119,14 +119,14 @@ struct ExpandedProjectRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(project.name)
-                    .font(.system(size: 12, weight: isActive ? .semibold : .medium))
+                    .droidFont(size: 12, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(isActive ? DroidTheme.fg : (hovered ? DroidTheme.fg : DroidTheme.fgMuted))
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 if isGitRepo, let worktree = activeWorktree, !worktreesExpanded {
                     Text(worktree.isPrimary ? "primary" : worktree.name)
-                        .font(.system(size: 10, design: .monospaced))
+                        .droidFont(size: 10, design: .monospaced)
                         .foregroundStyle(DroidTheme.fgDim)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -203,7 +203,7 @@ struct ExpandedProjectRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
             } else {
                 Text(displayLetter)
-                    .font(.system(size: 11, weight: .semibold))
+                    .droidFont(size: 11, weight: .semibold)
                     .foregroundStyle(letterForeground)
             }
         }
@@ -405,7 +405,7 @@ private struct ExpandedRenamePopover: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("Rename Project")
-                .font(.system(size: 12, weight: .semibold))
+                .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             TextField(
                 "",
@@ -413,7 +413,7 @@ private struct ExpandedRenamePopover: View {
                 prompt: Text("Project name").foregroundStyle(DroidTheme.fgDim)
             )
             .textFieldStyle(.plain)
-            .font(.system(size: 12))
+            .droidFont(size: 12)
             .foregroundStyle(DroidTheme.fg)
             .focused($isFocused)
             .padding(.horizontal, 10)

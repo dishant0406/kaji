@@ -84,7 +84,7 @@ struct PaletteOverlay<Item: Identifiable & Sendable>: View {
                 VStack {
                     Spacer()
                     Text(query.isEmpty ? emptyLabel : noMatchLabel)
-                        .font(.system(size: 12))
+                        .droidFont(size: 12)
                         .foregroundStyle(DroidTheme.fgMuted)
                     Spacer()
                 }
@@ -156,6 +156,7 @@ struct PaletteSearchField: NSViewRepresentable {
     let onEscape: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
+    @Environment(AppTypographySettings.self) private var typography
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -167,7 +168,7 @@ struct PaletteSearchField: NSViewRepresentable {
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
-        field.font = .systemFont(ofSize: fontSize)
+        field.font = typography.nsFont(size: fontSize)
         field.textColor = NSColor(DroidTheme.fg)
         field.placeholderString = placeholder
         field.cell?.sendsActionOnEndEditing = false
@@ -183,6 +184,7 @@ struct PaletteSearchField: NSViewRepresentable {
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
+        nsView.font = typography.nsFont(size: fontSize)
         if let field = nsView as? PaletteNSTextField {
             field.onEscape = onEscape
         }

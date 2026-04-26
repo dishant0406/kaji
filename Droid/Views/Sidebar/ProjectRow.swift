@@ -149,7 +149,7 @@ struct ProjectRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
             } else {
                 Text(displayLetter)
-                    .font(.system(size: 14, weight: .semibold))
+                    .droidFont(size: 14, weight: .semibold)
                     .foregroundStyle(letterForeground)
             }
         }
@@ -264,7 +264,7 @@ private struct RenamePopover: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("Rename Project")
-                .font(.system(size: 12, weight: .semibold))
+                .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             TextField(
                 "",
@@ -272,7 +272,7 @@ private struct RenamePopover: View {
                 prompt: Text("Project name").foregroundStyle(DroidTheme.fgDim)
             )
             .textFieldStyle(.plain)
-            .font(.system(size: 12))
+            .droidFont(size: 12)
             .foregroundStyle(DroidTheme.fg)
             .focused($isFocused)
             .padding(.horizontal, 10)

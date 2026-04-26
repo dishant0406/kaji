@@ -11,19 +11,19 @@ struct CreateWorktreeSetupSection: View {
                 ? "Add .droid/worktree.json to run trusted setup commands after creation."
                 : "This repository defines setup commands for new worktrees."
             )
-            .font(.system(size: 11))
+            .droidFont(size: 11)
             .foregroundStyle(DroidTheme.fgDim)
 
             if setupCommands.isEmpty {
                 Text("\(projectPath)/.droid/worktree.json")
-                    .font(.system(size: 11, design: .monospaced))
+                    .droidFont(size: 11, design: .monospaced)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .textSelection(.enabled)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(setupCommands, id: \.self) { command in
                         Text(command)
-                            .font(.system(size: 11, design: .monospaced))
+                            .droidFont(size: 11, design: .monospaced)
                             .foregroundStyle(DroidTheme.fg)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -37,7 +37,7 @@ struct CreateWorktreeSetupSection: View {
 
                 HStack {
                     Text("Run setup after creation")
-                        .font(.system(size: 12))
+                        .droidFont(size: 12)
                         .foregroundStyle(DroidTheme.fg)
                     Spacer()
                     DroidSwitch(isOn: $runSetup)

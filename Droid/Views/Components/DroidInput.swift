@@ -22,7 +22,7 @@ struct DroidInput: View {
                 prompt: Text(placeholder).foregroundStyle(DroidTheme.fgDim)
             )
             .textFieldStyle(.plain)
-            .font(inputFont)
+            .droidFont(size: 12, design: monospaced ? .monospaced : .default)
             .foregroundStyle(DroidTheme.fg)
             .focused($isFocused)
         }
@@ -34,12 +34,6 @@ struct DroidInput: View {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                 .stroke(isFocused ? DroidTheme.accent.opacity(0.6) : DroidTheme.border, lineWidth: 1)
         )
-    }
-
-    private var inputFont: Font {
-        monospaced
-            ? .system(size: 12, weight: .regular, design: .monospaced)
-            : .system(size: 12, weight: .regular)
     }
 
     private var controlBackground: Color {

@@ -17,7 +17,7 @@ struct DiffBodyView: View {
                     .padding(14)
             } else if let error {
                 Text(error)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -46,7 +46,7 @@ struct DiffBodyView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Text("No diff output")
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -58,12 +58,12 @@ struct DiffBodyView: View {
     private func truncatedBanner(onLoadFull: @escaping () -> Void) -> some View {
         HStack {
             Text("Large diff preview")
-                .font(.system(size: 11, weight: .medium))
+                .droidFont(size: 11, weight: .medium)
                 .foregroundStyle(DroidTheme.fgMuted)
             Spacer(minLength: 0)
             Button("Load full diff", action: onLoadFull)
                 .buttonStyle(.plain)
-                .font(.system(size: 11, weight: .semibold))
+                .droidFont(size: 11, weight: .semibold)
                 .foregroundStyle(DroidTheme.accent)
         }
         .padding(.horizontal, 10)

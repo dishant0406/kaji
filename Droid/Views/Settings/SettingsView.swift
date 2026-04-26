@@ -62,7 +62,7 @@ struct SettingsView: View {
     private var header: some View {
         HStack(spacing: 12) {
             Text("Settings")
-                .font(.system(size: 13, weight: .semibold))
+                .droidFont(size: 13, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             if let onClose {
@@ -137,7 +137,7 @@ private struct SettingsSidebarButton: View {
                 DroidIcon(systemName: icon, size: 12)
                     .frame(width: 14)
                 Text(title)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }

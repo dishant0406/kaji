@@ -90,9 +90,17 @@ enum MarkdownRenderer {
     }
 
     @MainActor
-    static func html(filePath: String?) -> String {
+    static func html(filePath: String?, typography: AppTypographySettings = .shared) -> String {
         let title = escapeForHTML(filePath.map { URL(fileURLWithPath: $0).lastPathComponent } ?? "Markdown")
         let imageBaseHost = filePath.flatMap { encodedImageBaseHost(forMarkdownFilePath: $0) } ?? ""
+        let bodyFontSize = Int(typography.scaled(14).rounded())
+        let headingOneSize = String(format: "%.2f", typography.scaleFactor * 2.0)
+        let headingTwoSize = String(format: "%.2f", typography.scaleFactor * 1.5)
+        let headingThreeSize = String(format: "%.2f", typography.scaleFactor * 1.25)
+        let headingFourSize = String(format: "%.2f", typography.scaleFactor)
+        let toolbarFontSize = Int(typography.scaled(11).rounded())
+        let errorFontSize = Int(typography.scaled(13).rounded())
+        let uiFontFamily = escapeForHTML(typography.fontFamily)
         return """
         <!DOCTYPE html>
         <html>
@@ -117,8 +125,8 @@ enum MarkdownRenderer {
                 html, body {
                     background: var(--bg);
                     color: var(--fg);
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-                    font-size: 14px;
+                    font-family: "\(uiFontFamily)", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                    font-size: \(bodyFontSize)px;
                     line-height: 1.6;
                     padding: 0;
                     margin: 0;
@@ -148,10 +156,10 @@ enum MarkdownRenderer {
                     margin-bottom: 16px;
                     line-height: 1.25;
                 }
-                .markdown-body h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-                .markdown-body h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-                .markdown-body h3 { font-size: 1.25em; }
-                .markdown-body h4 { font-size: 1em; }
+                .markdown-body h1 { font-size: \(headingOneSize)em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+                .markdown-body h2 { font-size: \(headingTwoSize)em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+                .markdown-body h3 { font-size: \(headingThreeSize)em; }
+                .markdown-body h4 { font-size: \(headingFourSize)em; }
                 .markdown-body a { color: var(--accent); text-decoration: none; }
                 .markdown-body a:hover { text-decoration: underline; }
                 .markdown-body code {
@@ -159,7 +167,7 @@ enum MarkdownRenderer {
                     border-radius: 4px;
                     padding: 0.2em 0.4em;
                     font-size: 85%;
-                    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+                    font-family: "\(uiFontFamily)", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
                 }
                 .markdown-body pre {
                     background: var(--code-bg);
@@ -208,7 +216,7 @@ enum MarkdownRenderer {
                     gap: 6px;
                     justify-content: flex-end;
                     margin-bottom: 6px;
-                    font-size: 11px;
+                    font-size: \(toolbarFontSize)px;
                     color: var(--muted);
                 }
                 .mermaid .mermaid-btn {
@@ -218,7 +226,7 @@ enum MarkdownRenderer {
                     border-radius: 4px;
                     padding: 2px 6px;
                     cursor: pointer;
-                    font-size: 11px;
+                    font-size: \(toolbarFontSize)px;
                     line-height: 1.2;
                 }
                 .mermaid .mermaid-btn:hover {
@@ -255,7 +263,7 @@ enum MarkdownRenderer {
                     border-radius: 6px;
                     padding: 12px 16px;
                     color: #f85149;
-                    font-size: 13px;
+                    font-size: \(errorFontSize)px;
                     margin: 16px 0;
                 }
                 .markdown-body pre.droid-prehl { background: var(--code-bg); }

@@ -5,7 +5,7 @@ struct EditorPane: View {
     let focused: Bool
     let onFocus: () -> Void
     @Environment(GhosttyService.self) private var ghostty
-    @State private var editorSettings = EditorSettings.shared
+    @Environment(AppTypographySettings.self) private var typography
 
     var body: some View {
         VStack(spacing: 0) {
@@ -45,7 +45,7 @@ struct EditorPane: View {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini)
                     Text("Loading full file...")
-                        .font(.system(size: 11))
+                        .droidFont(size: 11)
                         .foregroundStyle(DroidTheme.fgMuted)
                 }
                 .padding(.horizontal, 8)
@@ -107,7 +107,7 @@ struct EditorPane: View {
         HStack(spacing: 0) {
             CodeEditorView(
                 state: state,
-                editorSettings: editorSettings,
+                typography: typography,
                 themeVersion: ghostty.configVersion,
                 showsVerticalScroller: true,
                 focused: focused,
@@ -165,7 +165,7 @@ struct EditorPane: View {
     }
 
     private var renderedMarkdownHTML: String {
-        MarkdownRenderer.html(filePath: state.filePath)
+        MarkdownRenderer.html(filePath: state.filePath, typography: typography)
     }
 
     private var markdownPalette: MarkdownRenderer.Palette {
@@ -189,7 +189,7 @@ struct EditorPane: View {
             ProgressView()
                 .controlSize(.small)
             Text("Loading full markdown preview...")
-                .font(.system(size: 12))
+                .droidFont(size: 12)
                 .foregroundStyle(DroidTheme.fgMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -214,10 +214,10 @@ struct EditorPane: View {
             DroidIcon(systemName: "exclamationmark.triangle", size: 28)
                 .foregroundStyle(DroidTheme.fgMuted)
             Text("Large File")
-                .font(.system(size: 14, weight: .semibold))
+                .droidFont(size: 14, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Text("This file is \(formattedLargeFileSize). Large files may slow down the editor.")
-                .font(.system(size: 12))
+                .droidFont(size: 12)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
@@ -247,7 +247,7 @@ struct EditorPane: View {
         VStack {
             Spacer()
             Text(error)
-                .font(.system(size: 12))
+                .droidFont(size: 12)
                 .foregroundStyle(DroidTheme.diffRemoveFg)
             Spacer()
         }
@@ -326,7 +326,7 @@ private struct EditorBreadcrumb: View {
             DroidIcon(systemName: "doc.text", size: 10)
                 .foregroundStyle(DroidTheme.fgDim)
             Text(relativePath)
-                .font(.system(size: 11))
+                .droidFont(size: 11)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -342,7 +342,7 @@ private struct EditorBreadcrumb: View {
                 } icon: {
                     DroidIcon(systemName: "lock.fill", size: 10)
                 }
-                    .font(.system(size: 10, weight: .semibold))
+                    .droidFont(size: 10, weight: .semibold)
                     .foregroundStyle(DroidTheme.diffHunkFg)
             }
             Spacer()
@@ -354,7 +354,7 @@ private struct EditorBreadcrumb: View {
                 .padding(.trailing, 6)
             }
             Text("Ln \(state.cursorLine), Col \(state.cursorColumn)")
-                .font(.system(size: 10, design: .monospaced))
+                .droidFont(size: 10, design: .monospaced)
                 .foregroundStyle(DroidTheme.fgDim)
         }
         .padding(.horizontal, 10)

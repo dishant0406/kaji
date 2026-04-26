@@ -53,7 +53,7 @@ struct CreatePRModal: View {
                     if let errorMessage {
                         Rectangle().fill(DroidTheme.border).frame(height: 1)
                         Text(errorMessage)
-                            .font(.system(size: 11))
+                            .droidFont(size: 11)
                             .foregroundStyle(DroidTheme.diffRemoveFg)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 18)
@@ -82,7 +82,7 @@ struct CreatePRModal: View {
     private var header: some View {
         HStack {
             Text("Create Pull Request")
-                .font(.system(size: 13, weight: .semibold))
+                .droidFont(size: 13, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
             Spacer()
             IconButton(symbol: "xmark", accessibilityLabel: "Close Pull Request Modal", action: onCancel)
@@ -99,7 +99,7 @@ struct CreatePRModal: View {
                     HStack(spacing: 8) {
                         DroidSpinner(size: 12, lineWidth: 1.4, color: DroidTheme.fgMuted)
                         Text("Loading remote branches")
-                            .font(.system(size: 11))
+                            .droidFont(size: 11)
                             .foregroundStyle(DroidTheme.fgDim)
                     }
                 } else {

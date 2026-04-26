@@ -47,7 +47,7 @@ struct AIUsageMetricRowView: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
                 Text(row.label)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(DroidTheme.fgMuted)
 
                 if paceDetailText != nil {
@@ -73,13 +73,13 @@ struct AIUsageMetricRowView: View {
 
                 if let percent = displayPercent {
                     Text("\(Int(percent.rounded()))%")
-                        .font(.system(size: 12, weight: .medium))
+                        .droidFont(size: 12, weight: .medium)
                         .foregroundStyle(DroidTheme.fg)
                 }
 
                 if let detail = displayDetail {
                     Text(detail)
-                        .font(.system(size: 11))
+                        .droidFont(size: 11)
                         .foregroundStyle(DroidTheme.fgDim)
                 }
             }
@@ -91,14 +91,14 @@ struct AIUsageMetricRowView: View {
             if let resetDate = row.resetDate {
                 HStack(spacing: 6) {
                     Text("Resets \(Self.resetFormatter.string(from: resetDate))")
-                        .font(.system(size: 11))
+                        .droidFont(size: 11)
                         .foregroundStyle(DroidTheme.fgDim)
 
                     Spacer(minLength: 0)
 
                     if let paceDetailText {
                         Text(paceDetailText)
-                            .font(.system(size: 11))
+                            .droidFont(size: 11)
                             .foregroundStyle(DroidTheme.fgDim)
                             .lineLimit(1)
                     }

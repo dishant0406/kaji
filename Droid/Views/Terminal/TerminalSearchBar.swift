@@ -18,7 +18,7 @@ struct TerminalSearchBar: View {
 
                     TextField("Search", text: $searchState.needle)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 12))
+                        .droidFont(size: 12)
                         .foregroundStyle(DroidTheme.fg)
                         .focused($isFieldFocused)
                         .onSubmit { onNavigateNext() }
@@ -28,7 +28,7 @@ struct TerminalSearchBar: View {
 
                     if !searchState.displayText.isEmpty {
                         Text(searchState.displayText)
-                            .font(.system(size: 10))
+                            .droidFont(size: 10)
                             .foregroundStyle(DroidTheme.fgMuted)
                             .lineLimit(1)
                             .fixedSize()

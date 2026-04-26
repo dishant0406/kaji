@@ -25,7 +25,7 @@ struct ProjectIconColorPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(DroidTheme.fg)
 
             LazyVGrid(columns: columns, spacing: 8) {
@@ -42,7 +42,7 @@ struct ProjectIconColorPicker: View {
                 HStack(spacing: 6) {
                     DroidIcon(systemName: "arrow.uturn.backward", size: 10)
                     Text("Reset to Default")
-                        .font(.system(size: 11, weight: .medium))
+                        .droidFont(size: 11, weight: .medium)
                 }
                 .foregroundStyle(DroidTheme.fgMuted)
             }

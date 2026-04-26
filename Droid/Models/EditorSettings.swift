@@ -1,4 +1,5 @@
-import AppKit
+import Foundation
+import Observation
 import os
 
 private let logger = Logger(subsystem: "app.droid", category: "EditorSettings")
@@ -24,33 +25,11 @@ final class EditorSettings {
         }
     }
 
-    var fontSize: CGFloat = 13 { didSet { save() } }
-    var fontFamily: String = "SF Mono" { didSet { save() } }
     var defaultEditor: DefaultEditor = .builtIn { didSet { save() } }
     var externalEditorCommand: String = "vim" { didSet { save() } }
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private var isBatchLoading = false
-
-    var resolvedFont: NSFont {
-        if let font = NSFont(name: fontFamily, size: fontSize) {
-            return font
-        }
-        return NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
-    }
-
-    static var availableMonospacedFonts: [String] {
-        NSFontManager.shared
-            .availableFontFamilies
-            .filter { family in
-                guard let font = NSFont(name: family, size: 13) else { return false }
-                return font.isFixedPitch || family.localizedCaseInsensitiveContains("mono")
-                    || family.localizedCaseInsensitiveContains("courier")
-                    || family.localizedCaseInsensitiveContains("menlo")
-                    || family.localizedCaseInsensitiveContains("consolas")
-            }
-            .sorted()
-    }
 
     private init() {
         fileURL = DroidFileStorage.fileURL(filename: "editor-settings.json")
@@ -59,8 +38,6 @@ final class EditorSettings {
 
     func resetToDefaults() {
         isBatchLoading = true
-        fontSize = 13
-        fontFamily = "SF Mono"
         defaultEditor = .builtIn
         externalEditorCommand = "vim"
         isBatchLoading = false
@@ -73,8 +50,6 @@ final class EditorSettings {
             let data = try Data(contentsOf: fileURL)
             let snapshot = try JSONDecoder().decode(Snapshot.self, from: data)
             isBatchLoading = true
-            fontSize = snapshot.fontSize ?? 13
-            fontFamily = snapshot.fontFamily ?? "SF Mono"
             defaultEditor = snapshot.defaultEditor ?? snapshot.quickOpenEditor ?? .builtIn
             externalEditorCommand = snapshot.externalEditorCommand ?? "vim"
             isBatchLoading = false
@@ -87,8 +62,6 @@ final class EditorSettings {
         guard !isBatchLoading else { return }
         do {
             let snapshot = Snapshot(
-                fontSize: fontSize,
-                fontFamily: fontFamily,
                 defaultEditor: defaultEditor,
                 quickOpenEditor: nil,
                 externalEditorCommand: externalEditorCommand
@@ -108,8 +81,6 @@ final class EditorSettings {
 }
 
 private struct Snapshot: Codable {
-    let fontSize: CGFloat?
-    let fontFamily: String?
     let defaultEditor: EditorSettings.DefaultEditor?
     let quickOpenEditor: EditorSettings.DefaultEditor?
     let externalEditorCommand: String?

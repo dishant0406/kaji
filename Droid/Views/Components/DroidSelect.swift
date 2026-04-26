@@ -20,7 +20,7 @@ struct DroidSelect<Value: Hashable>: View {
         } label: {
             HStack(spacing: 8) {
                 Text(selectedTitle)
-                    .font(.system(size: 12))
+                    .droidFont(size: 12)
                     .foregroundStyle(selectedOption == nil ? DroidTheme.fgDim : DroidTheme.fg)
                     .lineLimit(1)
 
@@ -99,7 +99,7 @@ private struct DroidSelectRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 12, weight: isSelected ? .medium : .regular))
+                .droidFont(size: 12, weight: isSelected ? .medium : .regular)
                 .foregroundStyle(DroidTheme.fg)
                 .lineLimit(1)
 

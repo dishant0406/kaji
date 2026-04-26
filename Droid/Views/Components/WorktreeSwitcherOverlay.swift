@@ -76,13 +76,13 @@ private struct WorktreeSwitcherRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(item.displayName)
-                        .font(.system(size: 12, weight: .medium))
+                        .droidFont(size: 12, weight: .medium)
                         .foregroundStyle(DroidTheme.fg)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     if item.worktree.isPrimary {
                         Text("PRIMARY")
-                            .font(.system(size: 8, weight: .bold))
+                            .droidFont(size: 8, weight: .bold)
                             .tracking(0.5)
                             .foregroundStyle(DroidTheme.fgDim)
                             .padding(.horizontal, 4)
@@ -93,16 +93,16 @@ private struct WorktreeSwitcherRow: View {
                 HStack(spacing: 6) {
                     if let branch = item.branchSubtitle {
                         Text(branch)
-                            .font(.system(size: 10, design: .monospaced))
+                            .droidFont(size: 10, design: .monospaced)
                             .foregroundStyle(DroidTheme.fgDim)
                             .lineLimit(1)
                             .truncationMode(.middle)
                         Text("·")
-                            .font(.system(size: 10))
+                            .droidFont(size: 10)
                             .foregroundStyle(DroidTheme.fgDim)
                     }
                     Text(item.projectName)
-                        .font(.system(size: 10))
+                        .droidFont(size: 10)
                         .foregroundStyle(DroidTheme.fgDim)
                         .lineLimit(1)
                         .truncationMode(.middle)

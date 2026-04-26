@@ -39,6 +39,7 @@ struct DroidApp: App {
                 .environment(GhosttyService.shared)
                 .environment(DroidConfig.shared)
                 .environment(ThemeService.shared)
+                .environment(AppTypographySettings.shared)
                 .preferredColorScheme(DroidTheme.colorScheme)
                 .onAppear {
                     NotificationStore.shared.appState = appState
@@ -94,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HugeIconFont.registerIfNeeded()
         setAppIcon()
         _ = GhosttyService.shared
+        _ = AppTypographySettings.shared
         ThemeService.shared.applyDefaultThemeIfNeeded()
         UpdateService.shared.start()
         ModifierKeyMonitor.shared.start()

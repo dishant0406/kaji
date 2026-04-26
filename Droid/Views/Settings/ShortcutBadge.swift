@@ -6,7 +6,7 @@ struct ShortcutBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.system(size: compact ? 9 : 10, weight: .medium, design: .monospaced))
+            .droidFont(size: compact ? 9 : 10, weight: .medium, design: .monospaced)
             .foregroundStyle(DroidTheme.fg)
             .padding(.horizontal, compact ? 4 : 6)
             .padding(.vertical, compact ? 1 : 2)

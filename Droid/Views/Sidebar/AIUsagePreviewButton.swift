@@ -33,7 +33,7 @@ struct AIUsagePreviewButton: View {
             iconGlyph
             if let percentLabel {
                 Text(percentLabel)
-                    .font(.system(size: 11, weight: .semibold))
+                    .droidFont(size: 11, weight: .semibold)
                     .foregroundStyle(foreground)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

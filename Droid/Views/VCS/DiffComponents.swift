@@ -8,7 +8,7 @@ struct DiffSectionDivider: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(text)
-                .font(.system(size: 11, design: .monospaced))
+                .droidFont(size: 11, design: .monospaced)
                 .foregroundStyle(DroidTheme.fgDim)
                 .lineLimit(1)
                 .truncationMode(.tail)

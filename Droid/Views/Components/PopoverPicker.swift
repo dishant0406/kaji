@@ -95,7 +95,7 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
                     DroidIcon(systemName: icon, size: 12)
                 }
                 Text(title)
-                    .font(.system(size: 12, weight: .medium))
+                    .droidFont(size: 12, weight: .medium)
                 Spacer()
                 ProgressView()
                     .controlSize(.small)
