@@ -12,6 +12,7 @@ APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
+ICON_PATH="$APP_RESOURCES/AppIcon.icns"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
@@ -46,6 +47,7 @@ chmod +x "$APP_BINARY"
 ditto "$RESOURCE_BUNDLE" "$APP_RESOURCES/$(basename "$RESOURCE_BUNDLE")"
 ditto "$SPARKLE_FRAMEWORK" "$APP_MACOS/Sparkle.framework"
 cp "$ROOT_DIR/Droid/Info.plist" "$INFO_PLIST"
+"$ROOT_DIR/scripts/create-icns.sh" "$ICON_PATH" >/dev/null
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 0.0.0-dev" "$INFO_PLIST"
