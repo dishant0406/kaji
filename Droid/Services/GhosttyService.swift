@@ -17,6 +17,7 @@ final class GhosttyService {
 
     private init(droidConfig: DroidConfig = .shared) {
         self.droidConfig = droidConfig
+        TerminalEnvironmentPolicy.applyToProcessEnvironment()
         initializeGhostty()
     }
 
