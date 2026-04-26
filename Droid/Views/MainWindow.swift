@@ -411,7 +411,6 @@ struct MainWindow: View {
                 isFocused: true,
                 isWindowTitleBar: true,
                 showVCSButton: true,
-                showDevelopmentBadge: AppEnvironment.isDevelopment,
                 projectID: project.id,
                 onSelectTab: { tabID in
                     appState.dispatch(.selectTab(projectID: project.id, areaID: area.id, tabID: tabID))
@@ -470,10 +469,6 @@ struct MainWindow: View {
                 }
                 .overlay(alignment: .trailing) {
                     HStack(spacing: 0) {
-                        if AppEnvironment.isDevelopment {
-                            devModeBadge
-                                .padding(.trailing, 6)
-                        }
                         if let version = UpdateService.shared.availableUpdateVersion {
                             UpdateBadge(version: version) {
                                 UpdateService.shared.checkForUpdates()
@@ -549,10 +544,6 @@ struct MainWindow: View {
     private var topBarLeadingWidth: CGFloat {
         let sidebarWidth = SidebarLayout.resolvedWidth(expanded: sidebarExpanded) + 1
         return max(trafficLightWidth, sidebarWidth)
-    }
-
-    private var devModeBadge: some View {
-        DevelopmentBadge()
     }
 
     private var activeWorktreeKey: WorktreeKey? {
