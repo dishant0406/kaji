@@ -1,6 +1,6 @@
 # Notification Setup
 
-Droid already ships built-in integrations for **Claude Code** and **OpenCode** — toggle them under **Settings → Notifications** and you're done.
+Droid already ships built-in integrations for **Codex**, **Claude Code**, and **OpenCode** — toggle them under **Settings → Notifications** and you're done.
 
 This document is for everything else: sending notifications into Droid from **any other tool** (a custom CLI, a shell command, a build script, a different AI agent, etc.).
 
@@ -13,6 +13,8 @@ Droid listens on a Unix domain socket:
 ```
 
 The socket path is also exported to every terminal Droid spawns as the environment variable `DROID_SOCKET_PATH`, along with a per-pane identifier `DROID_PANE_ID`. Any process running inside a Droid terminal pane can read these and send a message.
+
+When a built-in provider such as Codex runs outside a Droid pane, Droid can still receive the notification by connecting to the default socket path directly and leaving `paneID` empty. In that case the notification is routed to the currently active pane.
 
 ## Wire Format
 
@@ -40,9 +42,17 @@ Constraints:
 From anywhere inside a Droid terminal pane:
 
 ```bash
-printf '%s|%s|%s|%s' \
-    "custom" "$DROID_PANE_ID" "Build finished" "All tests passed" \
-    | nc -U "$DROID_SOCKET_PATH"
+python3 - <<'PY'
+import os, socket
+
+path = os.environ["DROID_SOCKET_PATH"]
+pane = os.environ["DROID_PANE_ID"]
+payload = f"custom|{pane}|Build finished|All tests passed".encode("utf-8")
+
+with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+    s.connect(path)
+    s.sendall(payload)
+PY
 ```
 
 Wrap it in a function and call it from anywhere:
@@ -54,8 +64,20 @@ droid_notify() {
     local body="${2:-}"
     local safe_body
     safe_body=$(printf '%s' "$body" | tr '|\n\r' '   ' | head -c 500)
-    printf '%s|%s|%s|%s' "custom" "${DROID_PANE_ID:-}" "$title" "$safe_body" \
-        | nc -U "$DROID_SOCKET_PATH" 2>/dev/null || true
+    /usr/bin/python3 - "$DROID_SOCKET_PATH" "${DROID_PANE_ID:-}" "$title" "$safe_body" <<'PY'
+import socket
+import sys
+
+path, pane, title, body = sys.argv[1:5]
+payload = f"custom|{pane}|{title}|{body}".encode("utf-8")
+
+try:
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        s.connect(path)
+        s.sendall(payload)
+except Exception:
+    pass
+PY
 }
 
 # Usage
@@ -120,3 +142,5 @@ Regardless of where a notification comes from, Droid respects the user's choices
 - **Position** — where the toast appears
 
 A dot also appears on the project and worktree rows in the sidebar until the notification is read.
+
+If the notification targets the pane you're already looking at, Droid still shows the toast and sound but skips creating a new unread badge for that same focused tab.

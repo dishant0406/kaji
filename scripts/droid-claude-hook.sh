@@ -8,12 +8,28 @@ fi
 event="${1:-}"
 input=$(cat)
 
+send_socket_message() {
+    /usr/bin/python3 - "$1" "$2" <<'PY'
+import socket
+import sys
+
+path = sys.argv[1]
+payload = sys.argv[2].encode("utf-8")
+
+try:
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.connect(path)
+        sock.sendall(payload)
+except Exception:
+    pass
+PY
+}
+
 send_notification() {
     local type="$1"
     local title="$2"
     local body="$3"
-    printf '%s|%s|%s|%s' "$type" "$DROID_PANE_ID" "$title" "$body" \
-        | nc -U "$DROID_SOCKET_PATH" 2>/dev/null || true
+    send_socket_message "$DROID_SOCKET_PATH" "$type|$DROID_PANE_ID|$title|$body"
 }
 
 extract_last_message() {
