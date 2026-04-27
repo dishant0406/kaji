@@ -63,6 +63,7 @@ struct MainWindow: View {
     @State private var isFullScreen = false
     @State private var sidebarExpanded = UserDefaults.standard.bool(forKey: "droid.sidebarExpanded")
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
+    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage("droid.notifications.toastPosition") private var toastPositionRaw = ToastPosition.topCenter.rawValue
     private let trafficLightWidth: CGFloat = 75
 
@@ -223,10 +224,20 @@ struct MainWindow: View {
             }
             .frame(height: 38)
             .background(WindowDragRepresentable())
-            .background(ChromeBackgroundSurface(transparencyEnabled: sidebarTransparencyEnabled))
+            .background(
+                ChromeBackgroundSurface(
+                    transparencyEnabled: sidebarTransparencyEnabled,
+                    transparencyAmount: interfaceTransparencyAmount
+                )
+            )
 
             Rectangle().fill(DroidTheme.border).frame(height: 1)
-                .background(ChromeBackgroundSurface(transparencyEnabled: sidebarTransparencyEnabled))
+                .background(
+                    ChromeBackgroundSurface(
+                        transparencyEnabled: sidebarTransparencyEnabled,
+                        transparencyAmount: interfaceTransparencyAmount
+                    )
+                )
 
             HStack(spacing: 0) {
                 HStack(spacing: 0) {
@@ -237,7 +248,12 @@ struct MainWindow: View {
                         .accessibilityHidden(true)
                 }
                 .fixedSize(horizontal: true, vertical: false)
-                .background(SidebarBackgroundSurface(transparencyEnabled: sidebarTransparencyEnabled))
+                .background(
+                    SidebarBackgroundSurface(
+                        transparencyEnabled: sidebarTransparencyEnabled,
+                        transparencyAmount: interfaceTransparencyAmount
+                    )
+                )
 
                 ZStack {
                     DroidTheme.bg

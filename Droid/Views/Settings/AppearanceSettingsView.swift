@@ -2,6 +2,7 @@ import SwiftUI
 
 enum AppearanceSettingsKeys {
     static let sidebarTransparencyEnabled = "droid.appearance.sidebarTransparencyEnabled"
+    static let interfaceTransparencyAmount = "droid.appearance.interfaceTransparencyAmount"
 }
 
 struct AppearanceSettingsView: View {
@@ -9,6 +10,7 @@ struct AppearanceSettingsView: View {
     @State private var showThemePicker = false
     @State private var currentTheme: String?
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
+    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
 
     var body: some View {
         SettingsContainer {
@@ -19,6 +21,15 @@ struct AppearanceSettingsView: View {
                 SettingsToggleRow(
                     label: "Interface transparency",
                     isOn: $sidebarTransparencyEnabled
+                )
+                SettingsSliderRow(
+                    label: "Amount",
+                    value: $interfaceTransparencyAmount,
+                    range: 0 ... 1,
+                    isEnabled: sidebarTransparencyEnabled,
+                    valueText: { value in
+                        "\(Int((value * 100).rounded()))%"
+                    }
                 )
             }
 
@@ -53,6 +64,9 @@ struct AppearanceSettingsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .themeDidChange)) { _ in
             currentTheme = themeService.currentThemeDisplayName()
+        }
+        .onChange(of: interfaceTransparencyAmount) { _, newValue in
+            interfaceTransparencyAmount = min(max(newValue, 0), 1)
         }
     }
 }
