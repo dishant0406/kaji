@@ -29,6 +29,32 @@ struct CodexNotificationConfigTests {
     }
 
     @Test
+    func installPlacesManagedBlockBeforeFirstTable() {
+        let input = """
+        approval_policy = "never"
+
+        [tui.model_availability_nux]
+        "gpt-5.5" = 1
+        """
+
+        let output = CodexNotificationConfig.install(in: input, scriptPath: "/tmp/droid-codex-notify.sh")
+
+        let notifyIndex = output.range(of: #"notify = ["/bin/bash", "/tmp/droid-codex-notify.sh"]"#)?.lowerBound
+        let tableIndex = output.range(of: "[tui.model_availability_nux]")?.lowerBound
+
+        #expect(notifyIndex != nil)
+        #expect(tableIndex != nil)
+        #expect(notifyIndex! < tableIndex!)
+        #expect(output.contains(
+            """
+            # droid-notify-end
+
+            [tui.model_availability_nux]
+            """
+        ))
+    }
+
+    @Test
     func installConsumesExistingNotifyWhenManagedMarkersAreEmpty() {
         let input = """
         notify = ["terminal-notifier", "turn-ended"]
