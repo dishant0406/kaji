@@ -9,6 +9,7 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
 
     private static let settingsPath = NSHomeDirectory() + "/.claude/settings.json"
     private static let droidMarker = "droid-notification-hook"
+    private static let obsoleteMarkers = [droidMarker, "muxy-notification-hook"]
 
     func isToolInstalled() -> Bool {
         let home = NSHomeDirectory()
@@ -112,7 +113,7 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
         guard let hooks = entry["hooks"] as? [[String: Any]] else { return false }
         return hooks.contains { hook in
             guard let command = hook["command"] as? String else { return false }
-            return command.contains(droidMarker)
+            return obsoleteMarkers.contains { command.contains($0) }
         }
     }
 

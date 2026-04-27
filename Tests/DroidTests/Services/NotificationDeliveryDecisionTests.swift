@@ -4,32 +4,32 @@ import Testing
 
 struct NotificationDeliveryDecisionTests {
     @Test
-    func activeAppAndActiveTabDeliverWithoutPersistence() {
+    func activeAppAndActiveTabPersistAsReadAndDeliver() {
         let decision = NotificationDeliveryDecision.resolve(
             isAppActive: true,
             isTargetTabActive: true
         )
 
-        #expect(decision == .deliverOnly)
+        #expect(decision == .persistReadAndDeliver)
     }
 
     @Test
-    func inactiveTabPersistsAndDelivers() {
+    func inactiveTabPersistsUnreadAndDelivers() {
         let decision = NotificationDeliveryDecision.resolve(
             isAppActive: true,
             isTargetTabActive: false
         )
 
-        #expect(decision == .persistAndDeliver)
+        #expect(decision == .persistUnreadAndDeliver)
     }
 
     @Test
-    func inactiveAppPersistsAndDelivers() {
+    func inactiveAppPersistsUnreadAndDelivers() {
         let decision = NotificationDeliveryDecision.resolve(
             isAppActive: false,
             isTargetTabActive: true
         )
 
-        #expect(decision == .persistAndDeliver)
+        #expect(decision == .persistUnreadAndDeliver)
     }
 }

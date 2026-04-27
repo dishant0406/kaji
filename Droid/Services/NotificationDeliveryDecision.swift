@@ -1,11 +1,11 @@
 enum NotificationDeliveryDecision {
-    case persistAndDeliver
-    case deliverOnly
+    case persistUnreadAndDeliver
+    case persistReadAndDeliver
 
     static func resolve(isAppActive: Bool, isTargetTabActive: Bool) -> Self {
         if isAppActive, isTargetTabActive {
-            return .deliverOnly
+            return .persistReadAndDeliver
         }
-        return .persistAndDeliver
+        return .persistUnreadAndDeliver
     }
 }

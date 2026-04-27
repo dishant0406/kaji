@@ -63,29 +63,49 @@ final class NotificationStore {
         body: String,
         appState: AppState
     ) {
-        guard let worktreeStore else {
-            logger.debug("Notification dropped: worktreeStore not set")
+        if let worktreeStore,
+           let context = NotificationNavigator.resolveContext(
+               for: paneID,
+               appState: appState,
+               worktreeStore: worktreeStore
+           )
+        {
+            let notification = DroidNotification(
+                paneID: paneID,
+                projectID: context.projectID,
+                worktreeID: context.worktreeID,
+                areaID: context.areaID,
+                tabID: context.tabID,
+                worktreePath: context.worktreePath,
+                source: source,
+                title: title,
+                body: body
+            )
+            insertIfNotFocused(notification, appState: appState)
             return
         }
-        guard let context = NotificationNavigator.resolveContext(
-            for: paneID,
-            appState: appState,
-            worktreeStore: worktreeStore
-        )
-        else { return }
 
-        let notification = DroidNotification(
-            paneID: paneID,
-            projectID: context.projectID,
-            worktreeID: context.worktreeID,
-            areaID: context.areaID,
-            tabID: context.tabID,
-            worktreePath: context.worktreePath,
-            source: source,
-            title: title,
-            body: body
-        )
-        insertIfNotFocused(notification, appState: appState)
+        if let projectID = appState.activeProjectID,
+           let key = appState.activeWorktreeKey(for: projectID),
+           let context = NotificationFallbackContextResolver.resolve(
+               key: key,
+               appState: appState,
+               worktreeStore: worktreeStore
+           )
+        {
+            logger.warning("Notification pane context missing for \(paneID.uuidString, privacy: .public); falling back to active context")
+            addWithContext(
+                context: context,
+                source: source,
+                title: title,
+                body: body,
+                appState: appState
+            )
+            return
+        }
+
+        logger.warning("Notification pane context missing for \(paneID.uuidString, privacy: .public); persisting detached notification")
+        addDetached(source: source, title: title, body: body)
     }
 
     func addWithContext(
@@ -109,16 +129,36 @@ final class NotificationStore {
         insertIfNotFocused(notification, appState: appState)
     }
 
+    func addDetached(
+        source: DroidNotification.Source,
+        title: String,
+        body: String,
+        markRead: Bool = false
+    ) {
+        let notification = DroidNotification(
+            paneID: UUID(),
+            projectID: UUID(),
+            worktreeID: UUID(),
+            areaID: UUID(),
+            tabID: UUID(),
+            worktreePath: "",
+            source: source,
+            title: title,
+            body: body,
+            isRead: markRead
+        )
+        notifications.insert(notification, at: 0)
+        trimIfNeeded()
+        scheduleSave()
+        deliverNotification(notification)
+    }
+
     private func insertIfNotFocused(_ notification: DroidNotification, appState: AppState) {
         let decision = NotificationDeliveryDecision.resolve(
             isAppActive: NSApp.isActive,
             isTargetTabActive: NotificationNavigator.isActiveTab(notification.tabID, appState: appState)
         )
-
-        if decision == .deliverOnly {
-            deliverNotification(notification)
-            return
-        }
+        notification.isRead = decision == .persistReadAndDeliver
 
         notifications.insert(notification, at: 0)
         trimIfNeeded()
