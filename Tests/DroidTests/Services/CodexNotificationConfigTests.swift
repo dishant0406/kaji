@@ -9,11 +9,11 @@ struct CodexNotificationConfigTests {
 
         #expect(output.contains("model = \"gpt-5\""))
         #expect(output.contains(CodexNotificationConfig.startMarker))
-        #expect(output.contains(#"notify = ["/tmp/droid-codex-notify.sh"]"#))
+        #expect(output.contains(#"notify = ["/bin/bash", "/tmp/droid-codex-notify.sh"]"#))
     }
 
     @Test
-    func installReplacesExistingNotifyBlock() {
+    func installWrapsExistingNotifyBlock() {
         let input = """
         sandbox_mode = "workspace-write"
         notify = [
@@ -24,8 +24,24 @@ struct CodexNotificationConfigTests {
 
         let output = CodexNotificationConfig.install(in: input, scriptPath: "/tmp/droid-codex-notify.sh")
 
-        #expect(!output.contains("terminal-notifier"))
-        #expect(output.contains(#"notify = ["/tmp/droid-codex-notify.sh"]"#))
+        #expect(output.contains(#"# droid-notify-original = ["terminal-notifier", "Codex"]"#))
+        #expect(output.contains(#"notify = ["/bin/bash", "/tmp/droid-codex-notify.sh", "--passthrough-count", "2", "terminal-notifier", "Codex"]"#))
+    }
+
+    @Test
+    func installConsumesExistingNotifyWhenManagedMarkersAreEmpty() {
+        let input = """
+        notify = ["terminal-notifier", "turn-ended"]
+
+        # droid-notify-start
+        # droid-notify-end
+        """
+
+        let output = CodexNotificationConfig.install(in: input, scriptPath: "/tmp/droid-codex-notify.sh")
+
+        #expect(!output.contains(#"notify = ["terminal-notifier", "turn-ended"]"#))
+        #expect(output.contains(#"# droid-notify-original = ["terminal-notifier", "turn-ended"]"#))
+        #expect(output.contains(#"notify = ["/bin/bash", "/tmp/droid-codex-notify.sh", "--passthrough-count", "2", "terminal-notifier", "turn-ended"]"#))
     }
 
     @Test
@@ -34,12 +50,26 @@ struct CodexNotificationConfigTests {
         model = "gpt-5"
 
         # droid-notify-start
-        notify = ["/tmp/droid-codex-notify.sh"]
+        notify = ["/bin/bash", "/tmp/droid-codex-notify.sh"]
         # droid-notify-end
         """
 
         let output = CodexNotificationConfig.uninstall(from: input)
 
         #expect(output == "model = \"gpt-5\"\n")
+    }
+
+    @Test
+    func uninstallRestoresOriginalNotifyBlock() {
+        let input = """
+        # droid-notify-start
+        # droid-notify-original = ["terminal-notifier", "turn-ended"]
+        notify = ["/bin/bash", "/tmp/droid-codex-notify.sh", "--passthrough-count", "2", "terminal-notifier", "turn-ended"]
+        # droid-notify-end
+        """
+
+        let output = CodexNotificationConfig.uninstall(from: input)
+
+        #expect(output == #"notify = ["terminal-notifier", "turn-ended"]"# + "\n")
     }
 }

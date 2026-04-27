@@ -110,7 +110,13 @@ final class NotificationStore {
     }
 
     private func insertIfNotFocused(_ notification: DroidNotification, appState: AppState) {
-        if NSApp.isActive, NotificationNavigator.isActiveTab(notification.tabID, appState: appState) {
+        let decision = NotificationDeliveryDecision.resolve(
+            isAppActive: NSApp.isActive,
+            isTargetTabActive: NotificationNavigator.isActiveTab(notification.tabID, appState: appState)
+        )
+
+        if decision == .deliverOnly {
+            deliverNotification(notification)
             return
         }
 
