@@ -5,6 +5,7 @@ struct TabAreaView: View {
     let isFocused: Bool
     let isActiveProject: Bool
     let showTabStrip: Bool
+    let showPaneHeader: Bool
     let showVCSButton: Bool
     let projectID: UUID
     let onFocus: () -> Void
@@ -14,12 +15,26 @@ struct TabAreaView: View {
     let onCloseTab: (UUID) -> Void
     let onForceCloseTab: (UUID) -> Void
     let onSplit: (SplitDirection) -> Void
+    let onCloseArea: () -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
+    let onMoveArea: (PaneDragCoordinator.DropResult) -> Void
     @Environment(TabDragCoordinator.self) private var dragCoordinator
+    @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
     @Environment(AppState.self) private var appState
 
     var body: some View {
         VStack(spacing: 0) {
+            if showPaneHeader {
+                PaneHeaderView(
+                    title: PaneHeaderTitle.resolve(for: area),
+                    isFocused: isFocused,
+                    isDragging: paneDragCoordinator.activeDrag?.sourceAreaID == area.id,
+                    onClose: onCloseArea,
+                    onDragChanged: handlePaneDragChanged,
+                    onDragEnded: handlePaneDragEnded
+                )
+                Rectangle().fill(DroidTheme.border).frame(height: 1)
+            }
             if showTabStrip {
                 PaneTabStrip(
                     areaID: area.id,
@@ -78,15 +93,21 @@ struct TabAreaView: View {
                 }
             }
             .overlay {
-                if dragCoordinator.activeDrag != nil, dragCoordinator.hoveredAreaID == area.id,
-                   let zone = dragCoordinator.hoveredZone
-                {
-                    DropZoneHighlight(zone: zone)
-                }
+                DropZoneHighlight(
+                    zone: paneDragCoordinator.hoveredZone ?? .left,
+                    showsTabStripTarget: false
+                )
+                .opacity(
+                    paneDragCoordinator.activeDrag != nil &&
+                    paneDragCoordinator.hoveredAreaID == area.id &&
+                    paneDragCoordinator.hoveredZone != nil ? 1 : 0
+                )
+                .animation(.easeOut(duration: 0.12), value: paneDragCoordinator.hoveredAreaID)
+                .animation(.easeOut(duration: 0.12), value: paneDragCoordinator.hoveredZone)
             }
         }
         .background {
-            if dragCoordinator.activeDrag != nil {
+            if paneDragCoordinator.activeDrag != nil {
                 GeometryReader { geo in
                     Color.clear.preference(
                         key: AreaFramePreferenceKey.self,
@@ -116,6 +137,20 @@ struct TabAreaView: View {
                     appState.pendingSaveErrorMessage = error.localizedDescription
                 }
             }
+        }
+    }
+
+    private func handlePaneDragChanged(_ value: DragGesture.Value) {
+        if paneDragCoordinator.activeDrag == nil {
+            paneDragCoordinator.beginDrag(sourceAreaID: area.id, projectID: projectID)
+        }
+        paneDragCoordinator.updatePosition(value.location)
+    }
+
+    private func handlePaneDragEnded(_ value: DragGesture.Value) {
+        paneDragCoordinator.updatePosition(value.location)
+        if let result = paneDragCoordinator.endDrag() {
+            onMoveArea(result)
         }
     }
 }

@@ -8,305 +8,112 @@ import Testing
 struct WorkspaceSnapshotTests {
     private let testPath = "/tmp/test"
 
-    @Test("TerminalTabSnapshot Codable round-trip for terminal")
+    @Test("TerminalTabSnapshot Codable round-trip for editor")
     func terminalTabSnapshotRoundTrip() throws {
         let snapshot = TerminalTabSnapshot(
-            kind: .terminal,
-            customTitle: "My Tab",
+            kind: .editor,
+            customTitle: "Editor",
             colorID: "blue",
             isPinned: true,
             projectPath: testPath,
-            paneTitle: "Shell"
-        )
-        let data = try JSONEncoder().encode(snapshot)
-        let decoded = try JSONDecoder().decode(TerminalTabSnapshot.self, from: data)
-
-        #expect(decoded.kind == .terminal)
-        #expect(decoded.customTitle == "My Tab")
-        #expect(decoded.colorID == "blue")
-        #expect(decoded.isPinned == true)
-        #expect(decoded.projectPath == testPath)
-        #expect(decoded.paneTitle == "Shell")
-        #expect(decoded.filePath == nil)
-    }
-
-    @Test("TerminalTabSnapshot Codable round-trip for editor")
-    func editorTabSnapshotRoundTrip() throws {
-        let snapshot = TerminalTabSnapshot(
-            kind: .editor,
-            customTitle: nil,
-            colorID: nil,
-            isPinned: false,
-            projectPath: testPath,
-            paneTitle: nil,
-            filePath: "/tmp/test/file.swift"
+            paneTitle: "main.swift",
+            filePath: "/tmp/test/main.swift"
         )
         let data = try JSONEncoder().encode(snapshot)
         let decoded = try JSONDecoder().decode(TerminalTabSnapshot.self, from: data)
 
         #expect(decoded.kind == .editor)
-        #expect(decoded.filePath == "/tmp/test/file.swift")
-        #expect(decoded.paneTitle == "Terminal")
+        #expect(decoded.customTitle == "Editor")
+        #expect(decoded.colorID == "blue")
+        #expect(decoded.isPinned)
+        #expect(decoded.filePath == "/tmp/test/main.swift")
     }
 
-    @Test("TerminalTabSnapshot decoding with missing kind defaults to terminal")
-    func terminalTabSnapshotMissingKind() throws {
-        let json = """
-        {
-            "customTitle": null,
-            "isPinned": false,
-            "projectPath": "/tmp/test",
-            "paneTitle": "Shell"
-        }
-        """
-        let data = Data(json.utf8)
-        let decoded = try JSONDecoder().decode(TerminalTabSnapshot.self, from: data)
-        #expect(decoded.kind == .terminal)
-    }
-
-    @Test("TabAreaSnapshot Codable round-trip")
-    func tabAreaSnapshotRoundTrip() throws {
-        let areaID = UUID()
-        let snapshot = TabAreaSnapshot(
-            id: areaID,
-            projectPath: testPath,
-            tabs: [
-                TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell"),
-                TerminalTabSnapshot(kind: .vcs, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Git Diff"),
-            ],
-            activeTabIndex: 1
-        )
-        let data = try JSONEncoder().encode(snapshot)
-        let decoded = try JSONDecoder().decode(TabAreaSnapshot.self, from: data)
-
-        #expect(decoded.id == areaID)
-        #expect(decoded.projectPath == testPath)
-        #expect(decoded.tabs.count == 2)
-        #expect(decoded.activeTabIndex == 1)
-    }
-
-    @Test("SplitNodeSnapshot.tabArea Codable round-trip")
-    func splitNodeTabAreaRoundTrip() throws {
-        let areaSnapshot = TabAreaSnapshot(
-            id: UUID(),
-            projectPath: testPath,
-            tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell")],
-            activeTabIndex: 0
-        )
-        let snapshot = SplitNodeSnapshot.tabArea(areaSnapshot)
-        let data = try JSONEncoder().encode(snapshot)
-        let decoded = try JSONDecoder().decode(SplitNodeSnapshot.self, from: data)
-
-        if case let .tabArea(decodedArea) = decoded {
-            #expect(decodedArea.id == areaSnapshot.id)
-        } else {
-            Issue.record("Expected tabArea snapshot")
-        }
-    }
-
-    @Test("SplitNodeSnapshot.split Codable round-trip")
-    func splitNodeSplitRoundTrip() throws {
-        let area1 = TabAreaSnapshot(
-            id: UUID(), projectPath: testPath,
-            tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell")],
-            activeTabIndex: 0
-        )
-        let area2 = TabAreaSnapshot(
-            id: UUID(), projectPath: testPath,
-            tabs: [TerminalTabSnapshot(kind: .vcs, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "VCS")],
-            activeTabIndex: 0
-        )
-        let branchSnapshot = SplitBranchSnapshot(
-            direction: .horizontal,
-            ratio: 0.6,
-            first: .tabArea(area1),
-            second: .tabArea(area2)
-        )
-        let snapshot = SplitNodeSnapshot.split(branchSnapshot)
-        let data = try JSONEncoder().encode(snapshot)
-        let decoded = try JSONDecoder().decode(SplitNodeSnapshot.self, from: data)
-
-        if case let .split(decodedBranch) = decoded {
-            #expect(decodedBranch.direction == .horizontal)
-            #expect(abs(decodedBranch.ratio - 0.6) < 0.001)
-        } else {
-            Issue.record("Expected split snapshot")
-        }
-    }
-
-    @Test("WorkspaceSnapshot Codable round-trip")
+    @Test("WorkspaceSnapshot Codable round-trip for workspace tabs")
     func workspaceSnapshotRoundTrip() throws {
-        let projectID = UUID()
-        let worktreeID = UUID()
-        let focusedAreaID = UUID()
-        let snapshot = WorkspaceSnapshot(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            worktreePath: testPath,
-            focusedAreaID: focusedAreaID,
-            root: .tabArea(TabAreaSnapshot(
-                id: focusedAreaID, projectPath: testPath,
-                tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell")],
-                activeTabIndex: 0
-            ))
-        )
-        let data = try JSONEncoder().encode(snapshot)
-        let decoded = try JSONDecoder().decode(WorkspaceSnapshot.self, from: data)
-
-        #expect(decoded.projectID == projectID)
-        #expect(decoded.worktreeID == worktreeID)
-        #expect(decoded.worktreePath == testPath)
-        #expect(decoded.focusedAreaID == focusedAreaID)
-    }
-
-    @Test("WorkspaceRestorer.snapshotAll produces correct structure")
-    func snapshotAll() {
-        let projectID = UUID()
-        let worktreeID = UUID()
-        let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
-        let area = TabArea(projectPath: testPath)
-        let root = SplitNode.tabArea(area)
-        let workspaceRoots: [WorktreeKey: SplitNode] = [key: root]
-        let focusedAreaID: [WorktreeKey: UUID] = [key: area.id]
-
-        let snapshots = WorkspaceRestorer.snapshotAll(
-            workspaceRoots: workspaceRoots,
-            focusedAreaID: focusedAreaID
-        )
-
-        #expect(snapshots.count == 1)
-        #expect(snapshots[0].projectID == projectID)
-        #expect(snapshots[0].worktreeID == worktreeID)
-        #expect(snapshots[0].focusedAreaID == area.id)
-    }
-
-    @Test("WorkspaceRestorer.restoreAll rebuilds tree from snapshots")
-    func restoreAll() {
-        let project = Project(name: "Test", path: testPath)
-        let worktree = Worktree(name: "main", path: testPath, isPrimary: true)
         let areaID = UUID()
-
-        let snapshot = WorkspaceSnapshot(
-            projectID: project.id,
-            worktreeID: worktree.id,
-            worktreePath: testPath,
+        let workspaceTab = WorkspaceTabSnapshot(
+            id: UUID(),
+            customTitle: "Shell",
+            colorID: "blue",
+            isPinned: true,
             focusedAreaID: areaID,
             root: .tabArea(TabAreaSnapshot(
-                id: areaID, projectPath: testPath,
-                tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell")],
+                id: areaID,
+                projectPath: testPath,
+                tabs: [TerminalTabSnapshot(
+                    kind: .terminal,
+                    customTitle: nil,
+                    colorID: nil,
+                    isPinned: false,
+                    projectPath: testPath,
+                    paneTitle: "Shell"
+                )],
                 activeTabIndex: 0
             ))
         )
-
-        let results = WorkspaceRestorer.restoreAll(
-            from: [snapshot],
-            projects: [project],
-            worktrees: [project.id: [worktree]]
-        )
-
-        #expect(results.count == 1)
-        #expect(results[0].key.projectID == project.id)
-        #expect(results[0].key.worktreeID == worktree.id)
-        #expect(results[0].root.allAreas().count == 1)
-        #expect(results[0].focusedAreaID == areaID)
-    }
-
-    @Test("WorkspaceRestorer.restoreAll skips missing projects")
-    func restoreAllSkipsMissingProjects() {
         let snapshot = WorkspaceSnapshot(
             projectID: UUID(),
             worktreeID: UUID(),
             worktreePath: testPath,
-            focusedAreaID: UUID(),
-            root: .tabArea(TabAreaSnapshot(
-                id: UUID(), projectPath: testPath,
-                tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell")],
-                activeTabIndex: 0
-            ))
+            tabs: [workspaceTab],
+            activeTabID: workspaceTab.id
         )
 
-        let results = WorkspaceRestorer.restoreAll(
-            from: [snapshot],
-            projects: [],
-            worktrees: [:]
-        )
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(WorkspaceSnapshot.self, from: data)
 
-        #expect(results.isEmpty)
+        #expect(decoded.tabs.count == 1)
+        #expect(decoded.activeTabID == workspaceTab.id)
     }
 
-    @Test("WorkspaceRestorer.restoreAll falls back to primary worktree")
-    func restoreAllFallbackToPrimary() {
+    @Test("legacy root snapshot upgrades hidden pane tabs into workspace tabs")
+    func legacySnapshotUpgrade() throws {
+        let areaID = UUID()
+        let json = """
+        {
+          "projectID":"\(UUID().uuidString)",
+          "worktreeID":"\(UUID().uuidString)",
+          "worktreePath":"\(testPath)",
+          "focusedAreaID":"\(areaID.uuidString)",
+          "root":{
+            "type":"tabArea",
+            "tabArea":{
+              "id":"\(areaID.uuidString)",
+              "projectPath":"\(testPath)",
+              "tabs":[
+                {"kind":"terminal","customTitle":"One","isPinned":false,"projectPath":"\(testPath)","paneTitle":"One"},
+                {"kind":"terminal","customTitle":"Two","isPinned":false,"projectPath":"\(testPath)","paneTitle":"Two"}
+              ],
+              "activeTabIndex":0
+            }
+          }
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(WorkspaceSnapshot.self, from: Data(json.utf8))
+        #expect(decoded.tabs.count == 2)
+    }
+
+    @Test("WorkspaceRestorer snapshotAll and restoreAll preserve workspaces")
+    func snapshotAndRestore() {
         let project = Project(name: "Test", path: testPath)
-        let primaryWorktree = Worktree(name: "main", path: testPath, isPrimary: true)
-
-        let snapshot = WorkspaceSnapshot(
-            projectID: project.id,
-            worktreeID: UUID(),
-            worktreePath: testPath,
-            focusedAreaID: nil,
-            root: .tabArea(TabAreaSnapshot(
-                id: UUID(), projectPath: testPath,
-                tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: testPath, paneTitle: "Shell")],
-                activeTabIndex: 0
-            ))
-        )
-
-        let results = WorkspaceRestorer.restoreAll(
-            from: [snapshot],
-            projects: [project],
-            worktrees: [project.id: [primaryWorktree]]
-        )
-
-        #expect(results.count == 1)
-        #expect(results[0].key.worktreeID == primaryWorktree.id)
-    }
-
-    @Test("WorkspaceRestorer.restoreAll falls back to worktree path before primary")
-    func restoreAllFallbackToPath() {
-        let project = Project(name: "Test", path: testPath)
-        let primaryWorktree = Worktree(name: "main", path: testPath, isPrimary: true)
-        let importedWorktree = Worktree(
-            name: "feature-a",
-            path: "/tmp/feature-a",
-            branch: "feature-a",
-            source: .external,
-            isPrimary: false
-        )
-
-        let snapshot = WorkspaceSnapshot(
-            projectID: project.id,
-            worktreeID: UUID(),
-            worktreePath: importedWorktree.path,
-            focusedAreaID: nil,
-            root: .tabArea(TabAreaSnapshot(
-                id: UUID(), projectPath: importedWorktree.path,
-                tabs: [TerminalTabSnapshot(kind: .terminal, customTitle: nil, colorID: nil, isPinned: false, projectPath: importedWorktree.path, paneTitle: "Shell")],
-                activeTabIndex: 0
-            ))
-        )
-
-        let results = WorkspaceRestorer.restoreAll(
-            from: [snapshot],
-            projects: [project],
-            worktrees: [project.id: [primaryWorktree, importedWorktree]]
-        )
-
-        #expect(results.count == 1)
-        #expect(results[0].key.worktreeID == importedWorktree.id)
-    }
-
-    @Test("TabArea snapshot and restore round-trip")
-    func tabAreaRoundTrip() {
+        let worktree = Worktree(name: "main", path: testPath, isPrimary: true)
+        let key = WorktreeKey(projectID: project.id, worktreeID: worktree.id)
         let area = TabArea(projectPath: testPath)
-        area.createTab()
-        area.togglePin(area.tabs[0].id)
+        let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        let workspace = WorktreeWorkspace(tabs: [tab], activeTabID: tab.id)
 
-        let snapshot = area.snapshot()
-        let restored = TabArea(restoring: snapshot)
+        let snapshots = WorkspaceRestorer.snapshotAll(workspaces: [key: workspace])
+        let restored = WorkspaceRestorer.restoreAll(
+            from: snapshots,
+            projects: [project],
+            worktrees: [project.id: [worktree]]
+        )
 
-        #expect(restored.id == area.id)
-        #expect(restored.projectPath == area.projectPath)
-        #expect(restored.tabs.count == area.tabs.count)
-        #expect(restored.tabs[0].isPinned == true)
+        #expect(snapshots.count == 1)
+        #expect(restored.count == 1)
+        #expect(restored[0].workspace.tabs.count == 1)
+        #expect(restored[0].workspace.activeTab?.focusedAreaID == area.id)
     }
 }

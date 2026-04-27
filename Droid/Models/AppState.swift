@@ -51,6 +51,7 @@ final class AppState {
         case focusPaneUp(projectID: UUID)
         case focusPaneDown(projectID: UUID)
         case moveTab(projectID: UUID, request: TabMoveRequest)
+        case movePane(projectID: UUID, request: PaneMoveRequest)
         case selectNextProject(projects: [Project], worktrees: [UUID: [Worktree]])
         case selectPreviousProject(projects: [Project], worktrees: [UUID: [Worktree]])
         case navigate(projectID: UUID, worktreeID: UUID, areaID: UUID, tabID: UUID?)
@@ -72,6 +73,7 @@ final class AppState {
         let tabID: UUID
     }
 
+    var workspaces: [WorktreeKey: WorktreeWorkspace] = [:]
     var workspaceRoots: [WorktreeKey: SplitNode] = [:]
     var focusedAreaID: [WorktreeKey: UUID] = [:]
     var pendingLastTabClose: PendingTabClose?
@@ -105,9 +107,9 @@ final class AppState {
             worktrees: worktrees
         )
         for entry in restored {
-            workspaceRoots[entry.key] = entry.root
-            focusedAreaID[entry.key] = entry.focusedAreaID
+            workspaces[entry.key] = entry.workspace
         }
+        refreshWorkspaceMirrors()
 
         let savedWorktreeIDs = selectionStore.loadActiveWorktreeIDs()
         for project in projects {
@@ -139,8 +141,7 @@ final class AppState {
 
     func saveWorkspaces() {
         let snapshots = WorkspaceRestorer.snapshotAll(
-            workspaceRoots: workspaceRoots,
-            focusedAreaID: focusedAreaID
+            workspaces: workspaces
         )
         do {
             try workspacePersistence.saveWorkspaces(snapshots)
@@ -162,6 +163,19 @@ final class AppState {
     func workspaceRoot(for projectID: UUID) -> SplitNode? {
         guard let key = activeWorktreeKey(for: projectID) else { return nil }
         return workspaceRoots[key]
+    }
+
+    func workspace(for projectID: UUID) -> WorktreeWorkspace? {
+        guard let key = activeWorktreeKey(for: projectID) else { return nil }
+        return workspaces[key]
+    }
+
+    func workspaceTabs(for projectID: UUID) -> [WorkspaceTab] {
+        workspace(for: projectID)?.tabs ?? []
+    }
+
+    func activeWorkspaceTab(for projectID: UUID) -> WorkspaceTab? {
+        workspace(for: projectID)?.activeTab
     }
 
     func focusedAreaID(for projectID: UUID) -> UUID? {
@@ -186,16 +200,11 @@ final class AppState {
     }
 
     func focusedArea(for projectID: UUID) -> TabArea? {
-        guard let key = activeWorktreeKey(for: projectID),
-              let root = workspaceRoots[key],
-              let areaID = focusedAreaID[key]
-        else { return nil }
-        return root.findArea(id: areaID)
+        activeWorkspaceTab(for: projectID)?.activeArea
     }
 
     func allAreas(for projectID: UUID) -> [TabArea] {
-        guard let key = activeWorktreeKey(for: projectID) else { return [] }
-        return workspaceRoots[key]?.allAreas() ?? []
+        workspaceTabs(for: projectID).flatMap { $0.root.allAreas() }
     }
 
     func splitFocusedArea(direction: SplitDirection, projectID: UUID) {
@@ -237,9 +246,11 @@ final class AppState {
                 return
             }
         }
-        for area in allAreas(for: projectID) {
-            if let tab = area.tabs.first(where: { $0.content.editorState?.filePath == filePath }) {
-                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tab.id))
+        for workspaceTab in workspaceTabs(for: projectID) {
+            if workspaceTab.root.allAreas().contains(where: { area in
+                area.tabs.contains(where: { $0.content.editorState?.filePath == filePath })
+            }) {
+                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
                 return
             }
         }
@@ -249,15 +260,17 @@ final class AppState {
     func handleFileMoved(from oldPath: String, to newPath: String) {
         guard oldPath != newPath else { return }
         let oldPrefix = oldPath + "/"
-        for (_, root) in workspaceRoots {
-            for area in root.allAreas() {
-                for tab in area.tabs {
-                    guard let editorState = tab.content.editorState else { continue }
-                    let currentPath = editorState.filePath
-                    if currentPath == oldPath {
-                        editorState.updateFilePath(newPath)
-                    } else if currentPath.hasPrefix(oldPrefix) {
-                        editorState.updateFilePath(newPath + "/" + String(currentPath.dropFirst(oldPrefix.count)))
+        for workspace in workspaces.values {
+            for workspaceTab in workspace.tabs {
+                for area in workspaceTab.root.allAreas() {
+                    for tab in area.tabs {
+                        guard let editorState = tab.content.editorState else { continue }
+                        let currentPath = editorState.filePath
+                        if currentPath == oldPath {
+                            editorState.updateFilePath(newPath)
+                        } else if currentPath.hasPrefix(oldPrefix) {
+                            editorState.updateFilePath(newPath + "/" + String(currentPath.dropFirst(oldPrefix.count)))
+                        }
                     }
                 }
             }
@@ -265,12 +278,14 @@ final class AppState {
     }
 
     func openDiffViewer(vcs: VCSTabState, filePath: String, isStaged: Bool, projectID: UUID) {
-        for area in allAreas(for: projectID) {
-            if let tab = area.tabs.first(where: { tab in
-                guard let diff = tab.content.diffViewerState else { return false }
-                return diff.filePath == filePath && diff.isStaged == isStaged
+        for workspaceTab in workspaceTabs(for: projectID) {
+            if workspaceTab.root.allAreas().contains(where: { area in
+                area.tabs.contains(where: { tab in
+                    guard let diff = tab.content.diffViewerState else { return false }
+                    return diff.filePath == filePath && diff.isStaged == isStaged
+                })
             }) {
-                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tab.id))
+                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
                 return
             }
         }
@@ -282,9 +297,11 @@ final class AppState {
     }
 
     private func openFileInExternalEditor(_ filePath: String, projectID: UUID, command: String) {
-        for area in allAreas(for: projectID) {
-            if let tab = area.tabs.first(where: { $0.content.pane?.externalEditorFilePath == filePath }) {
-                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tab.id))
+        for workspaceTab in workspaceTabs(for: projectID) {
+            if workspaceTab.root.allAreas().contains(where: { area in
+                area.tabs.contains(where: { $0.content.pane?.externalEditorFilePath == filePath })
+            }) {
+                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
                 return
             }
         }
@@ -378,31 +395,29 @@ final class AppState {
     }
 
     private func unpinTabIfNeeded(_ tabID: UUID, areaID: UUID, projectID: UUID) {
-        guard let key = activeWorktreeKey(for: projectID),
-              let root = workspaceRoots[key],
-              let area = root.findArea(id: areaID),
-              let tab = area.tabs.first(where: { $0.id == tabID }),
+        _ = areaID
+        guard let workspace = workspace(for: projectID),
+              let tab = workspace.tabs.first(where: { $0.id == tabID }),
               tab.isPinned
         else { return }
-        area.togglePin(tabID)
+        workspace.togglePin(tabID)
     }
 
     private func isLastTabInProject(_ tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
-        guard let key = activeWorktreeKey(for: projectID),
-              let root = workspaceRoots[key]
-        else { return false }
-        let allAreas = root.allAreas()
-        let totalTabs = allAreas.reduce(0) { $0 + $1.tabs.count }
-        return totalTabs <= 1
+        _ = tabID
+        _ = areaID
+        return workspaceTabs(for: projectID).count <= 1
     }
 
     func unsavedEditorTabs() -> [EditorTabState] {
         var result: [EditorTabState] = []
-        for (_, root) in workspaceRoots {
-            for area in root.allAreas() {
-                for tab in area.tabs {
-                    if let state = tab.content.editorState, state.isModified {
-                        result.append(state)
+        for workspace in workspaces.values {
+            for workspaceTab in workspace.tabs {
+                for area in workspaceTab.root.allAreas() {
+                    for tab in area.tabs {
+                        if let state = tab.content.editorState, state.isModified {
+                            result.append(state)
+                        }
                     }
                 }
             }
@@ -411,24 +426,23 @@ final class AppState {
     }
 
     private func needsUnsavedEditorConfirmation(tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
-        guard let key = activeWorktreeKey(for: projectID),
-              let root = workspaceRoots[key],
-              let area = root.findArea(id: areaID),
-              let tab = area.tabs.first(where: { $0.id == tabID }),
-              let editorState = tab.content.editorState
+        _ = areaID
+        guard let workspace = workspace(for: projectID),
+              let tab = workspace.tabs.first(where: { $0.id == tabID })
         else { return false }
-        return editorState.isModified
+        return tab.root.allAreas().contains(where: { area in
+            area.tabs.contains(where: { $0.content.editorState?.isModified == true })
+        })
     }
 
     private func needsProcessConfirmation(tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
         guard TabCloseConfirmationPreferences.confirmRunningProcess else { return false }
-        guard let key = activeWorktreeKey(for: projectID),
-              let root = workspaceRoots[key],
-              let area = root.findArea(id: areaID),
-              let tab = area.tabs.first(where: { $0.id == tabID }),
-              let paneID = tab.content.pane?.id
+        _ = areaID
+        guard let workspace = workspace(for: projectID),
+              let tab = workspace.tabs.first(where: { $0.id == tabID })
         else { return false }
-        return terminalViews.needsConfirmQuit(for: paneID)
+        let paneIDs = tab.root.allAreas().flatMap { area in area.tabs.compactMap { $0.content.pane?.id } }
+        return paneIDs.contains { terminalViews.needsConfirmQuit(for: $0) }
     }
 
     func selectTabByIndex(_ index: Int, projectID: UUID) {
@@ -444,14 +458,14 @@ final class AppState {
     }
 
     func activeTab(for projectID: UUID) -> TerminalTab? {
-        focusedArea(for: projectID)?.activeTab
+        activeWorkspaceTab(for: projectID)?.activeContent
     }
 
     func togglePinActiveTab(projectID: UUID) {
-        guard let area = focusedArea(for: projectID),
-              let tabID = area.activeTabID
+        guard let workspace = workspace(for: projectID),
+              let tabID = workspace.activeTabID
         else { return }
-        area.togglePin(tabID)
+        workspace.togglePin(tabID)
         saveWorkspaces()
     }
 
@@ -465,11 +479,10 @@ final class AppState {
 
         if case let .selectTab(projectID, areaID, tabID) = action,
            let key = activeWorktreeKey(for: projectID),
-           let root = workspaceRoots[key],
-           let area = root.findArea(id: areaID),
-           area.activeTabID == tabID,
-           focusedAreaID[key] == areaID
+           let workspace = workspaces[key],
+           workspace.activeTabID == tabID
         {
+            _ = areaID
             return
         }
 
@@ -478,6 +491,7 @@ final class AppState {
             activeProjectID: activeProjectID,
             activeWorktreeID: activeWorktreeID,
             activeWorktreePath: activeWorktreePath,
+            workspaces: workspaces,
             workspaceRoots: workspaceRoots,
             focusedAreaID: focusedAreaID,
             focusHistory: focusHistory,
@@ -493,6 +507,7 @@ final class AppState {
         if activeWorktreePath != workspace.activeWorktreePath {
             activeWorktreePath = workspace.activeWorktreePath
         }
+        workspaces = workspace.workspaces
         if currentWorkspaceRootSignature != workspaceRootSignature(workspace.workspaceRoots) {
             workspaceRoots = workspace.workspaceRoots
         }
@@ -591,13 +606,16 @@ final class AppState {
 
     private func navigationEntryIsLive(_ entry: NavigationEntry) -> Bool {
         let key = WorktreeKey(projectID: entry.projectID, worktreeID: entry.worktreeID)
-        guard let root = workspaceRoots[key],
-              let area = root.findArea(id: entry.areaID)
+        guard let workspace = workspaces[key]
         else { return false }
-        if let tabID = entry.tabID, !area.tabs.contains(where: { $0.id == tabID }) {
-            return false
+        for tab in workspace.tabs {
+            guard let area = tab.root.findArea(id: entry.areaID) else { continue }
+            if let tabID = entry.tabID, !area.tabs.contains(where: { $0.id == tabID }) {
+                continue
+            }
+            return true
         }
-        return true
+        return false
     }
 
     private func workspaceRootSignature(_ roots: [WorktreeKey: SplitNode]) -> [WorktreeKey: UUID] {
@@ -613,6 +631,9 @@ final class AppState {
             return path
         }
         let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
+        if let workspace = workspaces[key], let tab = workspace.tabs.first {
+            return tab.projectPath
+        }
         if let root = workspaceRoots[key], case let .tabArea(area) = root {
             return area.projectPath
         }
@@ -649,11 +670,26 @@ final class AppState {
     }
 
     private func tabExists(tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
-        guard let key = activeWorktreeKey(for: projectID),
-              let root = workspaceRoots[key],
-              let area = root.findArea(id: areaID)
+        guard let workspace = workspace(for: projectID),
+              let tab = workspace.tabs.first(where: { $0.id == tabID })
         else { return false }
-        return area.tabs.contains(where: { $0.id == tabID })
+        return tab.root.findArea(id: areaID) != nil
+    }
+
+    private func activateWorkspaceTab(_ workspaceTabID: UUID, projectID: UUID) {
+        dispatch(.selectTab(projectID: projectID, areaID: UUID(), tabID: workspaceTabID))
+    }
+
+    private func refreshWorkspaceMirrors() {
+        workspaceRoots = [:]
+        focusedAreaID = [:]
+        focusHistory = [:]
+        for (key, workspace) in workspaces {
+            guard let tab = workspace.activeTab else { continue }
+            workspaceRoots[key] = tab.root
+            focusedAreaID[key] = tab.focusedAreaID
+            focusHistory[key] = tab.focusHistory
+        }
     }
 
     func focusArea(_ areaID: UUID, projectID: UUID) {

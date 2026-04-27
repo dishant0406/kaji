@@ -5,7 +5,7 @@ struct TerminalArea: View {
     let worktreeKey: WorktreeKey
     let isActiveProject: Bool
     @Environment(AppState.self) private var appState
-    @Environment(TabDragCoordinator.self) private var dragCoordinator
+    @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
 
     private var root: SplitNode? {
         appState.workspaceRoots[worktreeKey]
@@ -15,20 +15,16 @@ struct TerminalArea: View {
         appState.focusedAreaID[worktreeKey]
     }
 
-    private var rootIsTabArea: Bool {
-        guard let root else { return false }
-        if case .tabArea = root { return true }
-        return false
-    }
-
     var body: some View {
         if let root {
+            let showsPaneHeader = root.allAreas().count > 1
             VStack(spacing: 0) {
                 PaneNode(
                     node: root,
                     focusedAreaID: focusedAreaID,
                     isActiveProject: isActiveProject,
-                    showTabStrip: !rootIsTabArea,
+                    showTabStrip: false,
+                    showPaneHeader: showsPaneHeader,
                     showVCSButton: false,
                     projectID: project.id,
                     onFocusArea: { areaID in
@@ -63,6 +59,9 @@ struct TerminalArea: View {
                     },
                     onDropAction: { result in
                         appState.dispatch(result.action(projectID: project.id))
+                    },
+                    onMoveArea: { result in
+                        appState.dispatch(result.action(projectID: project.id))
                     }
                 )
 
@@ -72,8 +71,8 @@ struct TerminalArea: View {
             }
             .environment(\.activeWorktreeKey, worktreeKey)
             .onPreferenceChange(AreaFramePreferenceKey.self) { frames in
-                guard isActiveProject, dragCoordinator.activeDrag != nil else { return }
-                dragCoordinator.setAreaFrames(frames, forProject: project.id)
+                guard isActiveProject, paneDragCoordinator.activeDrag != nil else { return }
+                paneDragCoordinator.setAreaFrames(frames, forProject: project.id)
             }
         }
     }

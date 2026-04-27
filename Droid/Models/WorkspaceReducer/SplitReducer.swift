@@ -87,6 +87,31 @@ enum SplitReducer {
         }
     }
 
+    static func movePane(
+        _ request: PaneMoveRequest,
+        key: WorktreeKey,
+        state: inout WorkspaceState
+    ) {
+        guard request.sourceAreaID != request.targetAreaID,
+              let root = state.workspaceRoots[key]
+        else { return }
+
+        let detached = root.detachingArea(request.sourceAreaID)
+        guard let remainingRoot = detached.remaining,
+              let movingNode = detached.detached
+        else { return }
+
+        let inserted = remainingRoot.insertingArea(
+            movingNode,
+            beside: request.targetAreaID,
+            split: request.split
+        )
+        guard inserted.inserted else { return }
+
+        state.workspaceRoots[key] = inserted.node
+        FocusReducer.focusArea(request.sourceAreaID, key: key, state: &state)
+    }
+
     private static func collapseEmptyArea(
         _ areaID: UUID,
         key: WorktreeKey,

@@ -20,8 +20,8 @@ There is no iOS companion target, no shared protocol package, and no remote serv
 
 - `Droid/DroidApp.swift` wires the app scene graph, stores, in-app settings modal flow, and app delegate lifecycle.
 - `Droid/Services/AppEnvironment.swift` builds the concrete dependencies used by the app state.
-- `Droid/Models/AppState.swift` owns project selection, worktree selection, tab and split trees, and workspace persistence. Project selection is separate from workspace creation, so a selected project can render an empty state until the first tab is opened.
-- `Droid/Models/WorkspaceReducer.swift` is the state transition layer for tabs, panes, splits, and focus.
+- `Droid/Models/AppState.swift` owns project selection, worktree selection, workspace tabs, split trees, and workspace persistence. Project selection is separate from workspace creation, so a selected project can render an empty state until the first tab is opened.
+- `Droid/Models/WorkspaceReducer.swift` is the state transition layer for workspace tabs, panes, splits, and focus.
 - `Droid/Services/GhosttyService.swift` owns the single `ghostty_app_t` instance and global Ghostty callbacks.
 - `Droid/Views/Terminal/GhosttyTerminalNSView.swift` is the AppKit bridge that creates and drives each `ghostty_surface_t`.
 - `Droid/Views/Terminal/TerminalViewRegistry.swift` keeps terminal views alive across SwiftUI updates.
@@ -29,22 +29,25 @@ There is no iOS companion target, no shared protocol package, and no remote serv
 ## Workspace Model
 
 ```text
-Project -> Worktree -> SplitNode -> TabArea -> TerminalTab
+Project -> Worktree -> WorktreeWorkspace -> WorkspaceTab -> SplitNode -> TabArea -> TerminalTab
 ```
 
 - A `Project` is a top-level folder the user adds to Droid.
 - A `Worktree` is either the primary project checkout or a git worktree discovered or created for that project.
-- `SplitNode` stores the pane tree for one worktree.
-- Each `TabArea` owns ordered tabs inside one pane.
-- `TerminalTab` can represent a terminal, editor, VCS tab, or diff viewer tab.
+- `WorktreeWorkspace` owns the ordered top-level tabs for a worktree and remembers which workspace tab is active.
+- `WorkspaceTab` is the user-facing tab in the title bar. It owns one full-canvas split tree plus the focused pane inside that tree.
+- `SplitNode` stores the pane tree inside one workspace tab.
+- `TabArea` remains the leaf model used by the split tree, but after the tab rewrite it acts as a pane container for one active content stack rather than as the app's primary tab concept.
+- `TerminalTab` is the content model hosted by a leaf pane and can represent a terminal, editor, VCS view, or diff viewer.
+- `TabDragCoordinator` now serves pane-level arrangement only. Title-bar tabs are workspace tabs, not pane-local tabs.
 
-Workspace state is persisted per worktree so every project can keep separate terminal, editor, and VCS layouts across launches. A project can also remain selected with no workspace root when its tabs are closed or before any tab has been opened.
+Workspace state is persisted per worktree so every project can keep separate workspace tabs, split layouts, focus state, terminal sessions, editor tabs, and VCS layouts across launches. A project can also remain selected with no workspace root when its tabs are closed or before any tab has been opened.
 
 ## Major Subsystems
 
 - Terminal: `GhosttyTerminalNSView`, `TerminalPane`, `TerminalSearchBar`, and `GhosttyRuntimeEventAdapter`.
 - Editor: `EditorTabState`, `CodeEditorRepresentable`, `TextBackingStore`, and the syntax highlighter pipeline under `Droid/Syntax/`.
-- Git and VCS: `GitRepositoryService`, `GitWorktreeService`, `VCSTabState`, and the attached source-control panel under `Droid/Views/VCS/`. Droid no longer supports separate VCS tabs or windows; source control always opens as the attached side panel for the active worktree.
+- Git and VCS: `GitRepositoryService`, `GitWorktreeService`, `VCSTabState`, and the attached source-control panel under `Droid/Views/VCS/`.
 - Projects and worktrees: `ProjectStore`, `WorktreeStore`, `ProjectOpenService`, and `WorktreeSetupRunner`.
 - Workspace navigation: `FileSearchService`, `PaletteOverlay`, and the command overlays under `Droid/Views/Components/` handle indexed quick-open and worktree switching.
 - Notifications: `NotificationStore`, `NotificationNavigator`, and `NotificationSocketServer`.
