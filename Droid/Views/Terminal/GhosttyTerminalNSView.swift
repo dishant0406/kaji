@@ -18,6 +18,7 @@ final class GhosttyTerminalNSView: NSView {
     var onSearchSelected: ((Int?) -> Void)?
     var isFocused: Bool = false
     var overlayActive: Bool = false
+    private var isSurfaceVisible = true
 
     var processExitHandled = false
 
@@ -137,6 +138,7 @@ final class GhosttyTerminalNSView: NSView {
             ghostty_surface_set_display_id(surface, displayID)
         }
 
+        ghostty_surface_set_occlusion(surface, isSurfaceVisible)
         ghostty_surface_set_focus(surface, isFocused)
         flushInjectedCommandIfNeeded()
     }
@@ -304,6 +306,12 @@ final class GhosttyTerminalNSView: NSView {
     func notifySurfaceUnfocused() {
         guard let surface else { return }
         ghostty_surface_set_focus(surface, false)
+    }
+
+    func setSurfaceVisible(_ visible: Bool) {
+        isSurfaceVisible = visible
+        guard let surface else { return }
+        ghostty_surface_set_occlusion(surface, visible)
     }
 
     override var acceptsFirstResponder: Bool { !overlayActive }

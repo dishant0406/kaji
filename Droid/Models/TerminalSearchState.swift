@@ -23,11 +23,12 @@ final class TerminalSearchState {
         needleCancellable = needleSubject
             .removeDuplicates()
             .map { needle -> AnyPublisher<String, Never> in
-                if needle.isEmpty || needle.count >= 3 {
+                if needle.isEmpty {
                     return Just(needle).eraseToAnyPublisher()
                 }
+                let delay = needle.count >= 3 ? 120 : 300
                 return Just(needle)
-                    .delay(for: .milliseconds(300), scheduler: DispatchQueue.main)
+                    .delay(for: .milliseconds(delay), scheduler: DispatchQueue.main)
                     .eraseToAnyPublisher()
             }
             .switchToLatest()

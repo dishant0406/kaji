@@ -2,29 +2,33 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="Droid"
-BUNDLE_ID="com.droid.app"
-MIN_SYSTEM_VERSION="14.0"
+APP_NAME="${APP_NAME_OVERRIDE:-Droid}"
+BUILD_PRODUCT_NAME="${BUILD_PRODUCT_NAME_OVERRIDE:-Droid}"
+APP_EXECUTABLE_NAME="${APP_EXECUTABLE_NAME_OVERRIDE:-$APP_NAME}"
+BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-com.droid.app}"
+MIN_SYSTEM_VERSION="${MIN_SYSTEM_VERSION_OVERRIDE:-14.0}"
+RUN_IN_PLACE="${RUN_IN_PLACE:-0}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
-INSTALL_APP_BUNDLE="/Applications/${APP_NAME}.app"
+INSTALL_APP_BUNDLE="${INSTALL_APP_BUNDLE_OVERRIDE:-/Applications/${APP_NAME}.app}"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_FRAMEWORKS="$APP_CONTENTS/Frameworks"
-APP_BINARY="$APP_MACOS/$APP_NAME"
+APP_BINARY="$APP_MACOS/$APP_EXECUTABLE_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 PKGINFO="$APP_CONTENTS/PkgInfo"
 
-pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+pkill -x "$APP_EXECUTABLE_NAME" >/dev/null 2>&1 || true
 
 cd "$ROOT_DIR"
 swift build
 BUILD_BIN_DIR="$(swift build --show-bin-path)"
-BUILD_BINARY="$BUILD_BIN_DIR/$APP_NAME"
-RESOURCE_BUNDLE="$BUILD_BIN_DIR/${APP_NAME}_${APP_NAME}.bundle"
+BUILD_BINARY="$BUILD_BIN_DIR/$BUILD_PRODUCT_NAME"
+RESOURCE_BUNDLE_NAME="${BUILD_PRODUCT_NAME}_${BUILD_PRODUCT_NAME}.bundle"
+RESOURCE_BUNDLE="$BUILD_BIN_DIR/$RESOURCE_BUNDLE_NAME"
 SPARKLE_FRAMEWORK="$ROOT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
 APP_ICONSET_SOURCE="$ROOT_DIR/Droid/Resources/Assets.xcassets/AppIcon.appiconset"
 
@@ -35,7 +39,7 @@ chmod +x "$APP_BINARY"
 install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_BINARY" 2>/dev/null || true
 
 if [[ -d "$RESOURCE_BUNDLE" ]]; then
-  cp -R "$RESOURCE_BUNDLE" "$APP_RESOURCES/${APP_NAME}_${APP_NAME}.bundle"
+  cp -R "$RESOURCE_BUNDLE" "$APP_RESOURCES/$RESOURCE_BUNDLE_NAME"
 fi
 
 if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
@@ -60,7 +64,7 @@ if [[ -d "$APP_ICONSET_SOURCE" ]]; then
 fi
 
 cp "$ROOT_DIR/Droid/Info.plist" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $APP_NAME" "$INFO_PLIST"
+/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $APP_EXECUTABLE_NAME" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $MIN_SYSTEM_VERSION" "$INFO_PLIST"
@@ -69,6 +73,11 @@ printf 'APPL????' >"$PKGINFO"
 codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 
 open_app() {
+  if [[ "$RUN_IN_PLACE" == "1" ]]; then
+    /usr/bin/open -n "$APP_BUNDLE"
+    return
+  fi
+
   rm -rf "$INSTALL_APP_BUNDLE"
   cp -R "$APP_BUNDLE" "$INSTALL_APP_BUNDLE"
   /usr/bin/open -n "$INSTALL_APP_BUNDLE"
@@ -92,7 +101,7 @@ case "$MODE" in
   --verify|verify)
     open_app
     sleep 1
-    pgrep -x "$APP_NAME" >/dev/null
+    pgrep -x "$APP_EXECUTABLE_NAME" >/dev/null
     ;;
   *)
     echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
