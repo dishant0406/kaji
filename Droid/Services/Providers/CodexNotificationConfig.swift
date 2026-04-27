@@ -103,6 +103,24 @@ enum CodexNotificationConfig {
             return normalized(lines)
         }
 
+        let tableIndex = lines.firstIndex { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            return trimmed.hasPrefix("[") && trimmed.hasSuffix("]")
+        }
+
+        if let tableIndex {
+            let prefix = Array(lines[..<tableIndex]).dropLastBlankLines()
+            let suffix = Array(lines[tableIndex...]).dropFirstBlankLines()
+            var merged = prefix
+            if !merged.isEmpty {
+                merged.append("")
+            }
+            merged.append(contentsOf: replacement)
+            merged.append("")
+            merged.append(contentsOf: suffix)
+            return normalized(merged)
+        }
+
         let existing = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !existing.isEmpty else {
             return replacement.joined(separator: "\n") + "\n"
@@ -194,5 +212,23 @@ enum CodexNotificationConfig {
                 .replacingOccurrences(of: "\\\"", with: "\"")
                 .replacingOccurrences(of: "\\\\", with: "\\")
         }
+    }
+}
+
+private extension [String] {
+    func dropLastBlankLines() -> [String] {
+        var lines = self
+        while let last = lines.last, last.trimmingCharacters(in: .whitespaces).isEmpty {
+            lines.removeLast()
+        }
+        return lines
+    }
+
+    func dropFirstBlankLines() -> [String] {
+        var lines = self
+        while let first = lines.first, first.trimmingCharacters(in: .whitespaces).isEmpty {
+            lines.removeFirst()
+        }
+        return lines
     }
 }
