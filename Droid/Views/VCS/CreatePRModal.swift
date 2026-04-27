@@ -39,7 +39,9 @@ struct CreatePRModal: View {
     private var trimmedBranchName: String { newBranchName.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var needsNewBranch: Bool { !baseBranch.isEmpty && baseBranch == resolvedCurrentBranch }
     private var hasAnyChanges: Bool { context.hasStagedChanges || context.hasUnstagedChanges }
-    private var createEnabled: Bool { !trimmedTitle.isEmpty && !baseBranch.isEmpty && (!needsNewBranch || !trimmedBranchName.isEmpty) && !inProgress }
+    private var createEnabled: Bool {
+        !trimmedTitle.isEmpty && !baseBranch.isEmpty && (!needsNewBranch || !trimmedBranchName.isEmpty) && !inProgress
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -93,7 +95,10 @@ struct CreatePRModal: View {
     }
 
     private var branchSection: some View {
-        CreateWorktreeFormSection("Target", detail: "Choose the base branch and decide whether this PR should stay on the current branch.") {
+        CreateWorktreeFormSection(
+            "Target",
+            detail: "Choose the base branch and decide whether this PR should stay on the current branch."
+        ) {
             CreateWorktreeLabeledField("Base branch") {
                 if context.isLoadingBranches, context.availableBaseBranches.isEmpty {
                     HStack(spacing: 8) {
@@ -103,7 +108,11 @@ struct CreatePRModal: View {
                             .foregroundStyle(DroidTheme.fgDim)
                     }
                 } else {
-                    DroidSelect(options: branchOptions, selection: $baseBranch, placeholder: context.availableBaseBranches.isEmpty ? "No branches" : "Select branch")
+                    DroidSelect(
+                        options: branchOptions,
+                        selection: $baseBranch,
+                        placeholder: context.availableBaseBranches.isEmpty ? "No branches" : "Select branch"
+                    )
                 }
             }
             if needsNewBranch {
@@ -127,7 +136,12 @@ struct CreatePRModal: View {
                 DroidInput(placeholder: "Short summary of the change", text: $title)
             }
             CreateWorktreeLabeledField("Description") {
-                DroidTextArea(placeholder: "What changed and what should reviewers focus on?", text: $bodyText, minHeight: 124, maxHeight: 160)
+                DroidTextArea(
+                    placeholder: "What changed and what should reviewers focus on?",
+                    text: $bodyText,
+                    minHeight: 124,
+                    maxHeight: 160
+                )
             }
         }
     }
@@ -139,7 +153,11 @@ struct CreatePRModal: View {
                     SegmentedPicker(selection: $includeAll, options: [(true, "All changes"), (false, "Staged only")])
                 }
             }
-            SettingsDetailToggleRow(label: "Create as draft", detail: "Open the pull request in draft mode until it is ready for review.", isOn: $draft)
+            SettingsDetailToggleRow(
+                label: "Create as draft",
+                detail: "Open the pull request in draft mode until it is ready for review.",
+                isOn: $draft
+            )
         }
     }
 
@@ -173,7 +191,8 @@ struct CreatePRModal: View {
     private func applyDefaults() {
         if currentBranchSnapshot == nil { currentBranchSnapshot = context.currentBranch }
         if baseBranch.isEmpty {
-            baseBranch = context.defaultBranch ?? context.availableBaseBranches.first(where: { $0 != resolvedCurrentBranch }) ?? context.availableBaseBranches.first ?? ""
+            baseBranch = context.defaultBranch ?? context.availableBaseBranches.first(where: { $0 != resolvedCurrentBranch }) ?? context
+                .availableBaseBranches.first ?? ""
         }
         if !didApplyDefaults {
             includeAll = true

@@ -33,6 +33,7 @@ final class GhosttyTerminalNSView: NSView {
     private var keyTextAccumulator: [String] = []
     private var currentKeyEvent: NSEvent?
     private var commandSelectorCalled = false
+    @MainActor private let scrollCoalescer = GhosttyScrollCoalescer()
 
     init(workingDirectory: String, command: String? = nil) {
         self.workingDirectory = workingDirectory
@@ -595,10 +596,27 @@ final class GhosttyTerminalNSView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
+        guard surface != nil else { return }
+        let precise = event.hasPreciseScrollingDeltas
+        if precise {
+            scrollCoalescer.push(
+                x: event.scrollingDeltaX,
+                y: event.scrollingDeltaY,
+                precise: true
+            ) { [weak self] x, y, precise in
+                self?.sendMouseScroll(x: x, y: y, precise: precise)
+            }
+            return
+        }
+
+        sendMouseScroll(x: event.scrollingDeltaX, y: event.scrollingDeltaY, precise: false)
+    }
+
+    private func sendMouseScroll(x: Double, y: Double, precise: Bool) {
         guard let surface else { return }
         var mods: ghostty_input_scroll_mods_t = 0
-        if event.hasPreciseScrollingDeltas { mods |= 1 }
-        ghostty_surface_mouse_scroll(surface, event.scrollingDeltaX, event.scrollingDeltaY, mods)
+        if precise { mods |= 1 }
+        ghostty_surface_mouse_scroll(surface, x, y, mods)
     }
 
     private func buildKeyEvent(from event: NSEvent, action: ghostty_input_action_e) -> ghostty_input_key_s {

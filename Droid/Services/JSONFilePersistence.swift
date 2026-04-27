@@ -1,12 +1,27 @@
 import Foundation
 
 enum DroidFileStorage {
+    private static let appSupportOverrideKey = "DROID_APP_SUPPORT_DIR"
+
     static func fileURL(filename: String) -> URL {
         let dir = appSupportDirectory()
         return dir.appendingPathComponent(filename)
     }
 
     static func appSupportDirectory() -> URL {
+        if let override = ProcessInfo.processInfo.environment[appSupportOverrideKey]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !override.isEmpty
+        {
+            let dir = URL(fileURLWithPath: override, isDirectory: true)
+            try? FileManager.default.createDirectory(
+                at: dir,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            return dir
+        }
+
         guard let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask

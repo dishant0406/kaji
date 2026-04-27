@@ -15,8 +15,10 @@ protocol GhosttyRuntimeEventHandling {
 }
 
 final class GhosttyRuntimeEventAdapter: GhosttyRuntimeEventHandling {
+    private let tickScheduler = GhosttyTickScheduler()
+
     func wakeup() {
-        DispatchQueue.main.async {
+        tickScheduler.schedule {
             GhosttyService.shared.tick()
         }
     }

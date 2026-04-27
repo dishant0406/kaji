@@ -228,7 +228,7 @@ enum WorkspaceRestorer {
                 isPinned: false,
                 focusedAreaID: visibleFocusedAreaID,
                 root: visibleRoot
-            )
+            ),
         ]
 
         for content in hiddenLegacyTabs(root) {
@@ -253,11 +253,13 @@ enum WorkspaceRestorer {
 
     private static func resolveWorktree(for snapshot: WorkspaceSnapshot, in worktrees: [Worktree]) -> Worktree? {
         if let worktreeID = snapshot.worktreeID,
-           let match = worktrees.first(where: { $0.id == worktreeID }) {
+           let match = worktrees.first(where: { $0.id == worktreeID })
+        {
             return match
         }
         if let worktreePath = snapshot.worktreePath,
-           let match = worktrees.first(where: { $0.path == worktreePath }) {
+           let match = worktrees.first(where: { $0.path == worktreePath })
+        {
             return match
         }
         return worktrees.first(where: { $0.isPrimary }) ?? worktrees.first
@@ -372,9 +374,9 @@ enum WorkspaceRestorer {
     nonisolated private static func collectAreaIDs(in root: SplitNodeSnapshot) -> [UUID] {
         switch root {
         case let .tabArea(area):
-            return [area.id]
+            [area.id]
         case let .split(branch):
-            return collectAreaIDs(in: branch.first) + collectAreaIDs(in: branch.second)
+            collectAreaIDs(in: branch.first) + collectAreaIDs(in: branch.second)
         }
     }
 }

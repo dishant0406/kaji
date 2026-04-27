@@ -342,8 +342,8 @@ private struct EditorBreadcrumb: View {
                 } icon: {
                     DroidIcon(systemName: "lock.fill", size: 10)
                 }
-                    .droidFont(size: 10, weight: .semibold)
-                    .foregroundStyle(DroidTheme.diffHunkFg)
+                .droidFont(size: 10, weight: .semibold)
+                .foregroundStyle(DroidTheme.diffHunkFg)
             }
             Spacer()
             if state.isMarkdownFile {

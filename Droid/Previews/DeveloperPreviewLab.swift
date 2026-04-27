@@ -14,10 +14,10 @@ private struct DeveloperPreviewLab: View {
             Sidebar(
                 showAIUsagePopover: $showAIUsagePopover
             )
-                .environment(stores.appState)
-                .environment(stores.projectStore)
-                .environment(stores.worktreeStore)
-                .frame(width: SidebarLayout.expandedWidth)
+            .environment(stores.appState)
+            .environment(stores.projectStore)
+            .environment(stores.worktreeStore)
+            .frame(width: SidebarLayout.expandedWidth)
 
             Rectangle()
                 .fill(DroidTheme.border)

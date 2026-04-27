@@ -4,7 +4,7 @@ struct DroidTextArea: View {
     let placeholder: String
     @Binding var text: String
     var minHeight: CGFloat = 88
-    var maxHeight: CGFloat? = nil
+    var maxHeight: CGFloat?
     var monospaced = false
     var onCommandEnter: (() -> Void)?
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false

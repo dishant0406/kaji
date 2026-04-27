@@ -45,7 +45,7 @@ Workspace state is persisted per worktree so every project can keep separate wor
 
 ## Major Subsystems
 
-- Terminal: `GhosttyTerminalNSView`, `TerminalPane`, `TerminalSearchBar`, and `GhosttyRuntimeEventAdapter`. `TerminalPane` keeps terminal views mounted for session continuity while propagating SwiftUI visibility into Ghostty occlusion state.
+- Terminal: `GhosttyTerminalNSView`, `TerminalPane`, `TerminalSearchBar`, and `GhosttyRuntimeEventAdapter`. `TerminalPane` keeps terminal views mounted for session continuity while propagating SwiftUI visibility into Ghostty occlusion state, and the embedded bridge now coalesces Ghostty wakeups plus precise scroll bursts before they cross the AppKit-to-libghostty boundary. `GhosttyPerf` adds unified-log signposts around `ghostty_app_tick()` and emits runtime events for wakeup coalescing and scroll flush batches so Instruments and `./script/build_and_run.sh --telemetry` can inspect the hot path.
 - Editor: `EditorTabState`, `CodeEditorRepresentable`, `TextBackingStore`, and the syntax highlighter pipeline under `Droid/Syntax/`.
 - Git and VCS: `GitRepositoryService`, `GitWorktreeService`, `VCSTabState`, and the attached source-control panel under `Droid/Views/VCS/`.
 - Projects and worktrees: `ProjectStore`, `WorktreeStore`, `ProjectOpenService`, and `WorktreeSetupRunner`.
@@ -62,7 +62,7 @@ Droid stores app data under `~/Library/Application Support/Droid/`.
 - `worktrees/*.json`: per-project worktree metadata
 - workspace persistence files: tabs, splits, and selection state
 - notification persistence files used by `NotificationStore`
-- `ghostty.conf`: Droid-managed Ghostty config snapshot with theme, app-owned terminal typography, and editor-like cursor interaction defaults
+- `ghostty.conf`: Droid-managed Ghostty config snapshot with theme, app-owned terminal typography, a default scrollback cap for large-output sessions, and editor-like cursor interaction defaults
 - `~/.config/ghostty/themes/*`: imported and user-created Ghostty theme files managed by `ThemeService`
 - `cli-launchers.json`: enabled CLI footer launchers and their commands
 

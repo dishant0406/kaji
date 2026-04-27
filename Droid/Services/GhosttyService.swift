@@ -163,6 +163,8 @@ final class GhosttyService {
 
     func tick() {
         guard let app else { return }
+        let signpostID = GhosttyPerf.begin("ghosttyAppTick")
+        defer { GhosttyPerf.end("ghosttyAppTick", signpostID) }
         ghostty_app_tick(app)
     }
 

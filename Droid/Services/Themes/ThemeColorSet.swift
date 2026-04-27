@@ -1,6 +1,6 @@
 import Foundation
 
-struct ThemeColorSet: Equatable, Sendable {
+struct ThemeColorSet: Equatable {
     var background: String
     var foreground: String
     var cursorColor: String
@@ -8,22 +8,4 @@ struct ThemeColorSet: Equatable, Sendable {
     var selectionBackground: String
     var selectionForeground: String
     var palette: [String]
-
-    init(
-        background: String,
-        foreground: String,
-        cursorColor: String,
-        cursorText: String,
-        selectionBackground: String,
-        selectionForeground: String,
-        palette: [String]
-    ) {
-        self.background = background
-        self.foreground = foreground
-        self.cursorColor = cursorColor
-        self.cursorText = cursorText
-        self.selectionBackground = selectionBackground
-        self.selectionForeground = selectionForeground
-        self.palette = palette
-    }
 }

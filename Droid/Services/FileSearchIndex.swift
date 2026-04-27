@@ -145,5 +145,4 @@ private enum FileSearchScanner {
             arguments.append(contentsOf: ["--glob", "!\(name)/**"])
         }
     }
-
 }

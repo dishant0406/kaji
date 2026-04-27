@@ -75,7 +75,7 @@ struct TabAreaView: View {
                     TabContentView(
                         tab: tab,
                         focused: isActive && isFocused && isActiveProject,
-                        visible: isActive,
+                        visible: isActive && isActiveProject,
                         onFocus: onFocus,
                         onProcessExit: { onForceCloseTab(tab.id) },
                         onSplitRequest: { direction, position in
@@ -99,8 +99,8 @@ struct TabAreaView: View {
                 )
                 .opacity(
                     paneDragCoordinator.activeDrag != nil &&
-                    paneDragCoordinator.hoveredAreaID == area.id &&
-                    paneDragCoordinator.hoveredZone != nil ? 1 : 0
+                        paneDragCoordinator.hoveredAreaID == area.id &&
+                        paneDragCoordinator.hoveredZone != nil ? 1 : 0
                 )
                 .animation(.easeOut(duration: 0.12), value: paneDragCoordinator.hoveredAreaID)
                 .animation(.easeOut(duration: 0.12), value: paneDragCoordinator.hoveredZone)

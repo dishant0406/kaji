@@ -23,7 +23,8 @@ extension ThemeService {
         discoverThemes().first { $0.identifier == identifier }
     }
 
-    @MainActor static func updatedConfigContent(
+    @MainActor
+    static func updatedConfigContent(
         from content: String,
         themeIdentifier: String,
         theme: ThemePreview?,
@@ -35,11 +36,10 @@ extension ThemeService {
                 || GhosttyTypographyDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
         }
 
-        let themeLines: [String]
-        if let theme, theme.source == .bundled {
-            themeLines = theme.content.components(separatedBy: .newlines).filter { !$0.hasPrefix("# droid-") }
+        let themeLines: [String] = if let theme, theme.source == .bundled {
+            theme.content.components(separatedBy: .newlines).filter { !$0.hasPrefix("# droid-") }
         } else {
-            themeLines = ["theme = \"\(themeIdentifier)\""]
+            ["theme = \"\(themeIdentifier)\""]
         }
 
         let preserved = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -47,8 +47,9 @@ extension ThemeService {
             fontSize: AppTypographySettings.shared.fontSize,
             fontFamily: AppTypographySettings.shared.fontFamily
         )
+        let performanceLines = GhosttyPerformanceDefaults.linesIfMissing(in: preserved)
         let interactionLines = GhosttyInteractionDefaults.linesIfMissing(in: preserved)
-        return (themeLines + resolvedTypographyLines + interactionLines + preserved).joined(separator: "\n")
+        return (themeLines + resolvedTypographyLines + performanceLines + interactionLines + preserved).joined(separator: "\n")
     }
 
     nonisolated static func userThemesDirectoryURL() throws -> URL {

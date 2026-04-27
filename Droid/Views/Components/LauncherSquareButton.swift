@@ -31,11 +31,11 @@ struct LauncherSquareButton: View {
     }
 
     private var foregroundColor: Color {
-        return hovered ? DroidTheme.fg : DroidTheme.fgMuted
+        hovered ? DroidTheme.fg : DroidTheme.fgMuted
     }
 
     private var backgroundColor: Color {
-        return hovered ? DroidTheme.surface : DroidTheme.secondaryBackground
+        hovered ? DroidTheme.surface : DroidTheme.secondaryBackground
     }
 
     private var borderColor: Color {

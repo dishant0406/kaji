@@ -8,6 +8,8 @@ APP_EXECUTABLE_NAME="${APP_EXECUTABLE_NAME_OVERRIDE:-$APP_NAME}"
 BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-com.droid.app}"
 MIN_SYSTEM_VERSION="${MIN_SYSTEM_VERSION_OVERRIDE:-14.0}"
 RUN_IN_PLACE="${RUN_IN_PLACE:-0}"
+APP_SUPPORT_DIR_OVERRIDE="${APP_SUPPORT_DIR_OVERRIDE:-}"
+KILL_BEFORE_LAUNCH="${KILL_BEFORE_LAUNCH:-1}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
@@ -21,7 +23,9 @@ APP_BINARY="$APP_MACOS/$APP_EXECUTABLE_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 PKGINFO="$APP_CONTENTS/PkgInfo"
 
-pkill -x "$APP_EXECUTABLE_NAME" >/dev/null 2>&1 || true
+if [[ "$KILL_BEFORE_LAUNCH" == "1" ]]; then
+  pkill -x "$APP_EXECUTABLE_NAME" >/dev/null 2>&1 || true
+fi
 
 cd "$ROOT_DIR"
 swift build
@@ -73,14 +77,19 @@ printf 'APPL????' >"$PKGINFO"
 codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 
 open_app() {
+  local open_args=(-n)
+  if [[ -n "$APP_SUPPORT_DIR_OVERRIDE" ]]; then
+    open_args+=(--env "DROID_APP_SUPPORT_DIR=$APP_SUPPORT_DIR_OVERRIDE")
+  fi
+
   if [[ "$RUN_IN_PLACE" == "1" ]]; then
-    /usr/bin/open -n "$APP_BUNDLE"
+    /usr/bin/open "${open_args[@]}" "$APP_BUNDLE"
     return
   fi
 
   rm -rf "$INSTALL_APP_BUNDLE"
   cp -R "$APP_BUNDLE" "$INSTALL_APP_BUNDLE"
-  /usr/bin/open -n "$INSTALL_APP_BUNDLE"
+  /usr/bin/open "${open_args[@]}" "$INSTALL_APP_BUNDLE"
 }
 
 case "$MODE" in
@@ -96,7 +105,8 @@ case "$MODE" in
     ;;
   --telemetry|telemetry)
     open_app
-    /usr/bin/log stream --info --style compact --predicate "subsystem == \"$BUNDLE_ID\""
+    /usr/bin/log show --last 5s --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.droid\" && category == \"GhosttyPerf\""
+    /usr/bin/log stream --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.droid\" && category == \"GhosttyPerf\""
     ;;
   --verify|verify)
     open_app

@@ -1,7 +1,7 @@
 import AppKit
 import Observation
-import SwiftUI
 import os
+import SwiftUI
 
 private let typographyLogger = Logger(subsystem: "app.droid", category: "AppTypographySettings")
 
