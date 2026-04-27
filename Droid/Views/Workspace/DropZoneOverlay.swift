@@ -2,38 +2,72 @@ import SwiftUI
 
 struct DropZoneHighlight: View {
     let zone: DropZone
+    let showsTabStripTarget: Bool
 
     var body: some View {
         GeometryReader { geo in
-            let rect = highlightRect(in: geo.size)
-            RoundedRectangle(cornerRadius: 4)
-                .fill(DroidTheme.accent.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(DroidTheme.accent.opacity(0.4), lineWidth: 2)
-                )
-                .frame(width: rect.width, height: rect.height)
-                .offset(x: rect.minX, y: rect.minY)
+            let outerRect = containerRect(in: geo.size)
+            let targetRect = highlightRect(in: geo.size)
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: outerCornerRadius)
+                    .fill(DroidTheme.selection.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: outerCornerRadius)
+                            .strokeBorder(DroidTheme.border.opacity(0.78), lineWidth: 1)
+                    )
+                    .frame(width: outerRect.width, height: outerRect.height)
+                    .offset(x: outerRect.minX, y: outerRect.minY)
+
+                RoundedRectangle(cornerRadius: targetCornerRadius)
+                    .fill(DroidTheme.selection.opacity(0.82))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: targetCornerRadius)
+                            .strokeBorder(DroidTheme.accent.opacity(0.58), lineWidth: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: targetCornerRadius)
+                            .strokeBorder(DroidTheme.borderStrong.opacity(0.62), lineWidth: 1)
+                    )
+                    .frame(width: targetRect.width, height: targetRect.height)
+                    .offset(x: targetRect.minX, y: targetRect.minY)
+            }
+            .animation(.easeOut(duration: 0.14), value: zone)
+            .animation(.easeOut(duration: 0.14), value: showsTabStripTarget)
         }
         .allowsHitTesting(false)
-        .animation(.easeInOut(duration: 0.15), value: zone)
         .accessibilityHidden(true)
     }
 
+    private var outerCornerRadius: CGFloat {
+        DroidShape.modalRadius
+    }
+
+    private var targetCornerRadius: CGFloat {
+        DroidShape.panelRadius
+    }
+
+    private func containerRect(in size: CGSize) -> CGRect {
+        CGRect(origin: .zero, size: size).insetBy(dx: 8, dy: 8)
+    }
+
     private func highlightRect(in size: CGSize) -> CGRect {
-        let inset: CGFloat = 4
+        let inset: CGFloat = 12
         switch zone {
         case .left:
-            return CGRect(x: inset, y: inset, width: size.width / 2 - inset * 1.5, height: size.height - inset * 2)
+            return CGRect(x: inset, y: inset, width: size.width * 0.38, height: size.height - inset * 2)
         case .right:
-            let halfW = size.width / 2 + inset * 0.5
-            return CGRect(x: halfW, y: inset, width: size.width - halfW - inset, height: size.height - inset * 2)
+            let width = size.width * 0.38
+            return CGRect(x: size.width - inset - width, y: inset, width: width, height: size.height - inset * 2)
         case .top:
-            return CGRect(x: inset, y: inset, width: size.width - inset * 2, height: size.height / 2 - inset * 1.5)
+            return CGRect(x: inset, y: inset, width: size.width - inset * 2, height: size.height * 0.38)
         case .bottom:
-            let halfH = size.height / 2 + inset * 0.5
-            return CGRect(x: inset, y: halfH, width: size.width - inset * 2, height: size.height - halfH - inset)
+            let height = size.height * 0.38
+            return CGRect(x: inset, y: size.height - inset - height, width: size.width - inset * 2, height: height)
         case .center:
+            if showsTabStripTarget {
+                return CGRect(x: inset, y: inset, width: size.width - inset * 2, height: 28)
+            }
             return CGRect(x: inset, y: inset, width: size.width - inset * 2, height: size.height - inset * 2)
         }
     }

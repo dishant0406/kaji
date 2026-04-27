@@ -11,12 +11,22 @@ enum WorkspaceReducerShared {
         state.activeWorktreePath[projectID]
     }
 
+    static func activeWorkspace(key: WorktreeKey, state: WorkspaceState) -> WorktreeWorkspace? {
+        state.workspaces[key]
+    }
+
+    static func activeWorkspaceTab(key: WorktreeKey, state: WorkspaceState) -> WorkspaceTab? {
+        state.workspaces[key]?.activeTab
+    }
+
     static func resolveArea(key: WorktreeKey, areaID: UUID?, state: WorkspaceState) -> TabArea? {
-        guard let root = state.workspaceRoots[key] else { return nil }
+        guard let root = state.workspaceRoots[key] ?? activeWorkspaceTab(key: key, state: state)?.root else { return nil }
         if let areaID {
             return root.findArea(id: areaID)
         }
-        guard let focusedID = state.focusedAreaID[key] else { return nil }
+        guard let focusedID = state.focusedAreaID[key] ?? activeWorkspaceTab(key: key, state: state)?.focusedAreaID else {
+            return root.allAreas().first
+        }
         return root.findArea(id: focusedID)
     }
 
@@ -30,10 +40,12 @@ enum WorkspaceReducerShared {
               let worktreePath = activeProjectPath(projectID: projectID, state: state)
         else { return nil }
         let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
-        guard state.workspaceRoots[key] == nil else { return nil }
         let area = createArea(worktreePath)
-        state.workspaceRoots[key] = .tabArea(area)
-        state.focusedAreaID[key] = area.id
+        let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        let workspace = state.workspaces[key] ?? WorktreeWorkspace()
+        workspace.appendTab(tab)
+        state.workspaces[key] = workspace
+        refreshActiveTabMirrors(for: key, state: &state)
         return (key, area)
     }
 
@@ -44,7 +56,7 @@ enum WorkspaceReducerShared {
         createArea: (String) -> TabArea
     ) -> (key: WorktreeKey, area: TabArea, created: Bool)? {
         guard let key = activeKey(projectID: projectID, state: state) else { return nil }
-        if state.workspaceRoots[key] == nil {
+        if state.workspaces[key]?.activeTab == nil {
             guard let created = resolveOrCreateArea(
                 projectID: projectID,
                 areaID: areaID,
@@ -59,6 +71,7 @@ enum WorkspaceReducerShared {
     }
 
     static func clearWorkspace(key: WorktreeKey, state: inout WorkspaceState) {
+        state.workspaces.removeValue(forKey: key)
         state.workspaceRoots.removeValue(forKey: key)
         state.focusedAreaID.removeValue(forKey: key)
         state.focusHistory.removeValue(forKey: key)
@@ -69,7 +82,7 @@ enum WorkspaceReducerShared {
         state: inout WorkspaceState,
         effects: inout WorkspaceSideEffects
     ) {
-        let hasAnyWorkspace = state.workspaceRoots.keys.contains { $0.projectID == projectID }
+        let hasAnyWorkspace = state.workspaces.keys.contains { $0.projectID == projectID }
         guard !hasAnyWorkspace else { return }
         guard !state.keepProjectOpenWhenEmpty else { return }
         state.activeWorktreeID.removeValue(forKey: projectID)
@@ -81,10 +94,43 @@ enum WorkspaceReducerShared {
     }
 
     static func projectPath(for key: WorktreeKey, state: WorkspaceState) -> String? {
-        guard let root = state.workspaceRoots[key] else { return nil }
+        guard let root = state.workspaceRoots[key] ?? activeWorkspaceTab(key: key, state: state)?.root else { return nil }
         if case let .tabArea(area) = root {
             return area.projectPath
         }
         return root.allAreas().first?.projectPath
+    }
+
+    static func flushMirrorsIntoActiveTabs(state: inout WorkspaceState) {
+        for (key, workspace) in state.workspaces {
+            guard let tab = workspace.activeTab else { continue }
+            if let root = state.workspaceRoots[key] {
+                tab.root = root
+            }
+            if let focusedAreaID = state.focusedAreaID[key] {
+                tab.focusedAreaID = focusedAreaID
+            }
+            if let focusHistory = state.focusHistory[key] {
+                tab.focusHistory = focusHistory
+            }
+        }
+    }
+
+    static func refreshActiveTabMirrors(state: inout WorkspaceState) {
+        for key in state.workspaces.keys {
+            refreshActiveTabMirrors(for: key, state: &state)
+        }
+    }
+
+    static func refreshActiveTabMirrors(for key: WorktreeKey, state: inout WorkspaceState) {
+        guard let workspace = state.workspaces[key], let tab = workspace.activeTab else {
+            state.workspaceRoots.removeValue(forKey: key)
+            state.focusedAreaID.removeValue(forKey: key)
+            state.focusHistory.removeValue(forKey: key)
+            return
+        }
+        state.workspaceRoots[key] = tab.root
+        state.focusedAreaID[key] = tab.focusedAreaID
+        state.focusHistory[key] = tab.focusHistory
     }
 }

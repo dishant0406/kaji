@@ -7,6 +7,7 @@ struct MainWindow: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @Environment(GhosttyService.self) private var ghostty
     @State private var dragCoordinator = TabDragCoordinator()
+    @State private var paneDragCoordinator = PaneDragCoordinator()
     private enum AttachedVCSLayout {
         static let minWidth: CGFloat = 200
         static let defaultWidth: CGFloat = 400
@@ -101,6 +102,7 @@ struct MainWindow: View {
                 }
                 .coordinateSpace(name: DragCoordinateSpace.mainWindow)
                 .environment(dragCoordinator)
+                .environment(paneDragCoordinator)
                 .background(MainWindowShortcutInterceptor(
                     onShortcut: { action in handleShortcutAction(action) },
                     onMouseBack: { appState.goBack() },
@@ -419,33 +421,34 @@ struct MainWindow: View {
     @ViewBuilder
     private var topBarContent: some View {
         if let project = activeProject,
-           let root = appState.workspaceRoot(for: project.id),
-           case let .tabArea(area) = root
+           let workspace = appState.workspace(for: project.id),
+           let activeWorkspaceTab = workspace.activeTab,
+           let areaID = activeWorkspaceTab.activeArea?.id
         {
             PaneTabStrip(
-                areaID: area.id,
-                tabs: PaneTabStrip.snapshots(from: area.tabs),
-                activeTabID: area.activeTabID,
+                areaID: areaID,
+                tabs: PaneTabStrip.workspaceSnapshots(from: workspace.tabs),
+                activeTabID: workspace.activeTabID,
                 isFocused: true,
                 isWindowTitleBar: true,
                 showVCSButton: true,
                 projectID: project.id,
                 onSelectTab: { tabID in
-                    appState.dispatch(.selectTab(projectID: project.id, areaID: area.id, tabID: tabID))
+                    appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tabID))
                 },
                 onCreateTab: {
-                    appState.dispatch(.createTab(projectID: project.id, areaID: area.id))
+                    appState.dispatch(.createTab(projectID: project.id, areaID: nil))
                 },
                 onCreateVCSTab: {
-                    openVCS(for: project, preferredAreaID: area.id)
+                    openVCS(for: project, preferredAreaID: areaID)
                 },
                 onCloseTab: { tabID in
-                    appState.closeTab(tabID, areaID: area.id, projectID: project.id)
+                    appState.closeTab(tabID, areaID: areaID, projectID: project.id)
                 },
                 onSplit: { dir in
                     appState.dispatch(.splitArea(.init(
                         projectID: project.id,
-                        areaID: area.id,
+                        areaID: areaID,
                         direction: dir,
                         position: .second
                     )))
@@ -454,21 +457,32 @@ struct MainWindow: View {
                     appState.dispatch(result.action(projectID: project.id))
                 },
                 onCreateTabAdjacent: { tabID, side in
-                    area.createTabAdjacent(to: tabID, side: side)
+                    let path = activeWorktreePath(for: project)
+                    let area = TabArea(projectPath: path)
+                    let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+                    workspace.insertTab(
+                        tab,
+                        adjacentTo: tabID,
+                        side: side
+                    )
+                    appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tab.id))
+                    appState.saveWorkspaces()
                 },
                 onTogglePin: { tabID in
-                    area.togglePin(tabID)
+                    workspace.togglePin(tabID)
+                    appState.saveWorkspaces()
                 },
                 onSetCustomTitle: { tabID, title in
-                    area.setCustomTitle(tabID, title: title)
+                    workspace.tabs.first(where: { $0.id == tabID })?.customTitle = title
                     appState.saveWorkspaces()
                 },
                 onSetColorID: { tabID, colorID in
-                    area.setColorID(tabID, colorID: colorID)
+                    workspace.tabs.first(where: { $0.id == tabID })?.colorID = colorID
                     appState.saveWorkspaces()
                 },
                 onReorderTab: { fromOffsets, toOffset in
-                    area.reorderTab(fromOffsets: fromOffsets, toOffset: toOffset)
+                    workspace.reorderTab(fromOffsets: fromOffsets, toOffset: toOffset)
+                    appState.saveWorkspaces()
                 }
             )
         } else {
@@ -493,7 +507,7 @@ struct MainWindow: View {
                             }
                             .padding(.trailing, 4)
                         }
-                        if let project = activeProject, activeProjectHasSplitWorkspace {
+                        if let project = activeProject, activeProjectWithWorkspace != nil {
                             IconButton(symbol: "doc.text", size: 12, accessibilityLabel: "Quick Open") {
                                 NotificationCenter.default.post(name: .quickOpen, object: nil)
                             }

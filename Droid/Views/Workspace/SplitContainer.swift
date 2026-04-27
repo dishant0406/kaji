@@ -5,6 +5,8 @@ struct SplitContainer: View {
     let branch: SplitBranch
     let focusedAreaID: UUID?
     let isActiveProject: Bool
+    let showTabStrip: Bool
+    let showPaneHeader: Bool
     let showVCSButton: Bool
     let projectID: UUID
     let onFocusArea: (UUID) -> Void
@@ -16,6 +18,7 @@ struct SplitContainer: View {
     let onSplit: (UUID, SplitDirection) -> Void
     let onCloseArea: (UUID) -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
+    let onMoveArea: (PaneDragCoordinator.DropResult) -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -76,6 +79,8 @@ struct SplitContainer: View {
             node: node,
             focusedAreaID: focusedAreaID,
             isActiveProject: isActiveProject,
+            showTabStrip: showTabStrip,
+            showPaneHeader: showPaneHeader,
             showVCSButton: showVCSButton,
             projectID: projectID,
             onFocusArea: onFocusArea,
@@ -86,7 +91,8 @@ struct SplitContainer: View {
             onForceCloseTab: onForceCloseTab,
             onSplit: onSplit,
             onCloseArea: onCloseArea,
-            onDropAction: onDropAction
+            onDropAction: onDropAction,
+            onMoveArea: onMoveArea
         )
     }
 }

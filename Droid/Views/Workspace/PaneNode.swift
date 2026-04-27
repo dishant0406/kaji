@@ -5,6 +5,7 @@ struct PaneNode: View {
     let focusedAreaID: UUID?
     let isActiveProject: Bool
     var showTabStrip = true
+    var showPaneHeader = false
     var showVCSButton = true
     let projectID: UUID
     let onFocusArea: (UUID) -> Void
@@ -16,6 +17,7 @@ struct PaneNode: View {
     let onSplit: (UUID, SplitDirection) -> Void
     let onCloseArea: (UUID) -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
+    let onMoveArea: (PaneDragCoordinator.DropResult) -> Void
 
     var body: some View {
         switch node {
@@ -25,6 +27,7 @@ struct PaneNode: View {
                 isFocused: focusedAreaID == area.id,
                 isActiveProject: isActiveProject,
                 showTabStrip: showTabStrip,
+                showPaneHeader: showPaneHeader,
                 showVCSButton: showVCSButton,
                 projectID: projectID,
                 onFocus: { onFocusArea(area.id) },
@@ -34,13 +37,17 @@ struct PaneNode: View {
                 onCloseTab: { tabID in onCloseTab(area.id, tabID) },
                 onForceCloseTab: { tabID in onForceCloseTab(area.id, tabID) },
                 onSplit: { dir in onSplit(area.id, dir) },
-                onDropAction: onDropAction
+                onCloseArea: { onCloseArea(area.id) },
+                onDropAction: onDropAction,
+                onMoveArea: onMoveArea
             )
         case let .split(branch):
             SplitContainer(
                 branch: branch,
                 focusedAreaID: focusedAreaID,
                 isActiveProject: isActiveProject,
+                showTabStrip: showTabStrip,
+                showPaneHeader: showPaneHeader,
                 showVCSButton: showVCSButton,
                 projectID: projectID,
                 onFocusArea: onFocusArea,
@@ -51,7 +58,8 @@ struct PaneNode: View {
                 onForceCloseTab: onForceCloseTab,
                 onSplit: onSplit,
                 onCloseArea: onCloseArea,
-                onDropAction: onDropAction
+                onDropAction: onDropAction,
+                onMoveArea: onMoveArea
             )
         }
     }

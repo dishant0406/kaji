@@ -11,6 +11,7 @@ enum DroidTheme {
     @MainActor static var fg: Color { snapshot.fg }
     @MainActor static var fgMuted: Color { snapshot.fgMuted }
     @MainActor static var fgDim: Color { snapshot.fgDim }
+    @MainActor static var selection: Color { snapshot.selection }
     @MainActor static var surface: Color { snapshot.surface }
     @MainActor static var surfaceMuted: Color { snapshot.surfaceMuted }
     @MainActor static var border: Color { snapshot.border }
@@ -62,6 +63,7 @@ extension DroidTheme {
         let fg: Color
         let fgMuted: Color
         let fgDim: Color
+        let selection: Color
         let surface: Color
         let surfaceMuted: Color
         let border: Color
@@ -117,6 +119,7 @@ extension DroidTheme {
             fg = Color(nsColor: fgColor)
             fgMuted = Color(nsColor: fgColor.withAlphaComponent(isLight ? 0.88 : 0.72))
             fgDim = Color(nsColor: fgColor.withAlphaComponent(isLight ? 0.7 : 0.46))
+            selection = Color(nsColor: selectionColor)
             surface = Color(nsColor: surfaceColor)
             surfaceMuted = Color(nsColor: surfaceMutedColor)
             border = Color(nsColor: borderColor)

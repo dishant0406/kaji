@@ -68,19 +68,26 @@ final class GhosttyService {
     }
 
     var backgroundColor: NSColor {
-        configColor("background") ?? NSColor(srgbRed: 0.059, green: 0.078, blue: 0.098, alpha: 1)
+        configColor("background")
+            ?? themeFileColor(\.background)
+            ?? NSColor(srgbRed: 0.059, green: 0.078, blue: 0.098, alpha: 1)
     }
 
     var foregroundColor: NSColor {
-        configColor("foreground") ?? NSColor(srgbRed: 0.902, green: 0.882, blue: 0.812, alpha: 1)
+        configColor("foreground")
+            ?? themeFileColor(\.foreground)
+            ?? NSColor(srgbRed: 0.902, green: 0.882, blue: 0.812, alpha: 1)
     }
 
     var selectionBackgroundColor: NSColor {
-        configColor("selection-background") ?? NSColor(srgbRed: 0.153, green: 0.216, blue: 0.278, alpha: 1)
+        configColor("selection-background")
+            ?? themeFileColor(\.selectionBackground)
+            ?? NSColor(srgbRed: 0.153, green: 0.216, blue: 0.278, alpha: 1)
     }
 
     var accentColor: NSColor {
         configColor("cursor-color")
+            ?? themeFileColor(\.cursorColor)
             ?? paletteColor(at: 3)
             ?? paletteColor(at: 4)
             ?? foregroundColor
@@ -111,6 +118,25 @@ final class GhosttyService {
             srgbRed: CGFloat(color.r) / 255,
             green: CGFloat(color.g) / 255,
             blue: CGFloat(color.b) / 255,
+            alpha: 1
+        )
+    }
+
+    private func themeFileColor(_ keyPath: KeyPath<ThemeColorSet, String>) -> NSColor? {
+        guard let identifier = ThemeService.shared.currentThemeIdentifier(),
+              let theme = ThemeService.discoverTheme(identifier: identifier)
+        else { return nil }
+        return Self.nsColor(hex: theme.draft.colors[keyPath: keyPath])
+    }
+
+    private static func nsColor(hex: String) -> NSColor? {
+        let normalized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = normalized.hasPrefix("#") ? String(normalized.dropFirst()) : normalized
+        guard value.count == 6, let rgb = UInt32(value, radix: 16) else { return nil }
+        return NSColor(
+            srgbRed: CGFloat((rgb >> 16) & 0xFF) / 255,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255,
+            blue: CGFloat(rgb & 0xFF) / 255,
             alpha: 1
         )
     }

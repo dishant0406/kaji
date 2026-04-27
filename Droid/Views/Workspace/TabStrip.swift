@@ -45,6 +45,19 @@ struct PaneTabStrip: View {
         }
     }
 
+    static func workspaceSnapshots(from tabs: [WorkspaceTab]) -> [TabSnapshot] {
+        tabs.map { tab in
+            TabSnapshot(
+                id: tab.id,
+                title: tab.title,
+                kind: tab.kind,
+                isPinned: tab.isPinned,
+                hasCustomTitle: tab.hasCustomTitle,
+                colorID: tab.colorID
+            )
+        }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             GeometryReader { geo in
@@ -86,6 +99,16 @@ struct PaneTabStrip: View {
             .background(WindowDragRepresentable(alwaysEnabled: isWindowTitleBar))
         }
         .frame(height: 36)
+        .background {
+            if dragCoordinator.activeDrag != nil {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: TabStripFramePreferenceKey.self,
+                        value: [areaID: geo.frame(in: .named(DragCoordinateSpace.mainWindow))]
+                    )
+                }
+            }
+        }
         .onPreferenceChange(TabFramePreferenceKey.self) { frames in
             guard dragState.draggedID != nil else { return }
             dragState.frames = frames
@@ -176,20 +199,10 @@ struct PaneTabStrip: View {
             guard distance >= Self.dragActivationDistance else { return }
             dragState.draggedID = tab.id
             dragState.lastReorderTargetID = nil
-        }
-
-        if dragState.isInSplitMode {
-            dragCoordinator.updatePosition(globalLocation)
-            return
-        }
-
-        if abs(dy) > 24, !tab.isPinned {
-            dragState.isInSplitMode = true
             dragCoordinator.beginDrag(tabID: tab.id, sourceAreaID: areaID, projectID: projectID)
-            dragCoordinator.updatePosition(globalLocation)
-            return
         }
 
+        dragCoordinator.updatePosition(globalLocation)
         reorderIfNeeded(at: globalLocation)
     }
 
@@ -201,22 +214,21 @@ struct PaneTabStrip: View {
         if !dragState.didSelect {
             onSelectTab(tab.id)
         }
-        if dragState.isInSplitMode {
-            if let result = dragCoordinator.endDrag() {
-                onDropAction(result)
-            }
+        if let result = dragCoordinator.endDrag() {
+            onDropAction(result)
         }
-        withAnimation(.easeInOut(duration: 0.15)) {
-            dragState.draggedID = nil
-            dragState.isInSplitMode = false
-            dragState.frames = [:]
-            dragState.lastReorderTargetID = nil
-            dragState.didSelect = false
-        }
+        dragState.draggedID = nil
+        dragState.frames = [:]
+        dragState.lastReorderTargetID = nil
+        dragState.didSelect = false
     }
 
     private func reorderIfNeeded(at location: CGPoint) {
         guard let draggedID = dragState.draggedID else { return }
+        guard dragCoordinator.hoveredAreaID == areaID, dragCoordinator.hoveredZone == .center else {
+            dragState.lastReorderTargetID = nil
+            return
+        }
         var hoveredTargetID: UUID?
 
         for (id, frame) in dragState.frames where id != draggedID {
@@ -230,9 +242,7 @@ struct PaneTabStrip: View {
 
             dragState.lastReorderTargetID = id
             let offset = destIndex > sourceIndex ? destIndex + 1 : destIndex
-            withAnimation(.easeInOut(duration: 0.15)) {
-                onReorderTab(IndexSet(integer: sourceIndex), offset)
-            }
+            onReorderTab(IndexSet(integer: sourceIndex), offset)
             return
         }
 
@@ -245,7 +255,6 @@ struct PaneTabStrip: View {
 private struct TabDragState {
     var draggedID: UUID?
     var frames: [UUID: CGRect] = [:]
-    var isInSplitMode = false
     var lastReorderTargetID: UUID?
     var didSelect = false
 }

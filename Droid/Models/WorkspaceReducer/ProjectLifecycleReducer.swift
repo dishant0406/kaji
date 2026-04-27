@@ -23,15 +23,15 @@ enum ProjectLifecycleReducer {
         state: inout WorkspaceState,
         effects: inout WorkspaceSideEffects
     ) {
-        let keysToRemove = state.workspaceRoots.keys.filter { $0.projectID == projectID }
+        let keysToRemove = state.workspaces.keys.filter { $0.projectID == projectID }
         for key in keysToRemove {
-            if let root = state.workspaceRoots[key] {
-                let paneIDs = root.allAreas().flatMap { area in area.tabs.compactMap { $0.content.pane?.id } }
-                effects.paneIDsToRemove.append(contentsOf: paneIDs)
+            if let workspace = state.workspaces[key] {
+                for tab in workspace.tabs {
+                    let paneIDs = tab.root.allAreas().flatMap { area in area.tabs.compactMap { $0.content.pane?.id } }
+                    effects.paneIDsToRemove.append(contentsOf: paneIDs)
+                }
             }
-            state.workspaceRoots.removeValue(forKey: key)
-            state.focusedAreaID.removeValue(forKey: key)
-            state.focusHistory.removeValue(forKey: key)
+            WorkspaceReducerShared.clearWorkspace(key: key, state: &state)
         }
         state.activeWorktreeID.removeValue(forKey: projectID)
         state.activeWorktreePath.removeValue(forKey: projectID)
@@ -48,13 +48,13 @@ enum ProjectLifecycleReducer {
         effects: inout WorkspaceSideEffects
     ) {
         let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
-        if let root = state.workspaceRoots[key] {
-            let paneIDs = root.allAreas().flatMap { area in area.tabs.compactMap { $0.content.pane?.id } }
-            effects.paneIDsToRemove.append(contentsOf: paneIDs)
+        if let workspace = state.workspaces[key] {
+            for tab in workspace.tabs {
+                let paneIDs = tab.root.allAreas().flatMap { area in area.tabs.compactMap { $0.content.pane?.id } }
+                effects.paneIDsToRemove.append(contentsOf: paneIDs)
+            }
         }
-        state.workspaceRoots.removeValue(forKey: key)
-        state.focusedAreaID.removeValue(forKey: key)
-        state.focusHistory.removeValue(forKey: key)
+        WorkspaceReducerShared.clearWorkspace(key: key, state: &state)
 
         guard state.activeWorktreeID[projectID] == worktreeID else { return }
         if let replacement {
@@ -63,9 +63,9 @@ enum ProjectLifecycleReducer {
             return
         }
 
-        let hasProjectWorkspace = state.workspaceRoots.keys.contains { $0.projectID == projectID }
+        let hasProjectWorkspace = state.workspaces.keys.contains { $0.projectID == projectID }
         if hasProjectWorkspace,
-           let fallback = state.workspaceRoots.keys
+           let fallback = state.workspaces.keys
            .filter({ $0.projectID == projectID })
            .min(by: { $0.worktreeID.uuidString < $1.worktreeID.uuidString })
         {

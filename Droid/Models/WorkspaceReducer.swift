@@ -5,6 +5,7 @@ struct WorkspaceState {
     var activeProjectID: UUID?
     var activeWorktreeID: [UUID: UUID]
     var activeWorktreePath: [UUID: String]
+    var workspaces: [WorktreeKey: WorktreeWorkspace]
     var workspaceRoots: [WorktreeKey: SplitNode]
     var focusedAreaID: [WorktreeKey: UUID]
     var focusHistory: [WorktreeKey: [UUID]]
@@ -131,10 +132,10 @@ enum WorkspaceReducer {
             TabReducer.selectTabByIndex(projectID: projectID, areaID: areaID, index: index, state: &state)
 
         case let .selectNextTab(projectID):
-            TabReducer.selectNextTab(projectID: projectID, state: state)
+            TabReducer.selectNextTab(projectID: projectID, state: &state)
 
         case let .selectPreviousTab(projectID):
-            TabReducer.selectPreviousTab(projectID: projectID, state: state)
+            TabReducer.selectPreviousTab(projectID: projectID, state: &state)
 
         case let .splitArea(request):
             SplitReducer.splitArea(request, state: &state)
@@ -146,6 +147,10 @@ enum WorkspaceReducer {
         case let .moveTab(projectID, request):
             guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state) else { break }
             SplitReducer.moveTab(request, key: key, state: &state, effects: &effects)
+
+        case let .movePane(projectID, request):
+            guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state) else { break }
+            SplitReducer.movePane(request, key: key, state: &state)
 
         case let .focusArea(projectID, areaID):
             FocusReducer.focusArea(projectID: projectID, areaID: areaID, state: &state)
@@ -175,6 +180,8 @@ enum WorkspaceReducer {
             }
         }
 
+        WorkspaceReducerShared.flushMirrorsIntoActiveTabs(state: &state)
+        WorkspaceReducerShared.refreshActiveTabMirrors(state: &state)
         return effects
     }
 }
