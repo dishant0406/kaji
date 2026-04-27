@@ -12,6 +12,7 @@ GhosttyKit/ghostty.h
 /ghostty
 /build
 /dist
+.dev-support/
 .agents/
 .claude/
 *.dmg

@@ -15,6 +15,7 @@ struct Sidebar: View {
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
+    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @State private var dragState = ProjectDragState()
     @State private var expanded = UserDefaults.standard.bool(forKey: "droid.sidebarExpanded")
     @Binding var showAIUsagePopover: Bool
@@ -34,7 +35,12 @@ struct Sidebar: View {
         .padding(.top, 10)
         .frame(maxHeight: .infinity, alignment: .bottom)
         .frame(width: SidebarLayout.resolvedWidth(expanded: expanded))
-        .background(SidebarBackgroundSurface(transparencyEnabled: sidebarTransparencyEnabled))
+        .background(
+            SidebarBackgroundSurface(
+                transparencyEnabled: sidebarTransparencyEnabled,
+                transparencyAmount: interfaceTransparencyAmount
+            )
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
         .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
@@ -195,6 +201,7 @@ struct SidebarFooter: View {
     var expanded: Bool = false
     @Binding var showAIUsagePopover: Bool
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
+    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage(AIUsageSettingsStore.usageEnabledKey) private var usageEnabled = false
     @AppStorage(AIUsageSettingsStore.usageDisplayModeKey) private var usageDisplayModeRaw = AIUsageSettingsStore.defaultUsageDisplayMode
         .rawValue
@@ -369,7 +376,10 @@ struct SidebarFooter: View {
         .padding(.horizontal, 10)
         .frame(height: DroidLayout.footerBarHeight)
         .background(
-            SidebarBackgroundSurface(transparencyEnabled: sidebarTransparencyEnabled)
+            SidebarBackgroundSurface(
+                transparencyEnabled: sidebarTransparencyEnabled,
+                transparencyAmount: interfaceTransparencyAmount
+            )
         )
         .overlay(alignment: .top) {
             Rectangle()

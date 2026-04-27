@@ -144,3 +144,9 @@ Regardless of where a notification comes from, Droid respects the user's choices
 A dot also appears on the project and worktree rows in the sidebar until the notification is read.
 
 If the notification targets the pane you're already looking at, Droid still shows the toast and sound but skips creating a new unread badge for that same focused tab.
+
+Settings also support outbound delivery rules:
+
+- **Destinations** — send normalized notification events to `ntfy` or any custom HTTP webhook
+- **Rules** — match by source and event type, then fan out to one or more destinations
+- **Templates** — use tokens like `{{title}}`, `{{body}}`, `{{source}}`, `{{event_kind}}`, `{{project}}`, `{{worktree}}`, and `{{timestamp_iso}}`

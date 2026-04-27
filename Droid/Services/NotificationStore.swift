@@ -131,6 +131,14 @@ final class NotificationStore {
             ToastState.shared.show(notification.title)
         }
         playSound()
+        let event = NotificationEventNormalizer.normalize(
+            notification: notification,
+            appState: appState,
+            worktreeStore: worktreeStore
+        )
+        Task {
+            await NotificationIntegrationStore.shared.deliver(event)
+        }
     }
 
     private func playSound() {
