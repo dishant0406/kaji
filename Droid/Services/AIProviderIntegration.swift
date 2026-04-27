@@ -24,15 +24,7 @@ extension AIProviderIntegration {
     }
 
     func isToolInstalled() -> Bool {
-        let home = NSHomeDirectory()
-        let searchPaths = executableNames.flatMap { name in
-            [
-                "\(home)/.local/bin/\(name)",
-                "/usr/local/bin/\(name)",
-                "/opt/homebrew/bin/\(name)",
-            ]
-        }
-        return searchPaths.contains { FileManager.default.isExecutableFile(atPath: $0) }
+        AIProviderExecutableLocator.isInstalled(executableNames: executableNames)
     }
 }
 

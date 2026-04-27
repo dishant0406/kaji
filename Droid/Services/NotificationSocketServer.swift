@@ -119,7 +119,11 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     private func processMessage(_ data: Data) {
         guard let message = String(data: data, encoding: .utf8) else { return }
-        let parts = message.split(separator: "|", maxSplits: 3).map(String.init)
+        let parts = message.split(
+            separator: "|",
+            maxSplits: 3,
+            omittingEmptySubsequences: false
+        ).map(String.init)
         guard parts.count >= 3 else {
             logger.warning("Invalid message on notification socket: expected type|paneID|title|body")
             return
@@ -138,9 +142,13 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     @MainActor
     private func dispatchNotification(type: String, title: String, body: String, paneIDString: String?) {
-        guard let appState = NotificationStore.shared.appState else { return }
-
         let source = AIProviderRegistry.shared.notificationSource(for: type)
+
+        guard let appState = NotificationStore.shared.appState else {
+            NotificationStore.shared.addDetached(source: source, title: title, body: body)
+            logger.warning("Persisted detached notification: appState not ready")
+            return
+        }
 
         if let paneIDString, let paneID = UUID(uuidString: paneIDString) {
             NotificationStore.shared.add(
@@ -155,8 +163,16 @@ final class NotificationSocketServer: @unchecked Sendable {
 
         guard let projectID = appState.activeProjectID,
               let key = appState.activeWorktreeKey(for: projectID),
-              let context = findFirstPaneContext(key: key, appState: appState)
-        else { return }
+              let context = NotificationFallbackContextResolver.resolve(
+                  key: key,
+                  appState: appState,
+                  worktreeStore: NotificationStore.shared.worktreeStore
+              )
+        else {
+            NotificationStore.shared.addDetached(source: source, title: title, body: body)
+            logger.warning("Persisted detached notification: no active pane context for socket fallback")
+            return
+        }
 
         NotificationStore.shared.addWithContext(
             context: context,
@@ -165,31 +181,6 @@ final class NotificationSocketServer: @unchecked Sendable {
             body: body,
             appState: appState
         )
-    }
-
-    @MainActor
-    private func findFirstPaneContext(
-        key: WorktreeKey,
-        appState: AppState
-    ) -> NavigationContext? {
-        guard let root = appState.workspaceRoots[key] else { return nil }
-        for area in root.allAreas() {
-            for tab in area.tabs {
-                guard tab.content.pane != nil else { continue }
-                let path = NotificationStore.shared.worktreeStore?.worktree(
-                    projectID: key.projectID,
-                    worktreeID: key.worktreeID
-                )?.path ?? area.projectPath
-                return NavigationContext(
-                    projectID: key.projectID,
-                    worktreeID: key.worktreeID,
-                    worktreePath: path,
-                    areaID: area.id,
-                    tabID: tab.id
-                )
-            }
-        }
-        return nil
     }
 
     private func cleanup() {

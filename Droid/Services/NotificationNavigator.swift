@@ -41,6 +41,11 @@ enum NotificationNavigator {
         appState: AppState,
         notificationStore: NotificationStore
     ) {
+        guard appState.activeWorktreeID[notification.projectID] != nil || appState.activeProjectID == notification.projectID else {
+            notificationStore.markAsRead(notification.id)
+            return
+        }
+
         if appState.activeProjectID != notification.projectID
             || appState.activeWorktreeID[notification.projectID] != notification.worktreeID
         {
