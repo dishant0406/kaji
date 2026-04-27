@@ -145,9 +145,10 @@ if ! command -v create-dmg &> /dev/null; then
 fi
 
 cd "$BUILD_DIR"
+find "$BUILD_DIR" -maxdepth 1 -name "Droid*.dmg" -delete
 create-dmg "$APP_BUNDLE" "$BUILD_DIR" || true
 
-GENERATED_DMG=$(find "$BUILD_DIR" -maxdepth 1 -name "Droid*.dmg" -not -name "$DMG_NAME" | head -1)
+GENERATED_DMG=$(find "$BUILD_DIR" -maxdepth 1 -name "Droid*.dmg" -not -name "$DMG_NAME" -print0 | xargs -0 ls -t | head -1)
 if [[ -n "$GENERATED_DMG" ]]; then
     mv "$GENERATED_DMG" "$BUILD_DIR/$DMG_NAME"
 fi
