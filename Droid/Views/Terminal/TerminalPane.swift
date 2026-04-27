@@ -14,6 +14,7 @@ struct TerminalPane: View {
             TerminalBridge(
                 state: state,
                 focused: focused,
+                visible: visible,
                 onFocus: onFocus,
                 onProcessExit: onProcessExit,
                 onSplitRequest: onSplitRequest
@@ -49,6 +50,7 @@ struct TerminalPane: View {
 struct TerminalBridge: NSViewRepresentable {
     let state: TerminalPaneState
     let focused: Bool
+    let visible: Bool
     let onFocus: () -> Void
     let onProcessExit: () -> Void
     let onSplitRequest: (SplitDirection, SplitPosition) -> Void
@@ -58,6 +60,7 @@ struct TerminalBridge: NSViewRepresentable {
     final class Coordinator {
         var wasFocused = false
         var wasOverlayActive = false
+        var wasVisible = true
     }
 
     func makeCoordinator() -> Coordinator {
@@ -77,6 +80,7 @@ struct TerminalBridge: NSViewRepresentable {
         view.setInjectedCommand(state.injectedCommand)
         view.isFocused = focused
         view.overlayActive = overlayActive
+        view.setSurfaceVisible(visible)
         view.onFocus = onFocus
         view.onProcessExit = onProcessExit
         view.onSplitRequest = onSplitRequest
@@ -87,6 +91,7 @@ struct TerminalBridge: NSViewRepresentable {
         }
         configureSearchCallbacks(view)
         context.coordinator.wasFocused = focused
+        context.coordinator.wasVisible = visible
         if focused, !overlayActive {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 view.window?.makeFirstResponder(view)
@@ -112,9 +117,14 @@ struct TerminalBridge: NSViewRepresentable {
         configureSearchCallbacks(nsView)
         let wasFocused = context.coordinator.wasFocused
         let wasOverlayActive = context.coordinator.wasOverlayActive
+        let wasVisible = context.coordinator.wasVisible
         context.coordinator.wasFocused = focused
         context.coordinator.wasOverlayActive = overlayActive
+        context.coordinator.wasVisible = visible
         nsView.isFocused = focused
+        if visible != wasVisible {
+            nsView.setSurfaceVisible(visible)
+        }
 
         if overlayActive {
             if nsView.window?.firstResponder === nsView || nsView.window?.firstResponder === nsView.inputContext {
