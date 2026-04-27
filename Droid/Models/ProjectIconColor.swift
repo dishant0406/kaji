@@ -1,7 +1,7 @@
 import Foundation
 
 enum ProjectIconColor {
-    struct Swatch: Identifiable, Hashable, Sendable {
+    struct Swatch: Identifiable, Hashable {
         let id: String
         let name: String
         let hex: String

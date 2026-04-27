@@ -38,10 +38,10 @@ struct DroidPopoverModifier<PopoverContent: View>: ViewModifier {
 }
 
 extension View {
-    func droidPopover<PopoverContent: View>(
+    func droidPopover(
         isPresented: Binding<Bool>,
         preferredEdge: DroidPopoverEdge,
-        @ViewBuilder content: @escaping () -> PopoverContent
+        @ViewBuilder content: @escaping () -> some View
     ) -> some View {
         modifier(
             DroidPopoverModifier(

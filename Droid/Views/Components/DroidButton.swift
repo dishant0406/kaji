@@ -68,13 +68,13 @@ struct DroidButtonStyle: ButtonStyle {
     private func foregroundColor(isPressed: Bool) -> Color {
         switch variant {
         case .primary:
-            return DroidTheme.bg
+            DroidTheme.bg
         case .secondary:
-            return DroidTheme.fg
+            DroidTheme.fg
         case .ghost:
-            return isPressed ? DroidTheme.fg : DroidTheme.fgMuted
+            isPressed ? DroidTheme.fg : DroidTheme.fgMuted
         case .danger:
-            return DroidTheme.diffRemoveFg
+            DroidTheme.diffRemoveFg
         }
     }
 
@@ -104,13 +104,13 @@ struct DroidButtonStyle: ButtonStyle {
     private func borderColor(isPressed: Bool) -> Color {
         switch variant {
         case .primary:
-            return DroidTheme.accent.opacity(isPressed ? 0.9 : 0.75)
+            DroidTheme.accent.opacity(isPressed ? 0.9 : 0.75)
         case .secondary:
-            return DroidTheme.border
+            DroidTheme.border
         case .ghost:
-            return isPressed ? DroidTheme.border : .clear
+            isPressed ? DroidTheme.border : .clear
         case .danger:
-            return DroidTheme.diffRemoveFg.opacity(0.35)
+            DroidTheme.diffRemoveFg.opacity(0.35)
         }
     }
 }

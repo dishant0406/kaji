@@ -414,10 +414,10 @@ struct VCSTabView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if state.files.isEmpty, state.errorMessage != nil {
-                Text(state.errorMessage ?? "")
-                    .droidFont(size: 12)
-                    .foregroundStyle(DroidTheme.fgMuted)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Text(state.errorMessage ?? "")
+                .droidFont(size: 12)
+                .foregroundStyle(DroidTheme.fgMuted)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(spacing: 0) {
                 commitArea
@@ -1244,8 +1244,8 @@ private struct SectionSplitLayout: View {
 
         return HStack(spacing: 6) {
             Button {
-                    toggleCollapsed(section)
-                } label: {
+                toggleCollapsed(section)
+            } label: {
                 HStack(spacing: 6) {
                     DroidIcon(systemName: isCollapsedState ? "chevron.right" : "chevron.down", size: 9)
                         .foregroundStyle(DroidTheme.fgDim)
@@ -1334,9 +1334,9 @@ private struct SectionSplitLayout: View {
                 systemName: anyExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
                 size: 10
             )
-                .foregroundStyle(DroidTheme.fgMuted)
-                .frame(width: 22, height: 20)
-                .contentShape(Rectangle())
+            .foregroundStyle(DroidTheme.fgMuted)
+            .frame(width: 22, height: 20)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(anyExpanded ? "Collapse all" : "Expand all")

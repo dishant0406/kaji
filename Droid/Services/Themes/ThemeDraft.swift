@@ -1,6 +1,6 @@
 import Foundation
 
-struct ThemeDraft: Equatable, Sendable {
+struct ThemeDraft: Equatable {
     var name: String
     var slug: String
     var colors: ThemeColorSet

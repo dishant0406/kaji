@@ -21,7 +21,7 @@ final class PaneDragCoordinator {
         let targetAreaID: UUID
 
         func action(projectID: UUID) -> AppState.Action {
-            let split: SplitPlacement = switch zone {
+            let split = switch zone {
             case .left:
                 SplitPlacement(direction: .horizontal, position: .first)
             case .right:

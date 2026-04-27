@@ -111,6 +111,7 @@ struct CreateWorktreeModal: View {
             branchName = name
         }
     }
+
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -133,6 +134,7 @@ struct CreateWorktreeModal: View {
             DroidTheme.chrome.opacity(0.42)
         )
     }
+
     private var footer: some View {
         HStack(spacing: 8) {
             Spacer()
@@ -157,13 +159,16 @@ struct CreateWorktreeModal: View {
             DroidTheme.chrome.opacity(0.42)
         )
     }
+
     private func loadSetupCommands() {
         setupCommands = WorktreeConfig.load(fromProjectPath: project.path)?.setup.map(\.command).filter { !$0.isEmpty } ?? []
     }
+
     private var canCreate: Bool {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
         return createNewBranch ? !branchName.trimmingCharacters(in: .whitespaces).isEmpty : !selectedExistingBranch.isEmpty
     }
+
     private func loadBranches() async {
         do {
             let branches = try await gitRepository.listBranches(repoPath: project.path)
@@ -183,7 +188,8 @@ struct CreateWorktreeModal: View {
         errorMessage = nil
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         let branch = createNewBranch ? branchName.trimmingCharacters(in: .whitespaces) : selectedExistingBranch
-        let path = DroidFileStorage.worktreeDirectory(forProjectID: project.id, name: Self.slug(from: trimmedName)).path(percentEncoded: false)
+        let path = DroidFileStorage.worktreeDirectory(forProjectID: project.id, name: Self.slug(from: trimmedName))
+            .path(percentEncoded: false)
         guard !FileManager.default.fileExists(atPath: path) else {
             inProgress = false
             errorMessage = "A worktree with this name already exists on disk."

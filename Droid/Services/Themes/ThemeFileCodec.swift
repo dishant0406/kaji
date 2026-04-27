@@ -22,7 +22,7 @@ enum ThemeFileCodec {
         var parsedName: String?
         var parsedSlug: String?
         var values: [String: String] = [:]
-        var palette = Array<String?>(repeating: nil, count: 16)
+        var palette = [String?](repeating: nil, count: 16)
 
         for rawLine in content.components(separatedBy: .newlines) {
             let line = rawLine.trimmingCharacters(in: .whitespaces)

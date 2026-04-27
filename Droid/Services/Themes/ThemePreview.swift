@@ -1,7 +1,7 @@
 import Foundation
 
-struct ThemePreview: Identifiable, Equatable, Sendable {
-    enum Source: String, Sendable {
+struct ThemePreview: Identifiable, Equatable {
+    enum Source: String {
         case bundled
         case external
     }

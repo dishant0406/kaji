@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-struct DropTargetFrameResolver {
+enum DropTargetFrameResolver {
     struct Match {
         let areaID: UUID
         let frame: CGRect

@@ -73,7 +73,10 @@ struct MainWindow: View {
     private var configuredMainLayout: AnyView {
         let base = AnyView(
             mainLayout
-                .environment(\.overlayActive, showQuickOpen || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID != nil)
+                .environment(
+                    \.overlayActive,
+                    showQuickOpen || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID != nil
+                )
                 .overlay(alignment: toastAlignment) {
                     toastOverlay
                 }

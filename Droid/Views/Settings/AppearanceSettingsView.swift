@@ -43,7 +43,7 @@ struct AppearanceSettingsView: View {
                             },
                             onDismiss: { showThemePicker = false }
                         )
-                            .environment(themeService)
+                        .environment(themeService)
                     }
                 }
             }

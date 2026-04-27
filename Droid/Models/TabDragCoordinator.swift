@@ -136,7 +136,8 @@ final class TabDragCoordinator {
             for: globalPosition,
             in: areaFrames,
             tolerance: 8
-        ) else {
+        )
+        else {
             updateHover(areaID: nil, zone: nil)
             return
         }
@@ -155,5 +156,4 @@ final class TabDragCoordinator {
             hoveredZone = zone
         }
     }
-
 }

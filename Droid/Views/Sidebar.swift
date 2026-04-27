@@ -29,7 +29,7 @@ struct Sidebar: View {
                 expanded: expanded,
                 showAIUsagePopover: $showAIUsagePopover
             )
-                .fixedSize(horizontal: false, vertical: true)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 10)
         .frame(maxHeight: .infinity, alignment: .bottom)
