@@ -79,6 +79,7 @@ struct ResourceMonitorTests {
                     projectName: alpha.name,
                     title: "compile"
                 ),
+                processGroupID: 101,
                 pid: 101,
                 processName: "swift",
                 ttyName: "ttys001",
@@ -95,6 +96,7 @@ struct ResourceMonitorTests {
                     projectName: alpha.name,
                     title: "shell"
                 ),
+                processGroupID: 102,
                 pid: 102,
                 processName: "zsh",
                 ttyName: "ttys002",
@@ -113,6 +115,7 @@ struct ResourceMonitorTests {
                 projectName: beta.name,
                 title: "agent"
             ),
+            processGroupID: 201,
             pid: 201,
             processName: "codex",
             ttyName: "ttys010",
@@ -126,10 +129,10 @@ struct ResourceMonitorTests {
             orderedProjects: [alpha, beta]
         )
 
-        #expect(projects.map(\.name) == ["alpha", "beta"])
+        #expect(projects.map { $0.name } == ["alpha", "beta"])
         #expect(projects[0].cpuPercent == 88)
         #expect(projects[0].memoryBytes == UInt64(920 * 1_024 * 1_024))
-        #expect(projects[0].terminals.map(\.title) == ["compile", "shell"])
+        #expect(projects[0].terminals.map { $0.title } == ["compile", "shell"])
     }
 
     @Test

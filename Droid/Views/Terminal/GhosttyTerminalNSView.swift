@@ -182,10 +182,10 @@ final class GhosttyTerminalNSView: NSView {
         flushInjectedCommandIfNeeded()
     }
 
-    func foregroundProcessID() -> Int32? {
+    func foregroundProcessGroupID() -> Int32? {
         guard let surface else { return nil }
-        let pid = ghostty_surface_foreground_pid(surface)
-        return pid > 0 ? Int32(pid) : nil
+        let processGroupID = ghostty_surface_foreground_pid(surface)
+        return processGroupID > 0 ? Int32(processGroupID) : nil
     }
 
     func ttyName() -> String? {

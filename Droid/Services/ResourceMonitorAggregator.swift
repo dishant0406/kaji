@@ -18,6 +18,7 @@ enum ResourceMonitorAggregator {
                         areaID: $0.descriptor.areaID,
                         projectID: $0.descriptor.projectID,
                         title: $0.descriptor.title,
+                        processGroupID: $0.processGroupID,
                         pid: $0.pid,
                         processName: $0.processName,
                         ttyName: $0.ttyName,

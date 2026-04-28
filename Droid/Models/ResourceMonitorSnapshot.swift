@@ -13,6 +13,7 @@ struct ResourceMonitorTerminalDescriptor: Identifiable, Equatable {
 
 struct ResourceMonitorTerminalReading: Identifiable, Equatable {
     let descriptor: ResourceMonitorTerminalDescriptor
+    let processGroupID: Int32?
     let pid: Int32?
     let processName: String?
     let ttyName: String?
@@ -29,6 +30,7 @@ struct ResourceMonitorTerminalSnapshot: Identifiable, Equatable {
     let areaID: UUID
     let projectID: UUID
     let title: String
+    let processGroupID: Int32?
     let pid: Int32?
     let processName: String?
     let ttyName: String?
