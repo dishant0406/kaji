@@ -31,6 +31,13 @@ final class CodexSessionMonitor: @unchecked Sendable {
         }
     }
 
+    func restart() {
+        queue.async { [weak self] in
+            self?.stopPolling()
+            self?.startPolling()
+        }
+    }
+
     private func startPolling() {
         guard timer == nil else { return }
         let rootURL = CodexSessionPathResolver.sessionsRootURL()

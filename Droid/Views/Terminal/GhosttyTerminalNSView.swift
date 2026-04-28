@@ -182,6 +182,23 @@ final class GhosttyTerminalNSView: NSView {
         flushInjectedCommandIfNeeded()
     }
 
+    func foregroundProcessID() -> Int32? {
+        guard let surface else { return nil }
+        let pid = ghostty_surface_foreground_pid(surface)
+        return pid > 0 ? Int32(pid) : nil
+    }
+
+    func ttyName() -> String? {
+        guard let surface else { return nil }
+        let tty = ghostty_surface_tty_name(surface)
+        defer { ghostty_string_free(tty) }
+        guard let ptr = tty.ptr, tty.len > 0 else { return nil }
+        let count = Int(tty.len)
+        return ptr.withMemoryRebound(to: UInt8.self, capacity: count) { rawPtr in
+            String(bytes: UnsafeBufferPointer(start: rawPtr, count: count), encoding: .utf8)
+        }
+    }
+
     deinit {
         screenChangeObserver.flatMap { NotificationCenter.default.removeObserver($0) }
         delayedResizeWorkItem?.cancel()

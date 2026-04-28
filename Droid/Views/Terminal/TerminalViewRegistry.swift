@@ -37,6 +37,14 @@ final class TerminalViewRegistry {
         views[paneID]
     }
 
+    func foregroundProcessID(for paneID: UUID) -> Int32? {
+        views[paneID]?.foregroundProcessID()
+    }
+
+    func ttyName(for paneID: UUID) -> String? {
+        views[paneID]?.ttyName()
+    }
+
     func paneID(for view: GhosttyTerminalNSView) -> UUID? {
         paneIDs[ObjectIdentifier(view)]
     }
