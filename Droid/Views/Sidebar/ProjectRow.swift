@@ -14,6 +14,7 @@ struct ProjectRow: View {
     @Environment(AppState.self) private var appState
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var activityStore = AIActivityStore.shared
+    @State private var notificationStore = NotificationStore.shared
 
     @State private var hovered = false
     @State private var isRenaming = false
@@ -145,7 +146,7 @@ struct ProjectRow: View {
 
     private var projectIcon: some View {
         let logo = resolvedLogo
-        let unread = NotificationStore.shared.unreadCount(for: project.id)
+        let unread = notificationStore.unreadCount(for: project.id)
         return ZStack {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                 .fill(iconBackground(hasLogo: logo != nil))
@@ -173,15 +174,17 @@ struct ProjectRow: View {
                     .offset(x: 5, y: -5)
             }
         }
-        .overlay(alignment: .bottomLeading) {
-            if hasRunningAgent {
-                SidebarActivitySpinner()
-                    .padding(4)
-            }
-        }
         .overlay {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                 .strokeBorder(iconBorderColor, lineWidth: 1)
+        }
+        .overlay {
+            if hasRunningAgent {
+                SidebarActivityBorder(
+                    cornerRadius: DroidShape.tileRadius,
+                    lineWidth: 1
+                )
+            }
         }
         .overlay(alignment: .bottomTrailing) {
             if isRefreshingWorktrees {

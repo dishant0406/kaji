@@ -29,6 +29,7 @@ struct PaneTabStrip: View {
     let onSetColorID: (UUID, String?) -> Void
     let onReorderTab: (IndexSet, Int) -> Void
     @Environment(TabDragCoordinator.self) private var dragCoordinator
+    @State private var notificationStore = NotificationStore.shared
     @State private var dragState = TabDragState()
     private let addButtonWidth: CGFloat = 30
 
@@ -129,7 +130,7 @@ struct PaneTabStrip: View {
                     tab: tab,
                     active: tab.id == activeTabID,
                     paneFocused: isFocused,
-                    hasUnread: NotificationStore.shared.hasUnread(tabID: tab.id),
+                    hasUnread: notificationStore.hasUnread(tabID: tab.id),
                     isAnyDragging: dragState.draggedID != nil,
                     shortcutIndex: index < 9 ? index + 1 : nil,
                     onSelect: { onSelectTab(tab.id) },

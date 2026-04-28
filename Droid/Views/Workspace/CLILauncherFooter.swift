@@ -46,7 +46,7 @@ struct CLILauncherFooter: View {
     }
 
     private func run(_ launcher: CLILauncherConfiguration) {
-        let command = CLILaunchCommandResolver.resolve(launcher)
+        let command = launcher.command.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !command.isEmpty else { return }
         appState.createCommandSplit(
             projectID: projectID,

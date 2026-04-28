@@ -25,27 +25,44 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
         let settings = try Self.readSettings()
         let hooks = settings["hooks"] as? [String: Any] ?? [:]
 
-        let stopCommand = Self.hookCommand(hookScript: hookScriptPath, event: "stop")
-        let notificationCommand = Self.hookCommand(hookScript: hookScriptPath, event: "notification")
+        let commands = [
+            "Notification": Self.hookCommand(hookScript: hookScriptPath, event: "notification"),
+            "PermissionRequest": Self.hookCommand(hookScript: hookScriptPath, event: "permissionrequest"),
+            "Stop": Self.hookCommand(hookScript: hookScriptPath, event: "stop"),
+            "UserPromptSubmit": Self.hookCommand(hookScript: hookScriptPath, event: "userpromptsubmit"),
+        ]
 
-        let stopMatches = Self.droidHookMatches(entries: hooks["Stop"] as? [[String: Any]], expectedCommand: stopCommand)
-        let notificationMatches = Self.droidHookMatches(
-            entries: hooks["Notification"] as? [[String: Any]],
-            expectedCommand: notificationCommand
-        )
+        let isInstalled = commands.allSatisfy { key, command in
+            Self.droidHookMatches(entries: hooks[key] as? [[String: Any]], expectedCommand: command)
+        }
 
-        guard !stopMatches || !notificationMatches else { return }
+        guard !isInstalled else { return }
 
         var updatedSettings = settings
         var updatedHooks = hooks
+        guard let notificationCommand = commands["Notification"],
+              let permissionRequestCommand = commands["PermissionRequest"],
+              let stopCommand = commands["Stop"],
+              let userPromptSubmitCommand = commands["UserPromptSubmit"]
+        else {
+            return
+        }
 
-        let stopHook = Self.buildHookEntry(command: stopCommand)
-        let notificationHook = Self.buildHookEntry(command: notificationCommand)
-
-        updatedHooks["Stop"] = Self.mergeHookArray(existing: hooks["Stop"] as? [[String: Any]], droidHook: stopHook)
         updatedHooks["Notification"] = Self.mergeHookArray(
             existing: hooks["Notification"] as? [[String: Any]],
-            droidHook: notificationHook
+            droidHook: Self.buildHookEntry(command: notificationCommand, matcher: "")
+        )
+        updatedHooks["PermissionRequest"] = Self.mergeHookArray(
+            existing: hooks["PermissionRequest"] as? [[String: Any]],
+            droidHook: Self.buildHookEntry(command: permissionRequestCommand, matcher: "*")
+        )
+        updatedHooks["Stop"] = Self.mergeHookArray(
+            existing: hooks["Stop"] as? [[String: Any]],
+            droidHook: Self.buildHookEntry(command: stopCommand, matcher: "")
+        )
+        updatedHooks["UserPromptSubmit"] = Self.mergeHookArray(
+            existing: hooks["UserPromptSubmit"] as? [[String: Any]],
+            droidHook: Self.buildHookEntry(command: userPromptSubmitCommand, matcher: "")
         )
 
         updatedSettings["hooks"] = updatedHooks
@@ -57,7 +74,7 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
         var settings = try Self.readSettings()
         guard var hooks = settings["hooks"] as? [String: Any] else { return }
 
-        for key in ["Stop", "Notification"] {
+        for key in ["Notification", "PermissionRequest", "Stop", "UserPromptSubmit"] {
             guard var entries = hooks[key] as? [[String: Any]] else { continue }
             entries.removeAll { Self.isDroidHookEntry($0) }
             if entries.isEmpty {
@@ -75,8 +92,8 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
         "'\(hookScript)' \(event) # \(droidMarker)"
     }
 
-    private static func buildHookEntry(command: String) -> [String: Any] {
-        [
+    private static func buildHookEntry(command: String, matcher: String) -> [String: Any] {
+        var entry: [String: Any] = [
             "matcher": "",
             "hooks": [
                 [
@@ -86,6 +103,8 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
                 ] as [String: Any],
             ],
         ]
+        entry["matcher"] = matcher
+        return entry
     }
 
     private static func droidHookMatches(entries: [[String: Any]]?, expectedCommand: String) -> Bool {

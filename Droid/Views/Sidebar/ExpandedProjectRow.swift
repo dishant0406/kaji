@@ -14,6 +14,7 @@ struct ExpandedProjectRow: View {
     @Environment(AppState.self) private var appState
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var activityStore = AIActivityStore.shared
+    @State private var notificationStore = NotificationStore.shared
 
     @AppStorage(GeneralSettingsKeys.autoExpandWorktreesOnProjectSwitch)
     private var autoExpandWorktrees = false
@@ -144,10 +145,6 @@ struct ExpandedProjectRow: View {
 
             Spacer(minLength: 4)
 
-            if hasRunningAgent {
-                SidebarActivitySpinner()
-            }
-
             if isGitRepo {
                 worktreeChevron
             }
@@ -178,10 +175,19 @@ struct ExpandedProjectRow: View {
             }
         }
         .overlay {
-            if showShortcutBadge, let shortcutIndex,
-               let action = ShortcutAction.projectAction(for: shortcutIndex)
-            {
-                ShortcutBadge(label: KeyBindingStore.shared.combo(for: action).displayString)
+            ZStack {
+                if hasRunningAgent {
+                    SidebarActivityBorder(
+                        cornerRadius: DroidShape.tileRadius,
+                        lineWidth: 1
+                    )
+                }
+
+                if showShortcutBadge, let shortcutIndex,
+                   let action = ShortcutAction.projectAction(for: shortcutIndex)
+                {
+                    ShortcutBadge(label: KeyBindingStore.shared.combo(for: action).displayString)
+                }
             }
         }
     }
@@ -203,7 +209,7 @@ struct ExpandedProjectRow: View {
 
     private var projectIcon: some View {
         let logo = resolvedLogo
-        let unread = NotificationStore.shared.unreadCount(for: project.id)
+        let unread = notificationStore.unreadCount(for: project.id)
         return ZStack {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                 .fill(iconBackground(hasLogo: logo != nil))

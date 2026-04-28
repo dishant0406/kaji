@@ -18,7 +18,30 @@ case "$state" in
     *) exit 0 ;;
 esac
 
-/usr/bin/python3 - "$DROID_SOCKET_PATH" "${provider}_activity|${DROID_PANE_ID}|${state}|${provider}" <<'PY'
+if [ "$provider" = "codex" ]; then
+    input=$(cat)
+    if [ -n "$input" ]; then
+        should_skip=$(
+            /usr/bin/python3 - "$input" <<'PY'
+import json
+import sys
+
+try:
+    payload = json.loads(sys.argv[1])
+except Exception:
+    print("0")
+    raise SystemExit(0)
+
+print("1" if payload.get("agent_id") or payload.get("agent_type") else "0")
+PY
+        )
+        if [ "$should_skip" = "1" ]; then
+            exit 0
+        fi
+    fi
+fi
+
+/usr/bin/python3 - "$DROID_SOCKET_PATH" "${provider}_activity|${DROID_PANE_ID}|${state}|" <<'PY'
 import socket
 import sys
 
