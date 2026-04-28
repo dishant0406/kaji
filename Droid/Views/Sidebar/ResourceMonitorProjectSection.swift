@@ -71,10 +71,12 @@ private struct ResourceMonitorTerminalRow: View {
 
     private var subtitle: String {
         let process = terminal.processName ?? "waiting"
-        let pid = terminal.pid.map { "pid \($0)" } ?? "pid --"
+        let identity = terminal.pid.map { "pid \($0)" }
+            ?? terminal.processGroupID.map { "grp \($0)" }
+            ?? "pid --"
         let tty = terminal.ttyName?.split(separator: "/").last.map(String.init)
         let threads = terminal.threadCount.map { "\($0)t" }
-        return [process, pid, tty, threads].compactMap(\.self).joined(separator: "  ")
+        return [process, identity, tty, threads].compactMap(\.self).joined(separator: "  ")
     }
 
     private var closeButton: some View {
