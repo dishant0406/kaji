@@ -7,9 +7,7 @@ struct OpenCodeProvider: AIProviderIntegration {
     let iconName = "opencode"
     let executableNames = ["opencode"]
 
-    private static let pluginsDir = NSHomeDirectory() + "/.opencode/plugins"
     private static let pluginFileName = "droid-notify.js"
-    private static var pluginPath: String { pluginsDir + "/" + pluginFileName }
     private static let pluginScriptName = "opencode-droid-plugin.js"
 
     func isToolInstalled() -> Bool {
@@ -27,24 +25,28 @@ struct OpenCodeProvider: AIProviderIntegration {
         guard let sourcePlugin = Self.findPluginSource(near: hookScriptPath) else { return }
         let sourceData = try Data(contentsOf: URL(fileURLWithPath: sourcePlugin))
 
-        if FileManager.default.fileExists(atPath: Self.pluginPath),
-           let existingData = try? Data(contentsOf: URL(fileURLWithPath: Self.pluginPath)),
-           existingData == sourceData
-        {
-            return
-        }
+        for pluginPath in Self.pluginPaths() {
+            if FileManager.default.fileExists(atPath: pluginPath),
+               let existingData = try? Data(contentsOf: URL(fileURLWithPath: pluginPath)),
+               existingData == sourceData
+            {
+                continue
+            }
 
-        try FileManager.default.createDirectory(atPath: Self.pluginsDir, withIntermediateDirectories: true)
-        let dest = URL(fileURLWithPath: Self.pluginPath)
-        if FileManager.default.fileExists(atPath: Self.pluginPath) {
-            try FileManager.default.removeItem(at: dest)
+            let pluginsDir = (pluginPath as NSString).deletingLastPathComponent
+            try FileManager.default.createDirectory(atPath: pluginsDir, withIntermediateDirectories: true)
+            let dest = URL(fileURLWithPath: pluginPath)
+            if FileManager.default.fileExists(atPath: pluginPath) {
+                try FileManager.default.removeItem(at: dest)
+            }
+            try FileManager.default.copyItem(at: URL(fileURLWithPath: sourcePlugin), to: dest)
         }
-        try FileManager.default.copyItem(at: URL(fileURLWithPath: sourcePlugin), to: dest)
     }
 
     func uninstall() throws {
-        guard FileManager.default.fileExists(atPath: Self.pluginPath) else { return }
-        try FileManager.default.removeItem(atPath: Self.pluginPath)
+        for pluginPath in Self.pluginPaths() where FileManager.default.fileExists(atPath: pluginPath) {
+            try FileManager.default.removeItem(atPath: pluginPath)
+        }
     }
 
     private static func findPluginSource(near hookScriptPath: String) -> String? {
@@ -56,5 +58,12 @@ struct OpenCodeProvider: AIProviderIntegration {
         let candidate = (hookDir as NSString).appendingPathComponent(pluginScriptName)
         guard FileManager.default.fileExists(atPath: candidate) else { return nil }
         return candidate
+    }
+
+    static func pluginPaths(homeDirectory: String = NSHomeDirectory()) -> [String] {
+        [
+            "\(homeDirectory)/.config/opencode/plugins/\(pluginFileName)",
+            "\(homeDirectory)/.opencode/plugins/\(pluginFileName)",
+        ]
     }
 }
