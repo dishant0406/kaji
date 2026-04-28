@@ -3,6 +3,37 @@ export const DroidNotificationPlugin = async ({ client }) => ({
     const socketPath = process.env.DROID_SOCKET_PATH
     const paneID = process.env.DROID_PANE_ID
     if (!socketPath || !paneID) return
+
+    const send = async (payload) => {
+      try {
+        const { createConnection } = await import("net")
+        const conn = createConnection({ path: socketPath })
+        conn.on("error", () => {})
+        conn.write(payload, () => conn.end())
+        await new Promise((resolve) => {
+          conn.on("close", resolve)
+          setTimeout(resolve, 3000)
+        })
+      } catch {}
+    }
+
+    if (event.type === "session.status") {
+      const status = event.properties?.status
+      if (status === "active") {
+        await send(`opencode_activity|${paneID}|start|`)
+        return
+      }
+      if (status === "idle" || status === "error") {
+        await send(`opencode_activity|${paneID}|stop|`)
+        return
+      }
+    }
+
+    if (event.type === "question.asked" || event.type === "permission.asked") {
+      await send(`opencode_activity|${paneID}|stop|`)
+      return
+    }
+
     if (event.type !== "session.idle") return
 
     const sessionID = event.properties.sessionID
@@ -29,16 +60,7 @@ export const DroidNotificationPlugin = async ({ client }) => ({
     } catch {}
 
     const payload = `opencode|${paneID}|OpenCode|${body}`
-
-    try {
-      const { createConnection } = await import("net")
-      const conn = createConnection({ path: socketPath })
-      conn.on("error", () => {})
-      conn.write(payload, () => conn.end())
-      await new Promise((resolve) => {
-        conn.on("close", resolve)
-        setTimeout(resolve, 3000)
-      })
-    } catch {}
+    await send(`opencode_activity|${paneID}|stop|`)
+    await send(payload)
   },
 })

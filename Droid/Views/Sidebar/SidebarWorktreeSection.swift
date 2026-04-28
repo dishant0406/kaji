@@ -48,6 +48,7 @@ struct SidebarWorktreeRow: View {
     @State private var hovered = false
     @State private var isRenaming = false
     @State private var renameText = ""
+    @State private var notificationStore = NotificationStore.shared
     @FocusState private var renameFieldFocused: Bool
 
     private var displayName: String {
@@ -86,7 +87,7 @@ struct SidebarWorktreeRow: View {
                 }
             }
             Spacer(minLength: 0)
-            let unread = NotificationStore.shared.unreadCount(for: projectID, worktreeID: worktree.id)
+            let unread = notificationStore.unreadCount(for: projectID, worktreeID: worktree.id)
             if unread > 0 {
                 NotificationBadge(count: unread)
             }

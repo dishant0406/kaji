@@ -208,6 +208,7 @@ struct SidebarFooter: View {
     @AppStorage(AIUsageSettingsStore.sidebarPreviewProviderIDKey) private var pinnedPreviewProviderID: String = ""
     @State private var showThemePicker = false
     @State private var showNotifications = false
+    @State private var notificationStore = NotificationStore.shared
     private let usageService = AIUsageService.shared
 
     private var usageDisplayMode: AIUsageDisplayMode {
@@ -215,8 +216,6 @@ struct SidebarFooter: View {
     }
 
     private let usageRefreshTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-
-    private var notificationStore: NotificationStore { NotificationStore.shared }
 
     var body: some View {
         VStack(spacing: 0) {

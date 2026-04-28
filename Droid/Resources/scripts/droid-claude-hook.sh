@@ -32,6 +32,11 @@ send_notification() {
     send_socket_message "$DROID_SOCKET_PATH" "$type|$DROID_PANE_ID|$title|$body"
 }
 
+send_activity() {
+    local state="$1"
+    send_socket_message "$DROID_SOCKET_PATH" "claude_activity|$DROID_PANE_ID|$state|"
+}
+
 extract_last_message() {
     local msg=""
     msg=$(printf '%s' "$input" | grep -o '"last_assistant_message":"[^"]*"' | head -1 | cut -d'"' -f4)
@@ -43,10 +48,19 @@ extract_last_message() {
 }
 
 case "$event" in
+    userpromptsubmit)
+        send_activity "start"
+        ;;
+    permissionrequest)
+        send_activity "stop"
+        send_notification "claude_hook" "Claude Code" "Needs permission"
+        ;;
     notification)
+        send_activity "stop"
         send_notification "claude_hook" "Claude Code" "Needs attention"
         ;;
     stop)
+        send_activity "stop"
         body=$(extract_last_message)
         send_notification "claude_hook" "Claude Code" "$body"
         ;;
