@@ -142,6 +142,10 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     @MainActor
     private func dispatchNotification(type: String, title: String, body: String, paneIDString: String?) {
+        if handleActivityMessage(type: type, title: title, paneIDString: paneIDString) {
+            return
+        }
+
         let source = AIProviderRegistry.shared.notificationSource(for: type)
 
         guard let appState = NotificationStore.shared.appState else {
@@ -181,6 +185,35 @@ final class NotificationSocketServer: @unchecked Sendable {
             body: body,
             appState: appState
         )
+    }
+
+    @MainActor
+    private func handleActivityMessage(type: String, title: String, paneIDString: String?) -> Bool {
+        guard type.hasSuffix("_activity"),
+              let paneIDString,
+              let paneID = UUID(uuidString: paneIDString),
+              let appState = NotificationStore.shared.appState
+        else {
+            return false
+        }
+
+        let providerID = String(type.dropLast("_activity".count))
+        if title.lowercased() == "start" {
+            AIActivityStore.shared.start(
+                providerID: providerID,
+                paneID: paneID,
+                appState: appState,
+                worktreeStore: NotificationStore.shared.worktreeStore
+            )
+            return true
+        }
+
+        if title.lowercased() == "stop" {
+            AIActivityStore.shared.stop(paneID: paneID)
+            return true
+        }
+
+        return false
     }
 
     private func cleanup() {

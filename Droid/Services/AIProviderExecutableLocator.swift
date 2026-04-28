@@ -13,7 +13,8 @@ enum AIProviderExecutableLocator {
                 env: env,
                 homeDirectory: homeDirectory,
                 fileManager: fileManager
-            ) else {
+            )
+            else {
                 return false
             }
             return fileManager.isExecutableFile(atPath: path)

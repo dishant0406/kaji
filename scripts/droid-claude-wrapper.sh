@@ -17,6 +17,7 @@ find_real_claude() {
 }
 
 REAL_CLAUDE="$(find_real_claude)" || { echo "Error: claude not found in PATH" >&2; exit 127; }
+HELPER_SCRIPT="$(cd "$(dirname "$0")" && pwd)/droid-ai-activity.sh"
 
 case "${1:-}" in
     mcp|config|api-key) exec "$REAL_CLAUDE" "$@" ;;
@@ -28,4 +29,8 @@ escaped_hook=$(printf '%s' "$HOOK_SCRIPT" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
 HOOKS_JSON="{\"hooks\":{\"Stop\":[{\"matcher\":\"\",\"hooks\":[{\"type\":\"command\",\"command\":\"'${escaped_hook}' stop\",\"timeout\":10}]}],\"Notification\":[{\"matcher\":\"\",\"hooks\":[{\"type\":\"command\",\"command\":\"'${escaped_hook}' notification\",\"timeout\":10}]}]}}"
 
-exec "$REAL_CLAUDE" --settings "$HOOKS_JSON" "$@"
+"$HELPER_SCRIPT" claude start || true
+"$REAL_CLAUDE" --settings "$HOOKS_JSON" "$@"
+status=$?
+"$HELPER_SCRIPT" claude stop || true
+exit $status

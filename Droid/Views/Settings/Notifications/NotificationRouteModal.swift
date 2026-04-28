@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct NotificationRouteModal: View {
@@ -7,6 +8,9 @@ struct NotificationRouteModal: View {
     let onSave: (NotificationRoutingRule) -> Void
     @State private var draft: NotificationRoutingRule
     @State private var selectedDestinationIDs: Set<UUID>
+    @State private var selectedSound = defaultSoundOptionID
+
+    private static let defaultSoundOptionID = "__default__"
 
     init(
         existing: NotificationRoutingRule?,
@@ -26,6 +30,7 @@ struct NotificationRouteModal: View {
         )
         _draft = State(initialValue: route)
         _selectedDestinationIDs = State(initialValue: Set(route.destinationIDs))
+        _selectedSound = State(initialValue: route.sound?.rawValue ?? Self.defaultSoundOptionID)
     }
 
     var body: some View {
@@ -54,6 +59,16 @@ struct NotificationRouteModal: View {
                             selection: $draft.eventKind,
                             width: 190
                         )
+                    }
+                }
+                NotificationFormRow("Sound") {
+                    DroidSelect(
+                        options: soundOptions,
+                        selection: $selectedSound,
+                        width: 190
+                    )
+                    .onChange(of: selectedSound) { _, newValue in
+                        previewSound(newValue)
                     }
                 }
                 NotificationFormBlock("Send To") {
@@ -125,6 +140,7 @@ struct NotificationRouteModal: View {
                 .buttonStyle(DroidButtonStyle(.secondary))
             Button(existing == nil ? "Create" : "Save") {
                 draft.destinationIDs = Array(selectedDestinationIDs)
+                draft.sound = selectedSound == Self.defaultSoundOptionID ? nil : NotificationSound(rawValue: selectedSound)
                 onSave(draft)
             }
             .buttonStyle(DroidButtonStyle(.primary))
@@ -150,5 +166,22 @@ struct NotificationRouteModal: View {
                 }
             }
         )
+    }
+
+    private var soundOptions: [DroidSelectOption<String>] {
+        [DroidSelectOption(id: Self.defaultSoundOptionID, title: "Use app default", value: Self.defaultSoundOptionID)] +
+            NotificationSound.allCases.map {
+                DroidSelectOption(id: $0.rawValue, title: $0.rawValue, value: $0.rawValue)
+            }
+    }
+
+    private func previewSound(_ value: String) {
+        guard value != Self.defaultSoundOptionID,
+              let sound = NotificationSound(rawValue: value),
+              sound != .none
+        else {
+            return
+        }
+        NSSound(named: .init(sound.rawValue))?.play()
     }
 }

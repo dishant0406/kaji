@@ -41,7 +41,8 @@ struct NotificationRouteRow: View {
     private var summary: String {
         let source = route.source.rawValue
         let event = route.eventKind.rawValue
+        let sound = route.sound?.rawValue ?? "App default sound"
         let destinations = destinationNames.isEmpty ? "No destinations" : destinationNames.joined(separator: ", ")
-        return "\(source) • \(event) • \(destinations)"
+        return "\(source) • \(event) • \(destinations) • \(sound)"
     }
 }

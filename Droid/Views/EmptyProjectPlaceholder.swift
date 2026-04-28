@@ -58,7 +58,7 @@ struct EmptyProjectPlaceholder: View {
     }
 
     private func run(_ launcher: CLILauncherConfiguration) {
-        let command = launcher.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let command = CLILaunchCommandResolver.resolve(launcher)
         guard !command.isEmpty else { return }
         appState.createCommandTab(
             projectID: project.id,

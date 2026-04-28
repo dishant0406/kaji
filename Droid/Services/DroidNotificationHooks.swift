@@ -58,6 +58,9 @@ enum DroidNotificationHooks {
         for _ in 0 ..< 10 {
             let candidate = dir.appendingPathComponent("scripts/\(fileName)")
             if FileManager.default.fileExists(atPath: candidate.path) {
+                if !FileManager.default.isExecutableFile(atPath: candidate.path) {
+                    try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: candidate.path)
+                }
                 return candidate.path
             }
             let parent = dir.deletingLastPathComponent()

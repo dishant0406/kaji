@@ -27,6 +27,7 @@ struct NotificationEventNormalizerTests {
 
         #expect(event.source == .codex)
         #expect(event.kind == .completed)
+        #expect(event.title == "Turn completed · muxy")
         #expect(event.project == "muxy")
         #expect(event.worktree == "muxy")
     }

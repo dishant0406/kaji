@@ -150,7 +150,7 @@ final class NotificationStore {
         switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
         case .replaced:
             scheduleSave()
-            deliverOutbound(notification)
+            deliverOutbound(notification, event: normalizedEvent(for: notification))
             return
         case .ignored:
             scheduleSave()
@@ -171,10 +171,11 @@ final class NotificationStore {
             isTargetTabActive: NotificationNavigator.isActiveTab(notification.tabID, appState: appState)
         )
         notification.isRead = decision == .persistReadAndDeliver
+        clearActivityIfNeeded(for: notification)
         switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
         case .replaced:
             scheduleSave()
-            deliverOutbound(notification)
+            deliverOutbound(notification, event: normalizedEvent(for: notification))
             return
         case .ignored:
             scheduleSave()
@@ -191,28 +192,44 @@ final class NotificationStore {
     }
 
     private func deliverNotification(_ notification: DroidNotification) {
+        let event = normalizedEvent(for: notification)
         if Self.defaults.bool(forKey: "droid.notifications.toastEnabled", fallback: true) {
-            ToastState.shared.show(notification.title)
+            ToastState.shared.show(
+                NotificationDisplayTextResolver.title(
+                    for: notification,
+                    appState: appState,
+                    worktreeStore: worktreeStore
+                )
+            )
         }
-        playSound()
-        deliverOutbound(notification)
+        playSound(for: event)
+        deliverOutbound(notification, event: event)
     }
 
-    private func deliverOutbound(_ notification: DroidNotification) {
-        let event = NotificationEventNormalizer.normalize(
+    private func normalizedEvent(for notification: DroidNotification) -> NotificationOutboundEvent {
+        NotificationEventNormalizer.normalize(
             notification: notification,
             appState: appState,
             worktreeStore: worktreeStore
         )
+    }
+
+    private func deliverOutbound(_ notification: DroidNotification, event: NotificationOutboundEvent) {
         CodexOutboundNotificationCoordinator.shared.deliver(notification: notification, event: event) { event in
             await NotificationIntegrationStore.shared.deliver(event)
         }
     }
 
-    private func playSound() {
-        let soundName = Self.defaults.string(forKey: "droid.notifications.sound") ?? NotificationSound.funk.rawValue
-        guard soundName != NotificationSound.none.rawValue else { return }
-        NSSound(named: .init(soundName))?.play()
+    private func playSound(for event: NotificationOutboundEvent) {
+        let defaultSoundName = Self.defaults.string(forKey: "droid.notifications.sound") ?? NotificationSound.funk.rawValue
+        let defaultSound = NotificationSound(rawValue: defaultSoundName) ?? .funk
+        let resolvedSound = NotificationRouteSoundResolver.resolve(
+            routes: NotificationIntegrationStore.shared.routes,
+            event: event,
+            defaultSound: defaultSound
+        )
+        guard resolvedSound != .none else { return }
+        NSSound(named: .init(resolvedSound.rawValue))?.play()
     }
 
     func markAsRead(_ id: UUID) {
@@ -259,6 +276,15 @@ final class NotificationStore {
     private func trimIfNeeded() {
         guard notifications.count > Self.maxNotifications else { return }
         notifications = Array(notifications.prefix(Self.maxNotifications))
+    }
+
+    private func clearActivityIfNeeded(for notification: DroidNotification) {
+        guard case .aiProvider = notification.source,
+              normalizedEvent(for: notification).kind == .completed
+        else {
+            return
+        }
+        AIActivityStore.shared.stop(paneID: notification.paneID)
     }
 
     private func scheduleSave() {

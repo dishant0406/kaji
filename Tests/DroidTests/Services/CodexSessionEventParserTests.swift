@@ -46,4 +46,36 @@ struct CodexSessionEventParserTests {
 
         #expect(completion == .init(turnID: "turn-2", message: "Turn completed"))
     }
+
+    @Test
+    func taskCompleteUsesLastFinalAgentMessageWhenPayloadMessageMissing() {
+        var context = CodexSessionEventParser.FileContext(originator: "codex-tui", source: "cli")
+        _ = CodexSessionEventParser.consume(
+            line: #"{"type":"event_msg","payload":{"type":"agent_message","phase":"final_answer","message":"Long answer from Codex.\nSecond line."}}"#,
+            context: &context
+        )
+
+        let completion = CodexSessionEventParser.consume(
+            line: #"{"type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-3"}}"#,
+            context: &context
+        )
+
+        #expect(completion == .init(turnID: "turn-3", message: "Long answer from Codex. Second line."))
+    }
+
+    @Test
+    func taskCompleteUsesFinalAssistantResponseItemWhenPayloadMessageMissing() {
+        var context = CodexSessionEventParser.FileContext(originator: "codex_cli_rs", source: "cli")
+        _ = CodexSessionEventParser.consume(
+            line: #"{"type":"response_item","payload":{"type":"message","role":"assistant","phase":"final_answer","content":[{"type":"output_text","text":"Done from response item."}]}}"#,
+            context: &context
+        )
+
+        let completion = CodexSessionEventParser.consume(
+            line: #"{"type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-4","last_agent_message":null}}"#,
+            context: &context
+        )
+
+        #expect(completion == .init(turnID: "turn-4", message: "Done from response item."))
+    }
 }
