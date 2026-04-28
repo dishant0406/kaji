@@ -200,6 +200,8 @@ private struct ProjectDragState {
 struct SidebarFooter: View {
     var expanded: Bool = false
     @Binding var showAIUsagePopover: Bool
+    @Environment(AppState.self) private var appState
+    @Environment(ProjectStore.self) private var projectStore
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage(AIUsageSettingsStore.usageEnabledKey) private var usageEnabled = false
@@ -208,7 +210,9 @@ struct SidebarFooter: View {
     @AppStorage(AIUsageSettingsStore.sidebarPreviewProviderIDKey) private var pinnedPreviewProviderID: String = ""
     @State private var showThemePicker = false
     @State private var showNotifications = false
+    @State private var showResourceMonitor = false
     @State private var notificationStore = NotificationStore.shared
+    @State private var resourceMonitor = ResourceMonitorService.shared
     private let usageService = AIUsageService.shared
 
     private var usageDisplayMode: AIUsageDisplayMode {
@@ -317,6 +321,16 @@ struct SidebarFooter: View {
             if usageEnabled {
                 aiUsageButton
             }
+            IconButton(symbol: "memorychip", accessibilityLabel: "Resource Monitor") { showResourceMonitor.toggle() }
+                .help("Resource Monitor")
+                .droidPopover(isPresented: $showResourceMonitor, preferredEdge: .top) {
+                    ResourceMonitorPanel(
+                        projects: resourceMonitor.projects,
+                        isRefreshing: resourceMonitor.isRefreshing,
+                        onRefresh: { refreshResourceMonitor() },
+                        onDismiss: { showResourceMonitor = false }
+                    )
+                }
             IconButton(symbol: notificationBellIcon, accessibilityLabel: "Notifications") { showNotifications.toggle() }
                 .help("Notifications")
                 .droidPopover(isPresented: $showNotifications, preferredEdge: .top) {
@@ -355,6 +369,16 @@ struct SidebarFooter: View {
             if usageEnabled {
                 aiUsageButton
             }
+            IconButton(symbol: "memorychip", accessibilityLabel: "Resource Monitor") { showResourceMonitor.toggle() }
+                .help("Resource Monitor")
+                .droidPopover(isPresented: $showResourceMonitor, preferredEdge: .top) {
+                    ResourceMonitorPanel(
+                        projects: resourceMonitor.projects,
+                        isRefreshing: resourceMonitor.isRefreshing,
+                        onRefresh: { refreshResourceMonitor() },
+                        onDismiss: { showResourceMonitor = false }
+                    )
+                }
             IconButton(symbol: notificationBellIcon, accessibilityLabel: "Notifications") { showNotifications.toggle() }
                 .help("Notifications")
                 .droidPopover(isPresented: $showNotifications, preferredEdge: .top) {
@@ -395,5 +419,9 @@ struct SidebarFooter: View {
 
     private func toggleAIUsagePopover() {
         showAIUsagePopover.toggle()
+    }
+
+    private func refreshResourceMonitor() {
+        resourceMonitor.refresh(appState: appState, projectStore: projectStore)
     }
 }

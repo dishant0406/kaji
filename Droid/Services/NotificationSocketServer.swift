@@ -8,6 +8,9 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     private var serverFD: Int32 = -1
     private var acceptSource: DispatchSourceRead?
+    private var healthTimer: DispatchSourceTimer?
+    private var retryWorkItem: DispatchWorkItem?
+    private var wantsListening = false
     private let queue = DispatchQueue(label: "app.droid.notificationSocket")
 
     static var socketPath: String {
@@ -20,23 +23,39 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     func start() {
         queue.async { [weak self] in
+            self?.wantsListening = true
+            self?.startHealthChecksIfNeeded()
             self?.startListening()
         }
     }
 
     func stop() {
         queue.async { [weak self] in
+            self?.wantsListening = false
             self?.cleanup()
         }
     }
 
+    func restart() {
+        queue.async { [weak self] in
+            self?.wantsListening = true
+            self?.startHealthChecksIfNeeded()
+            self?.cleanup()
+            self?.startListening()
+        }
+    }
+
     private func startListening() {
+        guard acceptSource == nil else { return }
+        retryWorkItem?.cancel()
+        retryWorkItem = nil
         let path = Self.socketPath
         unlink(path)
 
         serverFD = socket(AF_UNIX, SOCK_STREAM, 0)
         guard serverFD >= 0 else {
             logger.error("Failed to create socket: \(String(cString: strerror(errno)))")
+            scheduleRetry()
             return
         }
 
@@ -56,6 +75,7 @@ final class NotificationSocketServer: @unchecked Sendable {
             logger.error("Failed to bind socket: \(String(cString: strerror(errno)))")
             close(serverFD)
             serverFD = -1
+            scheduleRetry()
             return
         }
 
@@ -65,6 +85,7 @@ final class NotificationSocketServer: @unchecked Sendable {
             logger.error("Failed to listen on socket: \(String(cString: strerror(errno)))")
             close(serverFD)
             serverFD = -1
+            scheduleRetry()
             return
         }
 
@@ -86,7 +107,14 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     private func acceptConnection() {
         let clientFD = accept(serverFD, nil, nil)
-        guard clientFD >= 0 else { return }
+        guard clientFD >= 0 else {
+            let code = errno
+            guard NotificationSocketRecoveryPolicy.shouldRetryAfterAcceptFailure(errno: code) else { return }
+            logger.error("Accept failed on notification socket: \(String(cString: strerror(code)))")
+            cleanupListener()
+            scheduleRetry()
+            return
+        }
 
         queue.async { [weak self] in
             self?.handleClient(clientFD)
@@ -192,7 +220,59 @@ final class NotificationSocketServer: @unchecked Sendable {
     }
 
     private func cleanup() {
+        retryWorkItem?.cancel()
+        retryWorkItem = nil
+        healthTimer?.cancel()
+        healthTimer = nil
+        cleanupListener()
+    }
+
+    private func cleanupListener() {
         acceptSource?.cancel()
         acceptSource = nil
+    }
+
+    private func scheduleRetry() {
+        guard wantsListening, retryWorkItem == nil else { return }
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.retryWorkItem = nil
+            guard self.wantsListening else { return }
+            self.cleanupListener()
+            self.startListening()
+        }
+        retryWorkItem = workItem
+        queue.asyncAfter(
+            deadline: .now() + NotificationSocketRecoveryPolicy.retryDelaySeconds,
+            execute: workItem
+        )
+    }
+
+    private func startHealthChecksIfNeeded() {
+        guard healthTimer == nil else { return }
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(
+            deadline: .now() + NotificationSocketRecoveryPolicy.healthCheckIntervalSeconds,
+            repeating: NotificationSocketRecoveryPolicy.healthCheckIntervalSeconds
+        )
+        timer.setEventHandler { [weak self] in
+            self?.performHealthCheck()
+        }
+        healthTimer = timer
+        timer.resume()
+    }
+
+    private func performHealthCheck() {
+        let socketExists = FileManager.default.fileExists(atPath: Self.socketPath)
+        let shouldRecover = NotificationSocketRecoveryPolicy.shouldRecover(
+            wantsListening: wantsListening,
+            socketExists: socketExists,
+            hasAcceptSource: acceptSource != nil,
+            serverFD: serverFD
+        )
+        guard shouldRecover else { return }
+        logger.notice("Notification socket health check requested listener recovery")
+        cleanupListener()
+        startListening()
     }
 }

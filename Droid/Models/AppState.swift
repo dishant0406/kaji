@@ -331,6 +331,36 @@ final class AppState {
         dispatch(.closeTab(projectID: projectID, areaID: areaID, tabID: tabID))
     }
 
+    func closeMonitoredTerminal(_ tabID: UUID, areaID: UUID, projectID: UUID) {
+        guard let workspace = workspace(for: projectID),
+              let workspaceTab = workspace.tabs.first(where: { $0.root.findArea(id: areaID) != nil }),
+              let area = workspaceTab.root.findArea(id: areaID)
+        else { return }
+
+        if area.tabs.count > 1 {
+            guard let removed = area.removeTab(tabID) else { return }
+            if let paneID = removed.content.pane?.id {
+                terminalViews.removeView(for: paneID)
+            }
+            reconcilePendingClosures()
+            pruneNavigationHistory()
+            recordCurrentNavigationEntry()
+            if let activeTabID = NotificationNavigator.activeTabID(appState: self) {
+                NotificationStore.shared.markAsRead(tabID: activeTabID)
+            }
+            saveWorkspaces()
+            saveSelection()
+            return
+        }
+
+        if workspaceTab.root.allAreas().count > 1 {
+            dispatch(.closeArea(projectID: projectID, areaID: areaID))
+            return
+        }
+
+        forceCloseTab(workspaceTab.id, areaID: areaID, projectID: projectID)
+    }
+
     func confirmCloseRunningTab() {
         guard let pending = pendingProcessTabClose else { return }
         pendingProcessTabClose = nil
