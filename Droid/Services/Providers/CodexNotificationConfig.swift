@@ -5,23 +5,24 @@ enum CodexNotificationConfig {
     static let endMarker = "# droid-notify-end"
     private static let originalMarker = "# droid-notify-original = "
     private static let passthroughFlag = "--passthrough-count"
+    private static let blockedPassthroughExecutables = ["SkyComputerUseClient"]
 
     static func install(in content: String, scriptPath: String) -> String {
         var lines = content.components(separatedBy: .newlines)
         if let range = managedBlockRange(in: lines) {
-            let passthrough = originalNotifyArguments(in: Array(lines[range]))
+            let passthrough = sanitizedPassthrough(originalNotifyArguments(in: Array(lines[range])))
             lines.removeSubrange(range)
             return installManagedBlock(
                 in: lines,
                 scriptPath: scriptPath,
-                passthrough: passthrough ?? existingNotifyArguments(in: lines)
+                passthrough: passthrough ?? sanitizedPassthrough(existingNotifyArguments(in: lines))
             )
         }
 
         return installManagedBlock(
             in: lines,
             scriptPath: scriptPath,
-            passthrough: existingNotifyArguments(in: lines)
+            passthrough: sanitizedPassthrough(existingNotifyArguments(in: lines))
         )
     }
 
@@ -212,6 +213,15 @@ enum CodexNotificationConfig {
                 .replacingOccurrences(of: "\\\"", with: "\"")
                 .replacingOccurrences(of: "\\\\", with: "\\")
         }
+    }
+
+    private static func sanitizedPassthrough(_ arguments: [String]?) -> [String]? {
+        guard let arguments, !arguments.isEmpty else { return nil }
+        let containsBlockedExecutable = arguments.contains { argument in
+            let executableName = URL(fileURLWithPath: argument).lastPathComponent
+            return blockedPassthroughExecutables.contains(executableName)
+        }
+        return containsBlockedExecutable ? nil : arguments
     }
 }
 

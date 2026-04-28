@@ -29,6 +29,35 @@ struct CodexNotificationConfigTests {
     }
 
     @Test
+    func installDropsLegacySkyComputerUsePassthrough() {
+        let input = """
+        notify = ["/Users/test/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+        """
+
+        let output = CodexNotificationConfig.install(in: input, scriptPath: "/tmp/droid-codex-notify.sh")
+
+        #expect(!output.contains("SkyComputerUseClient"))
+        #expect(output.contains(#"notify = ["/bin/bash", "/tmp/droid-codex-notify.sh"]"#))
+        #expect(!output.contains("# droid-notify-original"))
+    }
+
+    @Test
+    func installMigratesManagedBlockAwayFromLegacySkyComputerUsePassthrough() {
+        let input = """
+        # droid-notify-start
+        # droid-notify-original = ["/Users/test/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+        notify = ["/bin/bash", "/tmp/droid-codex-notify.sh", "--passthrough-count", "2", "/Users/test/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+        # droid-notify-end
+        """
+
+        let output = CodexNotificationConfig.install(in: input, scriptPath: "/tmp/droid-codex-notify.sh")
+
+        #expect(!output.contains("SkyComputerUseClient"))
+        #expect(output.contains(#"notify = ["/bin/bash", "/tmp/droid-codex-notify.sh"]"#))
+        #expect(!output.contains("# droid-notify-original"))
+    }
+
+    @Test
     func installPlacesManagedBlockBeforeFirstTable() {
         let input = """
         approval_policy = "never"
