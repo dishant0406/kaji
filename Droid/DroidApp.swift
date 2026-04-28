@@ -100,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UpdateService.shared.start()
         ModifierKeyMonitor.shared.start()
         NotificationSocketServer.shared.start()
+        CodexSessionMonitor.shared.start()
         AIProviderRegistry.shared.installAll()
         _ = AIUsageSettingsStore.isUsageEnabled()
     }
@@ -165,6 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         onTerminate?()
         NotificationStore.shared.saveToDisk()
+        CodexSessionMonitor.shared.stop()
         NotificationSocketServer.shared.stop()
     }
 

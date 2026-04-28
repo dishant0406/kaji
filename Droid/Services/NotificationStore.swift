@@ -147,6 +147,11 @@ final class NotificationStore {
             body: body,
             isRead: markRead
         )
+        if CodexNotificationCoalescer.merge(notification, into: &notifications) {
+            scheduleSave()
+            return
+        }
+        guard !NotificationDeduplicator.isDuplicate(notification, in: notifications) else { return }
         notifications.insert(notification, at: 0)
         trimIfNeeded()
         scheduleSave()
@@ -159,6 +164,11 @@ final class NotificationStore {
             isTargetTabActive: NotificationNavigator.isActiveTab(notification.tabID, appState: appState)
         )
         notification.isRead = decision == .persistReadAndDeliver
+        if CodexNotificationCoalescer.merge(notification, into: &notifications) {
+            scheduleSave()
+            return
+        }
+        guard !NotificationDeduplicator.isDuplicate(notification, in: notifications) else { return }
 
         notifications.insert(notification, at: 0)
         trimIfNeeded()
