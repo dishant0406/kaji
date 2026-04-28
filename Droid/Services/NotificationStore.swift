@@ -147,9 +147,16 @@ final class NotificationStore {
             body: body,
             isRead: markRead
         )
-        if CodexNotificationCoalescer.merge(notification, into: &notifications) {
+        switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
+        case .replaced:
+            scheduleSave()
+            deliverOutbound(notification)
+            return
+        case .ignored:
             scheduleSave()
             return
+        case .none:
+            break
         }
         guard !NotificationDeduplicator.isDuplicate(notification, in: notifications) else { return }
         notifications.insert(notification, at: 0)
@@ -164,9 +171,16 @@ final class NotificationStore {
             isTargetTabActive: NotificationNavigator.isActiveTab(notification.tabID, appState: appState)
         )
         notification.isRead = decision == .persistReadAndDeliver
-        if CodexNotificationCoalescer.merge(notification, into: &notifications) {
+        switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
+        case .replaced:
+            scheduleSave()
+            deliverOutbound(notification)
+            return
+        case .ignored:
             scheduleSave()
             return
+        case .none:
+            break
         }
         guard !NotificationDeduplicator.isDuplicate(notification, in: notifications) else { return }
 
@@ -181,12 +195,16 @@ final class NotificationStore {
             ToastState.shared.show(notification.title)
         }
         playSound()
+        deliverOutbound(notification)
+    }
+
+    private func deliverOutbound(_ notification: DroidNotification) {
         let event = NotificationEventNormalizer.normalize(
             notification: notification,
             appState: appState,
             worktreeStore: worktreeStore
         )
-        Task {
+        CodexOutboundNotificationCoordinator.shared.deliver(notification: notification, event: event) { event in
             await NotificationIntegrationStore.shared.deliver(event)
         }
     }

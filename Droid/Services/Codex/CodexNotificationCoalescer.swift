@@ -1,13 +1,19 @@
 import Foundation
 
 enum CodexNotificationCoalescer {
-    static func merge(_ notification: DroidNotification, into existing: inout [DroidNotification]) -> Bool {
+    enum MergeResult {
+        case none
+        case replaced
+        case ignored
+    }
+
+    static func merge(_ notification: DroidNotification, into existing: inout [DroidNotification]) -> MergeResult {
         guard isCodex(notification),
               let latest = existing.first,
               isCodex(latest),
               notification.timestamp.timeIntervalSince(latest.timestamp) < 15
         else {
-            return false
+            return .none
         }
 
         let latestIsGeneric = isGenericTurnCompleted(latest.body)
@@ -15,14 +21,14 @@ enum CodexNotificationCoalescer {
 
         if latestIsGeneric, !incomingIsGeneric {
             existing[0] = notification
-            return true
+            return .replaced
         }
 
         if !latestIsGeneric, incomingIsGeneric {
-            return true
+            return .ignored
         }
 
-        return false
+        return .none
     }
 
     private static func isCodex(_ notification: DroidNotification) -> Bool {
