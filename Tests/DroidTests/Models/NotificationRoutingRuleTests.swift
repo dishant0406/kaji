@@ -10,10 +10,12 @@ struct NotificationRoutingRuleTests {
             name: "Codex completions",
             source: .codex,
             eventKind: .completed,
+            sound: .glass,
             destinationIDs: [UUID()]
         )
 
         #expect(route.matches(.sample))
+        #expect(route.sound == .glass)
     }
 
     @Test

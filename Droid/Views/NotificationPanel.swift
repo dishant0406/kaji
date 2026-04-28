@@ -31,7 +31,11 @@ struct NotificationPanel: View {
             NotificationPanelItem(
                 id: n.id,
                 sourceIcon: registry.iconName(for: n.source),
-                title: n.title,
+                title: NotificationDisplayTextResolver.title(
+                    for: n,
+                    appState: store.appState,
+                    worktreeStore: store.worktreeStore
+                ),
                 body: n.body,
                 timestamp: n.timestamp,
                 isRead: n.isRead

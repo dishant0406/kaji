@@ -4,6 +4,7 @@ enum CodexSessionEventParser {
     struct FileContext: Equatable {
         var originator: String?
         var source: String?
+        var lastFinalMessage: String?
     }
 
     struct Completion: Equatable {
@@ -32,6 +33,25 @@ enum CodexSessionEventParser {
             return nil
         }
 
+        if type == "event_msg",
+           let payload = object["payload"] as? [String: Any],
+           payload["type"] as? String == "agent_message",
+           payload["phase"] as? String == "final_answer"
+        {
+            context.lastFinalMessage = normalizedOptionalMessage(payload["message"] as? String)
+            return nil
+        }
+
+        if type == "response_item",
+           let payload = object["payload"] as? [String: Any],
+           payload["type"] as? String == "message",
+           payload["role"] as? String == "assistant",
+           payload["phase"] as? String == "final_answer"
+        {
+            context.lastFinalMessage = normalizedOptionalMessage(messageText(from: payload["content"]))
+            return nil
+        }
+
         guard type == "event_msg",
               let payload = object["payload"] as? [String: Any],
               payload["type"] as? String == "task_complete",
@@ -41,7 +61,9 @@ enum CodexSessionEventParser {
             return nil
         }
 
-        let message = normalizedMessage(payload["last_agent_message"] as? String)
+        let message = normalizedMessage(
+            payload["last_agent_message"] as? String ?? context.lastFinalMessage
+        )
         return Completion(turnID: turnID, message: message)
     }
 
@@ -56,12 +78,26 @@ enum CodexSessionEventParser {
     }
 
     private static func normalizedMessage(_ message: String?) -> String {
+        normalizedOptionalMessage(message) ?? "Turn completed"
+    }
+
+    private static func normalizedOptionalMessage(_ message: String?) -> String? {
         let cleaned = (message ?? "")
             .replacingOccurrences(of: "\r", with: " ")
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard !cleaned.isEmpty else { return "Turn completed" }
+        guard !cleaned.isEmpty else { return nil }
         return String(cleaned.prefix(200))
+    }
+
+    private static func messageText(from content: Any?) -> String? {
+        guard let items = content as? [[String: Any]] else { return nil }
+        let parts = items.compactMap { item -> String? in
+            guard item["type"] as? String == "output_text" else { return nil }
+            return item["text"] as? String
+        }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " ")
     }
 }

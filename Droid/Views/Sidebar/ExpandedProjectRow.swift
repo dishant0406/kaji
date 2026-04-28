@@ -13,6 +13,7 @@ struct ExpandedProjectRow: View {
 
     @Environment(AppState.self) private var appState
     @Environment(WorktreeStore.self) private var worktreeStore
+    @State private var activityStore = AIActivityStore.shared
 
     @AppStorage(GeneralSettingsKeys.autoExpandWorktreesOnProjectSwitch)
     private var autoExpandWorktrees = false
@@ -44,6 +45,14 @@ struct ExpandedProjectRow: View {
 
     private var displayLetter: String {
         String(project.name.prefix(1)).uppercased()
+    }
+
+    private var hasOpenTerminal: Bool {
+        ProjectSidebarStateResolver.hasOpenTerminal(projectID: project.id, appState: appState)
+    }
+
+    private var hasRunningAgent: Bool {
+        activityStore.hasActiveAgent(projectID: project.id)
     }
 
     var body: some View {
@@ -135,6 +144,10 @@ struct ExpandedProjectRow: View {
 
             Spacer(minLength: 4)
 
+            if hasRunningAgent {
+                SidebarActivitySpinner()
+            }
+
             if isGitRepo {
                 worktreeChevron
             }
@@ -208,6 +221,10 @@ struct ExpandedProjectRow: View {
             }
         }
         .frame(width: 26, height: 26)
+        .shadow(
+            color: hasOpenTerminal ? DroidTheme.accent.opacity(isActive ? 0.18 : 0.12) : .clear,
+            radius: hasOpenTerminal ? 10 : 0
+        )
         .overlay {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                 .strokeBorder(iconBorderColor, lineWidth: 1)
@@ -276,12 +293,14 @@ struct ExpandedProjectRow: View {
 
     private var headerBackground: AnyShapeStyle {
         if isActive { return AnyShapeStyle(DroidTheme.surface) }
+        if hasOpenTerminal { return AnyShapeStyle(DroidTheme.secondaryBackground) }
         if hovered { return AnyShapeStyle(DroidTheme.hover) }
         return AnyShapeStyle(Color.clear)
     }
 
     private var iconBorderColor: Color {
         if isActive { return DroidTheme.border.opacity(0.7) }
+        if hasOpenTerminal { return DroidTheme.accent.opacity(0.28) }
         if hovered { return DroidTheme.border.opacity(0.65) }
         return .clear
     }

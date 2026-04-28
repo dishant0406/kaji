@@ -26,6 +26,7 @@ struct NotificationRoutingRule: Identifiable, Codable, Equatable {
     var name: String
     var source: SourceFilter
     var eventKind: KindFilter
+    var sound: NotificationSound?
     var destinationIDs: [UUID]
     var isEnabled: Bool
 
@@ -34,6 +35,7 @@ struct NotificationRoutingRule: Identifiable, Codable, Equatable {
         name: String,
         source: SourceFilter,
         eventKind: KindFilter,
+        sound: NotificationSound? = nil,
         destinationIDs: [UUID],
         isEnabled: Bool = true
     ) {
@@ -41,6 +43,7 @@ struct NotificationRoutingRule: Identifiable, Codable, Equatable {
         self.name = name
         self.source = source
         self.eventKind = eventKind
+        self.sound = sound
         self.destinationIDs = destinationIDs
         self.isEnabled = isEnabled
     }

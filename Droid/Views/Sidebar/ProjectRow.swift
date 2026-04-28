@@ -13,6 +13,7 @@ struct ProjectRow: View {
 
     @Environment(AppState.self) private var appState
     @Environment(WorktreeStore.self) private var worktreeStore
+    @State private var activityStore = AIActivityStore.shared
 
     @State private var hovered = false
     @State private var isRenaming = false
@@ -33,6 +34,14 @@ struct ProjectRow: View {
 
     private var displayLetter: String {
         String(project.name.prefix(1)).uppercased()
+    }
+
+    private var hasOpenTerminal: Bool {
+        ProjectSidebarStateResolver.hasOpenTerminal(projectID: project.id, appState: appState)
+    }
+
+    private var hasRunningAgent: Bool {
+        activityStore.hasActiveAgent(projectID: project.id)
     }
 
     var body: some View {
@@ -154,10 +163,20 @@ struct ProjectRow: View {
             }
         }
         .frame(width: 36, height: 36)
+        .shadow(
+            color: hasOpenTerminal ? DroidTheme.accent.opacity(isActive ? 0.22 : 0.14) : .clear,
+            radius: hasOpenTerminal ? 10 : 0
+        )
         .overlay(alignment: .topTrailing) {
             if unread > 0 {
                 NotificationBadge(count: unread)
                     .offset(x: 5, y: -5)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if hasRunningAgent {
+                SidebarActivitySpinner()
+                    .padding(4)
             }
         }
         .overlay {
@@ -192,6 +211,7 @@ struct ProjectRow: View {
 
     private var iconBorderColor: Color {
         if isActive { return DroidTheme.accent.opacity(0.7) }
+        if hasOpenTerminal { return DroidTheme.accent.opacity(0.32) }
         if hovered { return DroidTheme.border }
         return DroidTheme.border.opacity(0.55)
     }

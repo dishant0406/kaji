@@ -11,10 +11,15 @@ enum NotificationEventNormalizer {
         let kind = normalizeKind(source: source, title: notification.title, body: notification.body)
         let project = projectName(for: notification, appState: appState) ?? lastPathComponent(notification.worktreePath)
         let worktree = worktreeName(for: notification, worktreeStore: worktreeStore) ?? lastPathComponent(notification.worktreePath)
+        let title = normalizedTitle(
+            source: source,
+            title: notification.title,
+            project: project
+        )
         return NotificationOutboundEvent(
             source: source,
             kind: kind,
-            title: notification.title,
+            title: title,
             body: notification.body,
             project: project,
             worktree: worktree,
@@ -71,5 +76,20 @@ enum NotificationEventNormalizer {
 
     private static func lastPathComponent(_ path: String) -> String {
         URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    private static func normalizedTitle(
+        source: NotificationRouteSource,
+        title: String,
+        project: String
+    ) -> String {
+        guard source == .codex || source == .claude || source == .opencode,
+              !project.isEmpty,
+              !title.contains(project)
+        else {
+            return title
+        }
+
+        return title + " · " + project
     }
 }

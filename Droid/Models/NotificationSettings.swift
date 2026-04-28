@@ -1,6 +1,6 @@
 import Foundation
 
-enum NotificationSound: String, CaseIterable, Identifiable {
+enum NotificationSound: String, CaseIterable, Identifiable, Codable {
     case none = "None"
     case basso = "Basso"
     case blow = "Blow"

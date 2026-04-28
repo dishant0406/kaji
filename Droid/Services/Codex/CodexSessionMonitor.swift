@@ -158,6 +158,25 @@ final class CodexSessionMonitor: @unchecked Sendable {
 
         Task { @MainActor in
             guard CodexProvider().isEnabled else { return }
+            if let appState = NotificationStore.shared.appState,
+               let projectID = appState.activeProjectID,
+               let key = appState.activeWorktreeKey(for: projectID),
+               let context = NotificationFallbackContextResolver.resolve(
+                   key: key,
+                   appState: appState,
+                   worktreeStore: NotificationStore.shared.worktreeStore
+               )
+            {
+                NotificationStore.shared.addWithContext(
+                    context: context,
+                    source: .aiProvider("codex"),
+                    title: "Codex",
+                    body: completion.message,
+                    appState: appState
+                )
+                return
+            }
+
             NotificationStore.shared.addDetached(
                 source: .aiProvider("codex"),
                 title: "Codex",

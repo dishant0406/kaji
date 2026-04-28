@@ -138,7 +138,7 @@ The built-in integrations are good templates for writing your own:
 Regardless of where a notification comes from, Droid respects the user's choices under **Settings → Notifications**:
 
 - **Toast** — show an in-app banner
-- **Sound** — play a system sound on arrival
+- **Sound** — play a system sound on arrival, with optional per-rule overrides
 - **Position** — where the toast appears
 
 A dot also appears on the project and worktree rows in the sidebar until the notification is read.
