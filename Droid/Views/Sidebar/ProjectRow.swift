@@ -42,7 +42,7 @@ struct ProjectRow: View {
     }
 
     private var hasRunningAgent: Bool {
-        activityStore.hasActiveAgent(projectID: project.id)
+        activityStore.hasActiveAgent(projectID: project.id, appState: appState)
     }
 
     var body: some View {

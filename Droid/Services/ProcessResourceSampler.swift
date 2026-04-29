@@ -20,9 +20,13 @@ struct ProcessGroupResourceSample: Equatable {
 }
 
 enum ProcessResourceSampler {
+    static func samplesForProcessGroup(id: Int32) -> [ProcessResourceSample] {
+        guard id > 0 else { return [] }
+        return processGroupPIDs(id).compactMap(sampleProcess(pid:))
+    }
+
     static func sampleProcessGroup(id: Int32) -> ProcessGroupResourceSample? {
-        guard id > 0 else { return nil }
-        let samples = processGroupPIDs(id).compactMap(sampleProcess(pid:))
+        let samples = samplesForProcessGroup(id: id)
         return aggregate(processGroupID: id, samples: samples)
     }
 

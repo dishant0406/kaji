@@ -2,34 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleIdentifier</key>
-	<string>com.droid.app</string>
+	<key>CFBundleDisplayName</key>
+	<string>Droid</string>
 	<key>CFBundleExecutable</key>
 	<string>Droid</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.droid.app</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Droid</string>
-	<key>CFBundleDisplayName</key>
 	<string>Droid</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
-	<key>CFBundleVersion</key>
-	<string>374</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.23.14</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>14.0</string>
-	<key>NSHighResolutionCapable</key>
-	<true/>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
+	<string>0.23.15</string>
+	<key>CFBundleVersion</key>
+	<string>376</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
-	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>A process running in Droid's terminal would like to use AppleScript.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
@@ -40,6 +34,8 @@
 	<string>A process running in Droid's terminal would like to use the camera.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>A process running in Droid's terminal would like to access your contacts.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>A process running in Droid's terminal would like to access the local network.</string>
 	<key>NSLocationUsageDescription</key>
@@ -50,11 +46,15 @@
 	<string>A process running in Droid's terminal would like to access motion data.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>A process running in Droid's terminal would like to access your photo library.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>A process running in Droid's terminal would like to access your reminders.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>A process running in Droid's terminal would like to use speech recognition.</string>
 	<key>NSSystemAdministrationUsageDescription</key>
 	<string>A process running in Droid's terminal requires elevated privileges.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 </dict>
 </plist>
