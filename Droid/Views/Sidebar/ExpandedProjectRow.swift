@@ -53,7 +53,7 @@ struct ExpandedProjectRow: View {
     }
 
     private var hasRunningAgent: Bool {
-        activityStore.hasActiveAgent(projectID: project.id, appState: appState)
+        activityStore.hasActiveAgent(projectID: project.id)
     }
 
     var body: some View {

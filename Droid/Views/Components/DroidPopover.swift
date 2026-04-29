@@ -74,7 +74,9 @@ private struct DroidPopoverPresenter<PopoverContent: View>: NSViewRepresentable 
             from: nsView,
             isPresented: isPresented,
             preferredEdge: preferredEdge,
-            rootView: AnyView(DroidPopoverSurface(content: content))
+            makeRootView: {
+                AnyView(DroidPopoverSurface(content: content))
+            }
         )
     }
 
@@ -96,7 +98,21 @@ private struct DroidPopoverPresenter<PopoverContent: View>: NSViewRepresentable 
             view.postsFrameChangedNotifications = true
         }
 
-        func present(from view: NSView, isPresented: Bool, preferredEdge: DroidPopoverEdge, rootView: AnyView) {
+        func present(
+            from view: NSView,
+            isPresented: Bool,
+            preferredEdge: DroidPopoverEdge,
+            makeRootView: () -> AnyView
+        ) {
+            if !DroidPopoverPresentationPolicy.shouldPreparePopover(
+                isPresented: isPresented,
+                isShown: popover.isShown
+            ) {
+                return
+            }
+
+            let rootView = makeRootView()
+
             if hostingController == nil {
                 hostingController = NSHostingController(rootView: rootView)
                 hostingController?.view.appearance = NSAppearance(named: .darkAqua)
