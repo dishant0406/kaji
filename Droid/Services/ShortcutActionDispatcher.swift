@@ -122,6 +122,9 @@ struct ShortcutActionDispatcher {
         case .quickOpen:
             notificationCenter.post(name: .quickOpen, object: nil)
             return true
+        case .ask:
+            notificationCenter.post(name: .ask, object: nil)
+            return true
         case .switchWorktree:
             notificationCenter.post(name: .switchWorktree, object: nil)
             return true

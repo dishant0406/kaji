@@ -33,6 +33,7 @@ final class AppState {
         case createTab(projectID: UUID, areaID: UUID?)
         case createTabInDirectory(projectID: UUID, areaID: UUID?, directory: String)
         case createCommandTab(projectID: UUID, areaID: UUID?, title: String, command: String)
+        case createStartupCommandTab(projectID: UUID, areaID: UUID?, title: String, command: String)
         case createCommandSplit(projectID: UUID, title: String, command: String)
         case createVCSTab(projectID: UUID, areaID: UUID?)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
@@ -231,6 +232,10 @@ final class AppState {
 
     func createCommandTab(projectID: UUID, title: String, command: String) {
         dispatch(.createCommandTab(projectID: projectID, areaID: nil, title: title, command: command))
+    }
+
+    func createStartupCommandTab(projectID: UUID, title: String, command: String) {
+        dispatch(.createStartupCommandTab(projectID: projectID, areaID: nil, title: title, command: command))
     }
 
     func createCommandSplit(projectID: UUID, title: String, command: String) {

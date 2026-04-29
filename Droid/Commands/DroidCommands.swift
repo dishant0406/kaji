@@ -125,6 +125,12 @@ struct DroidCommands: Commands {
             }
             .shortcut(for: .quickOpen, store: keyBindings)
 
+            Button("Ask") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.ask)
+            }
+            .shortcut(for: .ask, store: keyBindings)
+
             Button("Save") {
                 guard isMainWindowFocused else { return }
                 performShortcutAction(.saveFile)

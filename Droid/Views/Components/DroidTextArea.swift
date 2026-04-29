@@ -6,6 +6,7 @@ struct DroidTextArea: View {
     var minHeight: CGFloat = 88
     var maxHeight: CGFloat?
     var monospaced = false
+    var onSubmit: (() -> Void)?
     var onCommandEnter: (() -> Void)?
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
     @FocusState private var isFocused: Bool
@@ -29,6 +30,10 @@ struct DroidTextArea: View {
                 .padding(.vertical, 4)
                 .focused($isFocused)
                 .onKeyPress(.return, phases: .down) { keyPress in
+                    if !keyPress.modifiers.contains(.shift), let onSubmit {
+                        onSubmit()
+                        return .handled
+                    }
                     guard keyPress.modifiers.contains(.command), let onCommandEnter else {
                         return .ignored
                     }

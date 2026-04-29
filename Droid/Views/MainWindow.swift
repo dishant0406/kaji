@@ -55,6 +55,7 @@ struct MainWindow: View {
     @AppStorage("droid.fileTreeWidth") private var fileTreePanelWidth: Double = .init(FileTreeLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
     @State private var showQuickOpen = false
+    @State private var showAsk = false
     @State private var showWorktreeSwitcher = false
     @State private var showSettings = false
     @State private var showCreateThemeModal = false
@@ -76,13 +77,16 @@ struct MainWindow: View {
             mainLayout
                 .environment(
                     \.overlayActive,
-                    showQuickOpen || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID != nil
+                    showQuickOpen || showAsk || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID != nil
                 )
                 .overlay(alignment: toastAlignment) {
                     toastOverlay
                 }
                 .overlay {
                     quickOpenOverlay
+                }
+                .overlay {
+                    askOverlay
                 }
                 .overlay {
                     worktreeSwitcherOverlay
@@ -132,11 +136,15 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .quickOpen)) { _ in
                     showQuickOpen.toggle()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .ask)) { _ in
+                    showAsk.toggle()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
                     showWorktreeSwitcher.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleSettings)) { _ in
                     showQuickOpen = false
+                    showAsk = false
                     showWorktreeSwitcher = false
                     showSettings.toggle()
                 }
@@ -363,6 +371,15 @@ struct MainWindow: View {
                     appState.openFile(filePath, projectID: project.id)
                 },
                 onDismiss: { showQuickOpen = false }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var askOverlay: some View {
+        if showAsk {
+            AskOverlay(
+                onDismiss: { showAsk = false }
             )
         }
     }
