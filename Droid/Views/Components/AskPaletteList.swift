@@ -1,0 +1,114 @@
+import SwiftUI
+
+struct AskPaletteList: View {
+    let entries: [AskPaletteEntry]
+    let highlightedIndex: Int?
+    let emptyLabel: String
+    let onSelect: (AskPaletteEntry) -> Void
+
+    var body: some View {
+        Group {
+            if entries.isEmpty {
+                VStack {
+                    Spacer()
+                    Text(emptyLabel)
+                        .droidFont(size: 12)
+                        .foregroundStyle(DroidTheme.fgDim)
+                    Spacer()
+                }
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        LazyVStack(spacing: 2) {
+                            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                                AskPaletteRow(entry: entry, isHighlighted: index == highlightedIndex)
+                                    .padding(.horizontal, 8)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { onSelect(entry) }
+                                    .id(entry.id)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .onChange(of: highlightedIndex) { _, newIndex in
+                        guard let newIndex, newIndex < entries.count else { return }
+                        proxy.scrollTo(entries[newIndex].id, anchor: .center)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+}
+
+private struct AskPaletteRow: View {
+    let entry: AskPaletteEntry
+    let isHighlighted: Bool
+    @State private var hovered = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            DroidIcon(systemName: iconName, size: 12)
+                .foregroundStyle(isHighlighted ? DroidTheme.fg : DroidTheme.fgMuted)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.title)
+                    .droidFont(size: 13, weight: .medium)
+                    .foregroundStyle(DroidTheme.fg)
+                    .lineLimit(1)
+                Text(entry.detail)
+                    .droidFont(size: 11)
+                    .foregroundStyle(isHighlighted ? DroidTheme.fgMuted : DroidTheme.fgDim)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 12)
+            if let annotation = entry.annotation {
+                Text(annotation)
+                    .droidFont(size: 11, design: .monospaced)
+                    .foregroundStyle(isHighlighted ? DroidTheme.fgMuted : DroidTheme.fgDim)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: DroidShape.panelRadius)
+                .fill(background)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DroidShape.panelRadius)
+                .stroke(isHighlighted ? DroidTheme.borderStrong : .clear, lineWidth: 1)
+        )
+        .onHover { hovered = $0 }
+    }
+
+    private var background: Color {
+        if isHighlighted {
+            return DroidTheme.secondaryBackground
+        }
+        if hovered {
+            return DroidTheme.chrome.opacity(0.72)
+        }
+        return .clear
+    }
+
+    private var iconName: String {
+        switch entry.action {
+        case .command:
+            "command"
+        case .project:
+            "folder"
+        case .worktree:
+            "arrow.triangle.branch"
+        case .provider:
+            "sparkles"
+        case .sessionMode:
+            "square.stack"
+        case .session:
+            "terminal"
+        case .submit:
+            "arrow.up.right"
+        }
+    }
+}

@@ -10,6 +10,7 @@ extension Notification.Name {
     static let toggleAttachedVCS = Notification.Name("DroidToggleAttachedVCS")
     static let toggleFileTree = Notification.Name("DroidToggleFileTree")
     static let quickOpen = Notification.Name("DroidQuickOpen")
+    static let ask = Notification.Name("DroidAsk")
     static let switchWorktree = Notification.Name("DroidSwitchWorktree")
     static let saveActiveEditor = Notification.Name("DroidSaveActiveEditor")
     static let windowFullScreenDidChange = Notification.Name("DroidWindowFullScreenDidChange")

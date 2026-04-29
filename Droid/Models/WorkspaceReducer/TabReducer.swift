@@ -50,6 +50,25 @@ enum TabReducer {
         }
     }
 
+    static func createStartupCommandTab(
+        projectID: UUID,
+        areaID _: UUID?,
+        title: String,
+        command: String,
+        state: inout WorkspaceState
+    ) {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        _ = appendWorkspaceTab(projectID: projectID, state: &state) { path in
+            let area = TabArea(projectPath: path, existingTab: TerminalTab(pane: TerminalPaneState(
+                projectPath: path,
+                title: title,
+                startupCommand: trimmed
+            )))
+            return WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        }
+    }
+
     static func createCommandSplit(
         projectID: UUID,
         title: String,

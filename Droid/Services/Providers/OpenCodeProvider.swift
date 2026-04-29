@@ -9,6 +9,7 @@ struct OpenCodeProvider: AIProviderIntegration {
 
     private static let pluginFileName = "droid-notify.js"
     private static let pluginScriptName = "opencode-droid-plugin.js"
+    private static let obsoletePluginNames = ["muxy-notify.js"]
 
     func isToolInstalled() -> Bool {
         let home = NSHomeDirectory()
@@ -36,6 +37,7 @@ struct OpenCodeProvider: AIProviderIntegration {
     ) throws {
         guard let sourcePlugin = Self.findPluginSource(near: hookScriptPath) else { return }
         let sourceData = try Data(contentsOf: URL(fileURLWithPath: sourcePlugin))
+        try removeObsoletePlugins(homeDirectory: homeDirectory, fileManager: fileManager)
 
         for pluginPath in Self.pluginPaths(homeDirectory: homeDirectory) {
             if fileManager.fileExists(atPath: pluginPath),
@@ -56,7 +58,8 @@ struct OpenCodeProvider: AIProviderIntegration {
     }
 
     func uninstall() throws {
-        for pluginPath in Self.pluginPaths() where FileManager.default.fileExists(atPath: pluginPath) {
+        let allPaths = Self.pluginPaths() + Self.obsoletePluginPaths()
+        for pluginPath in allPaths where FileManager.default.fileExists(atPath: pluginPath) {
             try FileManager.default.removeItem(atPath: pluginPath)
         }
     }
@@ -77,5 +80,24 @@ struct OpenCodeProvider: AIProviderIntegration {
             "\(homeDirectory)/.config/opencode/plugins/\(pluginFileName)",
             "\(homeDirectory)/.opencode/plugins/\(pluginFileName)",
         ]
+    }
+
+    private func removeObsoletePlugins(
+        homeDirectory: String,
+        fileManager: FileManager
+    ) throws {
+        for pluginPath in Self.obsoletePluginPaths(homeDirectory: homeDirectory)
+        where fileManager.fileExists(atPath: pluginPath) {
+            try fileManager.removeItem(atPath: pluginPath)
+        }
+    }
+
+    private static func obsoletePluginPaths(homeDirectory: String = NSHomeDirectory()) -> [String] {
+        [
+            "\(homeDirectory)/.config/opencode/plugins",
+            "\(homeDirectory)/.opencode/plugins",
+        ].flatMap { directory in
+            obsoletePluginNames.map { "\(directory)/\($0)" }
+        }
     }
 }
