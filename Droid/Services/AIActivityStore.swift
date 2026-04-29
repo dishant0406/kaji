@@ -16,8 +16,7 @@ final class AIActivityStore {
 
     private init() {}
 
-    func hasActiveAgent(projectID: UUID, appState: AppState) -> Bool {
-        pruneMissingPanes(appState: appState)
+    func hasActiveAgent(projectID: UUID) -> Bool {
         return activitiesByPaneID.values.contains { $0.projectID == projectID }
     }
 
@@ -75,26 +74,6 @@ final class AIActivityStore {
                 }
             }
         )
-        activitiesByPaneID = activitiesByPaneID.filter { paneID, activity in
-            guard validPaneIDs.contains(paneID) else { return false }
-            return isProviderStillForeground(activity)
-        }
-    }
-
-    private func isProviderStillForeground(_ activity: Activity) -> Bool {
-        guard TerminalViewRegistry.shared.view(for: activity.paneID) != nil else { return true }
-        guard let processGroupID = TerminalViewRegistry.shared.foregroundProcessGroupID(for: activity.paneID) else {
-            return true
-        }
-        let samples = ProcessResourceSampler.samplesForProcessGroup(id: processGroupID)
-        guard !samples.isEmpty else {
-            return true
-        }
-
-        let processNames = samples.map(\.processName)
-        return AIActivityProcessMatcher.matches(
-            providerID: activity.providerID,
-            processNames: processNames
-        )
+        activitiesByPaneID = activitiesByPaneID.filter { validPaneIDs.contains($0.key) }
     }
 }

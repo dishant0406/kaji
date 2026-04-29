@@ -17,6 +17,11 @@ export const DroidNotificationPlugin = async ({ client }) => ({
       } catch {}
     }
 
+    if (event.type === "tui.command.execute") {
+      await send(`opencode_activity|${paneID}|start|`)
+      return
+    }
+
     if (event.type === "session.status") {
       const status = event.properties?.status
       if (status === "active") {
@@ -29,7 +34,11 @@ export const DroidNotificationPlugin = async ({ client }) => ({
       }
     }
 
-    if (event.type === "question.asked" || event.type === "permission.asked") {
+    if (
+      event.type === "question.asked" ||
+      event.type === "permission.asked" ||
+      event.type === "session.error"
+    ) {
       await send(`opencode_activity|${paneID}|stop|`)
       return
     }

@@ -22,11 +22,23 @@ struct OpenCodeProvider: AIProviderIntegration {
     }
 
     func install(hookScriptPath: String) throws {
+        try install(
+            hookScriptPath: hookScriptPath,
+            homeDirectory: NSHomeDirectory(),
+            fileManager: .default
+        )
+    }
+
+    func install(
+        hookScriptPath: String,
+        homeDirectory: String,
+        fileManager: FileManager
+    ) throws {
         guard let sourcePlugin = Self.findPluginSource(near: hookScriptPath) else { return }
         let sourceData = try Data(contentsOf: URL(fileURLWithPath: sourcePlugin))
 
-        for pluginPath in Self.pluginPaths() {
-            if FileManager.default.fileExists(atPath: pluginPath),
+        for pluginPath in Self.pluginPaths(homeDirectory: homeDirectory) {
+            if fileManager.fileExists(atPath: pluginPath),
                let existingData = try? Data(contentsOf: URL(fileURLWithPath: pluginPath)),
                existingData == sourceData
             {
@@ -34,12 +46,12 @@ struct OpenCodeProvider: AIProviderIntegration {
             }
 
             let pluginsDir = (pluginPath as NSString).deletingLastPathComponent
-            try FileManager.default.createDirectory(atPath: pluginsDir, withIntermediateDirectories: true)
+            try fileManager.createDirectory(atPath: pluginsDir, withIntermediateDirectories: true)
             let dest = URL(fileURLWithPath: pluginPath)
-            if FileManager.default.fileExists(atPath: pluginPath) {
-                try FileManager.default.removeItem(at: dest)
+            if fileManager.fileExists(atPath: pluginPath) {
+                try fileManager.removeItem(at: dest)
             }
-            try FileManager.default.copyItem(at: URL(fileURLWithPath: sourcePlugin), to: dest)
+            try fileManager.copyItem(at: URL(fileURLWithPath: sourcePlugin), to: dest)
         }
     }
 

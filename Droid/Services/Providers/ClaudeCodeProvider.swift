@@ -89,7 +89,7 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
     }
 
     private static func hookCommand(hookScript: String, event: String) -> String {
-        "'\(hookScript)' \(event) # \(droidMarker)"
+        "/bin/bash '\(hookScript)' \(event) # \(droidMarker)"
     }
 
     private static func buildHookEntry(command: String, matcher: String) -> [String: Any] {

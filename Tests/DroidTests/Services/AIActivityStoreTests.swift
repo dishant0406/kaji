@@ -35,7 +35,7 @@ struct AIActivityStoreTests {
 
         store.pruneMissingPanes(appState: appState)
 
-        #expect(store.hasActiveAgent(projectID: project.id, appState: appState))
+        #expect(store.hasActiveAgent(projectID: project.id))
         #expect(store.activitiesByPaneID.count == 1)
         #expect(store.activitiesByPaneID[pane.id] != nil)
         store.reset()
@@ -60,7 +60,7 @@ struct AIActivityStoreTests {
         store.start(providerID: "codex", paneID: UUID(), appState: appState, worktreeStore: nil)
         store.reset()
 
-        #expect(!store.hasActiveAgent(projectID: project.id, appState: appState))
+        #expect(!store.hasActiveAgent(projectID: project.id))
     }
 }
 

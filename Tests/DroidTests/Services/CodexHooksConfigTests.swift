@@ -63,8 +63,8 @@ struct CodexHooksConfigTests {
 
         let commands = hookCommands(in: output.hooks)
         #expect(commands.contains("/tmp/custom-start.sh"))
-        #expect(commands.contains("'/tmp/droid-ai-activity.sh' codex start # droid-activity-hook"))
-        #expect(commands.contains("'/tmp/droid-ai-activity.sh' codex stop # droid-activity-hook"))
+        #expect(commands.contains("/bin/bash '/tmp/droid-ai-activity.sh' codex start # droid-activity-hook"))
+        #expect(commands.contains("/bin/bash '/tmp/droid-ai-activity.sh' codex stop # droid-activity-hook"))
     }
 
     @Test
@@ -85,7 +85,7 @@ struct CodexHooksConfigTests {
                 "hooks": [
                   {
                     "type": "command",
-                    "command": "'/tmp/droid-ai-activity.sh' codex stop # droid-activity-hook"
+                    "command": "/bin/bash '/tmp/droid-ai-activity.sh' codex stop # droid-activity-hook"
                   }
                 ]
               }

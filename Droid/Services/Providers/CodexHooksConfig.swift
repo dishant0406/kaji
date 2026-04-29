@@ -104,7 +104,7 @@ enum CodexHooksConfig {
     }
 
     private static func hookCommand(scriptPath: String, providerID: String, state: String) -> String {
-        "'\(scriptPath)' \(providerID) \(state) # \(marker)"
+        "/bin/bash '\(scriptPath)' \(providerID) \(state) # \(marker)"
     }
 
     private static func normalizedJSON(_ root: [String: Any]) -> String {
