@@ -38,3 +38,17 @@ brew install --cask droid
 3. Run it with a semantic version like `0.1.0`.
 4. Review the generated draft release.
 5. Publish when the DMGs and appcasts look correct.
+
+## Local DMG Flow
+
+For the repeated local workflow of bumping the app version, committing, pushing, and building an arm64 DMG, use:
+
+```bash
+scripts/release-local.sh --message "Release message" --all
+```
+
+Useful options:
+
+- `--version X.Y.Z` to override the default patch bump
+- `--arch x86_64` to build the Intel DMG instead of the default arm64 artifact
+- omit `--all` if you want the script to use only already-staged changes

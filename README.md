@@ -81,6 +81,16 @@ Release automation lives in [`.github/workflows/release.yml`](.github/workflows/
 
 See [docs/releasing.md](docs/releasing.md) for the required secrets and tap setup.
 
+### Local Release Wrapper
+
+For the local patch-bump, commit, push, and DMG flow:
+
+```bash
+scripts/release-local.sh --message "Release message" --all
+```
+
+It stages changes when `--all` is passed, bumps `Droid/Info.plist`, pushes the current branch, runs `scripts/build-release.sh`, verifies the DMG, and prints the checksum.
+
 ## License
 
 [MIT](LICENSE)

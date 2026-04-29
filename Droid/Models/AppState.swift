@@ -340,6 +340,7 @@ final class AppState {
         if area.tabs.count > 1 {
             guard let removed = area.removeTab(tabID) else { return }
             if let paneID = removed.content.pane?.id {
+                AIActivityStore.shared.stop(paneID: paneID)
                 terminalViews.removeView(for: paneID)
             }
             reconcilePendingClosures()
@@ -550,6 +551,7 @@ final class AppState {
         reconcilePendingClosures()
 
         for paneID in effects.paneIDsToRemove {
+            AIActivityStore.shared.stop(paneID: paneID)
             terminalViews.removeView(for: paneID)
         }
 

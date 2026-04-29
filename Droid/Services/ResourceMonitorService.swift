@@ -14,12 +14,16 @@ final class ResourceMonitorService {
     private(set) var isRefreshing = false
     private(set) var lastRefreshDate: Date?
 
+    private weak var appState: AppState?
+    private weak var projectStore: ProjectStore?
     private var refreshTask: Task<Void, Never>?
     private var baselines: [Int32: RefreshBaseline] = [:]
 
     private init() {}
 
     func start(appState: AppState, projectStore: ProjectStore) {
+        self.appState = appState
+        self.projectStore = projectStore
         guard refreshTask == nil else { return }
         refresh(appState: appState, projectStore: projectStore)
         refreshTask = Task { @MainActor [weak self] in
@@ -34,6 +38,13 @@ final class ResourceMonitorService {
     func stop() {
         refreshTask?.cancel()
         refreshTask = nil
+    }
+
+    func restartIfRunning() {
+        guard refreshTask != nil, let appState, let projectStore else { return }
+        stop()
+        baselines.removeAll()
+        start(appState: appState, projectStore: projectStore)
     }
 
     func refresh(appState: AppState, projectStore: ProjectStore) {
