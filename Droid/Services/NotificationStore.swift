@@ -279,12 +279,26 @@ final class NotificationStore {
     }
 
     private func clearActivityIfNeeded(for notification: DroidNotification) {
-        guard case .aiProvider = notification.source,
+        guard let providerID = providerID(for: notification),
               normalizedEvent(for: notification).kind == .completed
         else {
             return
         }
         AIActivityStore.shared.stop(paneID: notification.paneID)
+        AIActivityStore.shared.stop(
+            providerID: providerID,
+            projectID: notification.projectID,
+            worktreeID: notification.worktreeID
+        )
+        AIActivityStore.shared.stop(
+            providerID: providerID,
+            projectID: notification.projectID
+        )
+    }
+
+    private func providerID(for notification: DroidNotification) -> String? {
+        guard case let .aiProvider(providerID) = notification.source else { return nil }
+        return providerID
     }
 
     private func scheduleSave() {

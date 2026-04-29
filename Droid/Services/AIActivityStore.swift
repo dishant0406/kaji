@@ -33,11 +33,11 @@ final class AIActivityStore {
                worktreeStore: worktreeStore
            )
         {
-            activitiesByPaneID[paneID] = Activity(
+            start(
+                providerID: providerID,
                 paneID: paneID,
                 projectID: context.projectID,
-                worktreeID: context.worktreeID,
-                providerID: providerID
+                worktreeID: context.worktreeID
             )
             return
         }
@@ -48,16 +48,57 @@ final class AIActivityStore {
             return
         }
 
-        activitiesByPaneID[paneID] = Activity(
+        start(
+            providerID: providerID,
             paneID: paneID,
             projectID: key.projectID,
-            worktreeID: key.worktreeID,
+            worktreeID: key.worktreeID
+        )
+    }
+
+    func start(
+        providerID: String,
+        paneID: UUID,
+        projectID: UUID,
+        worktreeID: UUID
+    ) {
+        stop(
+            providerID: providerID,
+            projectID: projectID,
+            worktreeID: worktreeID
+        )
+        activitiesByPaneID[paneID] = Activity(
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
             providerID: providerID
         )
     }
 
     func stop(paneID: UUID) {
         activitiesByPaneID.removeValue(forKey: paneID)
+    }
+
+    func stop(
+        providerID: String,
+        projectID: UUID,
+        worktreeID: UUID
+    ) {
+        activitiesByPaneID = activitiesByPaneID.filter { _, activity in
+            !(activity.providerID == providerID &&
+              activity.projectID == projectID &&
+              activity.worktreeID == worktreeID)
+        }
+    }
+
+    func stop(
+        providerID: String,
+        projectID: UUID
+    ) {
+        activitiesByPaneID = activitiesByPaneID.filter { _, activity in
+            !(activity.providerID == providerID &&
+              activity.projectID == projectID)
+        }
     }
 
     func reset() {

@@ -30,7 +30,15 @@ struct OpenCodeProviderTests {
         try """
         export const DroidNotificationPlugin = async () => ({
           event: async ({ event }) => {
+            const projectID = process.env.DROID_PROJECT_ID
+            const worktreeID = process.env.DROID_WORKTREE_ID
+            const raw = event.properties?.status
+            if (typeof raw === "string") return raw
+            if (raw && typeof raw.type === "string") return raw.type
+            if (raw === "busy" || raw === "retry") return raw
             if (event.type === "tui.command.execute") return
+            if (event.type === "tool.execute.before") return
+            if (projectID && worktreeID) return
           },
         })
         """.data(using: .utf8)?.write(to: pluginScript)
@@ -45,6 +53,13 @@ struct OpenCodeProviderTests {
         for path in OpenCodeProvider.pluginPaths(homeDirectory: homeDir.path) {
             let text = try String(contentsOfFile: path, encoding: .utf8)
             #expect(text.contains("tui.command.execute"))
+            #expect(text.contains("tool.execute.before"))
+            #expect(text.contains("typeof raw === \"string\""))
+            #expect(text.contains("raw.type"))
+            #expect(text.contains("busy"))
+            #expect(text.contains("retry"))
+            #expect(text.contains("DROID_PROJECT_ID"))
+            #expect(text.contains("DROID_WORKTREE_ID"))
         }
     }
 }
