@@ -31,7 +31,7 @@ struct AIActivityStoreTests {
         appState.focusedAreaID[key] = area.id
 
         store.start(providerID: "codex", paneID: pane.id, appState: appState, worktreeStore: nil)
-        store.start(providerID: "codex", paneID: UUID(), appState: appState, worktreeStore: nil)
+        store.start(providerID: "claude", paneID: UUID(), appState: appState, worktreeStore: nil)
 
         store.pruneMissingPanes(appState: appState)
 
@@ -59,6 +59,91 @@ struct AIActivityStoreTests {
 
         store.start(providerID: "codex", paneID: UUID(), appState: appState, worktreeStore: nil)
         store.reset()
+
+        #expect(!store.hasActiveAgent(projectID: project.id))
+    }
+
+    @Test
+    func stopByProviderAndContextRemovesMatchingActivity() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let appState = AppState(
+            selectionStore: AIActivitySelectionStore(),
+            terminalViews: AIActivityTerminalViews(),
+            workspacePersistence: AIActivityWorkspacePersistence()
+        )
+        let worktreeID = UUID()
+        appState.activeProjectID = project.id
+        appState.activeWorktreeID[project.id] = worktreeID
+        appState.activeWorktreePath[project.id] = project.path
+
+        store.start(providerID: "codex", paneID: UUID(), appState: appState, worktreeStore: nil)
+        #expect(store.hasActiveAgent(projectID: project.id))
+
+        store.stop(providerID: "codex", projectID: project.id, worktreeID: worktreeID)
+
+        #expect(!store.hasActiveAgent(projectID: project.id))
+    }
+
+    @Test
+    func startReplacesExistingActivityForSameProviderAndContext() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let appState = AppState(
+            selectionStore: AIActivitySelectionStore(),
+            terminalViews: AIActivityTerminalViews(),
+            workspacePersistence: AIActivityWorkspacePersistence()
+        )
+        appState.activeProjectID = project.id
+        let worktreeID = UUID()
+        appState.activeWorktreeID[project.id] = worktreeID
+        appState.activeWorktreePath[project.id] = project.path
+
+        let firstPaneID = UUID()
+        let secondPaneID = UUID()
+
+        store.start(providerID: "opencode", paneID: firstPaneID, appState: appState, worktreeStore: nil)
+        store.start(providerID: "opencode", paneID: secondPaneID, appState: appState, worktreeStore: nil)
+
+        #expect(store.activitiesByPaneID.count == 1)
+        #expect(store.activitiesByPaneID[secondPaneID] != nil)
+        #expect(store.activitiesByPaneID[firstPaneID] == nil)
+    }
+
+    @Test
+    func stopByProviderAndProjectRemovesActivitiesAcrossWorktrees() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let appState = AppState(
+            selectionStore: AIActivitySelectionStore(),
+            terminalViews: AIActivityTerminalViews(),
+            workspacePersistence: AIActivityWorkspacePersistence()
+        )
+        appState.activeProjectID = project.id
+        appState.activeWorktreeID[project.id] = UUID()
+        appState.activeWorktreePath[project.id] = project.path
+
+        store.start(
+            providerID: "opencode",
+            paneID: UUID(),
+            projectID: project.id,
+            worktreeID: UUID()
+        )
+        store.start(
+            providerID: "opencode",
+            paneID: UUID(),
+            projectID: project.id,
+            worktreeID: UUID()
+        )
+        #expect(store.hasActiveAgent(projectID: project.id))
+
+        store.stop(providerID: "opencode", projectID: project.id)
 
         #expect(!store.hasActiveAgent(projectID: project.id))
     }
