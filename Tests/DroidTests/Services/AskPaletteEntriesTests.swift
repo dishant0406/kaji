@@ -17,15 +17,17 @@ struct AskPaletteEntriesTests {
     @MainActor
     func slashEntriesReturnFilteredProviderOptions() {
         let entries = AskPaletteEntries.build(
-            fieldText: "/provider codex",
-            prompt: "hello",
-            projects: [],
-            worktrees: [],
-            provider: .terminal,
-            sessionMode: .bestMatch,
-            sessions: [],
-            projectName: "muxy",
-            worktreeName: "main"
+            .init(
+                fieldText: "/provider codex",
+                prompt: "hello",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
         )
 
         #expect(entries.count == 1)
@@ -37,19 +39,42 @@ struct AskPaletteEntriesTests {
     func emptyPromptShowsSlashCommands() {
         let project = Project(name: "muxy", path: "/tmp/muxy")
         let entries = AskPaletteEntries.build(
-            fieldText: "",
-            prompt: "",
-            projects: [project],
-            worktrees: [],
-            provider: .codex,
-            sessionMode: .bestMatch,
-            sessions: [],
-            projectName: "muxy",
-            worktreeName: "main"
+            .init(
+                fieldText: "",
+                prompt: "",
+                projects: [project],
+                worktrees: [],
+                provider: .codex,
+                sessionMode: .bestMatch,
+                sessions: [],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
         )
 
         #expect(entries.map(\.title).contains("Project"))
         #expect(entries.map(\.title).contains("Provider"))
         #expect(entries.first(where: { $0.title == "Project" })?.annotation == "/project")
+    }
+
+    @Test
+    @MainActor
+    func inlineAnnotationShowsRelevantAutocomplete() {
+        let entries = AskPaletteEntries.build(
+            .init(
+                fieldText: "what is this :t:co",
+                prompt: "what is this",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
+        )
+
+        #expect(entries.count == 1)
+        #expect(entries.first?.title == "Codex")
     }
 }

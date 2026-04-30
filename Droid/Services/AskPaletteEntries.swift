@@ -7,6 +7,23 @@ struct AskSlashState: Hashable {
 }
 
 enum AskPaletteEntries {
+    static func annotationEntries(
+        active: AskActiveAnnotation,
+        projects: [Project],
+        worktrees: [Worktree]
+    ) -> [AskPaletteEntry] {
+        switch active.key {
+        case .project:
+            filteredProjects(projects, query: active.value)
+        case .worktree:
+            filteredWorktrees(worktrees, query: active.value)
+        case .provider:
+            filteredProviders(query: active.value)
+        case .session:
+            filteredSessionModes(query: active.value)
+        }
+    }
+
     static func slashState(for text: String) -> AskSlashState? {
         guard text.hasPrefix("/") else { return nil }
         let body = String(text.dropFirst())
@@ -20,27 +37,22 @@ enum AskPaletteEntries {
         return .init(token: token, command: AskSlashCommand.resolve(token), filter: filter)
     }
 
-    static func build(
-        fieldText: String,
-        prompt: String,
-        projects: [Project],
-        worktrees: [Worktree],
-        provider: AskProvider,
-        sessionMode: AskSessionMode,
-        sessions: [AskSessionOption],
-        projectName: String,
-        worktreeName: String
-    ) -> [AskPaletteEntry] {
-        if let slashState = slashState(for: fieldText) {
+    static func build(_ context: AskPaletteContext) -> [AskPaletteEntry] {
+        let parsed = AskInlineAnnotations.parse(context.fieldText)
+        if let active = parsed.activeAnnotation {
+            return annotationEntries(active: active, projects: context.projects, worktrees: context.worktrees)
+        }
+
+        if let slashState = slashState(for: context.fieldText) {
             return slashEntries(
                 state: slashState,
-                projects: projects,
-                worktrees: worktrees
+                projects: context.projects,
+                worktrees: context.worktrees
             )
         }
 
-        if sessionMode == .existingSession {
-            return sessions.map {
+        if context.sessionMode == .existingSession {
+            return context.sessions.map {
                 .init(
                     action: .session($0),
                     title: $0.title,
@@ -50,13 +62,19 @@ enum AskPaletteEntries {
             }
         }
 
-        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPrompt = context.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedPrompt.isEmpty {
             return AskSlashCommand.allCases.map { command in
                 .init(
                     action: .command(command),
                     title: command.title,
-                    detail: currentValue(for: command, projectName: projectName, worktreeName: worktreeName, provider: provider, sessionMode: sessionMode),
+                    detail: currentValue(
+                        for: command,
+                        projectName: context.projectName,
+                        worktreeName: context.worktreeName,
+                        provider: context.provider,
+                        sessionMode: context.sessionMode
+                    ),
                     annotation: command.trigger
                 )
             }
@@ -65,13 +83,13 @@ enum AskPaletteEntries {
         return [
             .init(
                 action: .submit,
-                title: "Send to \(provider.title)",
+                title: "Send to \(context.provider.title)",
                 detail: routeSummary(
-                    sessionMode: sessionMode,
-                    provider: provider,
-                    projectName: projectName,
-                    worktreeName: worktreeName,
-                    sessions: sessions
+                    sessionMode: context.sessionMode,
+                    provider: context.provider,
+                    projectName: context.projectName,
+                    worktreeName: context.worktreeName,
+                    sessions: context.sessions
                 ),
                 annotation: "Enter"
             ),
@@ -115,13 +133,29 @@ enum AskPaletteEntries {
 
     private static func filteredProviders(query: String) -> [AskPaletteEntry] {
         AskProvider.allCases
-            .filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) || $0.rawValue.localizedCaseInsensitiveContains(query) }
+            .filter { provider in
+                if query.isEmpty {
+                    return true
+                }
+                let normalized = query.lowercased()
+                return provider.annotationValue.hasPrefix(normalized) ||
+                    provider.rawValue.hasPrefix(normalized) ||
+                    provider.title.lowercased().hasPrefix(normalized)
+            }
             .map { .init(action: .provider($0), title: $0.title, detail: "Use \($0.title) for new sessions", annotation: nil) }
     }
 
     private static func filteredSessionModes(query: String) -> [AskPaletteEntry] {
         AskSessionMode.allCases
-            .filter { query.isEmpty || $0.title.localizedCaseInsensitiveContains(query) }
+            .filter { mode in
+                if query.isEmpty {
+                    return true
+                }
+                let normalized = query.lowercased()
+                return mode.annotationValue.hasPrefix(normalized) ||
+                    mode.rawValue.lowercased().hasPrefix(normalized) ||
+                    mode.title.lowercased().hasPrefix(normalized)
+            }
             .map { .init(action: .sessionMode($0), title: $0.title, detail: sessionModeDetail($0), annotation: nil) }
     }
 

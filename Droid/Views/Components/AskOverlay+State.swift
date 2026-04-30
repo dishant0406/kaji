@@ -1,8 +1,12 @@
 import SwiftUI
 
 extension AskOverlay {
+    var parsedInput: AskParsedInput {
+        AskInlineAnnotations.parse(fieldText)
+    }
+
     var entries: [AskPaletteEntry] {
-        AskPaletteEntries.build(
+        AskPaletteEntries.build(.init(
             fieldText: fieldText,
             prompt: prompt,
             projects: projectStore.projects,
@@ -12,19 +16,27 @@ extension AskOverlay {
             sessions: filteredSessions,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName
-        )
+        ))
     }
 
     var emptyLabel: String {
-        isSlashMode ? "No matching commands" : "No matching sessions"
+        if activeAnnotation != nil {
+            return "No matching options"
+        }
+        return isSlashMode ? "No matching commands" : "No matching sessions"
     }
 
     var isSlashMode: Bool {
         AskPaletteEntries.slashState(for: fieldText) != nil
     }
 
+    var activeAnnotation: AskActiveAnnotation? {
+        parsedInput.activeAnnotation
+    }
+
     var canSend: Bool {
-        !isSending && !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedProject != nil && selectedWorktree != nil &&
+        !isSending && !prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty && selectedProject != nil && selectedWorktree != nil &&
             (sessionMode != .existingSession || selectedSession != nil)
     }
 
@@ -60,7 +72,13 @@ extension AskOverlay {
     }
 
     var footerText: String {
-        isSlashMode ? "Enter applies the highlighted command. Esc closes." : "Enter sends. Type / to switch project, worktree, provider, or session. Esc closes."
+        if activeAnnotation != nil {
+            return "Enter applies the highlighted option. Esc closes."
+        }
+        if isSlashMode {
+            return "Enter applies the highlighted command. Esc closes."
+        }
+        return "Enter sends. Type / or :p: :wt: :t: :s: to retarget inline. Esc closes."
     }
 }
 
@@ -86,9 +104,9 @@ extension AskOverlay {
     }
 
     func handleFieldChange(_ newValue: String) {
-        if !isSlashMode {
-            prompt = newValue
-        }
+        let parsed = AskInlineAnnotations.parse(newValue)
+        prompt = parsed.prompt
+        applyInlineAnnotations(from: parsed)
         highlightedIndex = entries.isEmpty ? nil : 0
     }
 
@@ -107,5 +125,41 @@ extension AskOverlay {
     func syncSessionSelection() {
         sessionID = filteredSessions.first?.id
         highlightedIndex = entries.isEmpty ? nil : 0
+    }
+
+    func applyInlineAnnotations() {
+        applyInlineAnnotations(from: AskInlineAnnotations.parse(fieldText))
+    }
+
+    func applyInlineAnnotations(from parsed: AskParsedInput) {
+        if let projectValue = parsed.annotations[.project],
+           let project = projectStore.projects.first(where: { $0.name.compare(
+               projectValue,
+               options: [.caseInsensitive, .diacriticInsensitive]
+           ) == .orderedSame })
+        {
+            projectID = project.id
+        }
+
+        if let providerValue = parsed.annotations[.provider],
+           let resolved = AskProvider.resolveAnnotation(providerValue)
+        {
+            provider = resolved
+        }
+
+        if let sessionValue = parsed.annotations[.session],
+           let resolved = AskSessionMode.resolveAnnotation(sessionValue)
+        {
+            sessionMode = resolved
+        }
+
+        if let worktreeValue = parsed.annotations[.worktree],
+           let worktree = availableWorktrees.first(where: {
+               AskSessionCatalog.displayName(for: $0)
+                   .compare(worktreeValue, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+           })
+        {
+            worktreeID = worktree.id
+        }
     }
 }

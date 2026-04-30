@@ -6,6 +6,7 @@ struct PaletteSearchField: NSViewRepresentable {
     let placeholder: String
     var fontSize: CGFloat = 13
     let onSubmit: () -> Void
+    var onSubmitText: ((String) -> Void)?
     let onEscape: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
@@ -62,8 +63,21 @@ struct PaletteSearchField: NSViewRepresentable {
             textView _: NSTextView,
             doCommandBy commandSelector: Selector
         ) -> Bool {
+            if let field = control as? NSTextField {
+                parent.text = field.stringValue
+                if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                    if let onSubmitText = parent.onSubmitText {
+                        onSubmitText(field.stringValue)
+                    } else {
+                        parent.onSubmit()
+                    }
+                }
+            }
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-                parent.onSubmit()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                parent.onEscape()
                 return true
             }
             if commandSelector == #selector(NSResponder.moveUp(_:)) {
