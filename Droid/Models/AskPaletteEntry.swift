@@ -18,17 +18,17 @@ struct AskPaletteEntry: Identifiable, Hashable {
 
     var id: String {
         switch action {
-        case .command(let command):
+        case let .command(command):
             "command:\(command.rawValue)"
-        case .project(let project):
+        case let .project(project):
             "project:\(project.id.uuidString)"
-        case .worktree(let worktree):
+        case let .worktree(worktree):
             "worktree:\(worktree.id.uuidString)"
-        case .provider(let provider):
+        case let .provider(provider):
             "provider:\(provider.rawValue)"
-        case .sessionMode(let mode):
+        case let .sessionMode(mode):
             "session-mode:\(mode.rawValue)"
-        case .session(let session):
+        case let .session(session):
             "session:\(session.id.uuidString)"
         case .submit:
             "submit"

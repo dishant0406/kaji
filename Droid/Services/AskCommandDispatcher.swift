@@ -2,38 +2,30 @@ import Foundation
 
 @MainActor
 enum AskCommandDispatcher {
-    static func send(
-        prompt: String,
-        project: Project,
-        worktree: Worktree,
-        provider: AskProvider,
-        sessionMode: AskSessionMode,
-        session: AskSessionOption?,
-        appState: AppState
-    ) async {
-        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    static func send(_ request: AskDispatchRequest, appState: AppState) async {
+        let trimmed = request.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        appState.selectProject(project, worktree: worktree)
+        appState.selectProject(request.project, worktree: request.worktree)
         let sessions = AskSessionCatalog.sessions(
-            projectID: project.id,
-            worktreeID: worktree.id,
-            worktrees: [worktree],
+            projectID: request.project.id,
+            worktreeID: request.worktree.id,
+            worktrees: [request.worktree],
             appState: appState
         )
 
-        switch sessionMode {
+        switch request.sessionMode {
         case .existingSession:
-            guard let session else { return }
+            guard let session = request.session else { return }
             await sendToExistingSession(session, prompt: trimmed, appState: appState)
         case .bestMatch:
-            if let match = AskSessionCatalog.bestMatch(in: sessions, provider: provider) {
+            if let match = AskSessionCatalog.bestMatch(in: sessions, provider: request.provider) {
                 await sendToExistingSession(match, prompt: trimmed, appState: appState)
                 return
             }
-            await sendToNewSession(prompt: trimmed, project: project, provider: provider, appState: appState)
+            await sendToNewSession(prompt: trimmed, project: request.project, provider: request.provider, appState: appState)
         case .newTerminal:
-            await sendToNewSession(prompt: trimmed, project: project, provider: provider, appState: appState)
+            await sendToNewSession(prompt: trimmed, project: request.project, provider: request.provider, appState: appState)
         }
     }
 
@@ -86,7 +78,8 @@ enum AskCommandDispatcher {
         switch provider {
         case .terminal:
             return prompt
-        case .codex, .claude:
+        case .codex,
+             .claude:
             return "\(base) \(escapedPrompt)"
         case .opencode:
             return "\(base) --prompt \(escapedPrompt)"

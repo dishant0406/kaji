@@ -53,6 +53,14 @@ struct AskOverlay: View {
         .onChange(of: projectID) { _, _ in syncWorktreeSelection() }
         .onChange(of: provider) { _, _ in syncSessionSelection() }
         .onChange(of: sessionMode) { _, _ in syncSessionSelection() }
+        .background(
+            AskOverlayKeyMonitor(
+                onSubmit: { handleSubmit(fieldText) },
+                onEscape: onDismiss,
+                onArrowUp: { moveHighlight(-1) },
+                onArrowDown: { moveHighlight(1) }
+            )
+        )
     }
 
     private var searchField: some View {
@@ -65,6 +73,7 @@ struct AskOverlay: View {
                 placeholder: isSlashMode ? "Type a command or option" : "Ask anything or type /",
                 fontSize: 14,
                 onSubmit: handleSubmit,
+                onSubmitText: handleSubmit,
                 onEscape: onDismiss,
                 onArrowUp: { moveHighlight(-1) },
                 onArrowDown: { moveHighlight(1) }

@@ -77,7 +77,8 @@ struct MainWindow: View {
             mainLayout
                 .environment(
                     \.overlayActive,
-                    showQuickOpen || showAsk || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID != nil
+                    showQuickOpen || showAsk || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID !=
+                        nil
                 )
                 .overlay(alignment: toastAlignment) {
                     toastOverlay

@@ -21,6 +21,19 @@ enum AskProvider: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
+    var annotationValue: String {
+        switch self {
+        case .terminal:
+            "terminal"
+        case .codex:
+            "codex"
+        case .claude:
+            "claude"
+        case .opencode:
+            "opencode"
+        }
+    }
+
     var commandTitle: String {
         switch self {
         case .terminal:
@@ -96,6 +109,17 @@ enum AskProvider: String, CaseIterable, Hashable, Identifiable {
         }
 
         return .terminal
+    }
+
+    static func resolveAnnotation(_ value: String) -> Self? {
+        let normalized = value.lowercased()
+        return allCases.first { provider in
+            provider.annotationValue == normalized ||
+                provider.rawValue == normalized ||
+                provider.title.lowercased() == normalized ||
+                (provider == .claude && ["claude-code", "claudecode"].contains(normalized)) ||
+                (provider == .terminal && ["term", "shell"].contains(normalized))
+        }
     }
 
     private static func commandBase(from command: String?) -> String? {
