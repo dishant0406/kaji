@@ -34,7 +34,11 @@ send_notification() {
 
 send_activity() {
     local state="$1"
-    send_socket_message "$DROID_SOCKET_PATH" "claude_activity|$DROID_PANE_ID|$state|"
+    local context=""
+    if [ -n "${DROID_PROJECT_ID:-}" ] && [ -n "${DROID_WORKTREE_ID:-}" ]; then
+        context="${DROID_PROJECT_ID},${DROID_WORKTREE_ID}"
+    fi
+    send_socket_message "$DROID_SOCKET_PATH" "claude_activity|$DROID_PANE_ID|$state|$context"
 }
 
 extract_last_message() {

@@ -6,15 +6,15 @@ This document is for everything else: sending notifications into Droid from **an
 
 ## How Droid Receives Notifications
 
-Droid listens on a Unix domain socket:
+Droid listens on a process-specific Unix domain socket:
 
 ```
-~/Library/Application Support/Droid/droid.sock
+~/Library/Application Support/Droid/droid-<pid>.sock
 ```
 
-The socket path is also exported to every terminal Droid spawns as the environment variable `DROID_SOCKET_PATH`, along with a per-pane identifier `DROID_PANE_ID`. Any process running inside a Droid terminal pane can read these and send a message.
+The exact socket path is exported to every terminal Droid spawns as the environment variable `DROID_SOCKET_PATH`, along with a per-pane identifier `DROID_PANE_ID`. Any process running inside a Droid terminal pane can read these and send a message.
 
-When a built-in provider such as Codex runs outside a Droid pane, Droid can still receive the notification by connecting to the default socket path directly and leaving `paneID` empty. In that case the notification is routed to the currently active pane.
+When a tool runs outside a Droid pane, prefer passing the `DROID_SOCKET_PATH` from the pane that launched it. Without a pane-specific socket path, Droid cannot reliably route the event when multiple Droid processes are open.
 
 ## Wire Format
 

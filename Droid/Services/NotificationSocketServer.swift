@@ -15,7 +15,7 @@ final class NotificationSocketServer: @unchecked Sendable {
 
     static var socketPath: String {
         DroidFileStorage.appSupportDirectory()
-            .appendingPathComponent("droid.sock")
+            .appendingPathComponent("droid-\(ProcessInfo.processInfo.processIdentifier).sock")
             .path
     }
 
