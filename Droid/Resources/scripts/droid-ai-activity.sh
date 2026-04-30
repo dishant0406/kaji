@@ -41,7 +41,12 @@ PY
     fi
 fi
 
-/usr/bin/python3 - "$DROID_SOCKET_PATH" "${provider}_activity|${DROID_PANE_ID}|${state}|" <<'PY'
+context=""
+if [ -n "${DROID_PROJECT_ID:-}" ] && [ -n "${DROID_WORKTREE_ID:-}" ]; then
+    context="${DROID_PROJECT_ID},${DROID_WORKTREE_ID}"
+fi
+
+/usr/bin/python3 - "$DROID_SOCKET_PATH" "${provider}_activity|${DROID_PANE_ID}|${state}|${context}" <<'PY'
 import socket
 import sys
 

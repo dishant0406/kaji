@@ -44,4 +44,37 @@ struct AIActivitySocketRouterTests {
         #expect(handledStop)
         #expect(store.activitiesByPaneID[paneID] == nil)
     }
+
+    @Test
+    func explicitContextStopsActivityWhenPaneLookupIsUnavailable() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let startedPaneID = UUID()
+        let stoppedPaneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+        let payloadBody = "\(projectID.uuidString),\(worktreeID.uuidString)"
+
+        store.start(
+            providerID: "claude",
+            paneID: startedPaneID,
+            projectID: projectID,
+            worktreeID: worktreeID
+        )
+
+        let handledStop = AIActivitySocketRouter.handle(
+            .init(
+                type: "claude_activity",
+                title: "stop",
+                body: payloadBody,
+                paneIDString: stoppedPaneID.uuidString
+            ),
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(handledStop)
+        #expect(!store.hasActiveAgent(projectID: projectID))
+    }
 }

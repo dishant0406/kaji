@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-socket_path="${DROID_SOCKET_PATH:-${DROID_APP_SUPPORT_DIR:-$HOME/Library/Application Support/Droid}/droid.sock}"
+socket_path="${DROID_SOCKET_PATH:-}"
+if [ -z "$socket_path" ]; then
+    socket_dir="${DROID_APP_SUPPORT_DIR:-$HOME/Library/Application Support/Droid}"
+    for candidate in "$socket_dir"/droid-*.sock "$socket_dir"/droid.sock; do
+        if [ -S "$candidate" ]; then
+            socket_path="$candidate"
+            break
+        fi
+    done
+fi
 pane_id="${DROID_PANE_ID:-}"
 
 passthrough_count=0
