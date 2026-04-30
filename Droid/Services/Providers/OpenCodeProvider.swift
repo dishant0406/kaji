@@ -87,7 +87,8 @@ struct OpenCodeProvider: AIProviderIntegration {
         fileManager: FileManager
     ) throws {
         for pluginPath in Self.obsoletePluginPaths(homeDirectory: homeDirectory)
-        where fileManager.fileExists(atPath: pluginPath) {
+            where fileManager.fileExists(atPath: pluginPath)
+        {
             try fileManager.removeItem(atPath: pluginPath)
         }
     }

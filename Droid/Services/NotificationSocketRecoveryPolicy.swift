@@ -1,6 +1,6 @@
 import Foundation
 
-struct NotificationSocketRecoveryPolicy {
+enum NotificationSocketRecoveryPolicy {
     static let retryDelaySeconds: Double = 2
     static let healthCheckIntervalSeconds: Double = 15
 

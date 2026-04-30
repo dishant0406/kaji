@@ -44,12 +44,12 @@ enum AIActivitySocketRouter {
                     worktreeID: explicitContext.worktreeID
                 )
             } else if let appState,
-               let worktreeStore,
-               let context = NotificationNavigator.resolveContext(
-                   for: paneID,
-                   appState: appState,
-                   worktreeStore: worktreeStore
-               )
+                      let worktreeStore,
+                      let context = NotificationNavigator.resolveContext(
+                          for: paneID,
+                          appState: appState,
+                          worktreeStore: worktreeStore
+                      )
             {
                 AIActivityStore.shared.stop(
                     providerID: providerID,
