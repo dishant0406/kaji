@@ -17,7 +17,7 @@ final class AIActivityStore {
     private init() {}
 
     func hasActiveAgent(projectID: UUID) -> Bool {
-        return activitiesByPaneID.values.contains { $0.projectID == projectID }
+        activitiesByPaneID.values.contains { $0.projectID == projectID }
     }
 
     func start(
@@ -86,8 +86,8 @@ final class AIActivityStore {
     ) {
         activitiesByPaneID = activitiesByPaneID.filter { _, activity in
             !(activity.providerID == providerID &&
-              activity.projectID == projectID &&
-              activity.worktreeID == worktreeID)
+                activity.projectID == projectID &&
+                activity.worktreeID == worktreeID)
         }
     }
 
@@ -97,7 +97,7 @@ final class AIActivityStore {
     ) {
         activitiesByPaneID = activitiesByPaneID.filter { _, activity in
             !(activity.providerID == providerID &&
-              activity.projectID == projectID)
+                activity.projectID == projectID)
         }
     }
 
