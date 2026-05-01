@@ -33,6 +33,12 @@ extension AskOverlay {
         applyInlineAnnotations(from: parsed)
 
         if let activeAnnotation = parsed.activeAnnotation {
+            let activeTarget = resolvedTarget(for: parsed)
+            if activeAnnotationIsResolved(activeAnnotation, target: activeTarget) {
+                applyResolvedTarget(activeTarget)
+                submit(target: activeTarget)
+                return
+            }
             let updatedFieldText = resolvedFieldTextAfterActiveAnnotationSubmit(
                 latestFieldText: latestFieldText,
                 parsed: parsed
@@ -355,6 +361,14 @@ extension AskOverlay {
              .worktree:
             return true
         }
+    }
+
+    func activeAnnotationIsResolved(_ active: AskActiveAnnotation, target: AskResolvedTarget) -> Bool {
+        AskSubmitPolicy.activeAnnotationIsResolved(
+            key: active.key,
+            hasHistory: target.history != nil,
+            hasSkill: target.skill != nil
+        )
     }
 
     func applyResolvedTarget(_ target: AskResolvedTarget) {

@@ -166,10 +166,8 @@ final class CodexSessionMonitor: @unchecked Sendable {
         Task { @MainActor in
             guard CodexProvider().isEnabled else { return }
             if let appState = NotificationStore.shared.appState,
-               let projectID = appState.activeProjectID,
-               let key = appState.activeWorktreeKey(for: projectID),
-               let context = NotificationFallbackContextResolver.resolve(
-                   key: key,
+               let context = CodexSessionContextResolver.resolve(
+                   cwd: completion.cwd,
                    appState: appState,
                    worktreeStore: NotificationStore.shared.worktreeStore
                )

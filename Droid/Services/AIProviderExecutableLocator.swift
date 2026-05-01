@@ -27,10 +27,10 @@ enum AIProviderExecutableLocator {
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default
     ) -> String? {
-        for path in candidatePaths(for: executableName, env: env, homeDirectory: homeDirectory, fileManager: fileManager) {
-            if fileManager.isExecutableFile(atPath: path) {
-                return path
-            }
+        for path in candidatePaths(for: executableName, env: env, homeDirectory: homeDirectory, fileManager: fileManager)
+            where fileManager.isExecutableFile(atPath: path)
+        {
+            return path
         }
         return shellResolvedPath(for: executableName)
     }
@@ -48,6 +48,7 @@ enum AIProviderExecutableLocator {
         }
 
         let staticDirectories = [
+            "\(homeDirectory)/.opencode/bin",
             "\(homeDirectory)/.local/bin",
             "\(homeDirectory)/.volta/bin",
             "\(homeDirectory)/.asdf/shims",

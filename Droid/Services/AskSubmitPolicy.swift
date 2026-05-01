@@ -10,4 +10,22 @@ enum AskSubmitPolicy {
         if appliedKey == .history || appliedKey == .skill { return false }
         return canSend && !hasActiveAnnotation
     }
+
+    static func activeAnnotationIsResolved(
+        key: AskAnnotationKey,
+        hasHistory: Bool,
+        hasSkill: Bool
+    ) -> Bool {
+        switch key {
+        case .history:
+            hasHistory
+        case .skill:
+            hasSkill
+        case .provider,
+             .mode,
+             .project,
+             .worktree:
+            false
+        }
+    }
 }

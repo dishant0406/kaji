@@ -7,7 +7,7 @@ struct CodexSessionEventParserTests {
     func interactiveTaskCompleteProducesCompletion() {
         var context = CodexSessionEventParser.FileContext()
         _ = CodexSessionEventParser.consume(
-            line: #"{"type":"session_meta","payload":{"originator":"codex-tui","source":"cli"}}"#,
+            line: #"{"type":"session_meta","payload":{"originator":"codex-tui","source":"cli","cwd":"/tmp/muxy"}}"#,
             context: &context
         )
 
@@ -16,7 +16,7 @@ struct CodexSessionEventParserTests {
             context: &context
         )
 
-        #expect(completion == .init(turnID: "turn-1", message: "Hello. What do you need done?"))
+        #expect(completion == .init(turnID: "turn-1", message: "Hello. What do you need done?", cwd: "/tmp/muxy"))
     }
 
     @Test

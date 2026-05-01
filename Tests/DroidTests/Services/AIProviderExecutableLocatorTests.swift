@@ -46,4 +46,23 @@ struct AIProviderExecutableLocatorTests {
 
         #expect(path == executable.path)
     }
+
+    @Test
+    func resolvesExecutableFromOpenCodeInstall() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let bin = root.appendingPathComponent(".opencode/bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+
+        let executable = bin.appendingPathComponent("opencode")
+        try "#!/bin/sh\nexit 0\n".write(to: executable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
+
+        let path = AIProviderExecutableLocator.resolvePath(
+            for: "opencode",
+            env: [:],
+            homeDirectory: root.path
+        )
+
+        #expect(path == executable.path)
+    }
 }
