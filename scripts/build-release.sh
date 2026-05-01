@@ -65,6 +65,7 @@ rm -rf "$APP_BUNDLE"
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
 swift build -c release --triple "$TRIPLE"
+swift build -c release --triple "$TRIPLE" --target DroidHookClient
 
 SPM_BUILD_DIR=$(swift build -c release --triple "$TRIPLE" --show-bin-path)
 
@@ -73,10 +74,12 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$SPM_BUILD_DIR/Droid" "$APP_BUNDLE/Contents/MacOS/Droid"
+cp "$SPM_BUILD_DIR/DroidHookClient" "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Droid"
 
 echo "==> Stripping local and debug symbols"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/Droid"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
 
 if [[ -d "$SPM_BUILD_DIR/Droid_Droid.bundle" ]]; then
     cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Contents/Resources/Droid_Droid.bundle"
@@ -130,6 +133,11 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     /usr/bin/codesign --force --options runtime \
         --sign "$SIGN_IDENTITY" \
         "$SPARKLE_DIR"
+
+    echo "==> Signing DroidHookClient"
+    /usr/bin/codesign --force --options runtime \
+        --sign "$SIGN_IDENTITY" \
+        "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
 
     echo "==> Signing app bundle"
     /usr/bin/codesign --force --options runtime \

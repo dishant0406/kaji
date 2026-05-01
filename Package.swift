@@ -43,6 +43,10 @@ let package = Package(
                 .linkedLibrary("c++"),
             ]
         ),
+        .executableTarget(
+            name: "DroidHookClient",
+            path: "DroidHookClient"
+        ),
         .testTarget(
             name: "DroidTests",
             dependencies: [

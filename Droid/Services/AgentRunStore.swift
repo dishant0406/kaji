@@ -9,6 +9,8 @@ final class AgentRunStore {
 
     private let maxRuns = 80
     private let maxEventsPerRun = 40
+    private let maxActionsPerRun = 40
+    private let restartGraceInterval: TimeInterval = 2
 
     private init() {}
 
@@ -21,6 +23,9 @@ final class AgentRunStore {
         title: String? = nil,
         confidence: AgentSourceConfidence = .exactPane
     ) {
+        if ignoresLateRestart(providerID: providerID, paneID: paneID) {
+            return
+        }
         removeActiveRun(providerID: providerID, paneID: paneID)
         let sharedWorktree = hasConcurrentOpenRun(paneID: paneID, projectID: projectID, worktreeID: worktreeID)
         if sharedWorktree {
@@ -42,23 +47,22 @@ final class AgentRunStore {
             verification: .notStarted,
             startedAt: now,
             lastEventAt: now,
-            events: [AgentRunEvent(kind: .started, label: "start", text: "Started")]
+            events: [AgentRunEvent(kind: .started, label: "start", text: "Started")],
+            actions: []
         )
         runs.insert(run, at: 0)
         trimRuns()
     }
 
     func stop(paneID: UUID) {
-        updateRun(paneID: paneID) { run in
-            guard isOpen(run.status) else { return }
+        updateRuns(paneID: paneID, openOnly: true) { run in
             appendEvent(.init(kind: .stopped, label: "stop", text: "Stopped"), to: &run)
             run.status = .completed
         }
     }
 
     func stop(providerID: String, projectID: UUID, worktreeID: UUID) {
-        updateRun(providerID: providerID, projectID: projectID, worktreeID: worktreeID) { run in
-            guard isOpen(run.status) else { return }
+        updateRuns(providerID: providerID, projectID: projectID, worktreeID: worktreeID, openOnly: true) { run in
             appendEvent(.init(kind: .stopped, label: "stop", text: "Stopped"), to: &run)
             run.status = .completed
         }
@@ -77,7 +81,28 @@ final class AgentRunStore {
     }
 
     func complete(providerID: String, paneID: UUID, message: String) {
+        if updateRuns(providerID: providerID, paneID: paneID, openOnly: true, update: { run in
+            appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
+            run.status = .completed
+        }) {
+            return
+        }
+
         updateRun(providerID: providerID, paneID: paneID) { run in
+            appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
+            run.status = .completed
+        }
+    }
+
+    func complete(providerID: String, projectID: UUID, worktreeID: UUID, message: String) {
+        if updateRuns(providerID: providerID, projectID: projectID, worktreeID: worktreeID, openOnly: true, update: { run in
+            appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
+            run.status = .completed
+        }) {
+            return
+        }
+
+        updateRun(providerID: providerID, projectID: projectID, worktreeID: worktreeID) { run in
             appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
             run.status = .completed
         }
@@ -134,6 +159,11 @@ final class AgentRunStore {
         runs.first { $0.id == id }
     }
 
+    func run(providerID: String, paneID: UUID) -> AgentRun? {
+        runs.first { $0.providerID == providerID && $0.paneID == paneID && isOpen($0.status) }
+            ?? runs.first { $0.providerID == providerID && $0.paneID == paneID }
+    }
+
     func startVerification(runID: UUID, command: String) {
         updateRun(id: runID) { run in
             run.verification = AgentVerification(status: .running, command: command, output: nil, updatedAt: Date())
@@ -147,12 +177,26 @@ final class AgentRunStore {
         }
     }
 
+    func recordAction(runID: UUID, kind: AgentRunActionKind, status: AgentRunActionStatus, message: String) {
+        updateRun(id: runID) { run in
+            let action = AgentRunActionRecord(kind: kind, status: status, message: message)
+            run.actions = Array((run.actions + [action]).suffix(maxActionsPerRun))
+        }
+    }
+
     private func removeActiveRun(providerID: String, paneID: UUID) {
         runs.removeAll { run in
             run.providerID == providerID &&
                 run.paneID == paneID &&
                 isOpen(run.status)
         }
+    }
+
+    private func ignoresLateRestart(providerID: String, paneID: UUID) -> Bool {
+        guard let run = runs.first(where: { $0.providerID == providerID && $0.paneID == paneID }) else { return false }
+        guard !isOpen(run.status) else { return false }
+        guard run.events.last?.kind == .completed else { return false }
+        return Date().timeIntervalSince(run.lastEventAt) < restartGraceInterval
     }
 
     private func markSharedWorktree(projectID: UUID, worktreeID: UUID) {
@@ -167,13 +211,43 @@ final class AgentRunStore {
     }
 
     private func updateRun(paneID: UUID, update: (inout AgentRun) -> Void) {
-        guard let index = runs.firstIndex(where: { $0.paneID == paneID }) else { return }
+        let openIndex = runs.firstIndex { $0.paneID == paneID && isOpen($0.status) }
+        let fallbackIndex = runs.firstIndex { $0.paneID == paneID }
+        guard let index = openIndex ?? fallbackIndex else { return }
         update(&runs[index])
     }
 
+    @discardableResult
+    private func updateRuns(paneID: UUID, openOnly: Bool, update: (inout AgentRun) -> Void) -> Bool {
+        let indexes = runs.indices.filter { index in
+            runs[index].paneID == paneID && (!openOnly || isOpen(runs[index].status))
+        }
+        guard !indexes.isEmpty else { return false }
+        for index in indexes {
+            update(&runs[index])
+        }
+        return true
+    }
+
     private func updateRun(providerID: String, paneID: UUID, update: (inout AgentRun) -> Void) {
-        guard let index = runs.firstIndex(where: { $0.providerID == providerID && $0.paneID == paneID }) else { return }
+        let openIndex = runs.firstIndex { $0.providerID == providerID && $0.paneID == paneID && isOpen($0.status) }
+        let fallbackIndex = runs.firstIndex { $0.providerID == providerID && $0.paneID == paneID }
+        guard let index = openIndex ?? fallbackIndex else { return }
         update(&runs[index])
+    }
+
+    @discardableResult
+    private func updateRuns(providerID: String, paneID: UUID, openOnly: Bool, update: (inout AgentRun) -> Void) -> Bool {
+        let indexes = runs.indices.filter { index in
+            runs[index].providerID == providerID &&
+                runs[index].paneID == paneID &&
+                (!openOnly || isOpen(runs[index].status))
+        }
+        guard !indexes.isEmpty else { return false }
+        for index in indexes {
+            update(&runs[index])
+        }
+        return true
     }
 
     private func updateRun(id: UUID, update: (inout AgentRun) -> Void) {
@@ -187,11 +261,35 @@ final class AgentRunStore {
         worktreeID: UUID,
         update: (inout AgentRun) -> Void
     ) {
-        guard let index = runs.firstIndex(where: {
+        let openIndex = runs.firstIndex {
+            $0.providerID == providerID && $0.projectID == projectID && $0.worktreeID == worktreeID && isOpen($0.status)
+        }
+        let fallbackIndex = runs.firstIndex {
             $0.providerID == providerID && $0.projectID == projectID && $0.worktreeID == worktreeID
-        })
-        else { return }
+        }
+        guard let index = openIndex ?? fallbackIndex else { return }
         update(&runs[index])
+    }
+
+    @discardableResult
+    private func updateRuns(
+        providerID: String,
+        projectID: UUID,
+        worktreeID: UUID,
+        openOnly: Bool,
+        update: (inout AgentRun) -> Void
+    ) -> Bool {
+        let indexes = runs.indices.filter { index in
+            runs[index].providerID == providerID &&
+                runs[index].projectID == projectID &&
+                runs[index].worktreeID == worktreeID &&
+                (!openOnly || isOpen(runs[index].status))
+        }
+        guard !indexes.isEmpty else { return false }
+        for index in indexes {
+            update(&runs[index])
+        }
+        return true
     }
 
     private func appendEvent(_ event: AgentRunEvent, to run: inout AgentRun) {

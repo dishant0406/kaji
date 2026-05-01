@@ -45,7 +45,7 @@ enum AskCommandDispatcher {
             tabID: session.tabID
         ))
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        await inject(prompt: prompt, into: session.paneID)
+        _ = await TerminalCommandInjector.submit(prompt, into: session.paneID)
     }
 
     private static func sendToHistory(
@@ -55,7 +55,10 @@ enum AskCommandDispatcher {
         provider: AskProvider,
         appState: AppState
     ) async {
-        let command = resumeCommand(for: provider, history: history, prompt: prompt)
+        let command = commandWithCompletionNotification(
+            resumeCommand(for: provider, history: history, prompt: prompt),
+            provider: provider
+        )
         guard !command.isEmpty else { return }
         appState.createStartupCommandTab(projectID: project.id, title: provider.title, command: command)
     }
@@ -75,9 +78,23 @@ enum AskCommandDispatcher {
             return
         }
 
-        let command = startupCommand(for: provider, prompt: prompt)
+        let command = commandWithCompletionNotification(startupCommand(for: provider, prompt: prompt), provider: provider)
         guard !command.isEmpty else { return }
         appState.createStartupCommandTab(projectID: project.id, title: provider.title, command: command)
+    }
+
+    static func commandWithCompletionNotification(_ command: String, provider: AskProvider) -> String {
+        guard provider != .terminal else { return command }
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return command }
+        return [
+            "{",
+            command,
+            "; status=$?; if [ -n \"${DROID_HOOK_CLIENT_PATH:-}\" ]; then \"$DROID_HOOK_CLIENT_PATH\" ask-complete",
+            ShellEscaper.escape(provider.rawValue),
+            ShellEscaper.escape(provider.title),
+            "'Session completed'; fi",
+            "; exit $status; }",
+        ].joined(separator: " ")
     }
 
     private static func launchCommand(for provider: AskProvider) -> String {
@@ -154,16 +171,6 @@ enum AskCommandDispatcher {
             return prompt.isEmpty ? base : "\(base) \(prompt)"
         case .terminal:
             return prompt
-        }
-    }
-
-    private static func inject(prompt: String, into paneID: UUID) async {
-        for _ in 0 ..< 80 {
-            try? await Task.sleep(nanoseconds: 100_000_000)
-            guard let view = TerminalViewRegistry.shared.view(for: paneID), view.hasLiveSurface else { continue }
-            view.sendText(prompt)
-            view.sendReturnKey()
-            return
         }
     }
 }

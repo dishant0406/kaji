@@ -61,6 +61,48 @@ struct AgentMissionControlSnapshotBuilderTests {
     }
 
     @Test
+    func unreadCompletionNotificationsAreCompleted() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let item = AgentMissionControlSnapshotBuilder.items(
+            activities: [],
+            notifications: [notification(
+                project: project,
+                worktree: worktree,
+                source: .aiProvider("opencode"),
+                title: "Done",
+                body: "Completed task",
+                isRead: false
+            )],
+            projects: [project],
+            worktrees: [project.id: [worktree]]
+        ).first
+
+        #expect(item?.status == .completed)
+    }
+
+    @Test
+    func providerNotificationsWithoutCompletionKeywordsAreCompleted() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let item = AgentMissionControlSnapshotBuilder.items(
+            activities: [],
+            notifications: [notification(
+                project: project,
+                worktree: worktree,
+                source: .aiProvider("opencode"),
+                title: "OpenCode",
+                body: "Hello.",
+                isRead: true
+            )],
+            projects: [project],
+            worktrees: [project.id: [worktree]]
+        ).first
+
+        #expect(item?.status == .completed)
+    }
+
+    @Test
     func activePaneSuppressesOlderNotificationForSamePane() {
         let project = Project(name: "muxy", path: "/tmp/muxy")
         let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)

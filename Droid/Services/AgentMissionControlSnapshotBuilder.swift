@@ -59,11 +59,17 @@ enum AgentMissionControlSnapshotBuilder {
         if text.contains("fail") || text.contains("error") || text.contains("failed") {
             return .failed
         }
-        if text.contains("permission") || text.contains("question") || text.contains("waiting") || !notification.isRead {
+        if text.contains("permission") || text.contains("question") || text.contains("waiting") {
             return .needsAttention
         }
         if text.contains("complete") || text.contains("done") || text.contains("stop") || text.contains("finished") {
             return .completed
+        }
+        if case .aiProvider = notification.source {
+            return .completed
+        }
+        if !notification.isRead {
+            return .needsAttention
         }
         _ = now
         return .notice

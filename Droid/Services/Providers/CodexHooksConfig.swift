@@ -4,10 +4,10 @@ enum CodexHooksConfig {
     private static let marker = "droid-activity-hook"
     private static let obsoleteMarkers = [marker, "muxy-activity-hook"]
 
-    static func install(config: String, hooksContent: String, activityScriptPath: String) -> (config: String, hooks: String) {
+    static func install(config: String, hooksContent: String, hookClientPath: String) -> (config: String, hooks: String) {
         (
             ensureHooksEnabled(in: config),
-            installHooks(in: hooksContent, activityScriptPath: activityScriptPath)
+            installHooks(in: hooksContent, hookClientPath: hookClientPath)
         )
     }
 
@@ -31,17 +31,17 @@ enum CodexHooksConfig {
         return normalizedJSON(root)
     }
 
-    private static func installHooks(in content: String, activityScriptPath: String) -> String {
+    private static func installHooks(in content: String, hookClientPath: String) -> String {
         var root = parseRoot(content)
         var hooks = root["hooks"] as? [String: Any] ?? [:]
 
         hooks["UserPromptSubmit"] = merge(
             entries: hooks["UserPromptSubmit"] as? [[String: Any]],
-            command: hookCommand(scriptPath: activityScriptPath, providerID: "codex", state: "start")
+            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "start")
         )
         hooks["Stop"] = merge(
             entries: hooks["Stop"] as? [[String: Any]],
-            command: hookCommand(scriptPath: activityScriptPath, providerID: "codex", state: "stop")
+            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "stop")
         )
 
         root["hooks"] = hooks
@@ -103,8 +103,8 @@ enum CodexHooksConfig {
         }
     }
 
-    private static func hookCommand(scriptPath: String, providerID: String, state: String) -> String {
-        "/bin/bash '\(scriptPath)' \(providerID) \(state) # \(marker)"
+    private static func hookCommand(hookClientPath: String, providerID: String, state: String) -> String {
+        "\(ShellEscaper.escape(hookClientPath)) codex-activity \(providerID) \(state) # \(marker)"
     }
 
     private static func normalizedJSON(_ root: [String: Any]) -> String {

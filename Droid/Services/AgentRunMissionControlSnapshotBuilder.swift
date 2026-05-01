@@ -10,12 +10,16 @@ enum AgentRunMissionControlSnapshotBuilder {
         now: Date = Date(),
         limit: Int = 30
     ) -> [AgentMissionControlItem] {
+        let completedNotifications = notifications.filter(isCompletedProviderNotification)
         let runItems = runs.map { run in
-            item(run: run, projects: projects, worktrees: worktrees, now: now)
+            let completion = latestCompletion(for: run, notifications: completedNotifications)
+            return item(run: run, completion: completion, projects: projects, worktrees: worktrees, now: now)
         }
         let runPaneIDs = Set(runItems.compactMap(\.paneID))
+        let runContexts = Set(runs.compactMap(runContextKey))
         let fallbackItems: [AgentMissionControlItem] = notifications.prefix(limit).compactMap { notification in
             guard !runPaneIDs.contains(notification.paneID) else { return nil }
+            guard !runContexts.contains(notificationContextKey(notification)) else { return nil }
             return item(notification: notification, projects: projects, worktrees: worktrees, now: now)
         }
         return (runItems + fallbackItems)
@@ -29,13 +33,16 @@ enum AgentRunMissionControlSnapshotBuilder {
             .map(\.self)
     }
 
-    private static func item(
+    static func item(
         run: AgentRun,
+        completion: DroidNotification? = nil,
         projects: [Project],
         worktrees: [UUID: [Worktree]],
-        now: Date
+        now: Date = Date()
     ) -> AgentMissionControlItem {
         let providerName = AgentMissionControlSnapshotBuilder.providerName(for: run.providerID)
+        let resolvedStatus = completion == nil ? status(for: run.status) : .completed
+        let resolvedTimestamp = completion?.timestamp ?? run.lastEventAt
         return AgentMissionControlItem(
             id: "run:\(run.id.uuidString)",
             runID: run.id,
@@ -43,9 +50,9 @@ enum AgentRunMissionControlSnapshotBuilder {
             providerName: providerName,
             providerIconName: AgentMissionControlSnapshotBuilder.providerIconName(for: run.providerID),
             title: run.title.isEmpty ? "\(providerName) session" : run.title,
-            detail: detail(run: run, projects: projects, worktrees: worktrees, now: now),
-            status: status(for: run.status),
-            timestamp: run.lastEventAt,
+            detail: detail(run: run, completion: completion, projects: projects, worktrees: worktrees, now: now),
+            status: resolvedStatus,
+            timestamp: resolvedTimestamp,
             paneID: run.paneID,
             notificationID: nil,
             transcriptEntries: transcriptEntries(from: run),
@@ -89,6 +96,7 @@ enum AgentRunMissionControlSnapshotBuilder {
 
     private static func detail(
         run: AgentRun,
+        completion: DroidNotification? = nil,
         projects: [Project],
         worktrees: [UUID: [Worktree]],
         now: Date
@@ -99,7 +107,10 @@ enum AgentRunMissionControlSnapshotBuilder {
             "Detached session"
         }
         let base = "\(location) · \(elapsedTime(from: run.startedAt, to: now))"
-        let evidence = [changedFilesSummary(for: run), verificationSummary(for: run)].compactMap(\.self)
+        let completionSummary = completion.flatMap { notification in
+            notification.body.isEmpty ? "completed" : notification.body
+        }
+        let evidence = [completionSummary, changedFilesSummary(for: run), verificationSummary(for: run)].compactMap(\.self)
         guard !evidence.isEmpty else { return base }
         return "\(base) · \(evidence.joined(separator: " · "))"
     }
@@ -192,5 +203,35 @@ enum AgentRunMissionControlSnapshotBuilder {
         case .notice:
             4
         }
+    }
+
+    private static func runContextKey(_ run: AgentRun) -> String? {
+        guard let projectID = run.projectID, let worktreeID = run.worktreeID else { return nil }
+        return "\(run.providerID)|\(projectID.uuidString)|\(worktreeID.uuidString)"
+    }
+
+    private static func notificationContextKey(_ notification: DroidNotification) -> String {
+        let providerID = if case let .aiProvider(id) = notification.source { id } else { "" }
+        return "\(providerID)|\(notification.projectID.uuidString)|\(notification.worktreeID.uuidString)"
+    }
+
+    private static func latestCompletion(for run: AgentRun, notifications: [DroidNotification]) -> DroidNotification? {
+        notifications
+            .filter { notification in
+                notification.timestamp >= run.startedAt && matches(run: run, notification: notification)
+            }
+            .max { lhs, rhs in lhs.timestamp < rhs.timestamp }
+    }
+
+    private static func matches(run: AgentRun, notification: DroidNotification) -> Bool {
+        guard case let .aiProvider(providerID) = notification.source, providerID == run.providerID else { return false }
+        if let paneID = run.paneID, paneID == notification.paneID { return true }
+        guard let projectID = run.projectID, let worktreeID = run.worktreeID else { return false }
+        return notification.projectID == projectID && notification.worktreeID == worktreeID
+    }
+
+    private static func isCompletedProviderNotification(_ notification: DroidNotification) -> Bool {
+        guard case .aiProvider = notification.source else { return false }
+        return AgentMissionControlSnapshotBuilder.status(for: notification) == .completed
     }
 }

@@ -85,12 +85,14 @@ final class AIActivityStore {
         )
     }
 
-    func stop(paneID: UUID) {
+    @discardableResult
+    func stop(paneID: UUID) -> Activity? {
         let activity = activitiesByPaneID.removeValue(forKey: paneID)
         AgentRunStore.shared.stop(paneID: paneID)
         if let activity {
             captureChangedFiles(for: activity)
         }
+        return activity
     }
 
     func appendTranscript(providerID: String, paneID: UUID, kind: String, text: String) {
@@ -144,6 +146,21 @@ final class AIActivityStore {
     func reset() {
         activitiesByPaneID.removeAll()
         AgentRunStore.shared.reset()
+    }
+
+    func captureChangedFiles(providerID: String, paneID: UUID) {
+        guard let run = AgentRunStore.shared.run(providerID: providerID, paneID: paneID),
+              let projectID = run.projectID,
+              let worktreeID = run.worktreeID
+        else { return }
+        captureChangedFiles(for: Activity(
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: run.worktreePath,
+            providerID: providerID,
+            startedAt: run.startedAt
+        ))
     }
 
     func pruneMissingPanes(appState: AppState) {

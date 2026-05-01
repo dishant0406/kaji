@@ -149,6 +149,7 @@ struct AIActivityStoreTests {
 
         #expect(!store.hasActiveAgent(projectID: project.id))
     }
+
 }
 
 private struct AIActivitySelectionStore: ActiveProjectSelectionStoring {

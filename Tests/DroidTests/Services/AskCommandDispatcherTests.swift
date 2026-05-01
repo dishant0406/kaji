@@ -45,6 +45,21 @@ struct AskCommandDispatcherTests {
 
     @Test
     @MainActor
+    func completionNotificationWrapperPreservesCommandAndProviderPayload() {
+        let wrapped = AskCommandDispatcher.commandWithCompletionNotification("opencode --prompt hello", provider: .opencode)
+
+        #expect(wrapped.contains("opencode --prompt hello"))
+        #expect(wrapped.contains("DROID_HOOK_CLIENT_PATH"))
+        #expect(wrapped.contains("ask-complete"))
+        #expect(wrapped.contains("opencode"))
+        #expect(wrapped.contains("OpenCode"))
+        #expect(wrapped.contains("Session completed"))
+        #expect(wrapped.contains("exit $status"))
+        #expect(!wrapped.contains("python"))
+    }
+
+    @Test
+    @MainActor
     func skillsAdaptPromptsPerProvider() {
         let skill = AskSkillOption(
             name: "copywriting",

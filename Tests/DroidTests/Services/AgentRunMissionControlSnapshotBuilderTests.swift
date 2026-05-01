@@ -127,6 +127,76 @@ struct AgentRunMissionControlSnapshotBuilderTests {
     }
 
     @Test
+    func runContextSuppressesFallbackNotificationForDifferentPane() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let items = AgentRunMissionControlSnapshotBuilder.items(
+            runs: [run(status: .completed, providerID: "codex", project: project, worktree: worktree)],
+            notifications: [notification(project: project, worktree: worktree)],
+            projects: [project],
+            worktrees: [project.id: [worktree]]
+        )
+
+        #expect(items.count == 1)
+        #expect(items.first?.id.hasPrefix("run:") == true)
+        #expect(items.first?.status == .completed)
+    }
+
+    @Test
+    func newerCompletionNotificationOverridesRunningRunStatus() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let paneID = UUID()
+        let item = AgentRunMissionControlSnapshotBuilder.items(
+            runs: [run(paneID: paneID, status: .running, providerID: "codex", project: project, worktree: worktree, start: 10, last: 11)],
+            notifications: [notification(paneID: paneID, project: project, worktree: worktree, timestamp: 12)],
+            projects: [project],
+            worktrees: [project.id: [worktree]],
+            now: Date(timeIntervalSince1970: 20)
+        ).first
+
+        #expect(item?.status == .completed)
+        #expect(item?.detail.contains("Completed task") == true)
+    }
+
+    @Test
+    func contextCompletionNotificationOverridesRunningRunStatus() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let item = AgentRunMissionControlSnapshotBuilder.items(
+            runs: [run(status: .running, providerID: "codex", project: project, worktree: worktree, start: 10, last: 11)],
+            notifications: [notification(project: project, worktree: worktree, timestamp: 12)],
+            projects: [project],
+            worktrees: [project.id: [worktree]],
+            now: Date(timeIntervalSince1970: 20)
+        ).first
+
+        #expect(item?.status == .completed)
+    }
+
+    @Test
+    func providerNotificationWithoutCompletionKeywordsOverridesRunningRunStatus() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let item = AgentRunMissionControlSnapshotBuilder.items(
+            runs: [run(status: .running, providerID: "opencode", project: project, worktree: worktree, start: 10, last: 11)],
+            notifications: [notification(
+                project: project,
+                worktree: worktree,
+                providerID: "opencode",
+                title: "OpenCode",
+                body: "Hello.",
+                timestamp: 12
+            )],
+            projects: [project],
+            worktrees: [project.id: [worktree]],
+            now: Date(timeIntervalSince1970: 20)
+        ).first
+
+        #expect(item?.status == .completed)
+    }
+
+    @Test
     func detachedNotificationsRemainAsFallbackRows() {
         let project = Project(name: "muxy", path: "/tmp/muxy")
         let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
@@ -184,14 +254,19 @@ struct AgentRunMissionControlSnapshotBuilderTests {
             verification: .notStarted,
             startedAt: Date(timeIntervalSince1970: start),
             lastEventAt: Date(timeIntervalSince1970: last),
-            events: []
+            events: [],
+            actions: []
         )
     }
 
     private func notification(
         paneID: UUID = UUID(),
         project: Project,
-        worktree: Worktree
+        worktree: Worktree,
+        providerID: String = "codex",
+        title: String = "Done",
+        body: String = "Completed task",
+        timestamp: TimeInterval = 0
     ) -> DroidNotification {
         DroidNotification(
             paneID: paneID,
@@ -200,9 +275,10 @@ struct AgentRunMissionControlSnapshotBuilderTests {
             areaID: UUID(),
             tabID: UUID(),
             worktreePath: worktree.path,
-            source: .aiProvider("codex"),
-            title: "Done",
-            body: "Completed task",
+            source: .aiProvider(providerID),
+            title: title,
+            body: body,
+            timestamp: Date(timeIntervalSince1970: timestamp),
             isRead: true
         )
     }

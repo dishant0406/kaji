@@ -61,19 +61,16 @@ struct AgentMissionControlPanel: View {
             LazyVStack(spacing: 0) {
                 ForEach(sections) { section in
                     AgentMissionControlSectionHeader(section: section)
-                    ForEach(section.items) { item in
+                    ForEach(section.items, id: \.rowIdentity) { item in
+                        let capabilities = AgentControlCenter.capabilities(for: item)
                         AgentMissionControlRow(
                             item: item,
-                            onVerify: verify(item),
-                            onOpenFile: openFile(item),
-                            onOpenDiff: openDiff(item)
+                            capabilities: capabilities,
+                            onVerify: verify(item, capabilities: capabilities),
+                            onOpenFile: openFile(item, capabilities: capabilities),
+                            onOpenDiff: openDiff(item, capabilities: capabilities)
                         ) {
-                            AgentMissionControlNavigator.navigate(
-                                to: item,
-                                appState: appState,
-                                worktreeStore: worktreeStore,
-                                notificationStore: notificationStore
-                            )
+                            _ = controlCenter.perform(.jump(item))
                             onDismiss()
                         }
                     }
@@ -84,59 +81,34 @@ struct AgentMissionControlPanel: View {
         .background(DroidTheme.bg.opacity(0.28))
     }
 
-    private func verify(_ item: AgentMissionControlItem) -> (() -> Void)? {
+    private var controlCenter: AgentControlCenter {
+        AgentControlCenter(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+    }
+
+    private func verify(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> (() -> Void)? {
         guard let runID = item.runID else { return nil }
-        guard !item.changedFiles.isEmpty else { return nil }
+        guard capabilities.verify.isVisible else { return nil }
         return {
-            AgentVerificationRunner.verify(runID: runID, store: runStore)
+            _ = controlCenter.perform(.verify(runID))
         }
     }
 
-    private func openFile(_ item: AgentMissionControlItem) -> ((AgentChangedFile) -> Void)? {
+    private func openFile(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> ((AgentChangedFile) -> Void)? {
         guard let runID = item.runID else { return nil }
+        guard capabilities.openFiles.isVisible else { return nil }
         return { file in
-            guard file.status != .deleted,
-                  let context = activateContext(for: runID)
-            else { return }
-            let filePath = (context.worktreePath as NSString).appendingPathComponent(file.path)
-            appState.openFile(filePath, projectID: context.projectID)
+            _ = controlCenter.perform(.openFile(runID, file))
             onDismiss()
         }
     }
 
-    private func openDiff(_ item: AgentMissionControlItem) -> ((AgentChangedFile) -> Void)? {
+    private func openDiff(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> ((AgentChangedFile) -> Void)? {
         guard let runID = item.runID else { return nil }
+        guard capabilities.openDiffs.isVisible else { return nil }
         return { file in
-            guard let context = activateContext(for: runID) else { return }
-            appState.openDiffViewer(
-                vcs: VCSTabState(projectPath: context.worktreePath),
-                filePath: file.path,
-                isStaged: false,
-                projectID: context.projectID
-            )
+            _ = controlCenter.perform(.openDiff(runID, file))
             onDismiss()
         }
-    }
-
-    private func activateContext(for runID: UUID) -> (projectID: UUID, worktreePath: String)? {
-        guard let run = runStore.run(id: runID),
-              let projectID = run.projectID,
-              let worktreePath = run.worktreePath,
-              let project = projectStore.projects.first(where: { $0.id == projectID })
-        else { return nil }
-
-        guard let worktree = worktree(for: run, projectID: projectID, worktreePath: worktreePath) else { return nil }
-        appState.selectProject(project, worktree: worktree)
-        return (projectID, worktree.path)
-    }
-
-    private func worktree(for run: AgentRun, projectID: UUID, worktreePath: String) -> Worktree? {
-        if let worktreeID = run.worktreeID,
-           let worktree = worktreeStore.worktree(projectID: projectID, worktreeID: worktreeID)
-        {
-            return worktree
-        }
-        return worktreeStore.list(for: projectID).first { $0.path == worktreePath }
     }
 
     private var emptyState: some View {
@@ -156,5 +128,11 @@ struct AgentMissionControlPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DroidTheme.bg.opacity(0.28))
+    }
+}
+
+private extension AgentMissionControlItem {
+    var rowIdentity: String {
+        "\(id)|\(status.rawValue)"
     }
 }

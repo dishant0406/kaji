@@ -57,6 +57,9 @@ enum AIActivitySocketRouter {
     ) -> Bool {
         let normalizedState = state.lowercased()
         if normalizedState == "stop" {
+            if AIActivityStore.shared.stop(paneID: paneID) != nil {
+                return true
+            }
             if let explicitContext {
                 AIActivityStore.shared.stop(
                     providerID: providerID,
@@ -77,7 +80,6 @@ enum AIActivitySocketRouter {
                     worktreeID: context.worktreeID
                 )
             }
-            AIActivityStore.shared.stop(paneID: paneID)
             return true
         }
 

@@ -99,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ThemeService.shared.applyDefaultThemeIfNeeded()
         UpdateService.shared.start()
         ModifierKeyMonitor.shared.start()
-        NotificationSocketServer.shared.start()
+        ProviderEventReceiver.shared.start()
         CodexSessionMonitor.shared.start()
         SystemWakeCoordinator.shared.start()
         AIProviderRegistry.shared.installAll()
@@ -169,7 +169,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationStore.shared.saveToDisk()
         SystemWakeCoordinator.shared.stop()
         CodexSessionMonitor.shared.stop()
-        NotificationSocketServer.shared.stop()
+        ProviderEventReceiver.shared.stop()
     }
 
     @MainActor

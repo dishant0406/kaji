@@ -16,7 +16,7 @@ struct CodexHooksConfigTests {
         let output = CodexHooksConfig.install(
             config: input,
             hooksContent: "",
-            activityScriptPath: "/tmp/droid-ai-activity.sh"
+            hookClientPath: "/tmp/DroidHookClient"
         )
 
         #expect(output.config.contains("[features]"))
@@ -29,7 +29,7 @@ struct CodexHooksConfigTests {
         let output = CodexHooksConfig.install(
             config: "model = \"gpt-5.4\"\n",
             hooksContent: "",
-            activityScriptPath: "/tmp/droid-ai-activity.sh"
+            hookClientPath: "/tmp/DroidHookClient"
         )
 
         #expect(output.config.contains("[features]"))
@@ -58,13 +58,13 @@ struct CodexHooksConfigTests {
         let output = CodexHooksConfig.install(
             config: "",
             hooksContent: hooks,
-            activityScriptPath: "/tmp/droid-ai-activity.sh"
+            hookClientPath: "/tmp/DroidHookClient"
         )
 
         let commands = hookCommands(in: output.hooks)
         #expect(commands.contains("/tmp/custom-start.sh"))
-        #expect(commands.contains("/bin/bash '/tmp/droid-ai-activity.sh' codex start # droid-activity-hook"))
-        #expect(commands.contains("/bin/bash '/tmp/droid-ai-activity.sh' codex stop # droid-activity-hook"))
+        #expect(commands.contains("/tmp/DroidHookClient codex-activity codex start # droid-activity-hook"))
+        #expect(commands.contains("/tmp/DroidHookClient codex-activity codex stop # droid-activity-hook"))
     }
 
     @Test
@@ -85,7 +85,7 @@ struct CodexHooksConfigTests {
                 "hooks": [
                   {
                     "type": "command",
-                    "command": "/bin/bash '/tmp/droid-ai-activity.sh' codex stop # droid-activity-hook"
+                    "command": "/tmp/DroidHookClient codex-activity codex stop # droid-activity-hook"
                   }
                 ]
               }

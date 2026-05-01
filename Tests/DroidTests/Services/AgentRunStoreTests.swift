@@ -85,6 +85,84 @@ struct AgentRunStoreTests {
     }
 
     @Test
+    func stopByPanePrefersOpenRunWhenPaneHasHistory() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(providerID: "opencode", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+        store.stop(paneID: paneID)
+        let firstRunID = store.runs[0].id
+        store.start(providerID: "opencode", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+        let secondRunID = store.runs[0].id
+
+        store.complete(providerID: "opencode", paneID: paneID, message: "Done")
+
+        #expect(store.run(id: firstRunID)?.status == .completed)
+        #expect(store.run(id: secondRunID)?.status == .completed)
+        #expect(store.run(id: secondRunID)?.events.last?.text == "Done")
+        store.reset()
+    }
+
+    @Test
+    func lateStartAfterCompletionDoesNotReopenRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(providerID: "opencode", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+        store.complete(providerID: "opencode", paneID: paneID, message: "Done")
+        store.start(providerID: "opencode", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+
+        #expect(store.runs.count == 1)
+        #expect(store.runs.first?.status == .completed)
+        store.reset()
+    }
+
+    @Test
+    func completionAfterStopPreventsLateReopen() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(providerID: "opencode", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+        store.stop(paneID: paneID)
+        store.complete(providerID: "opencode", paneID: paneID, message: "Done")
+        store.start(providerID: "opencode", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+
+        #expect(store.runs.count == 1)
+        #expect(store.runs.first?.status == .completed)
+        #expect(store.runs.first?.events.last?.kind == .completed)
+        store.reset()
+    }
+
+    @Test
+    func contextCompletionClosesMatchingRunWithoutPaneID() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(providerID: "codex", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+        store.complete(providerID: "codex", projectID: projectID, worktreeID: worktreeID, message: "Done")
+
+        #expect(store.runs.first?.status == .completed)
+        #expect(store.runs.first?.events.last?.kind == .completed)
+        store.reset()
+    }
+
+    @Test
     func transcriptEventsAttachToMatchingRun() {
         let store = AgentRunStore.shared
         store.reset()

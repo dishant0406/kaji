@@ -23,10 +23,10 @@ struct OpenCodeProviderTests {
         try fileManager.createDirectory(at: scriptsDir, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: homeDir, withIntermediateDirectories: true)
 
-        let hookScript = scriptsDir.appendingPathComponent("droid-claude-hook.sh")
+        let hookClient = scriptsDir.appendingPathComponent("DroidHookClient")
         let pluginScript = scriptsDir.appendingPathComponent("opencode-droid-plugin.js")
 
-        try "#!/bin/bash\n".data(using: .utf8)?.write(to: hookScript)
+        try "native helper\n".data(using: .utf8)?.write(to: hookClient)
         try """
         export const DroidNotificationPlugin = async () => ({
           event: async ({ event }) => {
@@ -43,10 +43,18 @@ struct OpenCodeProviderTests {
           },
         })
         """.data(using: .utf8)?.write(to: pluginScript)
+        let configURL = URL(fileURLWithPath: OpenCodeProvider.configPath(homeDirectory: homeDir.path))
+        try fileManager.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try """
+        {
+          "$schema": "https://opencode.ai/config.json",
+          "plugin": ["existing-plugin"]
+        }
+        """.data(using: .utf8)?.write(to: configURL)
 
         let provider = OpenCodeProvider()
         try provider.install(
-            hookScriptPath: hookScript.path,
+            hookClientPath: hookClient.path,
             homeDirectory: homeDir.path,
             fileManager: fileManager
         )
@@ -63,6 +71,14 @@ struct OpenCodeProviderTests {
             #expect(text.contains("DROID_PROJECT_ID"))
             #expect(text.contains("DROID_WORKTREE_ID"))
         }
+
+        let configText = try String(
+            contentsOfFile: OpenCodeProvider.configPath(homeDirectory: homeDir.path),
+            encoding: .utf8
+        )
+        #expect(configText.contains("existing-plugin"))
+        #expect(configText.contains("file:"))
+        #expect(configText.contains("droid-notify.js"))
     }
 
     @Test
@@ -74,21 +90,21 @@ struct OpenCodeProviderTests {
         try fileManager.createDirectory(at: scriptsDir, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: homeDir, withIntermediateDirectories: true)
 
-        let hookScript = scriptsDir.appendingPathComponent("droid-claude-hook.sh")
+        let hookClient = scriptsDir.appendingPathComponent("DroidHookClient")
         let pluginScript = scriptsDir.appendingPathComponent("opencode-droid-plugin.js")
         let obsoletePlugin = homeDir
             .appendingPathComponent(".opencode")
             .appendingPathComponent("plugins")
             .appendingPathComponent("muxy-notify.js")
 
-        try "#!/bin/bash\n".data(using: .utf8)?.write(to: hookScript)
+        try "native helper\n".data(using: .utf8)?.write(to: hookClient)
         try "export const DroidNotificationPlugin = async () => ({})\n".data(using: .utf8)?.write(to: pluginScript)
         try fileManager.createDirectory(at: obsoletePlugin.deletingLastPathComponent(), withIntermediateDirectories: true)
         try "export const MuxyNotificationPlugin = async () => ({})\n".data(using: .utf8)?.write(to: obsoletePlugin)
 
         let provider = OpenCodeProvider()
         try provider.install(
-            hookScriptPath: hookScript.path,
+            hookClientPath: hookClient.path,
             homeDirectory: homeDir.path,
             fileManager: fileManager
         )
