@@ -4,12 +4,20 @@ enum CodexSessionEventParser {
     struct FileContext: Equatable {
         var originator: String?
         var source: String?
+        var cwd: String?
         var lastFinalMessage: String?
     }
 
     struct Completion: Equatable {
         let turnID: String
         let message: String
+        let cwd: String?
+
+        init(turnID: String, message: String, cwd: String? = nil) {
+            self.turnID = turnID
+            self.message = message
+            self.cwd = cwd
+        }
     }
 
     private static let interactiveOriginators: Set<String> = [
@@ -30,6 +38,7 @@ enum CodexSessionEventParser {
             let payload = object["payload"] as? [String: Any]
             context.originator = payload?["originator"] as? String
             context.source = payload?["source"] as? String
+            context.cwd = payload?["cwd"] as? String
             return nil
         }
 
@@ -64,7 +73,7 @@ enum CodexSessionEventParser {
         let message = normalizedMessage(
             payload["last_agent_message"] as? String ?? context.lastFinalMessage
         )
-        return Completion(turnID: turnID, message: message)
+        return Completion(turnID: turnID, message: message, cwd: context.cwd)
     }
 
     private static func isInteractive(context: FileContext) -> Bool {

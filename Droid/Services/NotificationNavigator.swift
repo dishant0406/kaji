@@ -41,6 +41,14 @@ enum NotificationNavigator {
         appState: AppState,
         notificationStore: NotificationStore
     ) {
+        if let worktreeStore = notificationStore.worktreeStore,
+           let context = resolveContext(for: notification.paneID, appState: appState, worktreeStore: worktreeStore)
+        {
+            navigate(to: context, appState: appState)
+            notificationStore.markAsRead(notification.id)
+            return
+        }
+
         guard appState.activeWorktreeID[notification.projectID] != nil || appState.activeProjectID == notification.projectID else {
             notificationStore.markAsRead(notification.id)
             return
@@ -56,18 +64,20 @@ enum NotificationNavigator {
             ))
         }
 
-        appState.dispatch(.focusArea(
-            projectID: notification.projectID,
-            areaID: notification.areaID
-        ))
-
-        appState.dispatch(.selectTab(
-            projectID: notification.projectID,
-            areaID: notification.areaID,
-            tabID: notification.tabID
-        ))
+        appState.dispatch(.focusArea(projectID: notification.projectID, areaID: notification.areaID))
+        appState.dispatch(.selectTab(projectID: notification.projectID, areaID: notification.areaID, tabID: notification.tabID))
 
         notificationStore.markAsRead(notification.id)
+    }
+
+    static func navigate(to context: NavigationContext, appState: AppState) {
+        appState.dispatch(.selectProject(
+            projectID: context.projectID,
+            worktreeID: context.worktreeID,
+            worktreePath: context.worktreePath
+        ))
+        appState.dispatch(.focusArea(projectID: context.projectID, areaID: context.areaID))
+        appState.dispatch(.selectTab(projectID: context.projectID, areaID: context.areaID, tabID: context.tabID))
     }
 
     static func activeTabID(appState: AppState) -> UUID? {

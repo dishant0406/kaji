@@ -96,6 +96,7 @@ final class NotificationStore {
             logger.warning("Notification pane context missing for \(paneID.uuidString, privacy: .public); falling back to active context")
             addWithContext(
                 context: context,
+                paneID: paneID,
                 source: source,
                 title: title,
                 body: body,
@@ -110,13 +111,14 @@ final class NotificationStore {
 
     func addWithContext(
         context: NavigationContext,
+        paneID: UUID = UUID(),
         source: DroidNotification.Source,
         title: String,
         body: String,
         appState: AppState
     ) {
         let notification = DroidNotification(
-            paneID: UUID(),
+            paneID: paneID,
             projectID: context.projectID,
             worktreeID: context.worktreeID,
             areaID: context.areaID,
@@ -279,21 +281,12 @@ final class NotificationStore {
     }
 
     private func clearActivityIfNeeded(for notification: DroidNotification) {
-        guard let providerID = providerID(for: notification),
+        guard providerID(for: notification) != nil,
               normalizedEvent(for: notification).kind == .completed
         else {
             return
         }
         AIActivityStore.shared.stop(paneID: notification.paneID)
-        AIActivityStore.shared.stop(
-            providerID: providerID,
-            projectID: notification.projectID,
-            worktreeID: notification.worktreeID
-        )
-        AIActivityStore.shared.stop(
-            providerID: providerID,
-            projectID: notification.projectID
-        )
     }
 
     private func providerID(for notification: DroidNotification) -> String? {

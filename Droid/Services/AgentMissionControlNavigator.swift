@@ -19,14 +19,8 @@ enum AgentMissionControlNavigator {
                   for: paneID,
                   appState: appState,
                   worktreeStore: worktreeStore
-              )
+               )
         else { return }
-        appState.dispatch(.selectProject(
-            projectID: context.projectID,
-            worktreeID: context.worktreeID,
-            worktreePath: context.worktreePath
-        ))
-        appState.dispatch(.focusArea(projectID: context.projectID, areaID: context.areaID))
-        appState.dispatch(.selectTab(projectID: context.projectID, areaID: context.areaID, tabID: context.tabID))
+        NotificationNavigator.navigate(to: context, appState: appState)
     }
 }

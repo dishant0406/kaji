@@ -85,10 +85,20 @@ enum AskCommandDispatcher {
             let saved = CLILauncherSettings.shared.command(for: launcherID)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if !saved.isEmpty {
-                return saved
+                return resolvedCommand(saved)
             }
         }
-        return provider.rawValue
+        return resolvedCommand(provider.rawValue)
+    }
+
+    private static func resolvedCommand(_ command: String) -> String {
+        let parts = command.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false)
+        guard let first = parts.first else { return command }
+        let executable = String(first)
+        guard !executable.contains("/") else { return command }
+        guard let resolved = AIProviderExecutableLocator.resolvePath(for: executable) else { return command }
+        guard parts.count == 2 else { return ShellEscaper.escape(resolved) }
+        return "\(ShellEscaper.escape(resolved)) \(parts[1])"
     }
 
     static func startupCommand(for provider: AskProvider, prompt: String) -> String {

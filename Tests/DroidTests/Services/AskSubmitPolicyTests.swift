@@ -62,4 +62,22 @@ struct AskSubmitPolicyTests {
             hasActiveAnnotation: false
         ))
     }
+
+    @Test
+    func resolvedHistoryAnnotationCanSubmitOnNextEnter() {
+        #expect(AskSubmitPolicy.activeAnnotationIsResolved(
+            key: .history,
+            hasHistory: true,
+            hasSkill: false
+        ))
+    }
+
+    @Test
+    func unresolvedHistoryAnnotationKeepsApplyingOptions() {
+        #expect(!AskSubmitPolicy.activeAnnotationIsResolved(
+            key: .history,
+            hasHistory: false,
+            hasSkill: false
+        ))
+    }
 }

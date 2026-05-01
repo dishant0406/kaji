@@ -12,11 +12,11 @@ struct AskCommandDispatcherTests {
         let opencode = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "hello world")
         let empty = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "")
 
-        #expect(codex.hasPrefix("codex"))
+        #expect(commandExecutableName(codex) == "codex")
         #expect(codex.hasSuffix("'whats this repo about'"))
-        #expect(claude.hasPrefix("claude"))
+        #expect(commandExecutableName(claude) == "claude")
         #expect(claude.hasSuffix(" hello"))
-        #expect(opencode.hasPrefix("opencode"))
+        #expect(commandExecutableName(opencode) == "opencode")
         #expect(opencode.contains("--prompt 'hello world'"))
         #expect(!empty.isEmpty)
         #expect(!empty.contains("--prompt"))
@@ -70,5 +70,10 @@ struct AskCommandDispatcherTests {
             history: nil,
             skill: skill
         )
+    }
+
+    private func commandExecutableName(_ command: String) -> String? {
+        guard let token = command.split(whereSeparator: \.isWhitespace).first else { return nil }
+        return URL(fileURLWithPath: String(token).trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))).lastPathComponent
     }
 }
