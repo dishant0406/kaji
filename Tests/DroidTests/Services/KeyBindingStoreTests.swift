@@ -38,6 +38,19 @@ struct KeyBindingStoreTests {
         #expect(store.action(for: event, scopes: [.mainWindow]) == nil)
     }
 
+    @Test("agent command center resolves from Command-J")
+    func agentCommandCenterResolvesFromCommandJ() throws {
+        let store = KeyBindingStore(persistence: StubKeyBindingPersistence(bindings: KeyBinding.defaults))
+        let event = try keyEvent(
+            characters: "j",
+            charactersIgnoringModifiers: "j",
+            keyCode: 38,
+            modifiers: [.command]
+        )
+
+        #expect(store.action(for: event, scopes: [.mainWindow]) == .agentCommandCenter)
+    }
+
     private func keyEvent(
         characters: String,
         charactersIgnoringModifiers: String,

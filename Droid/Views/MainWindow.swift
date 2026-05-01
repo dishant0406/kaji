@@ -56,6 +56,7 @@ struct MainWindow: View {
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
     @State private var showQuickOpen = false
     @State private var showAsk = false
+    @State private var showAgentCommandCenter = false
     @State private var showWorktreeSwitcher = false
     @State private var showSettings = false
     @State private var showCreateThemeModal = false
@@ -77,8 +78,8 @@ struct MainWindow: View {
             mainLayout
                 .environment(
                     \.overlayActive,
-                    showQuickOpen || showAsk || showWorktreeSwitcher || showSettings || showCreateThemeModal || createWorktreeProjectID !=
-                        nil
+                    showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showSettings || showCreateThemeModal ||
+                        createWorktreeProjectID != nil
                 )
                 .overlay(alignment: toastAlignment) {
                     toastOverlay
@@ -88,6 +89,9 @@ struct MainWindow: View {
                 }
                 .overlay {
                     askOverlay
+                }
+                .overlay {
+                    agentCommandCenterOverlay
                 }
                 .overlay {
                     worktreeSwitcherOverlay
@@ -140,12 +144,20 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .ask)) { _ in
                     showAsk.toggle()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .agentCommandCenter)) { _ in
+                    let shouldShow = !showAgentCommandCenter
+                    showQuickOpen = false
+                    showAsk = false
+                    showWorktreeSwitcher = false
+                    showAgentCommandCenter = shouldShow
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
                     showWorktreeSwitcher.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleSettings)) { _ in
                     showQuickOpen = false
                     showAsk = false
+                    showAgentCommandCenter = false
                     showWorktreeSwitcher = false
                     showSettings.toggle()
                 }
@@ -381,6 +393,15 @@ struct MainWindow: View {
         if showAsk {
             AskOverlay(
                 onDismiss: { showAsk = false }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var agentCommandCenterOverlay: some View {
+        if showAgentCommandCenter {
+            AgentCommandCenterOverlay(
+                onDismiss: { showAgentCommandCenter = false }
             )
         }
     }

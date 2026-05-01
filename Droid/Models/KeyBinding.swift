@@ -49,6 +49,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case openVCSTab
     case quickOpen
     case ask
+    case agentCommandCenter
     case switchWorktree
     case saveFile
     case toggleSidebar
@@ -98,6 +99,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
         .openVCSTab,
         .quickOpen,
         .ask,
+        .agentCommandCenter,
         .switchWorktree,
         .saveFile,
         .toggleSidebar,
@@ -148,6 +150,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
         case .openVCSTab: ShortcutMetadata(displayName: "Source Control", category: "App", scope: .mainWindow)
         case .quickOpen: ShortcutMetadata(displayName: "Quick Open", category: "App", scope: .mainWindow)
         case .ask: ShortcutMetadata(displayName: "Ask", category: "App", scope: .mainWindow)
+        case .agentCommandCenter: ShortcutMetadata(displayName: "Agent Command Center", category: "App", scope: .mainWindow)
         case .switchWorktree: ShortcutMetadata(displayName: "Switch Worktree", category: "Project Navigation", scope: .mainWindow)
         case .saveFile: ShortcutMetadata(displayName: "Save File", category: "Editor", scope: .mainWindow)
         case .toggleSidebar: ShortcutMetadata(displayName: "Toggle Sidebar", category: "App", scope: .mainWindow)
@@ -241,6 +244,7 @@ struct KeyBinding: Codable, Identifiable {
         Self(action: .openVCSTab, combo: KeyCombo(key: "k", command: true)),
         Self(action: .openProject, combo: KeyCombo(key: "o", command: true)),
         Self(action: .ask, combo: KeyCombo(key: "n", command: true, shift: true)),
+        Self(action: .agentCommandCenter, combo: KeyCombo(key: "j", command: true)),
         Self(action: .reloadConfig, combo: KeyCombo(key: "r", command: true, shift: true)),
         Self(action: .nextTab, combo: KeyCombo(key: "]", command: true)),
         Self(action: .previousTab, combo: KeyCombo(key: "[", command: true)),
