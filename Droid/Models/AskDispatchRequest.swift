@@ -7,4 +7,6 @@ struct AskDispatchRequest {
     let provider: AskProvider
     let sessionMode: AskSessionMode
     let session: AskSessionOption?
+    let history: AskHistoryOption?
+    let skill: AskSkillOption?
 }

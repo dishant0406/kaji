@@ -23,6 +23,25 @@ struct AskInlineAnnotationsTests {
     }
 
     @Test
+    func parseTracksModeHistoryAndSkillAnnotations() {
+        let parsed = AskInlineAnnotations.parse("fix this :m:new :h:abc :s:copywriting")
+
+        #expect(parsed.annotations[.mode] == "new")
+        #expect(parsed.annotations[.history] == "abc")
+        #expect(parsed.annotations[.skill] == "copywriting")
+        #expect(parsed.prompt == "fix this")
+    }
+
+    @Test
+    func legacySessionAnnotationResolvesExactModeValues() {
+        let parsed = AskInlineAnnotations.parse("fix this :s:new")
+
+        #expect(parsed.annotations[.mode] == "new")
+        #expect(parsed.activeAnnotation == nil)
+        #expect(parsed.prompt == "fix this")
+    }
+
+    @Test
     func replacingActiveAnnotationKeepsRestOfQuery() {
         let updated = AskInlineAnnotations.replacingActiveAnnotation(
             in: "what is this :t:co repo",

@@ -8,6 +8,9 @@ extension AskOverlay {
         let provider: AskProvider
         let sessionMode: AskSessionMode
         let session: AskSessionOption?
+        let history: AskHistoryOption?
+        let skill: AskSkillOption?
+        let hasInvalidProviderOption: Bool
     }
 
     func moveHighlight(_ delta: Int) {
@@ -29,7 +32,7 @@ extension AskOverlay {
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
 
-        if parsed.activeAnnotation != nil {
+        if let activeAnnotation = parsed.activeAnnotation {
             let updatedFieldText = resolvedFieldTextAfterActiveAnnotationSubmit(
                 latestFieldText: latestFieldText,
                 parsed: parsed
@@ -39,10 +42,12 @@ extension AskOverlay {
             let target = resolvedTarget(for: reparsed)
             applyResolvedTarget(target)
             let canSendAfterApply = canSend(target: target)
+            let needsResolution = activeAnnotationNeedsResolution(reparsed.activeAnnotation, target: target)
             if AskSubmitPolicy.shouldSendAfterAnnotationApply(
+                appliedKey: activeAnnotation.key,
                 updatedFieldText: updatedFieldText,
                 canSend: canSendAfterApply,
-                hasActiveAnnotation: reparsed.activeAnnotation != nil
+                hasActiveAnnotation: needsResolution
             ) {
                 submit(target: target)
             }
@@ -54,9 +59,15 @@ extension AskOverlay {
         }
         let target = resolvedTarget(for: parsed)
         applyResolvedTarget(target)
-        if target.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if targetHasMissingSelection(target, parsed: parsed) {
             confirmHighlight()
             return
+        }
+        if target.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if parsed.annotations.isEmpty {
+                confirmHighlight()
+                return
+            }
         }
         if target.sessionMode == .existingSession {
             confirmHighlight()
@@ -83,6 +94,12 @@ extension AskOverlay {
             applyAnnotationSelection(value: mode.annotationValue)
         case let .session(session):
             sessionID = session.id
+        case let .history(history):
+            applyAnnotationSelection(value: history.sessionID)
+        case let .skill(skill):
+            applyAnnotationSelection(value: skill.name)
+        case .launchProvider:
+            submit()
         case .submit:
             submit()
         }
@@ -109,7 +126,9 @@ extension AskOverlay {
             worktree: selectedWorktree,
             provider: target.provider,
             sessionMode: target.sessionMode,
-            session: target.session
+            session: target.session,
+            history: target.history,
+            skill: target.skill
         )
         Task { @MainActor in
             await AskCommandDispatcher.send(request, appState: appState)
@@ -144,6 +163,8 @@ extension AskOverlay {
             provider: provider,
             sessionMode: sessionMode,
             sessions: filteredSessions,
+            historyOptions: historyOptions,
+            skillOptions: skillOptions,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName
         ))
@@ -176,9 +197,14 @@ extension AskOverlay {
         case let .provider(provider):
             return active.key == .provider ? provider.annotationValue : nil
         case let .sessionMode(mode):
-            return active.key == .session ? mode.annotationValue : nil
+            return active.key == .mode ? mode.annotationValue : nil
+        case let .history(history):
+            return active.key == .history ? history.sessionID : nil
+        case let .skill(skill):
+            return active.key == .skill ? skill.name : nil
         case .command,
              .session,
+             .launchProvider,
              .submit:
             return nil
         }
@@ -195,7 +221,7 @@ extension AskOverlay {
                     provider.title.lowercased().hasPrefix(normalized)
             }
             return matches.count == 1 ? matches[0].annotationValue : nil
-        case .session:
+        case .mode:
             let matches = AskSessionMode.allCases.filter { mode in
                 if active.value.isEmpty { return true }
                 let normalized = active.value.lowercased()
@@ -217,12 +243,26 @@ extension AskOverlay {
                 return name.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? AskSessionCatalog.displayName(for: matches[0]) : nil
+        case .history:
+            let matches = historyOptions.filter { option in
+                if active.value.isEmpty { return true }
+                return option.sessionID.localizedCaseInsensitiveContains(active.value) ||
+                    option.title.localizedCaseInsensitiveContains(active.value)
+            }
+            return matches.count == 1 ? matches[0].sessionID : nil
+        case .skill:
+            let matches = skillOptions.filter { option in
+                if active.value.isEmpty { return true }
+                return option.name.localizedCaseInsensitiveContains(active.value) ||
+                    option.title.localizedCaseInsensitiveContains(active.value)
+            }
+            return matches.count == 1 ? matches[0].name : nil
         }
     }
 
     func resolvedTarget(for parsed: AskParsedInput) -> AskResolvedTarget {
         let resolvedProvider = parsed.annotations[.provider].flatMap(AskProvider.resolveAnnotation) ?? provider
-        let resolvedSessionMode = parsed.annotations[.session].flatMap(AskSessionMode.resolveAnnotation) ?? sessionMode
+        let resolvedSessionMode = parsed.annotations[.mode].flatMap(AskSessionMode.resolveAnnotation) ?? sessionMode
         let resolvedProject = parsed.annotations[.project]
             .flatMap(resolveProject(named:))
             ?? selectedProject
@@ -247,22 +287,74 @@ extension AskOverlay {
         let resolvedSession = resolvedSessionMode == .existingSession
             ? sessions.first(where: { $0.id == sessionID }) ?? sessions.first
             : nil
+        let resolvedHistory = parsed.annotations[.history].flatMap { historyID in
+            cachedHistoryOptions.first { $0.provider == resolvedProvider && $0.sessionID == historyID }
+        }
+        let resolvedSkill = parsed.annotations[.skill].flatMap { skillName in
+            AskSkillCatalog.options(
+                provider: resolvedProvider,
+                projectPath: resolvedProject?.path,
+                query: skillName
+            ).first { $0.name == skillName }
+        }
         return AskResolvedTarget(
             prompt: parsed.prompt,
             project: resolvedProject,
             worktree: resolvedWorktree,
             provider: resolvedProvider,
             sessionMode: resolvedSessionMode,
-            session: resolvedSession
+            session: resolvedSession,
+            history: resolvedHistory,
+            skill: resolvedSkill,
+            hasInvalidProviderOption: invalidProviderOption(
+                parsed: parsed,
+                provider: resolvedProvider,
+                history: resolvedHistory,
+                skill: resolvedSkill
+            )
         )
     }
 
     func canSend(target: AskResolvedTarget) -> Bool {
         !isSending &&
-            !target.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !target.hasInvalidProviderOption &&
             target.project != nil &&
             target.worktree != nil &&
-            (target.sessionMode != .existingSession || target.session != nil)
+            (target.history != nil || target.sessionMode != .existingSession || target.session != nil)
+    }
+
+    func targetHasMissingSelection(_ target: AskResolvedTarget, parsed: AskParsedInput) -> Bool {
+        if target.hasInvalidProviderOption { return true }
+        return (parsed.annotations[.history] != nil && target.history == nil) ||
+            (parsed.annotations[.skill] != nil && target.skill == nil)
+    }
+
+    func invalidProviderOption(
+        parsed: AskParsedInput,
+        provider: AskProvider,
+        history: AskHistoryOption?,
+        skill: AskSkillOption?
+    ) -> Bool {
+        if provider == .terminal {
+            return parsed.annotations[.history] != nil || parsed.annotations[.skill] != nil
+        }
+        return (parsed.annotations[.history] != nil && history == nil) ||
+            (parsed.annotations[.skill] != nil && skill == nil)
+    }
+
+    func activeAnnotationNeedsResolution(_ active: AskActiveAnnotation?, target: AskResolvedTarget) -> Bool {
+        guard let active else { return false }
+        switch active.key {
+        case .history:
+            return target.history == nil
+        case .skill:
+            return target.skill == nil
+        case .provider,
+             .mode,
+             .project,
+             .worktree:
+            return true
+        }
     }
 
     func applyResolvedTarget(_ target: AskResolvedTarget) {

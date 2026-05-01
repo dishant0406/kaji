@@ -14,12 +14,23 @@ extension AskOverlay {
             provider: provider,
             sessionMode: sessionMode,
             sessions: filteredSessions,
+            historyOptions: historyOptions,
+            skillOptions: skillOptions,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName
         ))
     }
 
     var emptyLabel: String {
+        if activeAnnotation?.key == .history, provider == .terminal {
+            return "History is unavailable for Terminal"
+        }
+        if activeAnnotation?.key == .skill, provider == .terminal {
+            return "Skills are unavailable for Terminal"
+        }
+        if activeAnnotation?.key == .history, isHistoryLoading {
+            return "Loading history"
+        }
         if activeAnnotation != nil {
             return "No matching options"
         }
@@ -71,6 +82,21 @@ extension AskOverlay {
         filteredSessions.first { $0.id == sessionID }
     }
 
+    var historyOptions: [AskHistoryOption] {
+        guard fieldText.contains(AskAnnotationKey.history.token) else { return [] }
+        let query = activeAnnotation?.key == .history ? activeAnnotation?.value ?? "" : ""
+        guard !query.isEmpty else { return cachedHistoryOptions }
+        return cachedHistoryOptions.filter { option in
+            option.title.localizedCaseInsensitiveContains(query) ||
+                option.sessionID.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var skillOptions: [AskSkillOption] {
+        guard provider != .terminal, fieldText.contains(AskAnnotationKey.skill.token) else { return [] }
+        return AskSkillCatalog.options(provider: provider, projectPath: selectedProject?.path, query: activeAnnotation?.value ?? "")
+    }
+
     var footerText: String {
         if activeAnnotation != nil {
             return "Enter applies the highlighted option. Esc closes."
@@ -78,7 +104,10 @@ extension AskOverlay {
         if isSlashMode {
             return "Enter applies the highlighted command. Esc closes."
         }
-        return "Enter sends. Type / or :p: :wt: :t: :s: to retarget inline. Esc closes."
+        if provider == .terminal {
+            return "Enter sends. Type / or :p: :wt: :t: :m: to retarget inline. Esc closes."
+        }
+        return "Enter sends. Type / or :p: :wt: :t: :m: :h: :s: to retarget inline. Esc closes."
     }
 }
 
@@ -101,13 +130,42 @@ extension AskOverlay {
         }
         syncSessionSelection()
         fieldText = prompt
+        refreshHistoryOptions()
     }
 
     func handleFieldChange(_ newValue: String) {
         let parsed = AskInlineAnnotations.parse(newValue)
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
+        refreshHistoryOptions(parsed: parsed)
         highlightedIndex = entries.isEmpty ? nil : 0
+    }
+
+    func refreshHistoryOptions(parsed: AskParsedInput? = nil) {
+        let parsed = parsed ?? parsedInput
+        guard provider != .terminal, parsed.annotations[.history] != nil || parsed.activeAnnotation?.key == .history else {
+            historyLoadTask?.cancel()
+            historyLoadTask = nil
+            historyCacheKey = nil
+            cachedHistoryOptions = []
+            isHistoryLoading = false
+            return
+        }
+        let key = AskHistoryCacheKey(provider: provider, projectPath: selectedProject?.path)
+        guard historyCacheKey != key else { return }
+        historyLoadTask?.cancel()
+        historyCacheKey = key
+        cachedHistoryOptions = []
+        isHistoryLoading = true
+        historyLoadTask = Task { @MainActor in
+            let options = await Task.detached(priority: .userInitiated) {
+                AskHistoryCatalog.options(provider: key.provider, projectPath: key.projectPath, query: "")
+            }.value
+            guard !Task.isCancelled, historyCacheKey == key else { return }
+            isHistoryLoading = false
+            cachedHistoryOptions = options
+            highlightedIndex = entries.isEmpty ? nil : min(highlightedIndex ?? 0, entries.count - 1)
+        }
     }
 
     func syncWorktreeSelection() {
@@ -147,7 +205,7 @@ extension AskOverlay {
             provider = resolved
         }
 
-        if let sessionValue = parsed.annotations[.session],
+        if let sessionValue = parsed.annotations[.mode],
            let resolved = AskSessionMode.resolveAnnotation(sessionValue)
         {
             sessionMode = resolved

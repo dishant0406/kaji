@@ -7,6 +7,9 @@ enum AskPaletteAction: Hashable {
     case provider(AskProvider)
     case sessionMode(AskSessionMode)
     case session(AskSessionOption)
+    case history(AskHistoryOption)
+    case skill(AskSkillOption)
+    case launchProvider(AskProvider)
     case submit
 }
 
@@ -30,6 +33,12 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "session-mode:\(mode.rawValue)"
         case let .session(session):
             "session:\(session.id.uuidString)"
+        case let .history(history):
+            "history:\(history.provider.rawValue):\(history.sessionID)"
+        case let .skill(skill):
+            "skill:\(skill.name):\(skill.path)"
+        case let .launchProvider(provider):
+            "launch:\(provider.rawValue)"
         case .submit:
             "submit"
         }

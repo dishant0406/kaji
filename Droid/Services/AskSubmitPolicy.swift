@@ -2,10 +2,12 @@ import Foundation
 
 enum AskSubmitPolicy {
     static func shouldSendAfterAnnotationApply(
+        appliedKey: AskAnnotationKey,
         updatedFieldText: String,
         canSend: Bool,
         hasActiveAnnotation: Bool
     ) -> Bool {
-        canSend && !hasActiveAnnotation
+        if appliedKey == .history || appliedKey == .skill { return false }
+        return canSend && !hasActiveAnnotation
     }
 }

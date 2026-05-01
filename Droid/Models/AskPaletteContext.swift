@@ -8,6 +8,8 @@ struct AskPaletteContext {
     let provider: AskProvider
     let sessionMode: AskSessionMode
     let sessions: [AskSessionOption]
+    let historyOptions: [AskHistoryOption]
+    let skillOptions: [AskSkillOption]
     let projectName: String
     let worktreeName: String
 }

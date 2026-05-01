@@ -4,7 +4,9 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
     case project = "p"
     case worktree = "wt"
     case provider = "t"
-    case session = "s"
+    case mode = "m"
+    case history = "h"
+    case skill = "s"
 
     var token: String {
         ":\(rawValue):"
@@ -18,8 +20,12 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
             "Worktree"
         case .provider:
             "Provider"
-        case .session:
-            "Session"
+        case .mode:
+            "Mode"
+        case .history:
+            "History"
+        case .skill:
+            "Skill"
         }
     }
 
