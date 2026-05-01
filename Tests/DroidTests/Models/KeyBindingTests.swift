@@ -81,6 +81,13 @@ struct KeyBindingTests {
         #expect(combos.count == unique.count)
     }
 
+    @Test("Agent Command Center defaults to Command-J")
+    func agentCommandCenterDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .agentCommandCenter })
+
+        #expect(binding.combo == KeyCombo(key: "j", command: true))
+    }
+
     @Test("KeyBinding Codable round-trip")
     func codableRoundTrip() throws {
         let binding = KeyBinding(

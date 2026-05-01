@@ -33,7 +33,12 @@ final class FileKeyBindingPersistence: KeyBindingPersisting {
     private static func mergeWithDefaults(_ saved: [KeyBinding]) -> [KeyBinding] {
         let savedByAction = Dictionary(uniqueKeysWithValues: saved.map { ($0.action, $0) })
         return KeyBinding.defaults.map { defaultBinding in
-            savedByAction[defaultBinding.action] ?? defaultBinding
+            if defaultBinding.action == .agentCommandCenter,
+               savedByAction[defaultBinding.action]?.combo == KeyCombo(key: "a", command: true, shift: true)
+            {
+                return defaultBinding
+            }
+            return savedByAction[defaultBinding.action] ?? defaultBinding
         }
     }
 
