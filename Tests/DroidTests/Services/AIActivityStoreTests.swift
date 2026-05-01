@@ -88,7 +88,7 @@ struct AIActivityStoreTests {
     }
 
     @Test
-    func startReplacesExistingActivityForSameProviderAndContext() {
+    func startAllowsParallelActivitiesForSameProviderAndContext() {
         let store = AIActivityStore.shared
         store.reset()
 
@@ -109,9 +109,11 @@ struct AIActivityStoreTests {
         store.start(providerID: "opencode", paneID: firstPaneID, appState: appState, worktreeStore: nil)
         store.start(providerID: "opencode", paneID: secondPaneID, appState: appState, worktreeStore: nil)
 
-        #expect(store.activitiesByPaneID.count == 1)
+        #expect(store.activitiesByPaneID.count == 2)
         #expect(store.activitiesByPaneID[secondPaneID] != nil)
-        #expect(store.activitiesByPaneID[firstPaneID] == nil)
+        #expect(store.activitiesByPaneID[firstPaneID] != nil)
+        #expect(AgentRunStore.shared.runs.count == 2)
+        #expect(AgentRunStore.shared.runs.allSatisfy { $0.changedFilesAttribution == .sharedWorktree })
     }
 
     @Test

@@ -56,9 +56,11 @@ enum ThemeFileCodec {
             selectionForeground: normalizeHex(values["selection-foreground"]) ?? foreground,
             palette: resolvedPalette
         )
+        let resolvedName = parsedName?.isEmpty == false ? parsedName ?? identifier : identifier
+        let resolvedSlug = parsedSlug?.isEmpty == false ? parsedSlug ?? identifier : identifier
         let draft = ThemeDraft(
-            name: (parsedName?.isEmpty == false ? parsedName! : identifier),
-            slug: slugify(parsedSlug?.isEmpty == false ? parsedSlug! : identifier),
+            name: resolvedName,
+            slug: slugify(resolvedSlug),
             colors: colors
         )
 

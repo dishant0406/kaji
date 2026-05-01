@@ -197,22 +197,22 @@ extension AskOverlay {
     func annotationReplacement(for entry: AskPaletteEntry, active: AskActiveAnnotation) -> String? {
         switch entry.action {
         case let .project(project):
-            return active.key == .project ? project.name : nil
+            active.key == .project ? project.name : nil
         case let .worktree(worktree):
-            return active.key == .worktree ? AskSessionCatalog.displayName(for: worktree) : nil
+            active.key == .worktree ? AskSessionCatalog.displayName(for: worktree) : nil
         case let .provider(provider):
-            return active.key == .provider ? provider.annotationValue : nil
+            active.key == .provider ? provider.annotationValue : nil
         case let .sessionMode(mode):
-            return active.key == .mode ? mode.annotationValue : nil
+            active.key == .mode ? mode.annotationValue : nil
         case let .history(history):
-            return active.key == .history ? history.sessionID : nil
+            active.key == .history ? history.sessionID : nil
         case let .skill(skill):
-            return active.key == .skill ? skill.name : nil
+            active.key == .skill ? skill.name : nil
         case .command,
              .session,
              .launchProvider,
              .submit:
-            return nil
+            nil
         }
     }
 
@@ -276,9 +276,8 @@ extension AskOverlay {
         let resolvedWorktree = parsed.annotations[.worktree]
             .flatMap { resolveWorktree(named: $0, in: worktrees) }
             ?? preferredWorktree(in: worktrees)
-        let sessions: [AskSessionOption]
-        if let project = resolvedProject, let worktree = resolvedWorktree {
-            sessions = AskSessionCatalog.filter(
+        let sessions: [AskSessionOption] = if let project = resolvedProject, let worktree = resolvedWorktree {
+            AskSessionCatalog.filter(
                 AskSessionCatalog.sessions(
                     projectID: project.id,
                     worktreeID: worktree.id,
@@ -288,7 +287,7 @@ extension AskOverlay {
                 provider: resolvedProvider
             )
         } else {
-            sessions = []
+            []
         }
         let resolvedSession = resolvedSessionMode == .existingSession
             ? sessions.first(where: { $0.id == sessionID }) ?? sessions.first

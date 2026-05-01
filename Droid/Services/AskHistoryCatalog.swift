@@ -16,16 +16,15 @@ enum AskHistoryCatalog {
         env: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default
     ) -> [AskHistoryOption] {
-        let options: [AskHistoryOption]
-        switch provider {
+        let options: [AskHistoryOption] = switch provider {
         case .codex:
-            options = codexOptions(query: query, env: env, fileManager: fileManager)
+            codexOptions(query: query, env: env, fileManager: fileManager)
         case .claude:
-            options = claudeOptions(env: env, fileManager: fileManager)
+            claudeOptions(env: env, fileManager: fileManager)
         case .opencode:
-            options = opencodeOptions(env: env, fileManager: fileManager)
+            opencodeOptions(env: env, fileManager: fileManager)
         case .terminal:
-            options = []
+            []
         }
 
         let normalizedQuery = query.lowercased()
@@ -43,7 +42,7 @@ enum AskHistoryCatalog {
                 return lhs.updatedAt > rhs.updatedAt
             }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
     }
 
     private static func codexOptions(query: String, env: [String: String], fileManager: FileManager) -> [AskHistoryOption] {

@@ -13,6 +13,7 @@ struct AgentMissionControlSnapshotBuilderTests {
             paneID: UUID(),
             projectID: project.id,
             worktreeID: worktree.id,
+            worktreePath: worktree.path,
             providerID: "codex",
             startedAt: Date(timeIntervalSince1970: 2)
         )
@@ -68,6 +69,7 @@ struct AgentMissionControlSnapshotBuilderTests {
             paneID: paneID,
             projectID: project.id,
             worktreeID: worktree.id,
+            worktreePath: worktree.path,
             providerID: "codex",
             startedAt: Date()
         )
@@ -100,6 +102,7 @@ struct AgentMissionControlSnapshotBuilderTests {
             paneID: UUID(),
             projectID: project.id,
             worktreeID: worktree.id,
+            worktreePath: worktree.path,
             providerID: "claude",
             startedAt: Date(),
             transcriptEntries: [AgentTranscriptEntry(kind: "user", text: "Fix tests")]

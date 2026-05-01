@@ -8,7 +8,8 @@ struct CLILauncherSettingsView: View {
             SettingsContainer {
                 SettingsSection(
                     "CLI Launchers",
-                    footer: "Enabled launchers appear in the active project workspace footer. Clicking one opens a terminal tab and runs its command.",
+                    footer: "Enabled launchers appear in the active project workspace footer. "
+                        + "Clicking one opens a terminal tab and runs its command.",
                     showsDivider: false
                 ) {
                     ForEach(Array(settings.launchers.enumerated()), id: \.element.id) { index, launcher in

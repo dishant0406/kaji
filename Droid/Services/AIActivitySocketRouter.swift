@@ -14,6 +14,12 @@ enum AIActivitySocketRouter {
         let worktreeStore: WorktreeStore?
     }
 
+    private struct ExplicitContext {
+        let projectID: UUID
+        let worktreeID: UUID
+        let worktreePath: String?
+    }
+
     static func handle(_ payload: Payload, appState: AppState?, worktreeStore: WorktreeStore?) -> Bool {
         guard let paneIDString = payload.paneIDString, let paneID = UUID(uuidString: paneIDString) else {
             return false
@@ -46,7 +52,7 @@ enum AIActivitySocketRouter {
         providerID: String,
         state: String,
         paneID: UUID,
-        explicitContext: (projectID: UUID, worktreeID: UUID)?,
+        explicitContext: ExplicitContext?,
         routingContext: RoutingContext
     ) -> Bool {
         let normalizedState = state.lowercased()
@@ -81,7 +87,8 @@ enum AIActivitySocketRouter {
                 providerID: providerID,
                 paneID: paneID,
                 projectID: explicitContext.projectID,
-                worktreeID: explicitContext.worktreeID
+                worktreeID: explicitContext.worktreeID,
+                worktreePath: explicitContext.worktreePath
             )
             return true
         }
@@ -95,14 +102,14 @@ enum AIActivitySocketRouter {
         return true
     }
 
-    private static func explicitContext(from body: String) -> (projectID: UUID, worktreeID: UUID)? {
-        let parts = body.split(separator: ",", maxSplits: 1).map(String.init)
-        guard parts.count == 2,
+    private static func explicitContext(from body: String) -> ExplicitContext? {
+        let parts = body.split(separator: ",", maxSplits: 2).map(String.init)
+        guard parts.count >= 2,
               let projectID = UUID(uuidString: parts[0]),
               let worktreeID = UUID(uuidString: parts[1])
         else {
             return nil
         }
-        return (projectID, worktreeID)
+        return ExplicitContext(projectID: projectID, worktreeID: worktreeID, worktreePath: parts.count == 3 ? parts[2] : nil)
     }
 }

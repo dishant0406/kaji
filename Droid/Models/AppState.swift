@@ -251,13 +251,11 @@ final class AppState {
                 return
             }
         }
-        for workspaceTab in workspaceTabs(for: projectID) {
-            if workspaceTab.root.allAreas().contains(where: { area in
-                area.tabs.contains(where: { $0.content.editorState?.filePath == filePath })
-            }) {
-                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-                return
-            }
+        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
+            area.tabs.contains(where: { $0.content.editorState?.filePath == filePath })
+        }) {
+            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
+            return
         }
         dispatch(.createEditorTab(projectID: projectID, areaID: nil, filePath: filePath))
     }
@@ -283,16 +281,14 @@ final class AppState {
     }
 
     func openDiffViewer(vcs: VCSTabState, filePath: String, isStaged: Bool, projectID: UUID) {
-        for workspaceTab in workspaceTabs(for: projectID) {
-            if workspaceTab.root.allAreas().contains(where: { area in
-                area.tabs.contains(where: { tab in
-                    guard let diff = tab.content.diffViewerState else { return false }
-                    return diff.filePath == filePath && diff.isStaged == isStaged
-                })
-            }) {
-                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-                return
-            }
+        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
+            area.tabs.contains(where: { tab in
+                guard let diff = tab.content.diffViewerState else { return false }
+                return diff.filePath == filePath && diff.isStaged == isStaged
+            })
+        }) {
+            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
+            return
         }
         dispatch(.createDiffViewerTab(
             projectID: projectID,
@@ -302,13 +298,11 @@ final class AppState {
     }
 
     private func openFileInExternalEditor(_ filePath: String, projectID: UUID, command: String) {
-        for workspaceTab in workspaceTabs(for: projectID) {
-            if workspaceTab.root.allAreas().contains(where: { area in
-                area.tabs.contains(where: { $0.content.pane?.externalEditorFilePath == filePath })
-            }) {
-                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-                return
-            }
+        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
+            area.tabs.contains(where: { $0.content.pane?.externalEditorFilePath == filePath })
+        }) {
+            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
+            return
         }
         dispatch(.createExternalEditorTab(projectID: projectID, areaID: nil, filePath: filePath, command: command))
     }

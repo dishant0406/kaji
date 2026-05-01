@@ -1,6 +1,12 @@
 import Foundation
 
 enum ProjectIconColor {
+    struct RGB {
+        let red: Double
+        let green: Double
+        let blue: Double
+    }
+
     struct Swatch: Identifiable, Hashable {
         let id: String
         let name: String
@@ -8,7 +14,7 @@ enum ProjectIconColor {
 
         var prefersDarkForeground: Bool {
             guard let rgb = ProjectIconColor.rgb(fromHex: hex) else { return false }
-            let luminance = 0.2126 * rgb.0 + 0.7152 * rgb.1 + 0.0722 * rgb.2
+            let luminance = 0.2126 * rgb.red + 0.7152 * rgb.green + 0.0722 * rgb.blue
             return luminance > 0.6
         }
     }
@@ -38,7 +44,7 @@ enum ProjectIconColor {
         return palette.first { $0.hex.caseInsensitiveCompare(identifier) == .orderedSame }
     }
 
-    static func rgb(fromHex hex: String) -> (Double, Double, Double)? {
+    static func rgb(fromHex hex: String) -> RGB? {
         var normalized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         if normalized.hasPrefix("#") { normalized.removeFirst() }
         guard normalized.count == 6,
@@ -47,6 +53,6 @@ enum ProjectIconColor {
         let red = Double((value >> 16) & 0xFF) / 255.0
         let green = Double((value >> 8) & 0xFF) / 255.0
         let blue = Double(value & 0xFF) / 255.0
-        return (red, green, blue)
+        return RGB(red: red, green: green, blue: blue)
     }
 }

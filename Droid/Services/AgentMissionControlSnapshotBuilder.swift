@@ -27,7 +27,7 @@ enum AgentMissionControlSnapshotBuilder {
                 return lhs.timestamp > rhs.timestamp
             }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
     }
 
     static func providerName(for providerID: String) -> String {
@@ -45,7 +45,9 @@ enum AgentMissionControlSnapshotBuilder {
 
     static func providerIconName(for providerID: String) -> String {
         switch providerID {
-        case "codex", "claude", "opencode":
+        case "codex",
+             "claude",
+             "opencode":
             providerID
         default:
             "sparkles"
@@ -75,6 +77,7 @@ enum AgentMissionControlSnapshotBuilder {
         let providerName = providerName(for: activity.providerID)
         return AgentMissionControlItem(
             id: "activity:\(activity.paneID.uuidString)",
+            runID: nil,
             providerID: activity.providerID,
             providerName: providerName,
             providerIconName: providerIconName(for: activity.providerID),
@@ -84,7 +87,10 @@ enum AgentMissionControlSnapshotBuilder {
             timestamp: activity.startedAt,
             paneID: activity.paneID,
             notificationID: nil,
-            transcriptEntries: activity.transcriptEntries
+            transcriptEntries: activity.transcriptEntries,
+            changedFiles: [],
+            changedFilesAttribution: .none,
+            verification: .notStarted
         )
     }
 
@@ -97,6 +103,7 @@ enum AgentMissionControlSnapshotBuilder {
         guard let providerID = providerID(from: notification.source) else { return nil }
         return AgentMissionControlItem(
             id: "notification:\(notification.id.uuidString)",
+            runID: nil,
             providerID: providerID,
             providerName: providerName(for: providerID),
             providerIconName: providerIconName(for: providerID),
@@ -111,7 +118,10 @@ enum AgentMissionControlSnapshotBuilder {
             timestamp: notification.timestamp,
             paneID: notification.paneID,
             notificationID: notification.id,
-            transcriptEntries: []
+            transcriptEntries: [],
+            changedFiles: [],
+            changedFilesAttribution: .none,
+            verification: .notStarted
         )
     }
 

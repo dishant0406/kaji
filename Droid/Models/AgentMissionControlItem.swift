@@ -25,6 +25,7 @@ enum AgentMissionControlStatus: String, Hashable {
 
 struct AgentMissionControlItem: Identifiable, Hashable {
     let id: String
+    let runID: UUID?
     let providerID: String
     let providerName: String
     let providerIconName: String
@@ -35,6 +36,13 @@ struct AgentMissionControlItem: Identifiable, Hashable {
     let paneID: UUID?
     let notificationID: UUID?
     let transcriptEntries: [AgentTranscriptEntry]
+    let changedFiles: [AgentChangedFile]
+    let changedFilesAttribution: AgentChangedFilesAttribution
+    let verification: AgentVerification
+
+    var hasChangedFileEvidence: Bool {
+        changedFilesAttribution != .none || verification.status != .notStarted
+    }
 }
 
 struct AgentTranscriptEntry: Identifiable, Hashable {

@@ -93,25 +93,25 @@ private enum FileSearchScanner {
         if let glob {
             arguments.append(contentsOf: ["--glob", glob])
         }
-        return await FileSearchProcessRunner.collect(
+        return await FileSearchProcessRunner.collect(.init(
             executableURL: rgURL,
             arguments: arguments,
             projectPath: projectPath,
             currentDirectoryPath: projectPath,
             limit: limit,
             outputPathsAreRelative: true
-        )
+        ))
     }
 
     private static func runFind(arguments: [String], projectPath: String, limit: Int?) async -> [FileSearchResult] {
-        await FileSearchProcessRunner.collect(
+        await FileSearchProcessRunner.collect(.init(
             executableURL: findURL,
             arguments: arguments,
             projectPath: projectPath,
             currentDirectoryPath: nil,
             limit: limit,
             outputPathsAreRelative: false
-        )
+        ))
     }
 
     private static func initialArguments(projectPath: String, maxDepth: Int) -> [String] {

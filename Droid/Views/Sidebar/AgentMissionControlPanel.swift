@@ -4,18 +4,22 @@ struct AgentMissionControlPanel: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
-    @State private var activityStore = AIActivityStore.shared
+    @State private var runStore = AgentRunStore.shared
     @State private var notificationStore = NotificationStore.shared
     let onDismiss: () -> Void
 
     private var items: [AgentMissionControlItem] {
         _ = notificationStore.readStateVersion
-        return AgentMissionControlSnapshotBuilder.items(
-            activities: Array(activityStore.activitiesByPaneID.values),
+        return AgentRunMissionControlSnapshotBuilder.items(
+            runs: runStore.runs,
             notifications: notificationStore.notifications,
             projects: projectStore.projects,
             worktrees: worktreeStore.worktrees
         )
+    }
+
+    private var sections: [AgentMissionControlSection] {
+        AgentMissionControlSectionBuilder.sections(for: items)
     }
 
     var body: some View {
@@ -55,21 +59,84 @@ struct AgentMissionControlPanel: View {
     private var list: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 0) {
-                ForEach(items) { item in
-                    AgentMissionControlRow(item: item) {
-                        AgentMissionControlNavigator.navigate(
-                            to: item,
-                            appState: appState,
-                            worktreeStore: worktreeStore,
-                            notificationStore: notificationStore
-                        )
-                        onDismiss()
+                ForEach(sections) { section in
+                    AgentMissionControlSectionHeader(section: section)
+                    ForEach(section.items) { item in
+                        AgentMissionControlRow(
+                            item: item,
+                            onVerify: verify(item),
+                            onOpenFile: openFile(item),
+                            onOpenDiff: openDiff(item)
+                        ) {
+                            AgentMissionControlNavigator.navigate(
+                                to: item,
+                                appState: appState,
+                                worktreeStore: worktreeStore,
+                                notificationStore: notificationStore
+                            )
+                            onDismiss()
+                        }
                     }
                 }
             }
             .padding(.vertical, 4)
         }
         .background(DroidTheme.bg.opacity(0.28))
+    }
+
+    private func verify(_ item: AgentMissionControlItem) -> (() -> Void)? {
+        guard let runID = item.runID else { return nil }
+        guard !item.changedFiles.isEmpty else { return nil }
+        return {
+            AgentVerificationRunner.verify(runID: runID, store: runStore)
+        }
+    }
+
+    private func openFile(_ item: AgentMissionControlItem) -> ((AgentChangedFile) -> Void)? {
+        guard let runID = item.runID else { return nil }
+        return { file in
+            guard file.status != .deleted,
+                  let context = activateContext(for: runID)
+            else { return }
+            let filePath = (context.worktreePath as NSString).appendingPathComponent(file.path)
+            appState.openFile(filePath, projectID: context.projectID)
+            onDismiss()
+        }
+    }
+
+    private func openDiff(_ item: AgentMissionControlItem) -> ((AgentChangedFile) -> Void)? {
+        guard let runID = item.runID else { return nil }
+        return { file in
+            guard let context = activateContext(for: runID) else { return }
+            appState.openDiffViewer(
+                vcs: VCSTabState(projectPath: context.worktreePath),
+                filePath: file.path,
+                isStaged: false,
+                projectID: context.projectID
+            )
+            onDismiss()
+        }
+    }
+
+    private func activateContext(for runID: UUID) -> (projectID: UUID, worktreePath: String)? {
+        guard let run = runStore.run(id: runID),
+              let projectID = run.projectID,
+              let worktreePath = run.worktreePath,
+              let project = projectStore.projects.first(where: { $0.id == projectID })
+        else { return nil }
+
+        guard let worktree = worktree(for: run, projectID: projectID, worktreePath: worktreePath) else { return nil }
+        appState.selectProject(project, worktree: worktree)
+        return (projectID, worktree.path)
+    }
+
+    private func worktree(for run: AgentRun, projectID: UUID, worktreePath: String) -> Worktree? {
+        if let worktreeID = run.worktreeID,
+           let worktree = worktreeStore.worktree(projectID: projectID, worktreeID: worktreeID)
+        {
+            return worktree
+        }
+        return worktreeStore.list(for: projectID).first { $0.path == worktreePath }
     }
 
     private var emptyState: some View {
@@ -89,96 +156,5 @@ struct AgentMissionControlPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DroidTheme.bg.opacity(0.28))
-    }
-}
-
-private struct AgentMissionControlRow: View {
-    let item: AgentMissionControlItem
-    let onSelect: () -> Void
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(alignment: .top, spacing: 9) {
-                providerIcon
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(item.title)
-                            .droidFont(size: 12, weight: .semibold)
-                            .foregroundStyle(DroidTheme.fg)
-                            .lineLimit(1)
-                        Spacer(minLength: 4)
-                        DroidBadge(text: item.status.title, variant: badgeVariant)
-                    }
-                    Text(item.detail)
-                        .droidFont(size: 11)
-                        .foregroundStyle(DroidTheme.fgMuted)
-                        .lineLimit(2)
-                    Text(item.providerName)
-                        .droidFont(size: 10, design: .monospaced)
-                        .foregroundStyle(DroidTheme.fgDim)
-                    if !item.transcriptEntries.isEmpty {
-                        transcriptPreview
-                    }
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-            .background(hovered ? DroidTheme.hover : .clear)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .accessibilityLabel("\(item.title), \(item.status.title)")
-    }
-
-    private var providerIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                .fill(DroidTheme.surface.opacity(0.5))
-            ProviderIconView(iconName: item.providerIconName, size: 14, style: .monochrome(DroidTheme.fgMuted))
-        }
-        .frame(width: 26, height: 26)
-        .overlay {
-            RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                .strokeBorder(DroidTheme.border.opacity(0.7), lineWidth: 1)
-        }
-    }
-
-    private var badgeVariant: DroidBadgeVariant {
-        switch item.status {
-        case .running:
-            .accent
-        case .needsAttention:
-            .warning
-        case .failed:
-            .danger
-        case .completed,
-             .notice:
-            .neutral
-        }
-    }
-
-    private var transcriptPreview: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ForEach(item.transcriptEntries.suffix(3)) { entry in
-                HStack(alignment: .top, spacing: 5) {
-                    Text(entry.kind.uppercased())
-                        .droidFont(size: 8, weight: .semibold, design: .monospaced)
-                        .foregroundStyle(DroidTheme.fgDim)
-                        .frame(width: 42, alignment: .leading)
-                    Text(entry.text)
-                        .droidFont(size: 10)
-                        .foregroundStyle(DroidTheme.fgMuted)
-                        .lineLimit(2)
-                }
-            }
-        }
-        .padding(6)
-        .background(DroidTheme.surface.opacity(0.38), in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                .strokeBorder(DroidTheme.border.opacity(0.6), lineWidth: 1)
-        }
     }
 }

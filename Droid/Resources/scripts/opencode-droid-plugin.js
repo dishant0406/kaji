@@ -7,8 +7,9 @@ export const DroidNotificationPlugin = async ({ client }) => {
       const paneID = process.env.DROID_PANE_ID
       const projectID = process.env.DROID_PROJECT_ID
       const worktreeID = process.env.DROID_WORKTREE_ID
+      const worktreePath = process.env.DROID_WORKTREE_PATH
       if (!socketPath || !paneID) return
-      const context = projectID && worktreeID ? `${projectID},${worktreeID}` : ""
+      const context = projectID && worktreeID ? `${projectID},${worktreeID},${worktreePath || ""}` : ""
 
       const send = async (payload) => {
         try {

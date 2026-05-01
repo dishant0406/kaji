@@ -75,7 +75,7 @@ struct TerminalBridge: NSViewRepresentable {
             command: state.startupCommand
         )
         if view.envVars.isEmpty, let key = worktreeKey {
-            view.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key)
+            view.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
         }
         view.setInjectedCommand(state.injectedCommand)
         view.isFocused = focused
@@ -102,7 +102,7 @@ struct TerminalBridge: NSViewRepresentable {
 
     func updateNSView(_ nsView: GhosttyTerminalNSView, context: Context) {
         if nsView.envVars.isEmpty, nsView.surface == nil, let key = worktreeKey {
-            nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key)
+            nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
         }
         nsView.setInjectedCommand(state.injectedCommand)
         nsView.overlayActive = overlayActive
@@ -143,11 +143,16 @@ struct TerminalBridge: NSViewRepresentable {
         }
     }
 
-    private static func buildEnvVars(paneID: UUID, worktreeKey key: WorktreeKey) -> [(key: String, value: String)] {
+    private static func buildEnvVars(
+        paneID: UUID,
+        worktreeKey key: WorktreeKey,
+        worktreePath: String
+    ) -> [(key: String, value: String)] {
         var vars: [(key: String, value: String)] = [
             (key: "DROID_PANE_ID", value: paneID.uuidString),
             (key: "DROID_PROJECT_ID", value: key.projectID.uuidString),
             (key: "DROID_WORKTREE_ID", value: key.worktreeID.uuidString),
+            (key: "DROID_WORKTREE_PATH", value: worktreePath),
             (key: "DROID_SOCKET_PATH", value: NotificationSocketServer.socketPath),
         ]
         if let hookPath = DroidNotificationHooks.hookScriptPath {
