@@ -3,16 +3,21 @@ import Foundation
 @MainActor
 @Observable
 final class AgentRunStore {
-    static let shared = AgentRunStore()
+    static let shared = AgentRunStore(fileStore: defaultFileStore())
 
     private(set) var runs: [AgentRun] = []
 
+    @ObservationIgnored private let fileStore: CodableFileStore<[AgentRun]>?
     private let maxRuns = 80
     private let maxEventsPerRun = 40
     private let maxActionsPerRun = 40
     private let restartGraceInterval: TimeInterval = 2
 
-    private init() {}
+    init(fileStore: CodableFileStore<[AgentRun]>? = nil) {
+        self.fileStore = fileStore
+        runs = Self.loadRuns(from: fileStore)
+        trimRuns()
+    }
 
     func start(
         providerID: String,
@@ -52,6 +57,7 @@ final class AgentRunStore {
         )
         runs.insert(run, at: 0)
         trimRuns()
+        persist()
     }
 
     func stop(paneID: UUID) {
@@ -59,6 +65,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .stopped, label: "stop", text: "Stopped"), to: &run)
             run.status = .completed
         }
+        persist()
     }
 
     func stop(providerID: String, projectID: UUID, worktreeID: UUID) {
@@ -66,6 +73,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .stopped, label: "stop", text: "Stopped"), to: &run)
             run.status = .completed
         }
+        persist()
     }
 
     func stop(providerID: String, projectID: UUID) {
@@ -78,6 +86,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .stopped, label: "stop", text: "Stopped"), to: &runs[index])
             runs[index].status = .completed
         }
+        persist()
     }
 
     func complete(providerID: String, paneID: UUID, message: String) {
@@ -85,6 +94,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
             run.status = .completed
         }) {
+            persist()
             return
         }
 
@@ -92,6 +102,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
             run.status = .completed
         }
+        persist()
     }
 
     func complete(providerID: String, projectID: UUID, worktreeID: UUID, message: String) {
@@ -99,6 +110,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
             run.status = .completed
         }) {
+            persist()
             return
         }
 
@@ -106,6 +118,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
             run.status = .completed
         }
+        persist()
     }
 
     func fail(providerID: String, paneID: UUID, message: String) {
@@ -113,6 +126,7 @@ final class AgentRunStore {
             appendEvent(.init(kind: .failed, label: "failed", text: message), to: &run)
             run.status = .failed
         }
+        persist()
     }
 
     func appendTranscript(providerID: String, paneID: UUID, kind: String, text: String) {
@@ -126,6 +140,7 @@ final class AgentRunStore {
                 run.status = .needsAttention
             }
         }
+        persist()
     }
 
     func setChangedFiles(
@@ -140,6 +155,7 @@ final class AgentRunStore {
             let message = changedFilesMessage(count: files.count, attribution: attribution)
             appendEvent(.init(kind: .fileChange, label: "files", text: message), to: &run)
         }
+        persist()
     }
 
     func hasConcurrentOpenRun(paneID: UUID, projectID: UUID, worktreeID: UUID) -> Bool {
@@ -153,6 +169,7 @@ final class AgentRunStore {
 
     func reset() {
         runs.removeAll()
+        persist()
     }
 
     func run(id: UUID) -> AgentRun? {
@@ -168,6 +185,7 @@ final class AgentRunStore {
         updateRun(id: runID) { run in
             run.verification = AgentVerification(status: .running, command: command, output: nil, updatedAt: Date())
         }
+        persist()
     }
 
     func finishVerification(runID: UUID, status: AgentVerificationStatus, output: String) {
@@ -175,6 +193,7 @@ final class AgentRunStore {
             let command = run.verification.command
             run.verification = AgentVerification(status: status, command: command, output: output, updatedAt: Date())
         }
+        persist()
     }
 
     func recordAction(runID: UUID, kind: AgentRunActionKind, status: AgentRunActionStatus, message: String) {
@@ -182,6 +201,41 @@ final class AgentRunStore {
             let action = AgentRunActionRecord(kind: kind, status: status, message: message)
             run.actions = Array((run.actions + [action]).suffix(maxActionsPerRun))
         }
+        persist()
+    }
+
+    private static func defaultFileStore() -> CodableFileStore<[AgentRun]>? {
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            ProcessInfo.processInfo.processName.hasSuffix("PackageTests")
+        {
+            return nil
+        }
+        return CodableFileStore(fileURL: DroidFileStorage.fileURL(filename: "agent-runs.json"))
+    }
+
+    private static func loadRuns(from fileStore: CodableFileStore<[AgentRun]>?) -> [AgentRun] {
+        guard let fileStore, let loaded = try? fileStore.load() else { return [] }
+        return loaded.map(normalizedPersistedRun)
+    }
+
+    private static func normalizedPersistedRun(_ run: AgentRun) -> AgentRun {
+        var run = run
+        if run.status == .running || run.status == .waiting || run.status == .needsAttention {
+            run.status = .stale
+        }
+        if run.verification.status == .running {
+            run.verification = AgentVerification(
+                status: .unavailable,
+                command: run.verification.command,
+                output: "Verification was interrupted.",
+                updatedAt: Date()
+            )
+        }
+        return run
+    }
+
+    private func persist() {
+        try? fileStore?.save(runs)
     }
 
     private func removeActiveRun(providerID: String, paneID: UUID) {

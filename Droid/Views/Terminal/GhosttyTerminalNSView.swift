@@ -786,10 +786,10 @@ final class GhosttyTerminalNSView: NSView {
         surface != nil
     }
 
-    private static func loginShellCommand(_ command: String) -> String {
+    static func loginShellCommand(_ command: String) -> String {
         let shell = userShell()
         let escaped = command.replacingOccurrences(of: "'", with: "'\\''")
-        return "\(shell) -l -c '\(escaped)'"
+        return "\(shell) -l -i -c '\(escaped)'"
     }
 
     private static func userShell() -> String {
