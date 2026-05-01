@@ -8,6 +8,8 @@ final class AIActivityStore {
         let projectID: UUID
         let worktreeID: UUID
         let providerID: String
+        let startedAt: Date
+        var transcriptEntries: [AgentTranscriptEntry] = []
     }
 
     static let shared = AIActivityStore()
@@ -71,12 +73,22 @@ final class AIActivityStore {
             paneID: paneID,
             projectID: projectID,
             worktreeID: worktreeID,
-            providerID: providerID
+            providerID: providerID,
+            startedAt: Date()
         )
     }
 
     func stop(paneID: UUID) {
         activitiesByPaneID.removeValue(forKey: paneID)
+    }
+
+    func appendTranscript(providerID: String, paneID: UUID, kind: String, text: String) {
+        guard var activity = activitiesByPaneID[paneID], activity.providerID == providerID else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let entry = AgentTranscriptEntry(kind: kind.isEmpty ? "update" : kind, text: trimmed)
+        activity.transcriptEntries = Array((activity.transcriptEntries + [entry]).suffix(8))
+        activitiesByPaneID[paneID] = activity
     }
 
     func stop(

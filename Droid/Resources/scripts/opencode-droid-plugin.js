@@ -26,6 +26,14 @@ export const DroidNotificationPlugin = async ({ client }) => {
         } catch {}
       }
 
+      const sanitize = (value) => String(value || "").replace(/[\n\r|]+/g, " ").trim().slice(0, 500)
+
+      const sendTranscript = async (kind, text) => {
+        const cleaned = sanitize(text)
+        if (!cleaned) return
+        await send(`opencode_transcript|${paneID}|${kind}|${cleaned}`)
+      }
+
       const sessionStatus = () => {
         const raw = event.properties?.status
         if (typeof raw === "string") return raw
@@ -47,11 +55,13 @@ export const DroidNotificationPlugin = async ({ client }) => {
 
       if (event.type === "tui.command.execute") {
         await start()
+        await sendTranscript("user", event.properties?.text || event.properties?.command)
         return
       }
 
       if (event.type === "tool.execute.before") {
         await start()
+        await sendTranscript("tool", event.properties?.tool || event.properties?.name)
         return
       }
 
@@ -73,6 +83,7 @@ export const DroidNotificationPlugin = async ({ client }) => {
         event.type === "session.error"
       ) {
         await stop()
+        await sendTranscript("attention", event.properties?.question || event.properties?.message || event.type)
         return
       }
 
@@ -98,7 +109,8 @@ export const DroidNotificationPlugin = async ({ client }) => {
           )
           const text = textParts.map((p) => p.text || "").join("")
           if (text) {
-            body = text.replace(/[\n\r|]+/g, " ").slice(0, 200)
+            body = sanitize(text).slice(0, 200)
+            await sendTranscript("assistant", text)
           }
         }
       } catch {}

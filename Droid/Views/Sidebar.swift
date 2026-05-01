@@ -202,6 +202,7 @@ struct SidebarFooter: View {
     @Binding var showAIUsagePopover: Bool
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
+    @Environment(WorktreeStore.self) private var worktreeStore
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage(AIUsageSettingsStore.usageEnabledKey) private var usageEnabled = false
@@ -211,6 +212,8 @@ struct SidebarFooter: View {
     @State private var showThemePicker = false
     @State private var showNotifications = false
     @State private var showResourceMonitor = false
+    @State private var showAgents = false
+    @State private var activityStore = AIActivityStore.shared
     @State private var notificationStore = NotificationStore.shared
     @State private var resourceMonitor = ResourceMonitorService.shared
     private let usageService = AIUsageService.shared
@@ -316,11 +319,30 @@ struct SidebarFooter: View {
         .help("AI Usage (\(KeyBindingStore.shared.combo(for: .toggleAIUsage).displayString))")
     }
 
+    private var agentItems: [AgentMissionControlItem] {
+        _ = notificationStore.readStateVersion
+        return AgentMissionControlSnapshotBuilder.items(
+            activities: Array(activityStore.activitiesByPaneID.values),
+            notifications: notificationStore.notifications,
+            projects: projectStore.projects,
+            worktrees: worktreeStore.worktrees
+        )
+    }
+
+    private var agentsButton: some View {
+        AgentMissionControlButton(items: agentItems, expanded: expanded) { showAgents.toggle() }
+            .help("Agents")
+            .droidPopover(isPresented: $showAgents, preferredEdge: .top) {
+                AgentMissionControlPanel(onDismiss: { showAgents = false })
+            }
+    }
+
     private var collapsedFooter: some View {
         VStack(spacing: 6) {
             if usageEnabled {
                 aiUsageButton
             }
+            agentsButton
             IconButton(symbol: "memorychip", accessibilityLabel: "Resource Monitor") { showResourceMonitor.toggle() }
                 .help("Resource Monitor")
                 .droidPopover(isPresented: $showResourceMonitor, preferredEdge: .top) {
@@ -369,6 +391,7 @@ struct SidebarFooter: View {
             if usageEnabled {
                 aiUsageButton
             }
+            agentsButton
             IconButton(symbol: "memorychip", accessibilityLabel: "Resource Monitor") { showResourceMonitor.toggle() }
                 .help("Resource Monitor")
                 .droidPopover(isPresented: $showResourceMonitor, preferredEdge: .top) {

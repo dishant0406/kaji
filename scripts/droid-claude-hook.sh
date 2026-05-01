@@ -41,6 +41,50 @@ send_activity() {
     send_socket_message "$DROID_SOCKET_PATH" "claude_activity|$DROID_PANE_ID|$state|$context"
 }
 
+send_transcript() {
+    local kind="$1"
+    local text="$2"
+    if [ -n "$text" ]; then
+        send_socket_message "$DROID_SOCKET_PATH" "claude_transcript|$DROID_PANE_ID|$kind|$text"
+    fi
+}
+
+extract_transcript_text() {
+    /usr/bin/python3 - "$1" "$input" <<'PY'
+import json
+import sys
+
+event = sys.argv[1]
+
+try:
+    payload = json.loads(sys.argv[2])
+except Exception:
+    raise SystemExit(0)
+
+keys = ["prompt", "last_assistant_message", "message", "text", "content"]
+if event == "userpromptsubmit":
+    keys = ["prompt", "message", "text", "content"]
+
+def walk(value):
+    if isinstance(value, dict):
+        for key in keys:
+            candidate = value.get(key)
+            if isinstance(candidate, str) and candidate.strip():
+                yield candidate
+        for child in value.values():
+            yield from walk(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from walk(child)
+
+for candidate in walk(payload):
+    text = " ".join(candidate.replace("|", " ").split())
+    if text:
+        print(text[:500])
+        break
+PY
+}
+
 extract_last_message() {
     local msg=""
     msg=$(printf '%s' "$input" | grep -o '"last_assistant_message":"[^"]*"' | head -1 | cut -d'"' -f4)
@@ -54,6 +98,7 @@ extract_last_message() {
 case "$event" in
     userpromptsubmit)
         send_activity "start"
+        send_transcript "user" "$(extract_transcript_text "$event")"
         ;;
     permissionrequest)
         send_activity "stop"
@@ -66,6 +111,7 @@ case "$event" in
     stop)
         send_activity "stop"
         body=$(extract_last_message)
+        send_transcript "assistant" "$body"
         send_notification "claude_hook" "Claude Code" "$body"
         ;;
 esac
