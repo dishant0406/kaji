@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import Droid
@@ -9,6 +10,7 @@ struct AskCommandDispatcherTests {
         let codex = AskCommandDispatcher.startupCommand(for: .codex, prompt: "whats this repo about")
         let claude = AskCommandDispatcher.startupCommand(for: .claude, prompt: "hello")
         let opencode = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "hello world")
+        let empty = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "")
 
         #expect(codex.hasPrefix("codex"))
         #expect(codex.hasSuffix("'whats this repo about'"))
@@ -16,5 +18,57 @@ struct AskCommandDispatcherTests {
         #expect(claude.hasSuffix(" hello"))
         #expect(opencode.hasPrefix("opencode"))
         #expect(opencode.contains("--prompt 'hello world'"))
+        #expect(!empty.isEmpty)
+        #expect(!empty.contains("--prompt"))
+    }
+
+    @Test
+    @MainActor
+    func resumeCommandUsesProviderNativeShape() {
+        let history = AskHistoryOption(
+            provider: .codex,
+            sessionID: "session one",
+            title: "Fix tests",
+            detail: "Codex in muxy",
+            projectPath: nil,
+            updatedAt: Date()
+        )
+
+        let codex = AskCommandDispatcher.resumeCommand(for: .codex, history: history, prompt: "continue")
+        let claude = AskCommandDispatcher.resumeCommand(for: .claude, history: history, prompt: "continue")
+        let opencode = AskCommandDispatcher.resumeCommand(for: .opencode, history: history, prompt: "continue")
+
+        #expect(codex.contains("resume 'session one' continue"))
+        #expect(claude.contains("--resume 'session one' continue"))
+        #expect(opencode.contains("--session 'session one' --prompt continue"))
+    }
+
+    @Test
+    @MainActor
+    func skillsAdaptPromptsPerProvider() {
+        let skill = AskSkillOption(
+            name: "copywriting",
+            title: "Write copy",
+            detail: "Agents skill",
+            path: "/tmp/copywriting/SKILL.md",
+            source: "Agents"
+        )
+
+        #expect(AskCommandDispatcher.adaptedPrompt(for: request(provider: .claude, prompt: "write a hero", skill: skill)) == "/copywriting write a hero")
+        #expect(AskCommandDispatcher.adaptedPrompt(for: request(provider: .codex, prompt: "write a hero", skill: skill)).contains("Use the copywriting skill"))
+        #expect(AskCommandDispatcher.adaptedPrompt(for: request(provider: .opencode, prompt: "", skill: skill)).contains("/tmp/copywriting/SKILL.md"))
+    }
+
+    private func request(provider: AskProvider, prompt: String, skill: AskSkillOption?) -> AskDispatchRequest {
+        AskDispatchRequest(
+            prompt: prompt,
+            project: Project(name: "muxy", path: "/tmp/muxy"),
+            worktree: Worktree(name: "main", path: "/tmp/muxy", isPrimary: true),
+            provider: provider,
+            sessionMode: .bestMatch,
+            session: nil,
+            history: nil,
+            skill: skill
+        )
     }
 }

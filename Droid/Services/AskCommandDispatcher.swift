@@ -3,8 +3,7 @@ import Foundation
 @MainActor
 enum AskCommandDispatcher {
     static func send(_ request: AskDispatchRequest, appState: AppState) async {
-        let trimmed = request.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        let prompt = adaptedPrompt(for: request)
 
         appState.selectProject(request.project, worktree: request.worktree)
         let sessions = AskSessionCatalog.sessions(
@@ -14,18 +13,23 @@ enum AskCommandDispatcher {
             appState: appState
         )
 
+        if let history = request.history {
+            await sendToHistory(history, prompt: prompt, project: request.project, provider: request.provider, appState: appState)
+            return
+        }
+
         switch request.sessionMode {
         case .existingSession:
             guard let session = request.session else { return }
-            await sendToExistingSession(session, prompt: trimmed, appState: appState)
+            await sendToExistingSession(session, prompt: prompt, appState: appState)
         case .bestMatch:
             if let match = AskSessionCatalog.bestMatch(in: sessions, provider: request.provider) {
-                await sendToExistingSession(match, prompt: trimmed, appState: appState)
+                await sendToExistingSession(match, prompt: prompt, appState: appState)
                 return
             }
-            await sendToNewSession(prompt: trimmed, project: request.project, provider: request.provider, appState: appState)
+            await sendToNewSession(prompt: prompt, project: request.project, provider: request.provider, appState: appState)
         case .newTerminal:
-            await sendToNewSession(prompt: trimmed, project: request.project, provider: request.provider, appState: appState)
+            await sendToNewSession(prompt: prompt, project: request.project, provider: request.provider, appState: appState)
         }
     }
 
@@ -40,7 +44,20 @@ enum AskCommandDispatcher {
             areaID: session.areaID,
             tabID: session.tabID
         ))
+        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         await inject(prompt: prompt, into: session.paneID)
+    }
+
+    private static func sendToHistory(
+        _ history: AskHistoryOption,
+        prompt: String,
+        project: Project,
+        provider: AskProvider,
+        appState: AppState
+    ) async {
+        let command = resumeCommand(for: provider, history: history, prompt: prompt)
+        guard !command.isEmpty else { return }
+        appState.createStartupCommandTab(projectID: project.id, title: provider.title, command: command)
     }
 
     private static func sendToNewSession(
@@ -50,7 +67,11 @@ enum AskCommandDispatcher {
         appState: AppState
     ) async {
         if provider == .terminal {
-            appState.createCommandTab(projectID: project.id, title: provider.title, command: prompt)
+            if prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                appState.createTab(projectID: project.id)
+            } else {
+                appState.createCommandTab(projectID: project.id, title: provider.title, command: prompt)
+            }
             return
         }
 
@@ -73,7 +94,9 @@ enum AskCommandDispatcher {
     static func startupCommand(for provider: AskProvider, prompt: String) -> String {
         let base = launchCommand(for: provider)
         guard !base.isEmpty else { return "" }
-        let escapedPrompt = ShellEscaper.escape(prompt)
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return base }
+        let escapedPrompt = ShellEscaper.escape(trimmed)
 
         switch provider {
         case .terminal:
@@ -83,6 +106,44 @@ enum AskCommandDispatcher {
             return "\(base) \(escapedPrompt)"
         case .opencode:
             return "\(base) --prompt \(escapedPrompt)"
+        }
+    }
+
+    static func resumeCommand(for provider: AskProvider, history: AskHistoryOption, prompt: String) -> String {
+        let base = launchCommand(for: provider)
+        guard !base.isEmpty else { return "" }
+        let escapedID = ShellEscaper.escape(history.sessionID)
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let escapedPrompt = trimmed.isEmpty ? nil : ShellEscaper.escape(trimmed)
+
+        switch provider {
+        case .terminal:
+            return trimmed
+        case .codex:
+            return [base, "resume", escapedID, escapedPrompt].compactMap { $0 }.joined(separator: " ")
+        case .claude:
+            return [base, "--resume", escapedID, escapedPrompt].compactMap { $0 }.joined(separator: " ")
+        case .opencode:
+            if let escapedPrompt {
+                return "\(base) --session \(escapedID) --prompt \(escapedPrompt)"
+            }
+            return "\(base) --session \(escapedID)"
+        }
+    }
+
+    static func adaptedPrompt(for request: AskDispatchRequest) -> String {
+        let prompt = request.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let skill = request.skill else { return prompt }
+
+        switch request.provider {
+        case .claude:
+            return prompt.isEmpty ? "/\(skill.name)" : "/\(skill.name) \(prompt)"
+        case .codex,
+             .opencode:
+            let base = "Use the \(skill.name) skill. Follow the instructions in \(skill.path)."
+            return prompt.isEmpty ? base : "\(base) \(prompt)"
+        case .terminal:
+            return prompt
         }
     }
 

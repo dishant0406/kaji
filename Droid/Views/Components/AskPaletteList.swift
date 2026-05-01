@@ -107,6 +107,12 @@ private struct AskPaletteRow: View {
             "square.stack"
         case .session:
             "terminal"
+        case .history:
+            "clock.arrow.circlepath"
+        case .skill:
+            "wand.and.stars"
+        case .launchProvider:
+            "play"
         case .submit:
             "arrow.up.right"
         }

@@ -16,6 +16,10 @@ struct AskOverlay: View {
     @State var sessionID: UUID?
     @State var highlightedIndex: Int? = 0
     @State var isSending = false
+    @State var historyCacheKey: AskHistoryCacheKey?
+    @State var cachedHistoryOptions: [AskHistoryOption] = []
+    @State var historyLoadTask: Task<Void, Never>?
+    @State var isHistoryLoading = false
 
     var body: some View {
         ZStack {
@@ -50,8 +54,14 @@ struct AskOverlay: View {
         }
         .onAppear(perform: configureDefaults)
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
-        .onChange(of: projectID) { _, _ in syncWorktreeSelection() }
-        .onChange(of: provider) { _, _ in syncSessionSelection() }
+        .onChange(of: projectID) { _, _ in
+            syncWorktreeSelection()
+            refreshHistoryOptions()
+        }
+        .onChange(of: provider) { _, _ in
+            syncSessionSelection()
+            refreshHistoryOptions()
+        }
         .onChange(of: sessionMode) { _, _ in syncSessionSelection() }
         .background(
             AskOverlayKeyMonitor(

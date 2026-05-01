@@ -9,18 +9,27 @@ struct AskSlashState: Hashable {
 enum AskPaletteEntries {
     static func annotationEntries(
         active: AskActiveAnnotation,
+        provider: AskProvider,
         projects: [Project],
-        worktrees: [Worktree]
+        worktrees: [Worktree],
+        historyOptions: [AskHistoryOption],
+        skillOptions: [AskSkillOption]
     ) -> [AskPaletteEntry] {
         switch active.key {
         case .project:
-            filteredProjects(projects, query: active.value)
+            return filteredProjects(projects, query: active.value)
         case .worktree:
-            filteredWorktrees(worktrees, query: active.value)
+            return filteredWorktrees(worktrees, query: active.value)
         case .provider:
-            filteredProviders(query: active.value)
-        case .session:
-            filteredSessionModes(query: active.value)
+            return filteredProviders(query: active.value)
+        case .mode:
+            return filteredSessionModes(query: active.value)
+        case .history:
+            if provider == .terminal { return [] }
+            return filteredHistory(historyOptions, query: active.value)
+        case .skill:
+            if provider == .terminal { return [] }
+            return filteredSkills(skillOptions, query: active.value)
         }
     }
 
@@ -40,7 +49,14 @@ enum AskPaletteEntries {
     static func build(_ context: AskPaletteContext) -> [AskPaletteEntry] {
         let parsed = AskInlineAnnotations.parse(context.fieldText)
         if let active = parsed.activeAnnotation {
-            return annotationEntries(active: active, projects: context.projects, worktrees: context.worktrees)
+            return annotationEntries(
+                active: active,
+                provider: context.provider,
+                projects: context.projects,
+                worktrees: context.worktrees,
+                historyOptions: context.historyOptions,
+                skillOptions: context.skillOptions
+            )
         }
 
         if let slashState = slashState(for: context.fieldText) {
@@ -63,6 +79,10 @@ enum AskPaletteEntries {
         }
 
         let trimmedPrompt = context.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !context.fieldText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return [submitEntry(context: context, parsed: parsed)]
+        }
+
         if trimmedPrompt.isEmpty {
             return AskSlashCommand.allCases.map { command in
                 .init(
@@ -80,20 +100,7 @@ enum AskPaletteEntries {
             }
         }
 
-        return [
-            .init(
-                action: .submit,
-                title: "Send to \(context.provider.title)",
-                detail: routeSummary(
-                    sessionMode: context.sessionMode,
-                    provider: context.provider,
-                    projectName: context.projectName,
-                    worktreeName: context.worktreeName,
-                    sessions: context.sessions
-                ),
-                annotation: "Enter"
-            ),
-        ]
+        return [submitEntry(context: context, parsed: parsed)]
     }
 
     private static func slashEntries(
@@ -157,6 +164,64 @@ enum AskPaletteEntries {
                     mode.title.lowercased().hasPrefix(normalized)
             }
             .map { .init(action: .sessionMode($0), title: $0.title, detail: sessionModeDetail($0), annotation: nil) }
+    }
+
+    private static func filteredHistory(_ options: [AskHistoryOption], query: String) -> [AskPaletteEntry] {
+        options.map { .init(action: .history($0), title: $0.title, detail: $0.detail, annotation: $0.provider.title) }
+    }
+
+    private static func filteredSkills(_ options: [AskSkillOption], query: String) -> [AskPaletteEntry] {
+        options.map { .init(action: .skill($0), title: $0.name, detail: $0.title, annotation: $0.source) }
+    }
+
+    private static func submitEntry(context: AskPaletteContext, parsed: AskParsedInput) -> AskPaletteEntry {
+        if let historyID = parsed.annotations[.history],
+           let history = context.historyOptions.first(where: { $0.sessionID == historyID })
+        {
+            return .init(
+                action: .submit,
+                title: "Resume \(history.title)",
+                detail: history.detail,
+                annotation: "Enter"
+            )
+        }
+        if let skillName = parsed.annotations[.skill],
+           let skill = context.skillOptions.first(where: { $0.name == skillName })
+        {
+            return .init(
+                action: .submit,
+                title: "Send to \(context.provider.title) with \(skill.name)",
+                detail: skill.title,
+                annotation: "Enter"
+            )
+        }
+        let trimmedPrompt = context.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedPrompt.isEmpty {
+            return .init(
+                action: .launchProvider(context.provider),
+                title: "Open \(context.provider.title)",
+                detail: routeSummary(
+                    sessionMode: context.sessionMode,
+                    provider: context.provider,
+                    projectName: context.projectName,
+                    worktreeName: context.worktreeName,
+                    sessions: context.sessions
+                ),
+                annotation: "Enter"
+            )
+        }
+        return .init(
+            action: .submit,
+            title: "Send to \(context.provider.title)",
+            detail: routeSummary(
+                sessionMode: context.sessionMode,
+                provider: context.provider,
+                projectName: context.projectName,
+                worktreeName: context.worktreeName,
+                sessions: context.sessions
+            ),
+            annotation: "Enter"
+        )
     }
 
     private static func currentValue(

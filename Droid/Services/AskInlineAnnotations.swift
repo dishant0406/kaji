@@ -67,7 +67,8 @@ enum AskInlineAnnotations {
     private static func parseExactToken(_ token: String) -> (key: AskAnnotationKey, value: String)? {
         guard token.hasPrefix(":") else { return nil }
         let parts = token.split(separator: ":", omittingEmptySubsequences: false)
-        guard parts.count == 3, parts[0].isEmpty, let key = AskAnnotationKey(rawValue: String(parts[1]).lowercased()) else { return nil }
+        guard parts.count == 3, parts[0].isEmpty else { return nil }
+        guard let key = annotationKey(raw: String(parts[1]), value: String(parts[2])) else { return nil }
         let value = String(parts[2]).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
         return (key, value)
@@ -112,11 +113,22 @@ enum AskInlineAnnotations {
         switch key {
         case .provider:
             AskProvider.resolveAnnotation(value) != nil
-        case .session:
+        case .mode:
             AskSessionMode.resolveAnnotation(value) != nil
+        case .history,
+             .skill:
+            false
         case .project,
              .worktree:
             false
         }
+    }
+
+    private static func annotationKey(raw: String, value: String) -> AskAnnotationKey? {
+        let normalized = raw.lowercased()
+        if normalized == "s", AskSessionMode.resolveAnnotation(value) != nil {
+            return .mode
+        }
+        return AskAnnotationKey(rawValue: normalized)
     }
 }
