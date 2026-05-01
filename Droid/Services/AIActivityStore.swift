@@ -7,6 +7,7 @@ final class AIActivityStore {
         let paneID: UUID
         let projectID: UUID
         let worktreeID: UUID
+        let worktreePath: String?
         let providerID: String
         let startedAt: Date
         var transcriptEntries: [AgentTranscriptEntry] = []
@@ -39,7 +40,8 @@ final class AIActivityStore {
                 providerID: providerID,
                 paneID: paneID,
                 projectID: context.projectID,
-                worktreeID: context.worktreeID
+                worktreeID: context.worktreeID,
+                worktreePath: context.worktreePath
             )
             return
         }
@@ -54,7 +56,8 @@ final class AIActivityStore {
             providerID: providerID,
             paneID: paneID,
             projectID: key.projectID,
-            worktreeID: key.worktreeID
+            worktreeID: key.worktreeID,
+            worktreePath: appState.activeWorktreePath[key.projectID]
         )
     }
 
@@ -62,24 +65,32 @@ final class AIActivityStore {
         providerID: String,
         paneID: UUID,
         projectID: UUID,
-        worktreeID: UUID
+        worktreeID: UUID,
+        worktreePath: String? = nil
     ) {
-        stop(
-            providerID: providerID,
-            projectID: projectID,
-            worktreeID: worktreeID
-        )
         activitiesByPaneID[paneID] = Activity(
             paneID: paneID,
             projectID: projectID,
             worktreeID: worktreeID,
+            worktreePath: worktreePath,
             providerID: providerID,
             startedAt: Date()
+        )
+        AgentRunStore.shared.start(
+            providerID: providerID,
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: worktreePath
         )
     }
 
     func stop(paneID: UUID) {
-        activitiesByPaneID.removeValue(forKey: paneID)
+        let activity = activitiesByPaneID.removeValue(forKey: paneID)
+        AgentRunStore.shared.stop(paneID: paneID)
+        if let activity {
+            captureChangedFiles(for: activity)
+        }
     }
 
     func appendTranscript(providerID: String, paneID: UUID, kind: String, text: String) {
@@ -89,6 +100,7 @@ final class AIActivityStore {
         let entry = AgentTranscriptEntry(kind: kind.isEmpty ? "update" : kind, text: trimmed)
         activity.transcriptEntries = Array((activity.transcriptEntries + [entry]).suffix(8))
         activitiesByPaneID[paneID] = activity
+        AgentRunStore.shared.appendTranscript(providerID: providerID, paneID: paneID, kind: kind, text: trimmed)
     }
 
     func stop(
@@ -96,10 +108,19 @@ final class AIActivityStore {
         projectID: UUID,
         worktreeID: UUID
     ) {
+        let matchingActivities = activitiesByPaneID.values.filter { activity in
+            activity.providerID == providerID &&
+                activity.projectID == projectID &&
+                activity.worktreeID == worktreeID
+        }
         activitiesByPaneID = activitiesByPaneID.filter { _, activity in
             !(activity.providerID == providerID &&
                 activity.projectID == projectID &&
                 activity.worktreeID == worktreeID)
+        }
+        AgentRunStore.shared.stop(providerID: providerID, projectID: projectID, worktreeID: worktreeID)
+        for activity in matchingActivities {
+            captureChangedFiles(for: activity)
         }
     }
 
@@ -107,14 +128,22 @@ final class AIActivityStore {
         providerID: String,
         projectID: UUID
     ) {
+        let matchingActivities = activitiesByPaneID.values.filter { activity in
+            activity.providerID == providerID && activity.projectID == projectID
+        }
         activitiesByPaneID = activitiesByPaneID.filter { _, activity in
             !(activity.providerID == providerID &&
                 activity.projectID == projectID)
+        }
+        AgentRunStore.shared.stop(providerID: providerID, projectID: projectID)
+        for activity in matchingActivities {
+            captureChangedFiles(for: activity)
         }
     }
 
     func reset() {
         activitiesByPaneID.removeAll()
+        AgentRunStore.shared.reset()
     }
 
     func pruneMissingPanes(appState: AppState) {
@@ -128,5 +157,58 @@ final class AIActivityStore {
             }
         )
         activitiesByPaneID = activitiesByPaneID.filter { validPaneIDs.contains($0.key) }
+    }
+
+    private func captureChangedFiles(for activity: Activity) {
+        guard let worktreePath = activity.worktreePath else {
+            AgentRunStore.shared.setChangedFiles(
+                providerID: activity.providerID,
+                paneID: activity.paneID,
+                files: [],
+                attribution: .unavailable
+            )
+            return
+        }
+
+        if AgentRunStore.shared.hasConcurrentOpenRun(
+            paneID: activity.paneID,
+            projectID: activity.projectID,
+            worktreeID: activity.worktreeID
+        ) || hasSharedWorktreeAttribution(paneID: activity.paneID) {
+            AgentRunStore.shared.setChangedFiles(
+                providerID: activity.providerID,
+                paneID: activity.paneID,
+                files: [],
+                attribution: .sharedWorktree
+            )
+            return
+        }
+
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: worktreePath, isDirectory: &isDirectory), isDirectory.boolValue else {
+            AgentRunStore.shared.setChangedFiles(
+                providerID: activity.providerID,
+                paneID: activity.paneID,
+                files: [],
+                attribution: .unavailable
+            )
+            return
+        }
+
+        Task {
+            let files = await AgentChangedFilesSnapshotter.snapshot(repoPath: worktreePath)
+            await MainActor.run {
+                AgentRunStore.shared.setChangedFiles(
+                    providerID: activity.providerID,
+                    paneID: activity.paneID,
+                    files: files ?? [],
+                    attribution: files == nil ? .unavailable : .worktreeSnapshot
+                )
+            }
+        }
+    }
+
+    private func hasSharedWorktreeAttribution(paneID: UUID) -> Bool {
+        AgentRunStore.shared.runs.first { $0.paneID == paneID }?.changedFilesAttribution == .sharedWorktree
     }
 }

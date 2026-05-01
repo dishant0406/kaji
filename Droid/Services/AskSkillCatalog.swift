@@ -20,7 +20,7 @@ enum AskSkillCatalog {
                     option.title.lowercased().contains(normalizedQuery)
             }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
     }
 
     private static func roots(provider: AskProvider, projectPath: String?, env: [String: String]) -> [(url: URL, source: String)] {

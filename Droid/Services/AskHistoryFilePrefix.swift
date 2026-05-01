@@ -5,7 +5,7 @@ enum AskHistoryFilePrefix {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return [] }
         defer { try? handle.close() }
         let data = (try? handle.read(upToCount: maxBytes)) ?? Data()
-        let prefix = String(decoding: data, as: UTF8.self)
+        let prefix = String(bytes: data, encoding: .utf8) ?? ""
         return prefix.split(separator: "\n", omittingEmptySubsequences: false).prefix(maxLines).map(String.init)
     }
 }

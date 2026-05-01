@@ -1,19 +1,21 @@
 import Foundation
 
 enum FileSearchProcessRunner {
-    static func collect(
-        executableURL: URL,
-        arguments: [String],
-        projectPath: String,
-        currentDirectoryPath: String?,
-        limit: Int?,
-        outputPathsAreRelative: Bool
-    ) async -> [FileSearchResult] {
+    struct Request {
+        let executableURL: URL
+        let arguments: [String]
+        let projectPath: String
+        let currentDirectoryPath: String?
+        let limit: Int?
+        let outputPathsAreRelative: Bool
+    }
+
+    static func collect(_ request: Request) async -> [FileSearchResult] {
         await withCheckedContinuation { continuation in
             let process = Process()
-            process.executableURL = executableURL
-            process.arguments = arguments
-            if let currentDirectoryPath {
+            process.executableURL = request.executableURL
+            process.arguments = request.arguments
+            if let currentDirectoryPath = request.currentDirectoryPath {
                 process.currentDirectoryURL = URL(fileURLWithPath: currentDirectoryPath)
             }
 
@@ -22,9 +24,9 @@ enum FileSearchProcessRunner {
             process.standardError = Pipe()
 
             let parser = FileSearchResultParser(
-                projectPath: projectPath,
-                limit: limit,
-                outputPathsAreRelative: outputPathsAreRelative
+                projectPath: request.projectPath,
+                limit: request.limit,
+                outputPathsAreRelative: request.outputPathsAreRelative
             )
             let handle = pipe.fileHandleForReading
 

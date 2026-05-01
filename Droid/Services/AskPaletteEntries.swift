@@ -7,29 +7,31 @@ struct AskSlashState: Hashable {
 }
 
 enum AskPaletteEntries {
-    static func annotationEntries(
-        active: AskActiveAnnotation,
-        provider: AskProvider,
-        projects: [Project],
-        worktrees: [Worktree],
-        historyOptions: [AskHistoryOption],
-        skillOptions: [AskSkillOption]
-    ) -> [AskPaletteEntry] {
-        switch active.key {
+    struct AnnotationContext {
+        let active: AskActiveAnnotation
+        let provider: AskProvider
+        let projects: [Project]
+        let worktrees: [Worktree]
+        let historyOptions: [AskHistoryOption]
+        let skillOptions: [AskSkillOption]
+    }
+
+    static func annotationEntries(_ annotation: AnnotationContext) -> [AskPaletteEntry] {
+        switch annotation.active.key {
         case .project:
-            return filteredProjects(projects, query: active.value)
+            return filteredProjects(annotation.projects, query: annotation.active.value)
         case .worktree:
-            return filteredWorktrees(worktrees, query: active.value)
+            return filteredWorktrees(annotation.worktrees, query: annotation.active.value)
         case .provider:
-            return filteredProviders(query: active.value)
+            return filteredProviders(query: annotation.active.value)
         case .mode:
-            return filteredSessionModes(query: active.value)
+            return filteredSessionModes(query: annotation.active.value)
         case .history:
-            if provider == .terminal { return [] }
-            return filteredHistory(historyOptions, query: active.value)
+            if annotation.provider == .terminal { return [] }
+            return filteredHistory(annotation.historyOptions, query: annotation.active.value)
         case .skill:
-            if provider == .terminal { return [] }
-            return filteredSkills(skillOptions, query: active.value)
+            if annotation.provider == .terminal { return [] }
+            return filteredSkills(annotation.skillOptions, query: annotation.active.value)
         }
     }
 
@@ -49,14 +51,14 @@ enum AskPaletteEntries {
     static func build(_ context: AskPaletteContext) -> [AskPaletteEntry] {
         let parsed = AskInlineAnnotations.parse(context.fieldText)
         if let active = parsed.activeAnnotation {
-            return annotationEntries(
+            return annotationEntries(.init(
                 active: active,
                 provider: context.provider,
                 projects: context.projects,
                 worktrees: context.worktrees,
                 historyOptions: context.historyOptions,
                 skillOptions: context.skillOptions
-            )
+            ))
         }
 
         if let slashState = slashState(for: context.fieldText) {

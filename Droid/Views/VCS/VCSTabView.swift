@@ -184,7 +184,7 @@ struct VCSTabView: View {
     @ViewBuilder
     private var branchModalOverlay: some View {
         if showCreateBranchModal {
-            DroidModalOverlay(onDismiss: { showCreateBranchModal = false }) {
+            DroidModalOverlay(onDismiss: { showCreateBranchModal = false }, content: {
                 CreateBranchModal(
                     currentBranch: state.branchName,
                     onCreate: { name in
@@ -193,7 +193,7 @@ struct VCSTabView: View {
                     },
                     onCancel: { showCreateBranchModal = false }
                 )
-            }
+            })
         }
     }
 

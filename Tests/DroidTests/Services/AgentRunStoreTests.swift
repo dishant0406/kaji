@@ -1,0 +1,165 @@
+import Foundation
+import Testing
+
+@testable import Droid
+
+@MainActor
+struct AgentRunStoreTests {
+    @Test
+    func startCreatesExactPaneRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(providerID: "codex", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+
+        #expect(store.runs.count == 1)
+        #expect(store.runs.first?.providerID == "codex")
+        #expect(store.runs.first?.paneID == paneID)
+        #expect(store.runs.first?.projectID == projectID)
+        #expect(store.runs.first?.worktreeID == worktreeID)
+        #expect(store.runs.first?.status == .running)
+        #expect(store.runs.first?.sourceConfidence == .exactPane)
+        store.reset()
+    }
+
+    @Test
+    func sameProviderCanRunInDifferentWorktrees() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let projectID = UUID()
+        let firstWorktreeID = UUID()
+        let secondWorktreeID = UUID()
+        let firstPaneID = UUID()
+        let secondPaneID = UUID()
+
+        store.start(providerID: "opencode", paneID: firstPaneID, projectID: projectID, worktreeID: firstWorktreeID)
+        store.start(providerID: "opencode", paneID: secondPaneID, projectID: projectID, worktreeID: secondWorktreeID)
+
+        #expect(store.runs.count == 2)
+        #expect(store.runs.contains { $0.paneID == firstPaneID && $0.status == .running })
+        #expect(store.runs.contains { $0.paneID == secondPaneID && $0.status == .running })
+        store.reset()
+    }
+
+    @Test
+    func sameProviderCanRunInSameWorktreeWithSharedAttribution() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let projectID = UUID()
+        let worktreeID = UUID()
+        let firstPaneID = UUID()
+        let secondPaneID = UUID()
+
+        store.start(providerID: "opencode", paneID: firstPaneID, projectID: projectID, worktreeID: worktreeID)
+        store.start(providerID: "opencode", paneID: secondPaneID, projectID: projectID, worktreeID: worktreeID)
+
+        #expect(store.runs.count == 2)
+        #expect(store.runs.allSatisfy { $0.status == .running })
+        #expect(store.runs.allSatisfy { $0.changedFilesAttribution == .sharedWorktree })
+        store.reset()
+    }
+
+    @Test
+    func stopByPaneCompletesOnlyMatchingRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let projectID = UUID()
+        let firstPaneID = UUID()
+        let secondPaneID = UUID()
+
+        store.start(providerID: "claude", paneID: firstPaneID, projectID: projectID, worktreeID: UUID())
+        store.start(providerID: "claude", paneID: secondPaneID, projectID: projectID, worktreeID: UUID())
+
+        store.stop(paneID: firstPaneID)
+
+        #expect(store.runs.first { $0.paneID == firstPaneID }?.status == .completed)
+        #expect(store.runs.first { $0.paneID == secondPaneID }?.status == .running)
+        store.reset()
+    }
+
+    @Test
+    func transcriptEventsAttachToMatchingRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        store.appendTranscript(providerID: "codex", paneID: paneID, kind: "tool", text: "Read Package.swift")
+
+        #expect(store.runs.first?.events.last?.kind == .transcript)
+        #expect(store.runs.first?.events.last?.label == "tool")
+        #expect(store.runs.first?.events.last?.text == "Read Package.swift")
+        #expect(store.runs.first?.status == .running)
+        store.reset()
+    }
+
+    @Test
+    func attentionTranscriptMarksRunNeedsAttention() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "opencode", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        store.appendTranscript(providerID: "opencode", paneID: paneID, kind: "attention", text: "Permission requested")
+
+        #expect(store.runs.first?.status == .needsAttention)
+        #expect(store.runs.first?.events.last?.kind == .attention)
+        store.reset()
+    }
+
+    @Test
+    func changedFilesAttachToMatchingRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        store.setChangedFiles(
+            providerID: "codex",
+            paneID: paneID,
+            files: [.init(
+                path: "Droid/Services/AgentRunStore.swift",
+                oldPath: nil,
+                status: .modified,
+                additions: 4,
+                deletions: 1,
+                isBinary: false
+            )],
+            attribution: .worktreeSnapshot
+        )
+
+        #expect(store.runs.first?.changedFiles.count == 1)
+        #expect(store.runs.first?.changedFilesAttribution == .worktreeSnapshot)
+        #expect(store.runs.first?.events.last?.kind == .fileChange)
+        store.reset()
+    }
+
+    @Test
+    func verificationStateUpdatesMatchingRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+        let runID = store.runs[0].id
+
+        store.startVerification(runID: runID, command: "swift build && swift test")
+        #expect(store.runs.first?.verification.status == .running)
+        #expect(store.runs.first?.verification.command == "swift build && swift test")
+
+        store.finishVerification(runID: runID, status: .passed, output: "ok")
+        #expect(store.runs.first?.verification.status == .passed)
+        #expect(store.runs.first?.verification.output == "ok")
+        store.reset()
+    }
+}

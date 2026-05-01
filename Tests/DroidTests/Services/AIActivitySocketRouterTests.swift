@@ -13,7 +13,7 @@ struct AIActivitySocketRouterTests {
         let paneID = UUID()
         let projectID = UUID()
         let worktreeID = UUID()
-        let payloadBody = "\(projectID.uuidString),\(worktreeID.uuidString)"
+        let payloadBody = "\(projectID.uuidString),\(worktreeID.uuidString),/tmp/muxy"
 
         let handledStart = AIActivitySocketRouter.handle(
             .init(
@@ -29,6 +29,10 @@ struct AIActivitySocketRouterTests {
         #expect(handledStart)
         #expect(store.activitiesByPaneID[paneID]?.projectID == projectID)
         #expect(store.activitiesByPaneID[paneID]?.worktreeID == worktreeID)
+        #expect(store.activitiesByPaneID[paneID]?.worktreePath == "/tmp/muxy")
+        #expect(AgentRunStore.shared.runs.first?.paneID == paneID)
+        #expect(AgentRunStore.shared.runs.first?.worktreePath == "/tmp/muxy")
+        #expect(AgentRunStore.shared.runs.first?.status == .running)
 
         let handledStop = AIActivitySocketRouter.handle(
             .init(
@@ -43,6 +47,8 @@ struct AIActivitySocketRouterTests {
 
         #expect(handledStop)
         #expect(store.activitiesByPaneID[paneID] == nil)
+        #expect(AgentRunStore.shared.runs.first?.paneID == paneID)
+        #expect(AgentRunStore.shared.runs.first?.status == .completed)
     }
 
     @Test
@@ -54,7 +60,7 @@ struct AIActivitySocketRouterTests {
         let stoppedPaneID = UUID()
         let projectID = UUID()
         let worktreeID = UUID()
-        let payloadBody = "\(projectID.uuidString),\(worktreeID.uuidString)"
+        let payloadBody = "\(projectID.uuidString),\(worktreeID.uuidString),/tmp/muxy"
 
         store.start(
             providerID: "claude",
@@ -76,6 +82,8 @@ struct AIActivitySocketRouterTests {
 
         #expect(handledStop)
         #expect(!store.hasActiveAgent(projectID: projectID))
+        #expect(AgentRunStore.shared.runs.first?.paneID == startedPaneID)
+        #expect(AgentRunStore.shared.runs.first?.status == .completed)
     }
 
     @Test
@@ -102,6 +110,8 @@ struct AIActivitySocketRouterTests {
         #expect(handled)
         #expect(store.activitiesByPaneID[paneID]?.transcriptEntries.first?.kind == "tool")
         #expect(store.activitiesByPaneID[paneID]?.transcriptEntries.first?.text == "Read Package.swift")
+        #expect(AgentRunStore.shared.runs.first?.events.last?.label == "tool")
+        #expect(AgentRunStore.shared.runs.first?.events.last?.text == "Read Package.swift")
         store.reset()
     }
 }

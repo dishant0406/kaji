@@ -49,7 +49,7 @@ final class AppTypographySettings {
     func uiFont(size: CGFloat, design: Font.Design = .default) -> Font {
         let resolvedSize = scaled(size)
         let resolvedFamily = Self.normalizedFamily(fontFamily)
-        if let _ = NSFont(name: resolvedFamily, size: resolvedSize) {
+        if NSFont(name: resolvedFamily, size: resolvedSize) != nil {
             return .custom(resolvedFamily, size: resolvedSize)
         }
         return .system(size: resolvedSize, weight: .regular, design: design)
@@ -105,8 +105,9 @@ final class AppTypographySettings {
             let snapshot = try JSONDecoder().decode(LegacySnapshot.self, from: data)
             isBatchLoading = true
             fontSize = snapshot.fontSize.map(Self.clamped) ?? Self.defaultFontSize
-            fontFamily = snapshot.fontFamily?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-                ? snapshot.fontFamily!
+            let legacyFamily = snapshot.fontFamily?.trimmingCharacters(in: .whitespacesAndNewlines)
+            fontFamily = legacyFamily?.isEmpty == false
+                ? legacyFamily ?? Self.defaultFontFamily
                 : Self.defaultFontFamily
             isBatchLoading = false
             save()

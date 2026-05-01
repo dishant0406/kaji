@@ -130,9 +130,9 @@ enum AskCommandDispatcher {
         case .terminal:
             return trimmed
         case .codex:
-            return [base, "resume", escapedID, escapedPrompt].compactMap { $0 }.joined(separator: " ")
+            return [base, "resume", escapedID, escapedPrompt].compactMap(\.self).joined(separator: " ")
         case .claude:
-            return [base, "--resume", escapedID, escapedPrompt].compactMap { $0 }.joined(separator: " ")
+            return [base, "--resume", escapedID, escapedPrompt].compactMap(\.self).joined(separator: " ")
         case .opencode:
             if let escapedPrompt {
                 return "\(base) --session \(escapedID) --prompt \(escapedPrompt)"

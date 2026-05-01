@@ -44,7 +44,7 @@ fi
 
 context=""
 if [ -n "${DROID_PROJECT_ID:-}" ] && [ -n "${DROID_WORKTREE_ID:-}" ]; then
-    context="${DROID_PROJECT_ID},${DROID_WORKTREE_ID}"
+    context="${DROID_PROJECT_ID},${DROID_WORKTREE_ID},${DROID_WORKTREE_PATH:-}"
 fi
 
 send_socket_message() {

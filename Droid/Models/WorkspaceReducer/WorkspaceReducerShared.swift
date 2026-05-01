@@ -2,6 +2,12 @@ import Foundation
 
 @MainActor
 enum WorkspaceReducerShared {
+    struct FocusedAreaResolution {
+        let key: WorktreeKey
+        let area: TabArea
+        let created: Bool
+    }
+
     static func activeKey(projectID: UUID, state: WorkspaceState) -> WorktreeKey? {
         guard let worktreeID = state.activeWorktreeID[projectID] else { return nil }
         return WorktreeKey(projectID: projectID, worktreeID: worktreeID)
@@ -54,7 +60,7 @@ enum WorkspaceReducerShared {
         areaID: UUID?,
         state: inout WorkspaceState,
         createArea: (String) -> TabArea
-    ) -> (key: WorktreeKey, area: TabArea, created: Bool)? {
+    ) -> FocusedAreaResolution? {
         guard let key = activeKey(projectID: projectID, state: state) else { return nil }
         if state.workspaces[key]?.activeTab == nil {
             guard let created = resolveOrCreateArea(
@@ -64,10 +70,10 @@ enum WorkspaceReducerShared {
                 createArea: createArea
             )
             else { return nil }
-            return (created.key, created.area, true)
+            return FocusedAreaResolution(key: created.key, area: created.area, created: true)
         }
         guard let area = resolveArea(key: key, areaID: areaID, state: state) else { return nil }
-        return (key, area, false)
+        return FocusedAreaResolution(key: key, area: area, created: false)
     }
 
     static func clearWorkspace(key: WorktreeKey, state: inout WorkspaceState) {

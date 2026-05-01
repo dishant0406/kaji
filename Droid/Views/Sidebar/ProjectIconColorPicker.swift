@@ -82,6 +82,6 @@ struct ProjectIconColorPicker: View {
 extension Color {
     init?(hex: String) {
         guard let rgb = ProjectIconColor.rgb(fromHex: hex) else { return nil }
-        self = Color(.sRGB, red: rgb.0, green: rgb.1, blue: rgb.2, opacity: 1)
+        self = Color(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue, opacity: 1)
     }
 }

@@ -187,6 +187,7 @@ final class NotificationSocketServer: @unchecked Sendable {
         }
 
         if let paneIDString, let paneID = UUID(uuidString: paneIDString) {
+            completeProviderRunIfNeeded(source: source, paneID: paneID, title: title, body: body)
             NotificationStore.shared.add(
                 paneID: paneID,
                 source: source,
@@ -216,6 +217,23 @@ final class NotificationSocketServer: @unchecked Sendable {
             title: title,
             body: body,
             appState: appState
+        )
+    }
+
+    @MainActor
+    private func completeProviderRunIfNeeded(source: DroidNotification.Source, paneID: UUID, title: String, body: String) {
+        guard case let .aiProvider(providerID) = source else { return }
+        let text = "\(title) \(body)".lowercased()
+        guard !text.contains("needs permission"),
+              !text.contains("needs attention"),
+              !text.contains("question"),
+              !text.contains("error")
+        else { return }
+        AIActivityStore.shared.stop(paneID: paneID)
+        AgentRunStore.shared.complete(
+            providerID: providerID,
+            paneID: paneID,
+            message: body.isEmpty ? "Session completed" : body
         )
     }
 

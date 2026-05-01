@@ -19,7 +19,7 @@ enum AgentMissionControlNavigator {
                   for: paneID,
                   appState: appState,
                   worktreeStore: worktreeStore
-               )
+              )
         else { return }
         NotificationNavigator.navigate(to: context, appState: appState)
     }
