@@ -9,9 +9,25 @@ enum AIActivitySocketRouter {
         let paneIDString: String?
     }
 
+    private struct RoutingContext {
+        let appState: AppState?
+        let worktreeStore: WorktreeStore?
+    }
+
     static func handle(_ payload: Payload, appState: AppState?, worktreeStore: WorktreeStore?) -> Bool {
         guard let paneIDString = payload.paneIDString, let paneID = UUID(uuidString: paneIDString) else {
             return false
+        }
+
+        if payload.type.hasSuffix("_transcript") {
+            let providerID = String(payload.type.dropLast("_transcript".count))
+            AIActivityStore.shared.appendTranscript(
+                providerID: providerID,
+                paneID: paneID,
+                kind: payload.title,
+                text: payload.body
+            )
+            return true
         }
 
         guard payload.type.hasSuffix("_activity") else { return false }
@@ -22,8 +38,7 @@ enum AIActivitySocketRouter {
             state: payload.title,
             paneID: paneID,
             explicitContext: context,
-            appState: appState,
-            worktreeStore: worktreeStore
+            routingContext: RoutingContext(appState: appState, worktreeStore: worktreeStore)
         )
     }
 
@@ -32,8 +47,7 @@ enum AIActivitySocketRouter {
         state: String,
         paneID: UUID,
         explicitContext: (projectID: UUID, worktreeID: UUID)?,
-        appState: AppState?,
-        worktreeStore: WorktreeStore?
+        routingContext: RoutingContext
     ) -> Bool {
         let normalizedState = state.lowercased()
         if normalizedState == "stop" {
@@ -43,8 +57,8 @@ enum AIActivitySocketRouter {
                     projectID: explicitContext.projectID,
                     worktreeID: explicitContext.worktreeID
                 )
-            } else if let appState,
-                      let worktreeStore,
+            } else if let appState = routingContext.appState,
+                      let worktreeStore = routingContext.worktreeStore,
                       let context = NotificationNavigator.resolveContext(
                           for: paneID,
                           appState: appState,
@@ -71,12 +85,12 @@ enum AIActivitySocketRouter {
             )
             return true
         }
-        guard let appState else { return true }
+        guard let appState = routingContext.appState else { return true }
         AIActivityStore.shared.start(
             providerID: providerID,
             paneID: paneID,
             appState: appState,
-            worktreeStore: worktreeStore
+            worktreeStore: routingContext.worktreeStore
         )
         return true
     }

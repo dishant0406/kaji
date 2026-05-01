@@ -77,4 +77,31 @@ struct AIActivitySocketRouterTests {
         #expect(handledStop)
         #expect(!store.hasActiveAgent(projectID: projectID))
     }
+
+    @Test
+    func transcriptPayloadAppendsToActiveActivity() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: projectID, worktreeID: worktreeID)
+
+        let handled = AIActivitySocketRouter.handle(
+            .init(
+                type: "codex_transcript",
+                title: "tool",
+                body: "Read Package.swift",
+                paneIDString: paneID.uuidString
+            ),
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(handled)
+        #expect(store.activitiesByPaneID[paneID]?.transcriptEntries.first?.kind == "tool")
+        #expect(store.activitiesByPaneID[paneID]?.transcriptEntries.first?.text == "Read Package.swift")
+        store.reset()
+    }
 }
