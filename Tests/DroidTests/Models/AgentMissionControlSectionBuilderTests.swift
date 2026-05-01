@@ -43,6 +43,7 @@ struct AgentMissionControlSectionBuilderTests {
             providerID: "codex",
             providerName: "Codex",
             providerIconName: "codex",
+            sessionID: nil,
             title: id,
             detail: "muxy / main",
             status: status,

@@ -29,6 +29,7 @@ struct AgentMissionControlItem: Identifiable, Hashable {
     let providerID: String
     let providerName: String
     let providerIconName: String
+    let sessionID: String?
     let title: String
     let detail: String
     let status: AgentMissionControlStatus

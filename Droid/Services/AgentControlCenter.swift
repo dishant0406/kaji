@@ -25,10 +25,10 @@ final class AgentControlCenter {
     static func capabilities(for item: AgentMissionControlItem) -> AgentRunCapabilities {
         AgentRunCapabilities(
             jump: item.paneID == nil && item.notificationID == nil ? .hidden : .available,
-            reply: .hidden,
-            stop: .hidden,
-            restart: .hidden,
-            resume: .hidden,
+            reply: replyCapability(for: item),
+            stop: stopCapability(for: item),
+            restart: restartCapability(for: item),
+            resume: resumeCapability(for: item),
             verify: verifyCapability(for: item),
             openFiles: openFilesCapability(for: item),
             openDiffs: openDiffsCapability(for: item),
@@ -41,13 +41,58 @@ final class AgentControlCenter {
         switch action {
         case let .jump(item):
             jump(to: item)
+        case let .stop(runID):
+            stop(runID: runID)
+        case let .restart(runID):
+            restart(runID: runID)
+        case let .resume(runID):
+            resume(runID: runID)
+        case let .reply(runID, text):
+            record(
+                .unavailable(text.isEmpty ? "Reply is empty." : "Reply requires a live terminal."),
+                kind: .reply,
+                runID: runID
+            )
         case let .verify(runID):
             verify(runID: runID)
         case let .openFile(runID, file):
             openFile(runID: runID, file: file)
         case let .openDiff(runID, file):
             openDiff(runID: runID, file: file)
+        case let .approve(runID):
+            permissionUnavailable(runID: runID, kind: .approve)
+        case let .deny(runID):
+            permissionUnavailable(runID: runID, kind: .deny)
         }
+    }
+
+    func performAsync(_ action: AgentRunControlAction) async -> AgentRunControlResult {
+        switch action {
+        case let .reply(runID, text):
+            await reply(runID: runID, text: text)
+        default:
+            perform(action)
+        }
+    }
+
+    private static func replyCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
+        guard item.runID != nil, item.paneID != nil else { return .hidden }
+        return item.status == .running || item.status == .needsAttention ? .available : .hidden
+    }
+
+    private static func stopCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
+        guard item.runID != nil, item.paneID != nil else { return .hidden }
+        return item.status == .running || item.status == .needsAttention ? .available : .hidden
+    }
+
+    private static func restartCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
+        guard item.runID != nil, provider(for: item) != nil else { return .hidden }
+        return .available
+    }
+
+    private static func resumeCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
+        guard item.runID != nil, provider(for: item) != nil else { return .hidden }
+        return item.sessionID == nil ? .hidden : .available
     }
 
     private static func verifyCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
@@ -91,6 +136,79 @@ final class AgentControlCenter {
         }
         AgentVerificationRunner.verify(runID: runID, store: runStore)
         return record(.succeeded("Verification started."), kind: .verify, runID: runID)
+    }
+
+    private func stop(runID: UUID) -> AgentRunControlResult {
+        guard let run = runStore.run(id: runID), let paneID = run.paneID else {
+            return .unavailable("Run terminal is unavailable.")
+        }
+        guard TerminalCommandInjector.interrupt(paneID, escapeCount: stopEscapeCount(for: run)) else {
+            return record(.unavailable("Run terminal is not reachable."), kind: .stop, runID: runID)
+        }
+        runStore.stop(paneID: paneID)
+        return record(.succeeded("Escape sent."), kind: .stop, runID: runID)
+    }
+
+    private func stopEscapeCount(for run: AgentRun) -> Int {
+        provider(for: run) == .opencode ? 2 : 1
+    }
+
+    private func restart(runID: UUID) -> AgentRunControlResult {
+        guard let run = runStore.run(id: runID), let provider = provider(for: run) else {
+            return .unavailable("Run cannot be restarted.")
+        }
+        guard let context = activateContext(for: runID) else {
+            return record(.unavailable("Run worktree is unavailable."), kind: .restart, runID: runID)
+        }
+        let command = AskCommandDispatcher.commandWithCompletionNotification(
+            AskCommandDispatcher.startupCommand(for: provider, prompt: ""),
+            provider: provider
+        )
+        guard !command.isEmpty else {
+            return record(.unavailable("Provider command is unavailable."), kind: .restart, runID: runID)
+        }
+        appState.createStartupCommandTab(projectID: context.projectID, title: provider.title, command: command)
+        return record(.succeeded("Started new run."), kind: .restart, runID: runID)
+    }
+
+    private func resume(runID: UUID) -> AgentRunControlResult {
+        guard let run = runStore.run(id: runID), let provider = provider(for: run), let sessionID = run.sessionID else {
+            return .unavailable("Run cannot be resumed.")
+        }
+        guard let context = activateContext(for: runID) else {
+            return record(.unavailable("Run worktree is unavailable."), kind: .resume, runID: runID)
+        }
+        let command = AskCommandDispatcher.commandWithCompletionNotification(
+            AskCommandDispatcher.resumeCommand(for: provider, sessionID: sessionID, prompt: ""),
+            provider: provider
+        )
+        guard !command.isEmpty else {
+            return record(.unavailable("Provider resume command is unavailable."), kind: .resume, runID: runID)
+        }
+        appState.createStartupCommandTab(projectID: context.projectID, title: provider.title, command: command)
+        return record(.succeeded("Resumed run."), kind: .resume, runID: runID)
+    }
+
+    private func reply(runID: UUID, text: String) async -> AgentRunControlResult {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return record(.unavailable("Reply is empty."), kind: .reply, runID: runID)
+        }
+        guard let run = runStore.run(id: runID), let paneID = run.paneID else {
+            return .unavailable("Run terminal is unavailable.")
+        }
+        guard await TerminalCommandInjector.submit(trimmed, into: paneID) else {
+            return record(.unavailable("Run terminal is not reachable."), kind: .reply, runID: runID)
+        }
+        return record(.succeeded("Reply sent."), kind: .reply, runID: runID)
+    }
+
+    private func permissionUnavailable(runID: UUID, kind: AgentRunActionKind) -> AgentRunControlResult {
+        record(
+            .unavailable("No provider permission request is available for this run."),
+            kind: kind,
+            runID: runID
+        )
     }
 
     private func openFile(runID: UUID, file: AgentChangedFile) -> AgentRunControlResult {
@@ -157,5 +275,13 @@ final class AgentControlCenter {
 
     private func itemProxy(for run: AgentRun) -> AgentMissionControlItem {
         AgentRunMissionControlSnapshotBuilder.item(run: run, projects: projectStore.projects, worktrees: worktreeStore.worktrees)
+    }
+
+    private static func provider(for item: AgentMissionControlItem) -> AskProvider? {
+        AskProvider.resolveAnnotation(item.providerID).flatMap { $0 == .terminal ? nil : $0 }
+    }
+
+    private func provider(for run: AgentRun) -> AskProvider? {
+        AskProvider.resolveAnnotation(run.providerID).flatMap { $0 == .terminal ? nil : $0 }
     }
 }

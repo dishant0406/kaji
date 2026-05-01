@@ -1,39 +1,12 @@
 import SwiftUI
 
-struct AgentMissionControlSectionHeader: View {
-    let section: AgentMissionControlSection
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(section.kind.title)
-                .droidFont(size: 9, weight: .semibold, design: .monospaced)
-                .foregroundStyle(DroidTheme.fgDim)
-            DroidBadge(text: "\(section.items.count)", variant: badgeVariant)
-            Spacer()
-        }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-    }
-
-    private var badgeVariant: DroidBadgeVariant {
-        switch section.kind {
-        case .needsAttention:
-            .warning
-        case .running:
-            .accent
-        case .failed:
-            .danger
-        case .completed,
-             .notifications:
-            .neutral
-        }
-    }
-}
-
 struct AgentMissionControlRow: View {
     let item: AgentMissionControlItem
     let capabilities: AgentRunCapabilities
+    let onReply: ((String) -> Void)?
+    let onStop: (() -> Void)?
+    let onRestart: (() -> Void)?
+    let onResume: (() -> Void)?
     let onVerify: (() -> Void)?
     let onOpenFile: ((AgentChangedFile) -> Void)?
     let onOpenDiff: ((AgentChangedFile) -> Void)?
@@ -63,9 +36,15 @@ struct AgentMissionControlRow: View {
                     .padding(.bottom, 8)
                 }
             }
-            if capabilities.verify.isVisible, let onVerify {
-                verificationAction(onVerify)
-            }
+            AgentMissionControlControlsView(
+                item: item,
+                capabilities: capabilities,
+                onReply: onReply,
+                onStop: onStop,
+                onRestart: onRestart,
+                onResume: onResume,
+                onVerify: onVerify
+            )
         }
         .background(hovered ? DroidTheme.hover : .clear)
         .onHover { hovered = $0 }
@@ -134,66 +113,6 @@ struct AgentMissionControlRow: View {
         }
     }
 
-    private func verificationAction(_ onVerify: @escaping () -> Void) -> some View {
-        Button(action: onVerify) {
-            HStack(spacing: 5) {
-                DroidIcon(systemName: verificationIconName, size: 9)
-                Text(verificationTitle)
-                    .droidFont(size: 10, weight: .medium)
-                Spacer()
-            }
-            .foregroundStyle(verificationColor)
-            .padding(.horizontal, 45)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!capabilities.verify.isAvailable || item.verification.status == .running)
-    }
-
-    private var verificationTitle: String {
-        switch item.verification.status {
-        case .notStarted:
-            "Verify run"
-        case .running:
-            "Verifying..."
-        case .passed:
-            "Verified"
-        case .failed:
-            "Rerun verification"
-        case .unavailable:
-            "Verification unavailable"
-        }
-    }
-
-    private var verificationIconName: String {
-        switch item.verification.status {
-        case .passed:
-            "checkmark.circle"
-        case .failed,
-             .unavailable:
-            "xmark.circle"
-        case .running:
-            "clock"
-        case .notStarted:
-            "play.circle"
-        }
-    }
-
-    private var verificationColor: Color {
-        switch item.verification.status {
-        case .passed:
-            DroidTheme.diffAddFg
-        case .failed,
-             .unavailable:
-            DroidTheme.diffRemoveFg
-        case .running:
-            DroidTheme.diffHunkFg
-        case .notStarted:
-            DroidTheme.fgMuted
-        }
-    }
-
     private var providerIcon: some View {
         ZStack {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
@@ -237,7 +156,10 @@ struct AgentMissionControlRow: View {
             }
         }
         .padding(6)
-        .background(DroidTheme.surface.opacity(0.38), in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+        .background(
+            DroidTheme.surface.opacity(0.38),
+            in: RoundedRectangle(cornerRadius: DroidShape.tileRadius)
+        )
         .overlay {
             RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                 .strokeBorder(DroidTheme.border.opacity(0.6), lineWidth: 1)
