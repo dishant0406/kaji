@@ -30,7 +30,8 @@ struct AgentVerificationRunnerTests {
             verification: .notStarted,
             startedAt: Date(),
             lastEventAt: Date(),
-            events: []
+            events: [],
+            actions: []
         )
 
         let plan = AgentVerificationRunner.plan(for: run)

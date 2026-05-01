@@ -31,6 +31,7 @@ final class DroidNotification: Identifiable, @preconcurrency Codable {
         source: Source,
         title: String,
         body: String,
+        timestamp: Date = Date(),
         isRead: Bool = false
     ) {
         id = UUID()
@@ -43,7 +44,7 @@ final class DroidNotification: Identifiable, @preconcurrency Codable {
         self.source = source
         self.title = title
         self.body = body
-        timestamp = Date()
+        self.timestamp = timestamp
         self.isRead = isRead
     }
 

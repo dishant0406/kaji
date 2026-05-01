@@ -11,7 +11,7 @@ protocol AIProviderIntegration {
     var executableNames: [String] { get }
 
     func isToolInstalled() -> Bool
-    func install(hookScriptPath: String) throws
+    func install(hookClientPath: String) throws
     func uninstall() throws
 }
 
@@ -56,15 +56,8 @@ final class AIProviderRegistry {
     private init() {}
 
     func installAll() {
-        #if DEBUG
-        guard ProcessInfo.processInfo.environment["FF_AI_HOOKS"] != nil else {
-            logger.info("Skipping AI hooks install in dev mode (set FF_AI_HOOKS=true to enable)")
-            return
-        }
-        #endif
-
-        guard let hookScript = DroidNotificationHooks.hookScriptPath else {
-            logger.info("Hook script not found, skipping AI provider installs")
+        guard let hookClientPath = DroidNotificationHooks.hookClientPath else {
+            logger.info("Hook client not found, skipping AI provider installs")
             return
         }
 
@@ -75,7 +68,7 @@ final class AIProviderRegistry {
             }
             guard provider.isToolInstalled() else { continue }
             do {
-                try provider.install(hookScriptPath: hookScript)
+                try provider.install(hookClientPath: hookClientPath)
                 logger.info("Installed \(provider.displayName) integration")
             } catch {
                 logger.error("Failed to install \(provider.displayName): \(error.localizedDescription)")
@@ -84,14 +77,14 @@ final class AIProviderRegistry {
     }
 
     func forceInstall(_ provider: AIProviderIntegration) {
-        guard let hookScript = DroidNotificationHooks.hookScriptPath else {
-            logger.info("Hook script not found, skipping force install")
+        guard let hookClientPath = DroidNotificationHooks.hookClientPath else {
+            logger.info("Hook client not found, skipping force install")
             return
         }
 
         do {
             try provider.uninstall()
-            try provider.install(hookScriptPath: hookScript)
+            try provider.install(hookClientPath: hookClientPath)
             logger.info("Force-installed \(provider.displayName) integration")
         } catch {
             logger.error("Failed to force-install \(provider.displayName): \(error.localizedDescription)")
@@ -99,10 +92,6 @@ final class AIProviderRegistry {
     }
 
     func uninstallAll() {
-        #if DEBUG
-        guard ProcessInfo.processInfo.environment["FF_AI_HOOKS"] != nil else { return }
-        #endif
-
         for provider in providers {
             do {
                 try provider.uninstall()

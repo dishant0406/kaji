@@ -29,8 +29,10 @@ fi
 
 cd "$ROOT_DIR"
 swift build
+swift build --target DroidHookClient
 BUILD_BIN_DIR="$(swift build --show-bin-path)"
 BUILD_BINARY="$BUILD_BIN_DIR/$BUILD_PRODUCT_NAME"
+HOOK_CLIENT_BINARY="$BUILD_BIN_DIR/DroidHookClient"
 RESOURCE_BUNDLE_NAME="${BUILD_PRODUCT_NAME}_${BUILD_PRODUCT_NAME}.bundle"
 RESOURCE_BUNDLE="$BUILD_BIN_DIR/$RESOURCE_BUNDLE_NAME"
 SPARKLE_FRAMEWORK="$ROOT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
@@ -40,6 +42,8 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$APP_FRAMEWORKS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
+cp "$HOOK_CLIENT_BINARY" "$APP_MACOS/DroidHookClient"
+chmod +x "$APP_MACOS/DroidHookClient"
 install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_BINARY" 2>/dev/null || true
 
 if [[ -d "$RESOURCE_BUNDLE" ]]; then

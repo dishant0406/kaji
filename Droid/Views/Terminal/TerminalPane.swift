@@ -150,13 +150,13 @@ struct TerminalBridge: NSViewRepresentable {
     ) -> [(key: String, value: String)] {
         var vars: [(key: String, value: String)] = [
             (key: "DROID_PANE_ID", value: paneID.uuidString),
+            (key: "DROID_INSTANCE_ID", value: ProviderEvent.distributedObject),
             (key: "DROID_PROJECT_ID", value: key.projectID.uuidString),
             (key: "DROID_WORKTREE_ID", value: key.worktreeID.uuidString),
             (key: "DROID_WORKTREE_PATH", value: worktreePath),
-            (key: "DROID_SOCKET_PATH", value: NotificationSocketServer.socketPath),
         ]
-        if let hookPath = DroidNotificationHooks.hookScriptPath {
-            vars.append((key: "DROID_HOOK_SCRIPT", value: hookPath))
+        if let hookClientPath = DroidNotificationHooks.hookClientPath {
+            vars.append((key: "DROID_HOOK_CLIENT_PATH", value: hookClientPath))
         }
         return vars
     }

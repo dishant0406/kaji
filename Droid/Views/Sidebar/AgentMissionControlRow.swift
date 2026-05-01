@@ -33,6 +33,7 @@ struct AgentMissionControlSectionHeader: View {
 
 struct AgentMissionControlRow: View {
     let item: AgentMissionControlItem
+    let capabilities: AgentRunCapabilities
     let onVerify: (() -> Void)?
     let onOpenFile: ((AgentChangedFile) -> Void)?
     let onOpenDiff: ((AgentChangedFile) -> Void)?
@@ -62,7 +63,7 @@ struct AgentMissionControlRow: View {
                     .padding(.bottom, 8)
                 }
             }
-            if let onVerify {
+            if capabilities.verify.isVisible, let onVerify {
                 verificationAction(onVerify)
             }
         }
@@ -147,7 +148,7 @@ struct AgentMissionControlRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(item.verification.status == .running)
+        .disabled(!capabilities.verify.isAvailable || item.verification.status == .running)
     }
 
     private var verificationTitle: String {

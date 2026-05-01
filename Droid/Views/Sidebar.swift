@@ -213,7 +213,7 @@ struct SidebarFooter: View {
     @State private var showNotifications = false
     @State private var showResourceMonitor = false
     @State private var showAgents = false
-    @State private var activityStore = AIActivityStore.shared
+    @State private var runStore = AgentRunStore.shared
     @State private var notificationStore = NotificationStore.shared
     @State private var resourceMonitor = ResourceMonitorService.shared
     private let usageService = AIUsageService.shared
@@ -321,8 +321,8 @@ struct SidebarFooter: View {
 
     private var agentItems: [AgentMissionControlItem] {
         _ = notificationStore.readStateVersion
-        return AgentMissionControlSnapshotBuilder.items(
-            activities: Array(activityStore.activitiesByPaneID.values),
+        return AgentRunMissionControlSnapshotBuilder.items(
+            runs: runStore.runs,
             notifications: notificationStore.notifications,
             projects: projectStore.projects,
             worktrees: worktreeStore.worktrees

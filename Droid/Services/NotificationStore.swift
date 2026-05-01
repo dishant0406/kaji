@@ -149,6 +149,7 @@ final class NotificationStore {
             body: body,
             isRead: markRead
         )
+        clearActivityIfNeeded(for: notification)
         switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
         case .replaced:
             scheduleSave()
@@ -281,12 +282,23 @@ final class NotificationStore {
     }
 
     private func clearActivityIfNeeded(for notification: DroidNotification) {
-        guard providerID(for: notification) != nil,
+        guard let providerID = providerID(for: notification),
               normalizedEvent(for: notification).kind == .completed
         else {
             return
         }
         AIActivityStore.shared.stop(paneID: notification.paneID)
+        AIActivityStore.shared.stop(
+            providerID: providerID,
+            projectID: notification.projectID,
+            worktreeID: notification.worktreeID
+        )
+        AgentRunStore.shared.complete(
+            providerID: providerID,
+            projectID: notification.projectID,
+            worktreeID: notification.worktreeID,
+            message: notification.body.isEmpty ? "Session completed" : notification.body
+        )
     }
 
     private func providerID(for notification: DroidNotification) -> String? {

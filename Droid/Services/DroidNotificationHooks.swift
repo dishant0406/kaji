@@ -4,19 +4,38 @@ import os
 private let logger = Logger(subsystem: "app.droid", category: "DroidNotificationHooks")
 
 enum DroidNotificationHooks {
-    private static let hookScriptName = "droid-claude-hook"
+    private static let hookClientName = "DroidHookClient"
 
-    static var hookScriptPath: String? {
-        if let bundled = findBundledScript(hookScriptName, extension: "sh") {
+    static var hookClientPath: String? {
+        if let bundled = findBundledExecutable(hookClientName) {
             return bundled
         }
 
-        let devPath = findDevScriptPath(hookScriptName + ".sh")
-        if let devPath, FileManager.default.isExecutableFile(atPath: devPath) {
-            return devPath
+        if let sibling = findSiblingExecutable(hookClientName) {
+            return sibling
         }
 
         return nil
+    }
+
+    private static func findBundledExecutable(_ name: String) -> String? {
+        let candidates = [
+            Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent(name),
+            Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/\(name)"),
+        ]
+
+        for case let url? in candidates where FileManager.default.isExecutableFile(atPath: url.path) {
+            return url.path
+        }
+
+        return nil
+    }
+
+    private static func findSiblingExecutable(_ name: String) -> String? {
+        guard let execURL = Bundle.main.executableURL else { return nil }
+        let candidate = execURL.deletingLastPathComponent().appendingPathComponent(name)
+        guard FileManager.default.isExecutableFile(atPath: candidate.path) else { return nil }
+        return candidate.path
     }
 
     static func scriptPath(named name: String, extension ext: String) -> String? {

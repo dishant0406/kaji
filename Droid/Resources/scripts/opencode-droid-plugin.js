@@ -1,27 +1,23 @@
 export const DroidNotificationPlugin = async ({ client }) => {
   let activityState = ""
+  let completedAt = 0
 
   return {
     event: async ({ event }) => {
-      const socketPath = process.env.DROID_SOCKET_PATH
+      const hookClientPath = process.env.DROID_HOOK_CLIENT_PATH
       const paneID = process.env.DROID_PANE_ID
       const projectID = process.env.DROID_PROJECT_ID
       const worktreeID = process.env.DROID_WORKTREE_ID
       const worktreePath = process.env.DROID_WORKTREE_PATH
-      if (!socketPath || !paneID) return
+      if (!hookClientPath || !paneID) return
       const context = projectID && worktreeID ? `${projectID},${worktreeID},${worktreePath || ""}` : ""
 
-      const send = async (payload) => {
+      const send = async (type, title, body) => {
         try {
           const { execFileSync } = await import("node:child_process")
           execFileSync(
-            "/usr/bin/python3",
-            [
-              "-c",
-              "import socket,sys;s=socket.socket(socket.AF_UNIX);s.connect(sys.argv[1]);s.sendall(sys.argv[2].encode());s.close()",
-              socketPath,
-              payload,
-            ],
+            hookClientPath,
+            ["send", type, paneID, title, body || ""],
             { stdio: "ignore", timeout: 3000 },
           )
         } catch {}
@@ -32,26 +28,31 @@ export const DroidNotificationPlugin = async ({ client }) => {
       const sendTranscript = async (kind, text) => {
         const cleaned = sanitize(text)
         if (!cleaned) return
-        await send(`opencode_transcript|${paneID}|${kind}|${cleaned}`)
+        await send("opencode_transcript", kind, cleaned)
       }
 
       const sessionStatus = () => {
         const raw = event.properties?.status
         if (typeof raw === "string") return raw
         if (raw && typeof raw.type === "string") return raw.type
+        if (raw && typeof raw.status === "string") return raw.status
+        if (raw && typeof raw.state === "string") return raw.state
+        if (typeof event.properties?.state === "string") return event.properties.state
         return ""
       }
 
       const start = async () => {
+        completedAt = 0
         if (activityState === "start") return
         activityState = "start"
-        await send(`opencode_activity|${paneID}|start|${context}`)
+        await send("opencode_activity", "start", context)
       }
 
       const stop = async () => {
         if (activityState === "stop") return
         activityState = "stop"
-        await send(`opencode_activity|${paneID}|stop|${context}`)
+        completedAt = Date.now()
+        await send("opencode_activity", "stop", context)
       }
 
       if (event.type === "tui.command.execute") {
@@ -68,7 +69,13 @@ export const DroidNotificationPlugin = async ({ client }) => {
 
       if (event.type === "session.status") {
         const status = sessionStatus()
-        if (status === "active" || status === "busy" || status === "retry") {
+        if (
+          status === "active" ||
+          status === "busy" ||
+          status === "running" ||
+          status === "loading" ||
+          status === "retry"
+        ) {
           await start()
           return
         }
@@ -76,6 +83,12 @@ export const DroidNotificationPlugin = async ({ client }) => {
           await stop()
           return
         }
+      }
+
+      if (event.type === "message.updated" || event.type === "message.part.updated") {
+        if (completedAt && Date.now() - completedAt < 1000) return
+        await start()
+        return
       }
 
       if (
@@ -116,8 +129,7 @@ export const DroidNotificationPlugin = async ({ client }) => {
         }
       } catch {}
 
-      const payload = `opencode|${paneID}|OpenCode|${body}`
-      await send(payload)
+      await send("opencode", "OpenCode", body)
     },
   }
 }

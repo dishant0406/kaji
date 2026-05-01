@@ -73,6 +73,12 @@ enum AgentVerificationStatus: String, Codable, Hashable {
     }
 }
 
+enum AgentRunActionStatus: String, Codable, Hashable {
+    case succeeded
+    case failed
+    case unavailable
+}
+
 struct AgentVerification: Codable, Hashable {
     var status: AgentVerificationStatus
     var command: String?
@@ -91,6 +97,28 @@ struct AgentChangedFile: Identifiable, Codable, Hashable {
     let isBinary: Bool
 
     var id: String { oldPath.map { "\($0)->\(path)" } ?? path }
+}
+
+struct AgentRunActionRecord: Identifiable, Codable, Hashable {
+    let id: UUID
+    let kind: AgentRunActionKind
+    let status: AgentRunActionStatus
+    let message: String
+    let timestamp: Date
+
+    init(
+        id: UUID = UUID(),
+        kind: AgentRunActionKind,
+        status: AgentRunActionStatus,
+        message: String,
+        timestamp: Date = Date()
+    ) {
+        self.id = id
+        self.kind = kind
+        self.status = status
+        self.message = message
+        self.timestamp = timestamp
+    }
 }
 
 struct AgentRunEvent: Identifiable, Codable, Hashable {
@@ -133,4 +161,5 @@ struct AgentRun: Identifiable, Codable, Hashable {
     var startedAt: Date
     var lastEventAt: Date
     var events: [AgentRunEvent]
+    var actions: [AgentRunActionRecord]
 }

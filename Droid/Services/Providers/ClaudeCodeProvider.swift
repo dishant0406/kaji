@@ -21,15 +21,15 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
         return paths.contains { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    func install(hookScriptPath: String) throws {
+    func install(hookClientPath: String) throws {
         let settings = try Self.readSettings()
         let hooks = settings["hooks"] as? [String: Any] ?? [:]
 
         let commands = [
-            "Notification": Self.hookCommand(hookScript: hookScriptPath, event: "notification"),
-            "PermissionRequest": Self.hookCommand(hookScript: hookScriptPath, event: "permissionrequest"),
-            "Stop": Self.hookCommand(hookScript: hookScriptPath, event: "stop"),
-            "UserPromptSubmit": Self.hookCommand(hookScript: hookScriptPath, event: "userpromptsubmit"),
+            "Notification": Self.hookCommand(hookClientPath: hookClientPath, event: "notification"),
+            "PermissionRequest": Self.hookCommand(hookClientPath: hookClientPath, event: "permissionrequest"),
+            "Stop": Self.hookCommand(hookClientPath: hookClientPath, event: "stop"),
+            "UserPromptSubmit": Self.hookCommand(hookClientPath: hookClientPath, event: "userpromptsubmit"),
         ]
 
         let isInstalled = commands.allSatisfy { key, command in
@@ -88,8 +88,8 @@ struct ClaudeCodeProvider: AIProviderIntegration, AIUsageProvider {
         try Self.writeSettings(settings)
     }
 
-    private static func hookCommand(hookScript: String, event: String) -> String {
-        "/bin/bash '\(hookScript)' \(event) # \(droidMarker)"
+    private static func hookCommand(hookClientPath: String, event: String) -> String {
+        "\(ShellEscaper.escape(hookClientPath)) claude-hook \(event) # \(droidMarker)"
     }
 
     private static func buildHookEntry(command: String, matcher: String) -> [String: Any] {

@@ -10,16 +10,14 @@ struct CodexProvider: AIProviderIntegration, AIUsageProvider {
     private static let configFileName = "config.toml"
     private static let hooksFileName = "hooks.json"
 
-    func install(hookScriptPath: String) throws {
-        let notifyScriptPath = DroidNotificationHooks.scriptPath(named: "droid-codex-notify", extension: "sh") ?? hookScriptPath
-        let activityScriptPath = DroidNotificationHooks.scriptPath(named: "droid-ai-activity", extension: "sh") ?? hookScriptPath
+    func install(hookClientPath: String) throws {
         let config = try Self.readConfig()
         let hooks = try Self.readHooks()
-        let notifyInstalled = CodexNotificationConfig.install(in: config, scriptPath: notifyScriptPath)
+        let notifyRemoved = CodexNotificationConfig.uninstall(from: config)
         let installed = CodexHooksConfig.install(
-            config: notifyInstalled,
+            config: notifyRemoved,
             hooksContent: hooks,
-            activityScriptPath: activityScriptPath
+            hookClientPath: hookClientPath
         )
         try Self.writeConfig(installed.config)
         try Self.writeHooks(installed.hooks)

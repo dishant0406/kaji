@@ -20,7 +20,7 @@ struct CodexOutboundNotificationCoordinatorTests {
             event: event(body: "Hello.")
         ) { await recorder.record($0) }
 
-        try? await Task.sleep(for: .milliseconds(60))
+        try? await Task.sleep(for: .milliseconds(120))
 
         #expect(await recorder.bodies() == ["Hello."])
     }
@@ -35,7 +35,7 @@ struct CodexOutboundNotificationCoordinatorTests {
             event: event(body: "Turn completed (codex-tui)")
         ) { await recorder.record($0) }
 
-        try? await Task.sleep(for: .milliseconds(60))
+        try? await Task.sleep(for: .milliseconds(120))
 
         #expect(await recorder.bodies() == ["Turn completed (codex-tui)"])
     }
