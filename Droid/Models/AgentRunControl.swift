@@ -42,9 +42,15 @@ struct AgentRunCapabilities: Hashable {
 
 enum AgentRunControlAction: Hashable {
     case jump(AgentMissionControlItem)
+    case reply(UUID, String)
+    case stop(UUID)
+    case restart(UUID)
+    case resume(UUID)
     case verify(UUID)
     case openFile(UUID, AgentChangedFile)
     case openDiff(UUID, AgentChangedFile)
+    case approve(UUID)
+    case deny(UUID)
 }
 
 enum AgentRunControlResult: Hashable {

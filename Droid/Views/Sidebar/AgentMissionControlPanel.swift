@@ -66,6 +66,10 @@ struct AgentMissionControlPanel: View {
                         AgentMissionControlRow(
                             item: item,
                             capabilities: capabilities,
+                            onReply: reply(item, capabilities: capabilities),
+                            onStop: stop(item, capabilities: capabilities),
+                            onRestart: restart(item, capabilities: capabilities),
+                            onResume: resume(item, capabilities: capabilities),
                             onVerify: verify(item, capabilities: capabilities),
                             onOpenFile: openFile(item, capabilities: capabilities),
                             onOpenDiff: openDiff(item, capabilities: capabilities)
@@ -90,6 +94,40 @@ struct AgentMissionControlPanel: View {
         guard capabilities.verify.isVisible else { return nil }
         return {
             _ = controlCenter.perform(.verify(runID))
+        }
+    }
+
+    private func reply(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> ((String) -> Void)? {
+        guard let runID = item.runID else { return nil }
+        guard capabilities.reply.isVisible else { return nil }
+        return { text in
+            Task {
+                _ = await controlCenter.performAsync(.reply(runID, text))
+            }
+        }
+    }
+
+    private func stop(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> (() -> Void)? {
+        guard let runID = item.runID else { return nil }
+        guard capabilities.stop.isVisible else { return nil }
+        return {
+            _ = controlCenter.perform(.stop(runID))
+        }
+    }
+
+    private func restart(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> (() -> Void)? {
+        guard let runID = item.runID else { return nil }
+        guard capabilities.restart.isVisible else { return nil }
+        return {
+            _ = controlCenter.perform(.restart(runID))
+        }
+    }
+
+    private func resume(_ item: AgentMissionControlItem, capabilities: AgentRunCapabilities) -> (() -> Void)? {
+        guard let runID = item.runID else { return nil }
+        guard capabilities.resume.isVisible else { return nil }
+        return {
+            _ = controlCenter.perform(.resume(runID))
         }
     }
 

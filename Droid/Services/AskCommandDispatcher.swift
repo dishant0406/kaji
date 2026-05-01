@@ -89,11 +89,11 @@ enum AskCommandDispatcher {
         return [
             "{",
             command,
-            "; status=$?; if [ -n \"${DROID_HOOK_CLIENT_PATH:-}\" ]; then \"$DROID_HOOK_CLIENT_PATH\" ask-complete",
+            "; droid_status=$?; if [ -n \"${DROID_HOOK_CLIENT_PATH:-}\" ]; then \"$DROID_HOOK_CLIENT_PATH\" ask-complete",
             ShellEscaper.escape(provider.rawValue),
             ShellEscaper.escape(provider.title),
             "'Session completed'; fi",
-            "; exit $status; }",
+            "; exec \"${SHELL:-/bin/zsh}\" -i; }",
         ].joined(separator: " ")
     }
 
@@ -137,9 +137,13 @@ enum AskCommandDispatcher {
     }
 
     static func resumeCommand(for provider: AskProvider, history: AskHistoryOption, prompt: String) -> String {
+        resumeCommand(for: provider, sessionID: history.sessionID, prompt: prompt)
+    }
+
+    static func resumeCommand(for provider: AskProvider, sessionID: String, prompt: String) -> String {
         let base = launchCommand(for: provider)
         guard !base.isEmpty else { return "" }
-        let escapedID = ShellEscaper.escape(history.sessionID)
+        let escapedID = ShellEscaper.escape(sessionID)
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let escapedPrompt = trimmed.isEmpty ? nil : ShellEscaper.escape(trimmed)
 

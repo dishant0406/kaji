@@ -87,6 +87,7 @@ enum AgentMissionControlSnapshotBuilder {
             providerID: activity.providerID,
             providerName: providerName,
             providerIconName: providerIconName(for: activity.providerID),
+            sessionID: nil,
             title: "\(providerName) session",
             detail: detail(projectID: activity.projectID, worktreeID: activity.worktreeID, projects: projects, worktrees: worktrees),
             status: .running,
@@ -113,6 +114,7 @@ enum AgentMissionControlSnapshotBuilder {
             providerID: providerID,
             providerName: providerName(for: providerID),
             providerIconName: providerIconName(for: providerID),
+            sessionID: nil,
             title: notification.title.isEmpty ? "Agent update" : notification.title,
             detail: notification.body.isEmpty ? detail(
                 projectID: notification.projectID,

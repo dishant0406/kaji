@@ -54,7 +54,10 @@ struct AskCommandDispatcherTests {
         #expect(wrapped.contains("opencode"))
         #expect(wrapped.contains("OpenCode"))
         #expect(wrapped.contains("Session completed"))
-        #expect(wrapped.contains("exit $status"))
+        #expect(wrapped.contains("droid_status=$?"))
+        #expect(!wrapped.contains("; status=$?"))
+        #expect(wrapped.contains("exec \"${SHELL:-/bin/zsh}\" -i"))
+        #expect(!wrapped.contains("exit $status"))
         #expect(!wrapped.contains("python"))
     }
 

@@ -754,6 +754,10 @@ final class GhosttyTerminalNSView: NSView {
         sendKeyPress(codepoint: 13, keycode: 36)
     }
 
+    func sendEscapeKey() {
+        sendKeyPress(codepoint: 27, keycode: 53)
+    }
+
     private func flushInjectedCommandIfNeeded() {
         guard surface != nil else { return }
         guard let injectedCommand, !injectedCommandSent else { return }

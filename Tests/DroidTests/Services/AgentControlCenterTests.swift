@@ -12,6 +12,17 @@ struct AgentControlCenterTests {
         #expect(AgentControlCenter.capabilities(for: base).verify == .hidden)
         #expect(AgentControlCenter.capabilities(for: base).openFiles == .hidden)
         #expect(AgentControlCenter.capabilities(for: base).openDiffs == .hidden)
+        #expect(AgentControlCenter.capabilities(for: base).restart == .available)
+        #expect(AgentControlCenter.capabilities(for: base).resume == .hidden)
+        #expect(AgentControlCenter.capabilities(for: base).approve == .hidden)
+        #expect(AgentControlCenter.capabilities(for: base).deny == .hidden)
+
+        let running = item(changedFiles: [], verification: .notStarted, status: .running)
+        #expect(AgentControlCenter.capabilities(for: running).reply == .available)
+        #expect(AgentControlCenter.capabilities(for: running).stop == .available)
+
+        let resumable = item(changedFiles: [], verification: .notStarted, sessionID: "session-1")
+        #expect(AgentControlCenter.capabilities(for: resumable).resume == .available)
 
         let file = AgentChangedFile(path: "Droid/App.swift", oldPath: nil, status: .modified, additions: 1, deletions: 0, isBinary: false)
         let withFile = item(changedFiles: [file], verification: .notStarted)
@@ -78,9 +89,118 @@ struct AgentControlCenterTests {
         #expect(runStore.run(id: runID)?.actions.last?.status == .succeeded)
     }
 
+    @Test
+    func restartCreatesProviderTabInRunWorktreeAndRecordsAction() throws {
+        let context = controlContext()
+        let runStore = AgentRunStore()
+        runStore.start(
+            providerID: "codex",
+            paneID: UUID(),
+            projectID: context.project.id,
+            worktreeID: context.worktree.id,
+            worktreePath: context.worktree.path
+        )
+        let runID = try #require(runStore.runs.first?.id)
+        let controlCenter = AgentControlCenter(
+            appState: context.appState,
+            projectStore: context.projectStore,
+            worktreeStore: context.worktreeStore,
+            runStore: runStore
+        )
+
+        let result = controlCenter.perform(.restart(runID))
+
+        #expect(result == .succeeded("Started new run."))
+        #expect(context.appState.workspaceTabs(for: context.project.id).contains { workspaceTab in
+            workspaceTab.root.allAreas().contains { area in
+                area.tabs.contains { tab in
+                    tab.content.pane?.startupCommand?.contains("codex") == true
+                }
+            }
+        })
+        #expect(runStore.run(id: runID)?.actions.last?.kind == .restart)
+    }
+
+    @Test
+    func resumeCreatesProviderResumeTabWhenSessionIsKnown() throws {
+        let context = controlContext()
+        let runStore = AgentRunStore()
+        let run = run(
+            providerID: "opencode",
+            projectID: context.project.id,
+            worktreeID: context.worktree.id,
+            worktreePath: context.worktree.path,
+            sessionID: "session-1"
+        )
+        let fileStore = makeFileStore(containing: [run])
+        let persistedRunStore = AgentRunStore(fileStore: fileStore)
+        let controlCenter = AgentControlCenter(
+            appState: context.appState,
+            projectStore: context.projectStore,
+            worktreeStore: context.worktreeStore,
+            runStore: persistedRunStore
+        )
+
+        let result = controlCenter.perform(.resume(run.id))
+
+        #expect(result == .succeeded("Resumed run."))
+        #expect(context.appState.workspaceTabs(for: context.project.id).contains { workspaceTab in
+            workspaceTab.root.allAreas().contains { area in
+                area.tabs.contains { tab in
+                    tab.content.pane?.startupCommand?.contains("--session") == true
+                }
+            }
+        })
+        #expect(persistedRunStore.run(id: run.id)?.actions.last?.kind == .resume)
+        _ = runStore
+    }
+
+    @Test
+    func emptyReplyRecordsUnavailableAction() async throws {
+        let context = controlContext()
+        let runStore = AgentRunStore()
+        runStore.start(providerID: "codex", paneID: UUID(), projectID: context.project.id, worktreeID: context.worktree.id)
+        let runID = try #require(runStore.runs.first?.id)
+        let controlCenter = AgentControlCenter(
+            appState: context.appState,
+            projectStore: context.projectStore,
+            worktreeStore: context.worktreeStore,
+            runStore: runStore
+        )
+
+        let result = await controlCenter.performAsync(.reply(runID, "  "))
+
+        #expect(result == .unavailable("Reply is empty."))
+        #expect(runStore.run(id: runID)?.actions.last?.kind == .reply)
+        #expect(runStore.run(id: runID)?.actions.last?.status == .unavailable)
+    }
+
+    @Test
+    func approveAndDenyRecordUnavailableWithoutPermissionRequest() throws {
+        let context = controlContext()
+        let runStore = AgentRunStore()
+        runStore.start(providerID: "codex", paneID: UUID(), projectID: context.project.id, worktreeID: context.worktree.id)
+        let runID = try #require(runStore.runs.first?.id)
+        let controlCenter = AgentControlCenter(
+            appState: context.appState,
+            projectStore: context.projectStore,
+            worktreeStore: context.worktreeStore,
+            runStore: runStore
+        )
+
+        let approveResult = controlCenter.perform(.approve(runID))
+        let denyResult = controlCenter.perform(.deny(runID))
+
+        #expect(approveResult == .unavailable("No provider permission request is available for this run."))
+        #expect(denyResult == .unavailable("No provider permission request is available for this run."))
+        #expect(runStore.run(id: runID)?.actions.map(\.kind).suffix(2) == [.approve, .deny])
+    }
+
     private func item(
         changedFiles: [AgentChangedFile],
-        verification: AgentVerification
+        verification: AgentVerification,
+        status: AgentMissionControlStatus = .completed,
+        sessionID: String? = nil
     ) -> AgentMissionControlItem {
         AgentMissionControlItem(
             id: "run:test",
@@ -88,9 +208,10 @@ struct AgentControlCenterTests {
             providerID: "codex",
             providerName: "Codex",
             providerIconName: "codex",
+            sessionID: sessionID,
             title: "Codex",
             detail: "muxy / main",
-            status: .completed,
+            status: status,
             timestamp: Date(),
             paneID: UUID(),
             notificationID: nil,
@@ -100,6 +221,74 @@ struct AgentControlCenterTests {
             verification: verification
         )
     }
+
+    private func controlContext() -> ControlContext {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let appState = AppState(
+            selectionStore: ControlSelectionStore(),
+            terminalViews: ControlTerminalViews(),
+            workspacePersistence: ControlWorkspacePersistence()
+        )
+        let projectStore = ProjectStore(persistence: ControlProjectPersistence(projects: [project]))
+        let worktreeStore = WorktreeStore(
+            persistence: ControlWorktreePersistence(worktrees: [project.id: [worktree]]),
+            projects: [project]
+        )
+        return ControlContext(
+            project: project,
+            worktree: worktree,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
+    }
+
+    private func run(
+        providerID: String,
+        projectID: UUID,
+        worktreeID: UUID,
+        worktreePath: String,
+        sessionID: String?
+    ) -> AgentRun {
+        AgentRun(
+            id: UUID(),
+            providerID: providerID,
+            paneID: UUID(),
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: worktreePath,
+            sessionID: sessionID,
+            transcriptPath: nil,
+            title: providerID,
+            status: .completed,
+            sourceConfidence: .exactPane,
+            changedFiles: [],
+            changedFilesAttribution: .none,
+            verification: .notStarted,
+            startedAt: Date(),
+            lastEventAt: Date(),
+            events: [],
+            actions: []
+        )
+    }
+
+    private func makeFileStore(containing runs: [AgentRun]) -> CodableFileStore<[AgentRun]> {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let fileStore = CodableFileStore<[AgentRun]>(fileURL: directory.appendingPathComponent("agent-runs.json"))
+        try? fileStore.save(runs)
+        return fileStore
+    }
+}
+
+private struct ControlContext {
+    let project: Project
+    let worktree: Worktree
+    let appState: AppState
+    let projectStore: ProjectStore
+    let worktreeStore: WorktreeStore
 }
 
 private struct ControlSelectionStore: ActiveProjectSelectionStoring {
