@@ -17,4 +17,13 @@ struct TerminalEnvironmentPolicyTests {
         #expect(result["COLORTERM"] == "truecolor")
         #expect(result["PATH"] == "/usr/bin")
     }
+
+    @Test
+    @MainActor
+    func startupCommandUsesInteractiveLoginShell() {
+        let command = GhosttyTerminalNSView.loginShellCommand("codex 'hello'")
+
+        #expect(command.contains(" -l -i -c "))
+        #expect(command.contains("codex"))
+    }
 }

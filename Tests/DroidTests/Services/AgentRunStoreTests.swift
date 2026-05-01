@@ -240,4 +240,47 @@ struct AgentRunStoreTests {
         #expect(store.runs.first?.verification.output == "ok")
         store.reset()
     }
+
+    @Test
+    func persistsCompletedRunsAcrossStoreInstances() throws {
+        let fileStore = makeFileStore()
+        let store = AgentRunStore(fileStore: fileStore)
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(providerID: "codex", paneID: paneID, projectID: projectID, worktreeID: worktreeID, worktreePath: "/tmp/muxy")
+        store.complete(providerID: "codex", paneID: paneID, message: "Done")
+
+        let reloaded = AgentRunStore(fileStore: fileStore)
+
+        #expect(reloaded.runs.count == 1)
+        #expect(reloaded.runs.first?.providerID == "codex")
+        #expect(reloaded.runs.first?.status == .completed)
+        #expect(reloaded.runs.first?.worktreePath == "/tmp/muxy")
+        #expect(reloaded.runs.first?.events.last?.text == "Done")
+    }
+
+    @Test
+    func persistedOpenRunsReloadAsStale() throws {
+        let fileStore = makeFileStore()
+        let store = AgentRunStore(fileStore: fileStore)
+        let paneID = UUID()
+
+        store.start(providerID: "opencode", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+        store.startVerification(runID: try #require(store.runs.first?.id), command: "swift test")
+
+        let reloaded = AgentRunStore(fileStore: fileStore)
+
+        #expect(reloaded.runs.first?.status == .stale)
+        #expect(reloaded.runs.first?.verification.status == .unavailable)
+        #expect(reloaded.runs.first?.verification.output == "Verification was interrupted.")
+    }
+
+    private func makeFileStore() -> CodableFileStore<[AgentRun]> {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return CodableFileStore(fileURL: directory.appendingPathComponent("agent-runs.json"))
+    }
 }
