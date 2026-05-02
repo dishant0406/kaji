@@ -3,32 +3,40 @@ import SwiftUI
 
 struct AskOverlayKeyMonitor: NSViewRepresentable {
     let onSubmit: () -> Void
+    var onShiftSubmit: (() -> Void)?
     let onEscape: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
+    var onPaste: (() -> Bool)?
 
     func makeNSView(context: Context) -> AskOverlayKeyMonitorView {
         let view = AskOverlayKeyMonitorView()
         view.onSubmit = onSubmit
+        view.onShiftSubmit = onShiftSubmit
         view.onEscape = onEscape
         view.onArrowUp = onArrowUp
         view.onArrowDown = onArrowDown
+        view.onPaste = onPaste
         return view
     }
 
     func updateNSView(_ nsView: AskOverlayKeyMonitorView, context: Context) {
         nsView.onSubmit = onSubmit
+        nsView.onShiftSubmit = onShiftSubmit
         nsView.onEscape = onEscape
         nsView.onArrowUp = onArrowUp
         nsView.onArrowDown = onArrowDown
+        nsView.onPaste = onPaste
     }
 }
 
 final class AskOverlayKeyMonitorView: NSView {
     var onSubmit: (() -> Void)?
+    var onShiftSubmit: (() -> Void)?
     var onEscape: (() -> Void)?
     var onArrowUp: (() -> Void)?
     var onArrowDown: (() -> Void)?
+    var onPaste: (() -> Bool)?
     private var keyMonitor: Any?
 
     override func viewDidMoveToWindow() {
@@ -45,10 +53,18 @@ final class AskOverlayKeyMonitorView: NSView {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, let window = self.window, window.isKeyWindow else { return event }
             guard !(window.firstResponder is NSTextView) else { return event }
-            guard event.modifierFlags.isDisjoint(with: .deviceIndependentFlagsMask) else { return event }
+            if event.modifierFlags.contains(.command), event.keyCode == 9, self.onPaste?() == true {
+                return nil
+            }
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard flags.isEmpty || flags == .shift else { return event }
             switch event.keyCode {
             case 36:
-                self.onSubmit?()
+                if flags == .shift {
+                    self.onShiftSubmit?()
+                } else {
+                    self.onSubmit?()
+                }
                 return nil
             case 53:
                 self.onEscape?()

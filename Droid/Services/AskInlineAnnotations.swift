@@ -116,7 +116,13 @@ enum AskInlineAnnotations {
         case .mode:
             AskSessionMode.resolveAnnotation(value) != nil
         case .history,
-             .skill:
+             .skill,
+             .task,
+             .taskAdd,
+             .taskEdit,
+             .taskDelete,
+             .projectAdd,
+             .attach:
             false
         case .project,
              .worktree:

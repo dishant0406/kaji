@@ -7,9 +7,11 @@ struct PaletteSearchField: NSViewRepresentable {
     var fontSize: CGFloat = 13
     let onSubmit: () -> Void
     var onSubmitText: ((String) -> Void)?
+    var onShiftSubmitText: ((String) -> Void)?
     let onEscape: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
+    var onPaste: (() -> Bool)?
     @Environment(AppTypographySettings.self) private var typography
 
     func makeCoordinator() -> Coordinator {
@@ -27,6 +29,7 @@ struct PaletteSearchField: NSViewRepresentable {
         field.placeholderString = placeholder
         field.cell?.sendsActionOnEndEditing = false
         field.onEscape = onEscape
+        field.onPaste = onPaste
         field.maximumNumberOfLines = 1
         field.usesSingleLineMode = true
         DispatchQueue.main.async {
@@ -43,6 +46,7 @@ struct PaletteSearchField: NSViewRepresentable {
         nsView.font = typography.nsFont(size: fontSize)
         if let field = nsView as? PaletteNSTextField {
             field.onEscape = onEscape
+            field.onPaste = onPaste
         }
     }
 
@@ -66,7 +70,11 @@ struct PaletteSearchField: NSViewRepresentable {
             if let field = control as? NSTextField {
                 parent.text = field.stringValue
                 if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-                    if let onSubmitText = parent.onSubmitText {
+                    if NSApp.currentEvent?.modifierFlags.contains(.shift) == true,
+                       let onShiftSubmitText = parent.onShiftSubmitText
+                    {
+                        onShiftSubmitText(field.stringValue)
+                    } else if let onSubmitText = parent.onSubmitText {
                         onSubmitText(field.stringValue)
                     } else {
                         parent.onSubmit()
@@ -95,8 +103,12 @@ struct PaletteSearchField: NSViewRepresentable {
 
 private final class PaletteNSTextField: NSTextField {
     var onEscape: (() -> Void)?
+    var onPaste: (() -> Bool)?
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command), event.keyCode == 9, onPaste?() == true {
+            return true
+        }
         if event.keyCode == 53 {
             onEscape?()
             return true

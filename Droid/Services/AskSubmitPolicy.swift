@@ -21,6 +21,13 @@ enum AskSubmitPolicy {
             hasHistory
         case .skill:
             hasSkill
+        case .task,
+             .taskAdd,
+             .taskEdit,
+             .taskDelete,
+             .projectAdd,
+             .attach:
+            false
         case .provider,
              .mode,
              .project,

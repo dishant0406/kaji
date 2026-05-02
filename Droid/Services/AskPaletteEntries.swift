@@ -14,6 +14,8 @@ enum AskPaletteEntries {
         let worktrees: [Worktree]
         let historyOptions: [AskHistoryOption]
         let skillOptions: [AskSkillOption]
+        let taskRecipes: [AskTaskRecipe]
+        let directoryOptions: [AskDirectoryOption]
     }
 
     static func annotationEntries(_ annotation: AnnotationContext) -> [AskPaletteEntry] {
@@ -32,6 +34,18 @@ enum AskPaletteEntries {
         case .skill:
             if annotation.provider == .terminal { return [] }
             return filteredSkills(annotation.skillOptions, query: annotation.active.value)
+        case .task:
+            return filteredTasks(annotation.taskRecipes, query: annotation.active.value)
+        case .taskAdd:
+            return [.init(action: .openTaskForm, title: "Add task", detail: "Create a reusable task prompt", annotation: "Enter")]
+        case .taskEdit:
+            return filteredEditableTasks(annotation.taskRecipes, query: annotation.active.value)
+        case .taskDelete:
+            return filteredUserTasks(annotation.taskRecipes, query: annotation.active.value)
+        case .projectAdd:
+            return directoryEntries(annotation.directoryOptions)
+        case .attach:
+            return [.init(action: .attach, title: "Attach", detail: "Pick files, folders, or images", annotation: "Enter")]
         }
     }
 
@@ -50,6 +64,9 @@ enum AskPaletteEntries {
 
     static func build(_ context: AskPaletteContext) -> [AskPaletteEntry] {
         let parsed = AskInlineAnnotations.parse(context.fieldText)
+        if AskMentionParser.activeMention(in: context.fieldText) != nil {
+            return mentionEntries(context.mentionOptions)
+        }
         if let active = parsed.activeAnnotation {
             return annotationEntries(.init(
                 active: active,
@@ -57,7 +74,9 @@ enum AskPaletteEntries {
                 projects: context.projects,
                 worktrees: context.worktrees,
                 historyOptions: context.historyOptions,
-                skillOptions: context.skillOptions
+                skillOptions: context.skillOptions,
+                taskRecipes: context.taskRecipes,
+                directoryOptions: context.directoryOptions
             ))
         }
 
@@ -170,6 +189,32 @@ enum AskPaletteEntries {
 
     private static func filteredHistory(_ options: [AskHistoryOption], query: String) -> [AskPaletteEntry] {
         options.map { .init(action: .history($0), title: $0.title, detail: $0.detail, annotation: $0.provider.title) }
+    }
+
+    private static func filteredTasks(_ recipes: [AskTaskRecipe], query: String) -> [AskPaletteEntry] {
+        recipes
+            .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
+            .map { .init(action: .taskRecipe($0), title: $0.name, detail: $0.prompt, annotation: $0.isBuiltIn ? "Built-in" : "Saved") }
+    }
+
+    private static func filteredUserTasks(_ recipes: [AskTaskRecipe], query: String) -> [AskPaletteEntry] {
+        recipes
+            .filter { !$0.isBuiltIn && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) }
+            .map { .init(action: .deleteTaskRecipe($0), title: $0.name, detail: $0.prompt, annotation: "Delete") }
+    }
+
+    private static func filteredEditableTasks(_ recipes: [AskTaskRecipe], query: String) -> [AskPaletteEntry] {
+        recipes
+            .filter { !$0.isBuiltIn && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) }
+            .map { .init(action: .editTaskRecipe($0), title: $0.name, detail: $0.prompt, annotation: $0.isGlobal ? "Global" : "Project") }
+    }
+
+    private static func mentionEntries(_ options: [AskMentionOption]) -> [AskPaletteEntry] {
+        options.map { .init(action: .mention($0), title: $0.title, detail: $0.detail, annotation: $0.kind.rawValue) }
+    }
+
+    private static func directoryEntries(_ options: [AskDirectoryOption]) -> [AskPaletteEntry] {
+        options.map { .init(action: .directory($0), title: $0.title, detail: $0.detail, annotation: "Shift Enter") }
     }
 
     private static func filteredSkills(_ options: [AskSkillOption], query: String) -> [AskPaletteEntry] {

@@ -111,6 +111,17 @@ private struct AskPaletteRow: View {
             "clock.arrow.circlepath"
         case .skill:
             "wand.and.stars"
+        case .taskRecipe,
+             .openTaskForm,
+             .editTaskRecipe,
+             .deleteTaskRecipe:
+            "checklist"
+        case .mention:
+            "at"
+        case .directory:
+            "folder"
+        case .attach:
+            "paperclip"
         case .launchProvider:
             "play"
         case .submit:

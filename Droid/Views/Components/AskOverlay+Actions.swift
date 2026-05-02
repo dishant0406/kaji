@@ -10,6 +10,7 @@ extension AskOverlay {
         let session: AskSessionOption?
         let history: AskHistoryOption?
         let skill: AskSkillOption?
+        let task: AskTaskRecipe?
         let hasInvalidProviderOption: Bool
     }
 
@@ -27,12 +28,22 @@ extension AskOverlay {
     }
 
     func handleSubmit(_ latestFieldText: String) {
+        if isTaskFormVisible {
+            saveTaskForm()
+            return
+        }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
         fieldText = latestFieldText
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
 
+        if AskMentionParser.activeMention(in: latestFieldText) != nil {
+            confirmHighlight()
+            return
+        }
+
         if let activeAnnotation = parsed.activeAnnotation {
+            if handleUtilityAnnotation(activeAnnotation) { return }
             let activeTarget = resolvedTarget(for: parsed)
             if activeAnnotationIsResolved(activeAnnotation, target: activeTarget) {
                 applyResolvedTarget(activeTarget)
@@ -81,6 +92,41 @@ extension AskOverlay {
         submit(target: target)
     }
 
+    func handleShiftSubmit(_ latestFieldText: String) {
+        let parsed = AskInlineAnnotations.parse(latestFieldText)
+        guard parsed.activeAnnotation?.key == .projectAdd else {
+            handleSubmit(latestFieldText)
+            return
+        }
+        if let highlightedIndex, highlightedIndex < entries.count, case let .directory(directory) = entries[highlightedIndex].action {
+            addProject(directory.path)
+            return
+        }
+        addProject(AskDirectorySearchService.expandHome(parsed.activeAnnotation?.value ?? "~"))
+    }
+
+    func handleUtilityAnnotation(_ annotation: AskActiveAnnotation) -> Bool {
+        switch annotation.key {
+        case .taskAdd:
+            openTaskForm()
+        case .attach:
+            attachments.append(contentsOf: AskAttachmentLoader.openPanel())
+        case .taskEdit,
+             .taskDelete,
+             .projectAdd:
+            confirmHighlight()
+        case .project,
+             .worktree,
+             .provider,
+             .mode,
+             .history,
+             .skill,
+             .task:
+            return false
+        }
+        return true
+    }
+
     func confirmHighlight() {
         guard let highlightedIndex, highlightedIndex < entries.count else { return }
         apply(entries[highlightedIndex])
@@ -104,6 +150,22 @@ extension AskOverlay {
             applyAnnotationSelection(value: history.sessionID)
         case let .skill(skill):
             applyAnnotationSelection(value: skill.name)
+        case let .taskRecipe(recipe):
+            fieldText = recipe.prompt
+            prompt = recipe.prompt
+        case .openTaskForm:
+            openTaskForm()
+        case let .editTaskRecipe(recipe):
+            openTaskForm(recipe: recipe)
+        case let .deleteTaskRecipe(recipe):
+            taskRecipeStore.delete(id: recipe.id)
+            highlightedIndex = entries.isEmpty ? nil : 0
+        case let .mention(option):
+            applyMention(option)
+        case let .directory(directory):
+            fieldText = "\(AskAnnotationKey.projectAdd.token)\(directory.path)/"
+        case .attach:
+            attachments.append(contentsOf: AskAttachmentLoader.openPanel())
         case .launchProvider:
             submit()
         case .submit:
@@ -127,7 +189,7 @@ extension AskOverlay {
         else { return }
         isSending = true
         let request = AskDispatchRequest(
-            prompt: target.prompt,
+            prompt: promptWithAttachments(target.prompt),
             project: selectedProject,
             worktree: selectedWorktree,
             provider: target.provider,
@@ -157,6 +219,77 @@ extension AskOverlay {
         highlightedIndex = entries.isEmpty ? nil : 0
     }
 
+    func applyMention(_ option: AskMentionOption) {
+        guard let mention = AskMentionParser.activeMention(in: fieldText) else { return }
+        fieldText = AskMentionParser.replacingActiveMention(in: fieldText, mention: mention, with: option.path)
+        prompt = AskInlineAnnotations.parse(fieldText).prompt
+        mentionOptions = []
+    }
+
+    func openTaskForm() {
+        isTaskFormVisible = true
+        editingTaskID = nil
+        taskFormName = ""
+        taskFormPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        taskFormScope = AskTaskRecipeScope.global.rawValue
+    }
+
+    func openTaskForm(recipe: AskTaskRecipe) {
+        isTaskFormVisible = true
+        editingTaskID = recipe.id
+        taskFormName = recipe.name
+        taskFormPrompt = recipe.prompt
+        taskFormScope = recipe.isGlobal ? AskTaskRecipeScope.global.rawValue : AskTaskRecipeScope.project.rawValue
+    }
+
+    func closeTaskForm() {
+        isTaskFormVisible = false
+        editingTaskID = nil
+    }
+
+    func saveTaskForm() {
+        let scope = AskTaskRecipeScope(rawValue: taskFormScope) ?? .global
+        let scopedProjectID = scope == .project ? projectID : nil
+        if let editingTaskID {
+            taskRecipeStore.update(id: editingTaskID, name: taskFormName, prompt: taskFormPrompt, projectID: scopedProjectID)
+        } else {
+            taskRecipeStore.save(name: taskFormName, prompt: taskFormPrompt, projectID: scopedProjectID)
+        }
+        let savedPrompt = taskFormPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        isTaskFormVisible = false
+        editingTaskID = nil
+        if !savedPrompt.isEmpty {
+            fieldText = savedPrompt
+            prompt = savedPrompt
+        }
+    }
+
+    func addProject(_ rawPath: String) {
+        let path = AskDirectorySearchService.expandHome(rawPath).trimmingCharacters(in: .whitespacesAndNewlines)
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { return }
+        if let existing = projectStore.projects.first(where: { $0.path == path }) {
+            guard let primary = worktreeStore.primary(for: existing.id) else { return }
+            projectID = existing.id
+            appState.selectProject(existing, worktree: primary)
+            onDismiss()
+            return
+        }
+        let project = Project(name: URL(fileURLWithPath: path).lastPathComponent, path: path, sortOrder: projectStore.projects.count)
+        projectStore.add(project)
+        worktreeStore.ensurePrimary(for: project)
+        guard let primary = worktreeStore.primary(for: project.id) else { return }
+        projectID = project.id
+        appState.selectProject(project, worktree: primary)
+        onDismiss()
+    }
+
+    func promptWithAttachments(_ base: String) -> String {
+        guard !attachments.isEmpty else { return base }
+        let paths = attachments.map { "- \($0.url.path)" }.joined(separator: "\n")
+        return [base, "Attached images:", paths].filter { !$0.isEmpty }.joined(separator: "\n\n")
+    }
+
     func resolvedFieldTextAfterActiveAnnotationSubmit(
         latestFieldText: String,
         parsed: AskParsedInput
@@ -171,6 +304,9 @@ extension AskOverlay {
             sessions: filteredSessions,
             historyOptions: historyOptions,
             skillOptions: skillOptions,
+            taskRecipes: taskRecipeStore.recipes(for: projectID),
+            mentionOptions: mentionOptions,
+            directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName
         ))
@@ -208,7 +344,15 @@ extension AskOverlay {
             active.key == .history ? history.sessionID : nil
         case let .skill(skill):
             active.key == .skill ? skill.name : nil
+        case let .taskRecipe(recipe):
+            active.key == .task ? recipe.prompt : nil
         case .command,
+             .openTaskForm,
+             .editTaskRecipe,
+             .deleteTaskRecipe,
+             .mention,
+             .directory,
+             .attach,
              .session,
              .launchProvider,
              .submit:
@@ -263,11 +407,24 @@ extension AskOverlay {
                     option.title.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? matches[0].name : nil
+        case .task:
+            let matches = taskRecipeStore.recipes(for: projectID).filter { option in
+                if active.value.isEmpty { return true }
+                return option.name.localizedCaseInsensitiveContains(active.value)
+            }
+            return matches.count == 1 ? matches[0].prompt : nil
+        case .taskAdd,
+             .taskEdit,
+             .taskDelete,
+             .projectAdd,
+             .attach:
+            return nil
         }
     }
 
     func resolvedTarget(for parsed: AskParsedInput) -> AskResolvedTarget {
-        let resolvedProvider = parsed.annotations[.provider].flatMap(AskProvider.resolveAnnotation) ?? provider
+        let resolvedTask = parsed.annotations[.task].flatMap(resolveTask(named:))
+        let resolvedProvider = resolvedProvider(parsed: parsed, task: resolvedTask)
         let resolvedSessionMode = parsed.annotations[.mode].flatMap(AskSessionMode.resolveAnnotation) ?? sessionMode
         let resolvedProject = parsed.annotations[.project]
             .flatMap(resolveProject(named:))
@@ -303,7 +460,7 @@ extension AskOverlay {
             ).first { $0.name == skillName }
         }
         return AskResolvedTarget(
-            prompt: parsed.prompt,
+            prompt: prompt(parsed.prompt, task: resolvedTask),
             project: resolvedProject,
             worktree: resolvedWorktree,
             provider: resolvedProvider,
@@ -311,13 +468,31 @@ extension AskOverlay {
             session: resolvedSession,
             history: resolvedHistory,
             skill: resolvedSkill,
+            task: resolvedTask,
             hasInvalidProviderOption: invalidProviderOption(
                 parsed: parsed,
                 provider: resolvedProvider,
                 history: resolvedHistory,
-                skill: resolvedSkill
+                skill: resolvedSkill,
+                task: resolvedTask
             )
         )
+    }
+
+    func resolvedProvider(parsed: AskParsedInput, task: AskTaskRecipe?) -> AskProvider {
+        if let annotated = parsed.annotations[.provider].flatMap(AskProvider.resolveAnnotation) {
+            return annotated
+        }
+        if task != nil, provider == .terminal {
+            return .opencode
+        }
+        return provider
+    }
+
+    func prompt(_ base: String, task: AskTaskRecipe?) -> String {
+        let cleanBase = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let task else { return cleanBase }
+        return [task.prompt, cleanBase].filter { !$0.isEmpty }.joined(separator: "\n\n")
     }
 
     func canSend(target: AskResolvedTarget) -> Bool {
@@ -331,20 +506,23 @@ extension AskOverlay {
     func targetHasMissingSelection(_ target: AskResolvedTarget, parsed: AskParsedInput) -> Bool {
         if target.hasInvalidProviderOption { return true }
         return (parsed.annotations[.history] != nil && target.history == nil) ||
-            (parsed.annotations[.skill] != nil && target.skill == nil)
+            (parsed.annotations[.skill] != nil && target.skill == nil) ||
+            (parsed.annotations[.task] != nil && target.task == nil)
     }
 
     func invalidProviderOption(
         parsed: AskParsedInput,
         provider: AskProvider,
         history: AskHistoryOption?,
-        skill: AskSkillOption?
+        skill: AskSkillOption?,
+        task: AskTaskRecipe?
     ) -> Bool {
         if provider == .terminal {
-            return parsed.annotations[.history] != nil || parsed.annotations[.skill] != nil
+            return parsed.annotations[.history] != nil || parsed.annotations[.skill] != nil || parsed.annotations[.task] != nil
         }
         return (parsed.annotations[.history] != nil && history == nil) ||
-            (parsed.annotations[.skill] != nil && skill == nil)
+            (parsed.annotations[.skill] != nil && skill == nil) ||
+            (parsed.annotations[.task] != nil && task == nil)
     }
 
     func activeAnnotationNeedsResolution(_ active: AskActiveAnnotation?, target: AskResolvedTarget) -> Bool {
@@ -354,6 +532,14 @@ extension AskOverlay {
             return target.history == nil
         case .skill:
             return target.skill == nil
+        case .task:
+            return target.task == nil
+        case .taskAdd,
+             .taskEdit,
+             .taskDelete,
+             .projectAdd,
+             .attach:
+            return false
         case .provider,
              .mode,
              .project,
@@ -377,6 +563,16 @@ extension AskOverlay {
         projectID = target.project?.id
         worktreeID = target.worktree?.id
         sessionID = target.session?.id
+    }
+
+    func resolveTask(named name: String) -> AskTaskRecipe? {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scopedRecipes = taskRecipeStore.recipes(for: projectID)
+        return scopedRecipes.first {
+            $0.name.compare(normalized, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        } ?? scopedRecipes.first {
+            $0.name.localizedCaseInsensitiveContains(normalized) || $0.id.localizedCaseInsensitiveContains(normalized)
+        }
     }
 
     func resolveProject(named name: String) -> Project? {
