@@ -38,6 +38,16 @@ final class FileKeyBindingPersistence: KeyBindingPersisting {
             {
                 return defaultBinding
             }
+            if defaultBinding.action == .ask,
+               savedByAction[defaultBinding.action]?.combo == KeyCombo(key: "n", command: true, shift: true)
+            {
+                return defaultBinding
+            }
+            if defaultBinding.action == .openVCSTab,
+               savedByAction[defaultBinding.action]?.combo == KeyCombo(key: "k", command: true)
+            {
+                return defaultBinding
+            }
             return savedByAction[defaultBinding.action] ?? defaultBinding
         }
     }

@@ -51,6 +51,22 @@ struct KeyBindingStoreTests {
         #expect(store.action(for: event, scopes: [.mainWindow]) == .agentCommandCenter)
     }
 
+    @Test("Ask resolves from Command-K")
+    func askResolvesFromCommandK() throws {
+        let store = KeyBindingStore(persistence: StubKeyBindingPersistence(bindings: KeyBinding.defaults))
+        let event = try keyEvent(characters: "k", charactersIgnoringModifiers: "k", keyCode: 40, modifiers: [.command])
+
+        #expect(store.action(for: event, scopes: [.mainWindow]) == .ask)
+    }
+
+    @Test("Source Control resolves from Command-Shift-G")
+    func sourceControlResolvesFromCommandShiftG() throws {
+        let store = KeyBindingStore(persistence: StubKeyBindingPersistence(bindings: KeyBinding.defaults))
+        let event = try keyEvent(characters: "G", charactersIgnoringModifiers: "g", keyCode: 5, modifiers: [.command, .shift])
+
+        #expect(store.action(for: event, scopes: [.mainWindow]) == .openVCSTab)
+    }
+
     private func keyEvent(
         characters: String,
         charactersIgnoringModifiers: String,
