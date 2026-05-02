@@ -20,6 +20,17 @@ struct AskOverlay: View {
     @State var cachedHistoryOptions: [AskHistoryOption] = []
     @State var historyLoadTask: Task<Void, Never>?
     @State var isHistoryLoading = false
+    @State var taskRecipeStore = AskTaskRecipeStore.shared
+    @State var mentionOptions: [AskMentionOption] = []
+    @State var mentionLoadTask: Task<Void, Never>?
+    @State var directoryOptions: [AskDirectoryOption] = []
+    @State var attachments: [AskAttachment] = []
+    @State var previewAttachment: AskAttachment?
+    @State var isTaskFormVisible = false
+    @State var taskFormName = ""
+    @State var taskFormPrompt = ""
+    @State var taskFormScope = AskTaskRecipeScope.global.rawValue
+    @State var editingTaskID: String?
 
     var body: some View {
         ZStack {
@@ -32,12 +43,26 @@ struct AskOverlay: View {
                 Divider().overlay(DroidTheme.border.opacity(0.75))
                 targetSummary
                 Divider().overlay(DroidTheme.border.opacity(0.75))
-                AskPaletteList(
-                    entries: entries,
-                    highlightedIndex: highlightedIndex,
-                    emptyLabel: emptyLabel,
-                    onSelect: apply
-                )
+                if !attachments.isEmpty {
+                    AskAttachmentStrip(attachments: attachments, onRemove: removeAttachment, onPreview: { previewAttachment = $0 })
+                    Divider().overlay(DroidTheme.border.opacity(0.75))
+                }
+                if isTaskFormVisible {
+                    AskTaskRecipeForm(
+                        name: $taskFormName,
+                        prompt: $taskFormPrompt,
+                        scope: $taskFormScope,
+                        onSave: saveTaskForm,
+                        onCancel: closeTaskForm
+                    )
+                } else {
+                    AskPaletteList(
+                        entries: entries,
+                        highlightedIndex: highlightedIndex,
+                        emptyLabel: emptyLabel,
+                        onSelect: apply
+                    )
+                }
                 Divider().overlay(DroidTheme.border.opacity(0.75))
                 footer
             }
@@ -52,6 +77,8 @@ struct AskOverlay: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityAddTraits(.isModal)
         }
+        .overlay { attachmentPreview }
+        .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })
         .onAppear(perform: configureDefaults)
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
         .onChange(of: projectID) { _, _ in
@@ -67,9 +94,11 @@ struct AskOverlay: View {
         .background(
             AskOverlayKeyMonitor(
                 onSubmit: { handleSubmit(fieldText) },
+                onShiftSubmit: { handleShiftSubmit(fieldText) },
                 onEscape: onDismiss,
                 onArrowUp: { moveHighlight(-1) },
-                onArrowDown: { moveHighlight(1) }
+                onArrowDown: { moveHighlight(1) },
+                onPaste: pasteAttachments
             )
         )
     }
@@ -79,15 +108,20 @@ struct AskOverlay: View {
             DroidIcon(systemName: isSlashMode ? "command" : "magnifyingglass", size: 12)
                 .foregroundStyle(DroidTheme.fgDim)
                 .accessibilityHidden(true)
+            IconButton(symbol: "paperclip", size: 12, accessibilityLabel: "Attach Image") {
+                attachments.append(contentsOf: AskAttachmentLoader.openPanel())
+            }
             PaletteSearchField(
                 text: $fieldText,
                 placeholder: isSlashMode ? "Type a command or option" : "Ask anything or type /",
                 fontSize: 14,
                 onSubmit: handleSubmit,
                 onSubmitText: handleSubmit,
+                onShiftSubmitText: handleShiftSubmit,
                 onEscape: onDismiss,
                 onArrowUp: { moveHighlight(-1) },
-                onArrowDown: { moveHighlight(1) }
+                onArrowDown: { moveHighlight(1) },
+                onPaste: pasteAttachments
             )
         }
         .padding(.horizontal, 14)
@@ -128,5 +162,12 @@ struct AskOverlay: View {
 
     private func summaryText(_ text: String) -> some View {
         Text(text).droidFont(size: 11).foregroundStyle(DroidTheme.fgDim).lineLimit(1)
+    }
+
+    @ViewBuilder
+    private var attachmentPreview: some View {
+        if let previewAttachment {
+            AskAttachmentPreviewOverlay(attachment: previewAttachment) { self.previewAttachment = nil }
+        }
     }
 }

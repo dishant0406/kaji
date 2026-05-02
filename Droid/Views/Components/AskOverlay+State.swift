@@ -16,6 +16,9 @@ extension AskOverlay {
             sessions: filteredSessions,
             historyOptions: historyOptions,
             skillOptions: skillOptions,
+            taskRecipes: taskRecipeStore.recipes(for: projectID),
+            mentionOptions: mentionOptions,
+            directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName
         ))
@@ -33,6 +36,9 @@ extension AskOverlay {
         }
         if activeAnnotation != nil {
             return "No matching options"
+        }
+        if AskMentionParser.activeMention(in: fieldText) != nil {
+            return "No matching files or folders"
         }
         return isSlashMode ? "No matching commands" : "No matching sessions"
     }
@@ -101,8 +107,11 @@ extension AskOverlay {
         if activeAnnotation != nil {
             return "Enter applies the highlighted option. Esc closes."
         }
+        if AskMentionParser.activeMention(in: fieldText) != nil {
+            return "Enter inserts file or folder. Type @ to attach context. Esc closes."
+        }
         if isSlashMode {
-            return "Enter applies the highlighted command. Esc closes."
+            return "Enter applies. Shift Enter adds project for /add-project. Esc closes."
         }
         if provider == .terminal {
             return "Enter sends. Type / or :p: :wt: :t: :m: to retarget inline. Esc closes."
@@ -138,7 +147,32 @@ extension AskOverlay {
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
         refreshHistoryOptions(parsed: parsed)
+        refreshMentionOptions()
+        refreshDirectoryOptions()
         highlightedIndex = entries.isEmpty ? nil : 0
+    }
+
+    func refreshMentionOptions() {
+        guard let mention = AskMentionParser.activeMention(in: fieldText), let path = selectedWorktree?.path else {
+            mentionLoadTask?.cancel()
+            mentionOptions = []
+            return
+        }
+        mentionLoadTask?.cancel()
+        mentionLoadTask = Task { @MainActor in
+            let options = await AskMentionSearchService.options(query: mention.query, projectPath: path)
+            guard !Task.isCancelled else { return }
+            mentionOptions = options
+        }
+    }
+
+    func refreshDirectoryOptions() {
+        let parsed = AskInlineAnnotations.parse(fieldText)
+        guard parsed.activeAnnotation?.key == .projectAdd else {
+            directoryOptions = []
+            return
+        }
+        directoryOptions = AskDirectorySearchService.options(query: parsed.activeAnnotation?.value ?? "~")
     }
 
     func refreshHistoryOptions(parsed: AskParsedInput? = nil) {

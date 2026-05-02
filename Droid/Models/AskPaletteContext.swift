@@ -10,6 +10,41 @@ struct AskPaletteContext {
     let sessions: [AskSessionOption]
     let historyOptions: [AskHistoryOption]
     let skillOptions: [AskSkillOption]
+    let taskRecipes: [AskTaskRecipe]
+    let mentionOptions: [AskMentionOption]
+    let directoryOptions: [AskDirectoryOption]
     let projectName: String
     let worktreeName: String
+
+    init(
+        fieldText: String,
+        prompt: String,
+        projects: [Project],
+        worktrees: [Worktree],
+        provider: AskProvider,
+        sessionMode: AskSessionMode,
+        sessions: [AskSessionOption],
+        historyOptions: [AskHistoryOption],
+        skillOptions: [AskSkillOption],
+        taskRecipes: [AskTaskRecipe] = AskTaskRecipe.builtIns,
+        mentionOptions: [AskMentionOption] = [],
+        directoryOptions: [AskDirectoryOption] = [],
+        projectName: String,
+        worktreeName: String
+    ) {
+        self.fieldText = fieldText
+        self.prompt = prompt
+        self.projects = projects
+        self.worktrees = worktrees
+        self.provider = provider
+        self.sessionMode = sessionMode
+        self.sessions = sessions
+        self.historyOptions = historyOptions
+        self.skillOptions = skillOptions
+        self.taskRecipes = taskRecipes
+        self.mentionOptions = mentionOptions
+        self.directoryOptions = directoryOptions
+        self.projectName = projectName
+        self.worktreeName = worktreeName
+    }
 }
