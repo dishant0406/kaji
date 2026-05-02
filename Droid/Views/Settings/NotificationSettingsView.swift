@@ -100,22 +100,32 @@ struct NotificationSettingsView: View {
 private struct ProviderToggleRow: View {
     let provider: AIProviderIntegration
     @State private var enabled: Bool
+    @State private var installed: Bool
+    @State private var installing = false
+    @State private var installMessage: String?
     @State private var refreshed = false
 
     init(provider: AIProviderIntegration) {
         self.provider = provider
-        _enabled = State(initialValue: provider.isEnabled)
+        let isInstalled = provider.isToolInstalled()
+        _installed = State(initialValue: isInstalled)
+        _enabled = State(initialValue: isInstalled && provider.isEnabled)
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
             ProviderIconView(iconName: provider.iconName, size: 12, style: .monochrome(.secondary))
                 .frame(width: 16)
-            Text(provider.displayName)
-                .droidFont(size: SettingsMetrics.labelFontSize)
-                .foregroundStyle(DroidTheme.fg)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(provider.displayName)
+                    .droidFont(size: SettingsMetrics.labelFontSize)
+                    .foregroundStyle(DroidTheme.fg)
+                Text(installMessage ?? (installed ? "Installed" : "CLI not installed"))
+                    .droidFont(size: SettingsMetrics.footnoteFontSize)
+                    .foregroundStyle(installed ? DroidTheme.fgDim : DroidTheme.diffRemoveFg)
+            }
             Spacer()
-            if enabled {
+            if installed, enabled {
                 Button {
                     AIProviderRegistry.shared.forceInstall(provider)
                     withAnimation { refreshed = true }
@@ -137,13 +147,62 @@ private struct ProviderToggleRow: View {
                 .buttonStyle(DroidButtonStyle(.secondary, size: .small))
                 .disabled(refreshed)
             }
+            if !installed {
+                Button(installing ? "Installing" : "Install") {
+                    installProvider()
+                }
+                .buttonStyle(DroidButtonStyle(.secondary, size: .small))
+                .disabled(installing)
+            }
             DroidSwitch(isOn: $enabled)
+                .disabled(!installed || installing)
                 .onChange(of: enabled) { _, newValue in
+                    guard installed else {
+                        enabled = false
+                        provider.isEnabled = false
+                        return
+                    }
                     provider.isEnabled = newValue
                     AIProviderRegistry.shared.installAll()
                 }
         }
         .padding(.horizontal, SettingsMetrics.horizontalPadding)
         .padding(.vertical, SettingsMetrics.rowVerticalPadding)
+        .onAppear(perform: refreshInstallState)
+    }
+
+    private func refreshInstallState() {
+        installed = provider.isToolInstalled()
+        if !installed {
+            enabled = false
+            provider.isEnabled = false
+        }
+    }
+
+    private func installProvider() {
+        guard let command = AIProviderInstaller.command(for: provider) else {
+            installMessage = "Install is not supported"
+            return
+        }
+        installing = true
+        installMessage = "Installing..."
+        Task { @MainActor in
+            let result = await AIProviderInstaller.install(command)
+            installed = provider.isToolInstalled()
+            installing = false
+            switch result {
+            case .success where installed:
+                enabled = true
+                provider.isEnabled = true
+                AIProviderRegistry.shared.installAll()
+                installMessage = "Installed"
+            case .success:
+                installMessage = "Install finished, but CLI was not found"
+            case let .failure(error):
+                enabled = false
+                provider.isEnabled = false
+                installMessage = error.localizedDescription
+            }
+        }
     }
 }
