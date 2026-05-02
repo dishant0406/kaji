@@ -58,6 +58,7 @@ struct AskOverlay: View {
             syncWorktreeSelection()
             refreshHistoryOptions()
         }
+        .onChange(of: worktreeID) { _, _ in refreshHistoryOptions() }
         .onChange(of: provider) { _, _ in
             syncSessionSelection()
             refreshHistoryOptions()

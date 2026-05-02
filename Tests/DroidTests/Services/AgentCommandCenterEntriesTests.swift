@@ -28,7 +28,7 @@ struct AgentCommandCenterEntriesTests {
         #expect(sections[0].id == first.id)
         #expect(sections[0].entries.map(\.action) == [.jump, .reply, .stop, .newRun])
         #expect(sections[1].id == second.id)
-        #expect(sections[1].entries.map(\.action) == [.jump, .newRun])
+        #expect(sections[1].entries.map(\.action) == [.jump, .reply, .newRun])
     }
 
     @Test
@@ -43,12 +43,12 @@ struct AgentCommandCenterEntriesTests {
     }
 
     @Test
-    func completedRunWithoutEvidenceShowsJumpAndNewRunOnly() {
+    func completedRunWithoutEvidenceShowsJumpReplyAndNewRun() {
         let item = item(changedFiles: [], status: .completed, sessionID: nil)
 
         let actions = AgentCommandCenterEntries.entries(for: [item]).map(\.action)
 
-        #expect(actions == [.jump, .newRun])
+        #expect(actions == [.jump, .reply, .newRun])
     }
 
     private func item(

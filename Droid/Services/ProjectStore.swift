@@ -45,6 +45,13 @@ final class ProjectStore {
         save()
     }
 
+    func setVerificationCommand(id: UUID, to command: String?) {
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        let normalized = command?.trimmingCharacters(in: .whitespacesAndNewlines)
+        projects[index].verificationCommand = normalized?.isEmpty == false ? normalized : nil
+        save()
+    }
+
     func reorder(fromOffsets source: IndexSet, toOffset destination: Int) {
         projects.move(fromOffsets: source, toOffset: destination)
         for index in projects.indices {

@@ -13,6 +13,7 @@ struct AgentControlCenterTests {
         #expect(AgentControlCenter.capabilities(for: base).openFiles == .hidden)
         #expect(AgentControlCenter.capabilities(for: base).openDiffs == .hidden)
         #expect(AgentControlCenter.capabilities(for: base).restart == .available)
+        #expect(AgentControlCenter.capabilities(for: base).reply == .available)
         #expect(AgentControlCenter.capabilities(for: base).resume == .hidden)
         #expect(AgentControlCenter.capabilities(for: base).approve == .hidden)
         #expect(AgentControlCenter.capabilities(for: base).deny == .hidden)
@@ -173,6 +174,72 @@ struct AgentControlCenterTests {
         #expect(result == .unavailable("Reply is empty."))
         #expect(runStore.run(id: runID)?.actions.last?.kind == .reply)
         #expect(runStore.run(id: runID)?.actions.last?.status == .unavailable)
+    }
+
+    @Test
+    func replyToCompletedRunResumesSessionWithPromptWhenSessionIsKnown() async throws {
+        let context = controlContext()
+        let run = run(
+            providerID: "opencode",
+            projectID: context.project.id,
+            worktreeID: context.worktree.id,
+            worktreePath: context.worktree.path,
+            sessionID: "session-1"
+        )
+        let fileStore = makeFileStore(containing: [run])
+        let persistedRunStore = AgentRunStore(fileStore: fileStore)
+        let controlCenter = AgentControlCenter(
+            appState: context.appState,
+            projectStore: context.projectStore,
+            worktreeStore: context.worktreeStore,
+            runStore: persistedRunStore
+        )
+
+        let result = await controlCenter.performAsync(.reply(run.id, "continue this"))
+
+        #expect(result == .succeeded("Reply queued."))
+        #expect(context.appState.workspaceTabs(for: context.project.id).contains { workspaceTab in
+            workspaceTab.root.allAreas().contains { area in
+                area.tabs.contains { tab in
+                    tab.content.pane?.startupCommand?.contains("--session") == true &&
+                        tab.content.pane?.startupCommand?.contains("continue this") == true
+                }
+            }
+        })
+        #expect(persistedRunStore.run(id: run.id)?.actions.last?.kind == .reply)
+    }
+
+    @Test
+    func replyToCompletedRunStartsFreshProviderRunWhenSessionIsUnknown() async throws {
+        let context = controlContext()
+        let run = run(
+            providerID: "codex",
+            projectID: context.project.id,
+            worktreeID: context.worktree.id,
+            worktreePath: context.worktree.path,
+            sessionID: nil
+        )
+        let fileStore = makeFileStore(containing: [run])
+        let persistedRunStore = AgentRunStore(fileStore: fileStore)
+        let controlCenter = AgentControlCenter(
+            appState: context.appState,
+            projectStore: context.projectStore,
+            worktreeStore: context.worktreeStore,
+            runStore: persistedRunStore
+        )
+
+        let result = await controlCenter.performAsync(.reply(run.id, "follow up"))
+
+        #expect(result == .succeeded("Reply queued."))
+        #expect(context.appState.workspaceTabs(for: context.project.id).contains { workspaceTab in
+            workspaceTab.root.allAreas().contains { area in
+                area.tabs.contains { tab in
+                    tab.content.pane?.startupCommand?.contains("codex") == true &&
+                        tab.content.pane?.startupCommand?.contains("follow up") == true
+                }
+            }
+        })
+        #expect(persistedRunStore.run(id: run.id)?.actions.last?.kind == .reply)
     }
 
     @Test

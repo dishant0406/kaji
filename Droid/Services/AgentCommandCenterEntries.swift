@@ -53,7 +53,7 @@ import Foundation
             entries.append(entry(item, EntryTemplate(
                 category: "Control",
                 title: "Reply",
-                detail: "Send text to this run",
+                detail: replyDetail(for: item),
                 shortcut: "r",
                 action: .reply
             )))
@@ -96,6 +96,19 @@ import Foundation
         }
         entries.append(contentsOf: changedFileEntries(item, capabilities: capabilities))
         return entries
+    }
+
+    private static func replyDetail(for item: AgentMissionControlItem) -> String {
+        switch item.status {
+        case .running:
+            "Queue message in active session"
+        case .needsAttention:
+            "Answer this run"
+        case .completed,
+             .failed,
+             .notice:
+            "Continue this run"
+        }
     }
 
     private static func changedFileEntries(
