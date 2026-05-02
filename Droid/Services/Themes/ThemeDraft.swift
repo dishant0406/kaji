@@ -9,17 +9,17 @@ struct ThemeDraft: Equatable {
         name: "",
         slug: "",
         colors: ThemeColorSet(
-            background: "#0F1419",
-            foreground: "#E6E1CF",
-            cursorColor: "#E6B450",
-            cursorText: "#0F1419",
-            selectionBackground: "#273747",
-            selectionForeground: "#E6E1CF",
+            background: "#101010",
+            foreground: "#FFFFFF",
+            cursorColor: "#FFC799",
+            cursorText: "#101010",
+            selectionBackground: "#2D2D2D",
+            selectionForeground: "#FFFFFF",
             palette: [
-                "#01060E", "#EA6C73", "#91B362", "#F9AF4F",
-                "#53BDFA", "#FAE994", "#90E1C6", "#C7C7C7",
-                "#686868", "#F07178", "#C2D94C", "#FFB454",
-                "#59C2FF", "#FFEE99", "#95E6CB", "#FFFFFF",
+                "#242424", "#E07070", "#73C990", "#FFC799",
+                "#688DFF", "#CF68FF", "#3FDEBE", "#BBBBBB",
+                "#555555", "#FF8080", "#A8FF78", "#FFD9B3",
+                "#9BB2F0", "#E8A1FF", "#7FFFD4", "#FFFFFF",
             ]
         )
     )

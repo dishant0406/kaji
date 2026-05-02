@@ -16,21 +16,21 @@ struct ThemeFileCodecTests {
             name: "Noir",
             slug: "noir",
             colors: ThemeColorSet(
-                background: "0f1419",
-                foreground: "#e6e1cf",
-                cursorColor: "#e6b450",
-                cursorText: "#0f1419",
-                selectionBackground: "#273747",
-                selectionForeground: "#e6e1cf",
+                background: "101010",
+                foreground: "#ffffff",
+                cursorColor: "#ffc799",
+                cursorText: "#101010",
+                selectionBackground: "#2d2d2d",
+                selectionForeground: "#ffffff",
                 palette: ThemeDraft.droidDefaults.colors.palette.map { $0.lowercased() }
             )
         )
 
         let normalized = ThemeFileCodec.normalizedDraft(draft)
 
-        #expect(normalized?.colors.background == "#0F1419")
-        #expect(normalized?.colors.foreground == "#E6E1CF")
-        #expect(normalized?.colors.palette.first == "#01060E")
+        #expect(normalized?.colors.background == "#101010")
+        #expect(normalized?.colors.foreground == "#FFFFFF")
+        #expect(normalized?.colors.palette.first == "#242424")
     }
 
     @Test
@@ -52,7 +52,7 @@ struct ThemeFileCodecTests {
         #expect(preview.name == "Noir Terminal")
         #expect(preview.identifier == "noir-terminal")
         #expect(preview.draft.slug == "noir-terminal")
-        #expect(preview.draft.colors.selectionBackground == "#273747")
+        #expect(preview.draft.colors.selectionBackground == "#2D2D2D")
     }
 
     @Test
