@@ -142,7 +142,11 @@ struct MainWindow: View {
                     showQuickOpen.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .ask)) { _ in
-                    showAsk.toggle()
+                    let shouldShow = !showAsk
+                    showQuickOpen = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showAsk = shouldShow
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .agentCommandCenter)) { _ in
                     let shouldShow = !showAgentCommandCenter

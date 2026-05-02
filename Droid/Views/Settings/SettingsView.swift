@@ -4,6 +4,7 @@ private enum SettingsPane: String, CaseIterable, Identifiable {
     case general = "General"
     case appearance = "Appearance"
     case cli = "CLI"
+    case agents = "Agents"
     case editor = "Editor"
     case shortcuts = "Shortcuts"
     case notifications = "Notifications"
@@ -16,6 +17,7 @@ private enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .appearance: "paintbrush"
         case .cli: "terminal"
+        case .agents: "rectangle.stack"
         case .editor: "pencil.line"
         case .shortcuts: "keyboard"
         case .notifications: "bell"
@@ -107,6 +109,8 @@ struct SettingsView: View {
                 AppearanceSettingsView()
             case .cli:
                 CLILauncherSettingsView()
+            case .agents:
+                AgentSettingsView()
             case .editor:
                 EditorSettingsView()
             case .shortcuts:

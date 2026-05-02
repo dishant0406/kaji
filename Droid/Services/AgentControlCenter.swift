@@ -76,8 +76,8 @@ final class AgentControlCenter {
     }
 
     private static func replyCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
-        guard item.runID != nil, item.paneID != nil else { return .hidden }
-        return item.status == .running || item.status == .needsAttention ? .available : .hidden
+        guard item.runID != nil, provider(for: item) != nil else { return .hidden }
+        return .available
     }
 
     private static func stopCapability(for item: AgentMissionControlItem) -> AgentRunCapability {
@@ -134,7 +134,8 @@ final class AgentControlCenter {
         guard AgentControlCenter.capabilities(for: item).verify.isAvailable else {
             return record(.unavailable("Verification is not available for this run."), kind: .verify, runID: runID)
         }
-        AgentVerificationRunner.verify(runID: runID, store: runStore)
+        let project = projectStore.projects.first { $0.id == run.projectID }
+        AgentVerificationRunner.verify(runID: runID, project: project, store: runStore)
         return record(.succeeded("Verification started."), kind: .verify, runID: runID)
     }
 
@@ -194,13 +195,33 @@ final class AgentControlCenter {
         guard !trimmed.isEmpty else {
             return record(.unavailable("Reply is empty."), kind: .reply, runID: runID)
         }
-        guard let run = runStore.run(id: runID), let paneID = run.paneID else {
-            return .unavailable("Run terminal is unavailable.")
+        guard let run = runStore.run(id: runID) else {
+            return .unavailable("Run is no longer available.")
         }
-        guard await TerminalCommandInjector.submit(trimmed, into: paneID) else {
-            return record(.unavailable("Run terminal is not reachable."), kind: .reply, runID: runID)
+        if let paneID = run.paneID, await TerminalCommandInjector.submit(trimmed, into: paneID) {
+            return record(.succeeded("Reply sent."), kind: .reply, runID: runID)
         }
-        return record(.succeeded("Reply sent."), kind: .reply, runID: runID)
+        return continueRun(runID: runID, run: run, prompt: trimmed)
+    }
+
+    private func continueRun(runID: UUID, run: AgentRun, prompt: String) -> AgentRunControlResult {
+        guard let provider = provider(for: run) else {
+            return record(.unavailable("Provider command is unavailable."), kind: .reply, runID: runID)
+        }
+        guard let context = activateContext(for: runID) else {
+            return record(.unavailable("Run worktree is unavailable."), kind: .reply, runID: runID)
+        }
+        let providerCommand = if let sessionID = run.sessionID {
+            AskCommandDispatcher.resumeCommand(for: provider, sessionID: sessionID, prompt: prompt)
+        } else {
+            AskCommandDispatcher.startupCommand(for: provider, prompt: prompt)
+        }
+        let command = AskCommandDispatcher.commandWithCompletionNotification(providerCommand, provider: provider)
+        guard !command.isEmpty else {
+            return record(.unavailable("Provider command is unavailable."), kind: .reply, runID: runID)
+        }
+        appState.createStartupCommandTab(projectID: context.projectID, title: provider.title, command: command)
+        return record(.succeeded("Reply queued."), kind: .reply, runID: runID)
     }
 
     private func permissionUnavailable(runID: UUID, kind: AgentRunActionKind) -> AgentRunControlResult {

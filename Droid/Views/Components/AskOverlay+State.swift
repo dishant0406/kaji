@@ -151,7 +151,7 @@ extension AskOverlay {
             isHistoryLoading = false
             return
         }
-        let key = AskHistoryCacheKey(provider: provider, projectPath: selectedProject?.path)
+        let key = AskHistoryCacheKey(provider: provider, projectPath: selectedWorktree?.path ?? selectedProject?.path)
         guard historyCacheKey != key else { return }
         historyLoadTask?.cancel()
         historyCacheKey = key
