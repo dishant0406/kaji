@@ -75,13 +75,14 @@ if [[ -z "$VERSION" ]]; then
 fi
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Error: invalid version $VERSION" >&2; exit 1; }
 
+BUILD_NUMBER="$(( $(git rev-list --count HEAD) + 1 ))"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$INFO_PLIST"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFO_PLIST"
+
 if [[ "$STAGE_ALL" == true ]]; then
     git add -A
 fi
 
-BUILD_NUMBER="$(( $(git rev-list --count HEAD) + 1 ))"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFO_PLIST"
 git add "$INFO_PLIST"
 
 git diff --cached --quiet && { echo "Error: no staged changes to release" >&2; exit 1; }
