@@ -88,6 +88,20 @@ struct KeyBindingTests {
         #expect(binding.combo == KeyCombo(key: "j", command: true))
     }
 
+    @Test("Ask defaults to Command-K")
+    func askDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .ask })
+
+        #expect(binding.combo == KeyCombo(key: "k", command: true))
+    }
+
+    @Test("Source Control defaults to Command-Shift-G")
+    func sourceControlDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .openVCSTab })
+
+        #expect(binding.combo == KeyCombo(key: "g", command: true, shift: true))
+    }
+
     @Test("KeyBinding Codable round-trip")
     func codableRoundTrip() throws {
         let binding = KeyBinding(
