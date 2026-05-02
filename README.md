@@ -8,10 +8,10 @@
 <p align="center"><a href="https://discord.gg/4eMXAmJQ2n">Discord</a></p>
 
 <div align="center">
-  <img src="https://img.shields.io/github/downloads/dishant0406/muxy/total" />
-  <img src="https://img.shields.io/github/v/release/dishant0406/muxy" />
-  <img src="https://img.shields.io/github/license/dishant0406/muxy" />
-  <img src="https://img.shields.io/github/commit-activity/m/dishant0406/muxy" />
+  <img src="https://img.shields.io/github/downloads/dishant0406/droid/total" />
+  <img src="https://img.shields.io/github/v/release/dishant0406/droid" />
+  <img src="https://img.shields.io/github/license/dishant0406/droid" />
+  <img src="https://img.shields.io/github/commit-activity/m/dishant0406/droid" />
 </div>
 
 ## Screenshots
@@ -43,13 +43,15 @@
 ### Homebrew
 
 ```bash
-brew tap dishant0406/homebrew-droid
+brew tap dishant0406/droid
 brew install --cask droid
 ```
 
+Droid is currently distributed as an unsigned developer preview. The Homebrew cask removes the macOS quarantine attribute after install so Droid can launch.
+
 ### Manual
 
-Download the latest release from the [releases page](https://github.com/dishant0406/muxy/releases).
+Download the latest release from the [releases page](https://github.com/dishant0406/droid/releases).
 
 ## Local Development
 
