@@ -44,7 +44,7 @@
 
 ```bash
 brew tap dishant0406/droid
-brew install --cask dishant0406/droid/droid
+brew install --cask droidkit
 ```
 
 Droid is currently distributed as an unsigned developer preview. The Homebrew cask removes the macOS quarantine attribute after install so Droid can launch.
