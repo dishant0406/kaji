@@ -22,13 +22,13 @@ If unset, the workflow defaults to `<repo-owner>/homebrew-droid`.
 
 ## Homebrew Tap
 
-The workflow writes `Casks/droid.rb` into the tap repo and creates the repo automatically if it does not already exist.
+The public preview cask is `droidkit` in `dishant0406/homebrew-droid`.
 
-Default install path:
+Install path:
 
 ```bash
-brew tap <repo-owner>/homebrew-droid
-brew install --cask droid
+brew tap dishant0406/droid
+brew install --cask droidkit
 ```
 
 ## Running A Release
@@ -52,3 +52,13 @@ Useful options:
 - `--version X.Y.Z` to override the default patch bump
 - `--arch x86_64` to build the Intel DMG instead of the default arm64 artifact
 - omit `--all` if you want the script to use only already-staged changes
+
+## Local Distribution Flow
+
+To bump, commit, push, build the DMG, create or update the GitHub release, update the `droidkit` Homebrew cask, rewrite tap emails, and verify the cask:
+
+```bash
+scripts/release-distribute.sh --version 0.0.3 --message "Release 0.0.3" --all --test-install
+```
+
+The script uses `git@github.com-personal:<tap-repo>.git` for the tap remote by default and enforces `dishu5570@gmail.com` across tap history with `git filter-repo`.
