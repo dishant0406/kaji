@@ -5,6 +5,7 @@ struct ParentAgentComposer: View {
     var isFocused: FocusState<Bool>.Binding
     let placeholder: String
     let isBusy: Bool
+    let isReady: Bool
     let onNewTask: () -> Void
     let onStop: () -> Void
     let onSubmit: () -> Void
@@ -31,7 +32,7 @@ struct ParentAgentComposer: View {
                 .foregroundStyle(DroidTheme.fg)
                 .focused(isFocused)
                 .onSubmit(onSubmit)
-                .disabled(isBusy)
+                .disabled(isBusy || !isReady)
 
             if isBusy {
                 HStack(spacing: 6) {
@@ -55,7 +56,7 @@ struct ParentAgentComposer: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(sendForeground)
-            .disabled(trimmedPrompt.isEmpty || isBusy)
+            .disabled(trimmedPrompt.isEmpty || isBusy || !isReady)
         }
         .padding(.leading, 12)
         .padding(.trailing, 8)
@@ -87,7 +88,7 @@ struct ParentAgentComposer: View {
     }
 
     private var sendBackground: Color {
-        trimmedPrompt.isEmpty ? DroidTheme.surfaceMuted : DroidTheme.fg
+        trimmedPrompt.isEmpty || !isReady ? DroidTheme.surfaceMuted : DroidTheme.fg
     }
 
     private var sendForeground: Color {

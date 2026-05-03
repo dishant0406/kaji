@@ -14,7 +14,8 @@ private struct DeveloperPreviewLab: View {
         HStack(spacing: 0) {
             Sidebar(
                 showAIUsagePopover: $showAIUsagePopover,
-                parentAgentSelected: $parentAgentSelected
+                parentAgentSelected: $parentAgentSelected,
+                parentAgentEnabled: true
             )
             .environment(stores.appState)
             .environment(stores.projectStore)
