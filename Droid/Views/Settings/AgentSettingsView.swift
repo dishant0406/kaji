@@ -34,6 +34,15 @@ struct AgentSettingsView: View {
                     ParentAgentAuthBadge(status: parentSettings.authStatus)
                 }
 
+                SettingsRow("Thinking") {
+                    DroidSelect(
+                        options: thinkingOptions,
+                        selection: thinkingSelection,
+                        width: 320
+                    )
+                    .disabled(!parentSettings.thinkingSupported)
+                }
+
                 if parentSettings.provider.oauthKey != nil {
                     SettingsRow("OAuth") {
                         oauthControls
@@ -113,6 +122,19 @@ struct AgentSettingsView: View {
         Binding(
             get: { parentSettings.modelID },
             set: { parentSettings.modelID = $0 }
+        )
+    }
+
+    private var thinkingOptions: [DroidSelectOption<String>] {
+        ParentAgentThinkingLevel.allCases.map { level in
+            DroidSelectOption(id: level.rawValue, title: level.rawValue, value: level.rawValue)
+        }
+    }
+
+    private var thinkingSelection: Binding<String> {
+        Binding(
+            get: { parentSettings.thinkingSupported ? parentSettings.thinkingLevel : ParentAgentThinkingLevel.off.rawValue },
+            set: { parentSettings.thinkingLevel = $0 }
         )
     }
 

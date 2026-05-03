@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ParentAgentTimelineView: View {
     let task: ParentAgentTask
-    let onNewThread: () -> Void
     @State private var expandedToolGroupIDs: Set<UUID> = []
     @State private var expandedThinkingIDs: Set<UUID> = []
 
@@ -10,15 +9,13 @@ struct ParentAgentTimelineView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
-                    ParentAgentHeaderControls(onNewThread: onNewThread, showsNewThread: true)
-                        .padding(.bottom, 28)
                     ForEach(timelineBlocks) { block in
                         timelineBlock(block)
                             .id(block.id)
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
-                .padding(.top, 58)
+                .padding(.top, 24)
                 .padding(.bottom, 24)
                 .frame(maxWidth: .infinity)
             }

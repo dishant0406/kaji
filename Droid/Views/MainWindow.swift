@@ -301,32 +301,16 @@ struct MainWindow: View {
 
                 ZStack {
                     DroidTheme.bg
+                    workspaceContent
+                        .opacity(showParentAgentHome ? 0 : 1)
+                        .allowsHitTesting(!showParentAgentHome)
+                        .environment(\.workspaceOccluded, showParentAgentHome)
+                        .zIndex(0)
                     if showParentAgentHome {
                         ParentAgentHome { prompt in
                             handleParentAgentPrompt(prompt)
                         }
-                    } else if let project = activeProject,
-                       appState.workspaceRoot(for: project.id) == nil,
-                       resolvedActiveWorktree(for: project) != nil
-                    {
-                        EmptyProjectPlaceholder(project: project) {
-                            appState.createTab(projectID: project.id)
-                        }
-                    } else if projectsWithWorkspaces.isEmpty {
-                        WelcomeView()
-                    } else if let project = activeProjectWithWorkspace,
-                              let activeKey = appState.activeWorktreeKey(for: project.id)
-                    {
-                        ForEach(mountedWorktreeKeys(for: project), id: \.self) { key in
-                            TerminalArea(
-                                project: project,
-                                worktreeKey: key,
-                                isActiveProject: key == activeKey
-                            )
-                            .opacity(key == activeKey ? 1 : 0)
-                            .allowsHitTesting(key == activeKey)
-                            .zIndex(key == activeKey ? 1 : 0)
-                        }
+                        .zIndex(1)
                     }
                 }
 
@@ -381,7 +365,39 @@ struct MainWindow: View {
             ParentAgentController.shared.answerPendingQuestion(prompt)
             return
         }
-        ParentAgentController.shared.submit(prompt: prompt, appState: appState, projectStore: projectStore)
+        ParentAgentController.shared.submit(
+            prompt: prompt,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
+    }
+
+    @ViewBuilder
+    private var workspaceContent: some View {
+        if let project = activeProject,
+           appState.workspaceRoot(for: project.id) == nil,
+           resolvedActiveWorktree(for: project) != nil
+        {
+            EmptyProjectPlaceholder(project: project) {
+                appState.createTab(projectID: project.id)
+            }
+        } else if projectsWithWorkspaces.isEmpty {
+            WelcomeView()
+        } else if let project = activeProjectWithWorkspace,
+                  let activeKey = appState.activeWorktreeKey(for: project.id)
+        {
+            ForEach(mountedWorktreeKeys(for: project), id: \.self) { key in
+                TerminalArea(
+                    project: project,
+                    worktreeKey: key,
+                    isActiveProject: key == activeKey
+                )
+                .opacity(key == activeKey ? 1 : 0)
+                .allowsHitTesting(key == activeKey)
+                .zIndex(key == activeKey ? 1 : 0)
+            }
+        }
     }
 
     @ViewBuilder

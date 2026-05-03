@@ -45,6 +45,10 @@ final class TerminalViewRegistry {
         views[paneID]?.ttyName()
     }
 
+    func visibleText(for paneID: UUID) -> String? {
+        views[paneID]?.visibleText()
+    }
+
     func paneID(for view: GhosttyTerminalNSView) -> UUID? {
         paneIDs[ObjectIdentifier(view)]
     }

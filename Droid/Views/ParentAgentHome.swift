@@ -9,12 +9,17 @@ struct ParentAgentHome: View {
     var body: some View {
         VStack(spacing: 0) {
             if let task = taskStore.activeTask {
-                ParentAgentTimelineView(task: task, onNewThread: startNewTask)
+                VStack(spacing: 0) {
+                    ParentAgentHeaderControls(task: task, onNewThread: startNewTask, showsNewThread: true)
+                        .padding(.top, 18)
+                        .frame(maxWidth: 760, alignment: .leading)
+                    ParentAgentTimelineView(task: task)
+                }
                 composer
                     .frame(maxWidth: 720)
             } else {
                 ZStack(alignment: .topLeading) {
-                    ParentAgentHeaderControls(onNewThread: startNewTask, showsNewThread: false)
+                    ParentAgentHeaderControls(task: nil, onNewThread: startNewTask, showsNewThread: false)
                         .padding(.top, 18)
                     VStack(spacing: 22) {
                         Spacer(minLength: 0)
@@ -45,13 +50,15 @@ struct ParentAgentHome: View {
             if let question = taskStore.pendingQuestion?.question {
                 ParentAgentQuestionPrompt(question: question)
             }
-            ParentAgentComposer(
-                prompt: $prompt,
-                isFocused: $focused,
-                placeholder: promptPlaceholder,
-                onNewTask: startNewTask,
-                onSubmit: submit
-            )
+        ParentAgentComposer(
+            prompt: $prompt,
+            isFocused: $focused,
+            placeholder: promptPlaceholder,
+            isBusy: isBusy,
+            onNewTask: startNewTask,
+            onStop: stopParentAgent,
+            onSubmit: submit
+        )
         }
     }
 
@@ -59,9 +66,20 @@ struct ParentAgentHome: View {
         taskStore.pendingQuestion == nil ? "What do you want to build, fix, or review?" : "Reply to Droid"
     }
 
+    private var isBusy: Bool {
+        guard taskStore.pendingQuestion == nil else { return false }
+        guard let status = taskStore.activeTask?.status else { return false }
+        return status == .planning || status == .running
+    }
+
     private func startNewTask() {
         prompt = ""
         taskStore.clearActiveTask()
+        focused = true
+    }
+
+    private func stopParentAgent() {
+        ParentAgentController.shared.stop()
         focused = true
     }
 
