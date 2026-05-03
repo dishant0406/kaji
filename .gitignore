@@ -20,3 +20,6 @@ appcast*.xml
 .plans/
 /droid-markdown-remote-image-urlcache
 /External/pi-mono
+/Vendor/pi-mono/node_modules
+/Vendor/pi-mono/packages/*/node_modules
+/Vendor/pi-mono/packages/*/dist

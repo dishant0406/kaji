@@ -20,6 +20,7 @@ struct Sidebar: View {
     @State private var expanded = UserDefaults.standard.bool(forKey: "droid.sidebarExpanded")
     @Binding var showAIUsagePopover: Bool
     @Binding var parentAgentSelected: Bool
+    let parentAgentEnabled: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,7 +31,8 @@ struct Sidebar: View {
             SidebarFooter(
                 expanded: expanded,
                 showAIUsagePopover: $showAIUsagePopover,
-                parentAgentSelected: $parentAgentSelected
+                parentAgentSelected: $parentAgentSelected,
+                parentAgentEnabled: parentAgentEnabled
             )
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -204,6 +206,7 @@ struct SidebarFooter: View {
     var expanded: Bool = false
     @Binding var showAIUsagePopover: Bool
     @Binding var parentAgentSelected: Bool
+    let parentAgentEnabled: Bool
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
@@ -355,7 +358,9 @@ struct SidebarFooter: View {
 
     private var collapsedFooter: some View {
         VStack(spacing: 6) {
-            parentAgentButton
+            if parentAgentEnabled {
+                parentAgentButton
+            }
             if usageEnabled {
                 aiUsageButton
             }
@@ -405,7 +410,9 @@ struct SidebarFooter: View {
 
             Spacer()
 
-            parentAgentButton
+            if parentAgentEnabled {
+                parentAgentButton
+            }
             if usageEnabled {
                 aiUsageButton
             }

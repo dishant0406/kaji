@@ -130,7 +130,7 @@ final class ParentAgentOAuthLoginService {
 
     private func launchConfiguration(providerID: String) throws -> ParentAgentOAuthLaunch {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let piRoot = root.appending(path: "External/pi-mono")
+        let piRoot = root.appending(path: "Vendor/pi-mono")
         let script = piRoot.appending(path: "packages/droid-agent/src/oauth-login.ts")
         let tsx = piRoot.appending(path: "node_modules/.bin/tsx")
         guard FileManager.default.fileExists(atPath: script.path),

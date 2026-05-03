@@ -55,6 +55,7 @@ struct ParentAgentHome: View {
             isFocused: $focused,
             placeholder: promptPlaceholder,
             isBusy: isBusy,
+            isReady: isReady,
             onNewTask: startNewTask,
             onStop: stopParentAgent,
             onSubmit: submit
@@ -70,6 +71,10 @@ struct ParentAgentHome: View {
         guard taskStore.pendingQuestion == nil else { return false }
         guard let status = taskStore.activeTask?.status else { return false }
         return status == .planning || status == .running
+    }
+
+    private var isReady: Bool {
+        ParentAgentSettingsStore.shared.readiness.isReady
     }
 
     private func startNewTask() {

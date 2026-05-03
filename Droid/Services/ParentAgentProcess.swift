@@ -13,6 +13,10 @@ final class ParentAgentProcess {
     func send(_ message: ParentAgentEnvelope) {
         do {
             try startIfNeeded()
+            guard process?.isRunning == true else {
+                onError?(ParentAgentSettingsStore.shared.readiness.detail)
+                return
+            }
             let data = try encoder.encode(message) + Data([10])
             inputPipe?.fileHandleForWriting.write(data)
         } catch {
@@ -74,40 +78,12 @@ final class ParentAgentProcess {
     }
 
     private static var launch: ParentAgentLaunch? {
-        if let source = sourceLaunch {
+        guard ParentAgentSettingsStore.shared.readiness.isReady else { return nil }
+        if let source = ParentAgentRuntimeLocator.sourceLaunch() {
             return source
         }
-        guard let script = bundledScriptURL else { return nil }
-        return ParentAgentLaunch(arguments: ["node", script.path], directory: nil)
+        return ParentAgentRuntimeLocator.bundledLaunch()
     }
-
-    private static var sourceLaunch: ParentAgentLaunch? {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let piRoot = root.appending(path: "External/pi-mono")
-        let script = piRoot.appending(path: "packages/droid-agent/src/main.ts")
-        let tsx = piRoot.appending(path: "node_modules/.bin/tsx")
-        guard FileManager.default.fileExists(atPath: script.path),
-              FileManager.default.fileExists(atPath: tsx.path)
-        else { return nil }
-        return ParentAgentLaunch(arguments: [tsx.path, script.path], directory: piRoot)
-    }
-
-    private static var bundledScriptURL: URL? {
-        Bundle.module.url(forResource: "droid-agent", withExtension: "mjs", subdirectory: "pi")
-            ?? Bundle.main.url(forResource: "droid-agent", withExtension: "mjs", subdirectory: "pi")
-            ?? bundledDevScriptURL
-    }
-
-    private static var bundledDevScriptURL: URL? {
-        let url = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-            .appending(path: "Droid/Resources/pi/droid-agent.mjs")
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
-    }
-}
-
-private struct ParentAgentLaunch {
-    let arguments: [String]
-    let directory: URL?
 }
 
 enum ParentAgentProcessError: LocalizedError {

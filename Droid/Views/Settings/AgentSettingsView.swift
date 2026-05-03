@@ -14,6 +14,12 @@ struct AgentSettingsView: View {
                 footer: "The parent model plans and calls Droid tools. "
                     + "Worker agents such as Codex, Claude Code, and OpenCode remain separate."
             ) {
+                SettingsToggleRow(label: "Enable parent agent", isOn: parentAgentEnabled)
+
+                SettingsRow("Status") {
+                    ParentAgentReadinessBadge(readiness: parentSettings.readiness)
+                }
+
                 SettingsRow("Provider") {
                     DroidSelect(
                         options: providerOptions,
@@ -97,6 +103,13 @@ struct AgentSettingsView: View {
 
     private var selectedProject: Project? {
         projectStore.projects.first { $0.id.uuidString == selectedProjectID }
+    }
+
+    private var parentAgentEnabled: Binding<Bool> {
+        Binding(
+            get: { parentSettings.isEnabled },
+            set: { parentSettings.isEnabled = $0 }
+        )
     }
 
     private var providerOptions: [DroidSelectOption<String>] {
@@ -208,6 +221,27 @@ private struct ParentAgentAuthBadge: View {
                 .droidFont(size: 12)
                 .foregroundStyle(DroidTheme.fgMuted)
                 .lineLimit(1)
+        }
+        .frame(width: 320, alignment: .leading)
+    }
+}
+
+private struct ParentAgentReadinessBadge: View {
+    let readiness: ParentAgentReadiness
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                DroidIcon(systemName: readiness.isReady ? "checkmark.circle" : "exclamationmark.triangle", size: 12)
+                    .foregroundStyle(readiness.isReady ? DroidTheme.diffAddFg : DroidTheme.diffHunkFg)
+                Text(readiness.title)
+                    .droidFont(size: 12, weight: .medium)
+                    .foregroundStyle(DroidTheme.fg)
+            }
+            Text(readiness.detail)
+                .droidFont(size: 11)
+                .foregroundStyle(DroidTheme.fgDim)
+                .lineLimit(2)
         }
         .frame(width: 320, alignment: .leading)
     }

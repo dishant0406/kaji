@@ -7,6 +7,11 @@ final class ParentAgentSettingsStore {
     static let providerIDKey = "droid.parentAgent.providerID"
     static let modelIDKey = "droid.parentAgent.modelID"
     static let thinkingLevelKey = "droid.parentAgent.thinkingLevel"
+    static let enabledKey = "droid.parentAgent.enabled"
+
+    var isEnabled: Bool {
+        didSet { UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey) }
+    }
 
     var providerID: String {
         didSet {
@@ -33,6 +38,7 @@ final class ParentAgentSettingsStore {
             ?? ParentAgentProviderRegistry.provider(id: storedProviderID).defaultModel
         thinkingLevel = UserDefaults.standard.string(forKey: Self.thinkingLevelKey)
             ?? ParentAgentThinkingLevel.off.rawValue
+        isEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
         normalizeModelForProvider()
     }
 
@@ -50,6 +56,15 @@ final class ParentAgentSettingsStore {
 
     var thinkingSupported: Bool {
         provider.supportsThinking
+    }
+
+    var readiness: ParentAgentReadiness {
+        guard isEnabled else { return .disabled }
+        guard ParentAgentRuntimeLocator.nodeExecutablePath() != nil else { return .missingNode }
+        guard ParentAgentRuntimeLocator.sourceLaunch() != nil || ParentAgentRuntimeLocator.bundledScriptURL() != nil else {
+            return .missingRuntime
+        }
+        return .ready
     }
 
     var authStatus: ParentAgentAuthStatus {

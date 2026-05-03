@@ -61,6 +61,7 @@ struct MainWindow: View {
     @State private var showSettings = false
     @State private var showCreateThemeModal = false
     @State private var showParentAgentHome = true
+    @State private var parentAgentSettings = ParentAgentSettingsStore.shared
     @State private var createWorktreeProjectID: UUID?
     @State private var showSidebarAIUsagePopover = false
     @State private var isFullScreen = false
@@ -157,6 +158,10 @@ struct MainWindow: View {
                     showAgentCommandCenter = shouldShow
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .showParentAgentHome)) { _ in
+                    guard parentAgentSettings.isEnabled else {
+                        showSettings = true
+                        return
+                    }
                     showParentAgentHome = true
                     showQuickOpen = false
                     showAsk = false
@@ -286,7 +291,8 @@ struct MainWindow: View {
                 HStack(spacing: 0) {
                     Sidebar(
                         showAIUsagePopover: $showSidebarAIUsagePopover,
-                        parentAgentSelected: $showParentAgentHome
+                        parentAgentSelected: $showParentAgentHome,
+                        parentAgentEnabled: parentAgentSettings.isEnabled
                     )
                     Rectangle().fill(DroidTheme.border).frame(width: 1)
                         .accessibilityHidden(true)
@@ -306,7 +312,7 @@ struct MainWindow: View {
                         .allowsHitTesting(!showParentAgentHome)
                         .environment(\.workspaceOccluded, showParentAgentHome)
                         .zIndex(0)
-                    if showParentAgentHome {
+                    if showParentAgentHome && parentAgentSettings.isEnabled {
                         ParentAgentHome { prompt in
                             handleParentAgentPrompt(prompt)
                         }
