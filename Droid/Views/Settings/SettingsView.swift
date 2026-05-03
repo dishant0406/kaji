@@ -59,6 +59,9 @@ struct SettingsView: View {
                 .stroke(DroidTheme.border, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.16), radius: 6, y: 2)
+        .onReceive(NotificationCenter.default.publisher(for: .openParentAgentSettings)) { _ in
+            selection = .agents
+        }
     }
 
     private var header: some View {

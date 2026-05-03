@@ -60,6 +60,7 @@ struct MainWindow: View {
     @State private var showWorktreeSwitcher = false
     @State private var showSettings = false
     @State private var showCreateThemeModal = false
+    @State private var showParentAgentHome = true
     @State private var createWorktreeProjectID: UUID?
     @State private var showSidebarAIUsagePopover = false
     @State private var isFullScreen = false
@@ -155,6 +156,16 @@ struct MainWindow: View {
                     showWorktreeSwitcher = false
                     showAgentCommandCenter = shouldShow
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .showParentAgentHome)) { _ in
+                    showParentAgentHome = true
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .hideParentAgentHome)) { _ in
+                    showParentAgentHome = false
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
                     showWorktreeSwitcher.toggle()
                 }
@@ -164,6 +175,13 @@ struct MainWindow: View {
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
                     showSettings.toggle()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .openParentAgentSettings)) { _ in
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showSettings = true
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .requestCreateWorktreeModal)) { notification in
                     guard let projectID = notification.userInfo?["projectID"] as? UUID else { return }
@@ -267,7 +285,8 @@ struct MainWindow: View {
             HStack(spacing: 0) {
                 HStack(spacing: 0) {
                     Sidebar(
-                        showAIUsagePopover: $showSidebarAIUsagePopover
+                        showAIUsagePopover: $showSidebarAIUsagePopover,
+                        parentAgentSelected: $showParentAgentHome
                     )
                     Rectangle().fill(DroidTheme.border).frame(width: 1)
                         .accessibilityHidden(true)
@@ -282,7 +301,11 @@ struct MainWindow: View {
 
                 ZStack {
                     DroidTheme.bg
-                    if let project = activeProject,
+                    if showParentAgentHome {
+                        ParentAgentHome { prompt in
+                            handleParentAgentPrompt(prompt)
+                        }
+                    } else if let project = activeProject,
                        appState.workspaceRoot(for: project.id) == nil,
                        resolvedActiveWorktree(for: project) != nil
                     {
@@ -351,6 +374,14 @@ struct MainWindow: View {
                 }
             }
         }
+    }
+
+    private func handleParentAgentPrompt(_ prompt: String) {
+        if ParentAgentController.shared.hasPendingQuestion {
+            ParentAgentController.shared.answerPendingQuestion(prompt)
+            return
+        }
+        ParentAgentController.shared.submit(prompt: prompt, appState: appState, projectStore: projectStore)
     }
 
     @ViewBuilder

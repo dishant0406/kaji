@@ -4,6 +4,7 @@ import SwiftUI
 private struct DeveloperPreviewLab: View {
     private let stores = PreviewStores.make()
     @State private var showAIUsagePopover = false
+    @State private var parentAgentSelected = true
 
     init() {
         UserDefaults.standard.register(defaults: ["droid.sidebarExpanded": true])
@@ -12,7 +13,8 @@ private struct DeveloperPreviewLab: View {
     var body: some View {
         HStack(spacing: 0) {
             Sidebar(
-                showAIUsagePopover: $showAIUsagePopover
+                showAIUsagePopover: $showAIUsagePopover,
+                parentAgentSelected: $parentAgentSelected
             )
             .environment(stores.appState)
             .environment(stores.projectStore)
