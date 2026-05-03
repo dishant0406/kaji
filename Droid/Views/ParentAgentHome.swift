@@ -47,8 +47,10 @@ struct ParentAgentHome: View {
 
     private var composer: some View {
         VStack(spacing: 10) {
-            if let question = taskStore.pendingQuestion?.question {
-                ParentAgentQuestionPrompt(question: question)
+            if let pendingQuestion = taskStore.pendingQuestion {
+                ParentAgentQuestionPrompt(pendingQuestion: pendingQuestion) { option in
+                    ParentAgentController.shared.answerPendingQuestion(option.value, displayText: option.title)
+                }
             }
         ParentAgentComposer(
             prompt: $prompt,
@@ -92,6 +94,10 @@ struct ParentAgentHome: View {
         let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         prompt = ""
+        if taskStore.pendingQuestion != nil {
+            ParentAgentController.shared.answerPendingQuestion(text)
+            return
+        }
         onSubmit(text)
     }
 }

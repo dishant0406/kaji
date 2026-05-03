@@ -7,8 +7,12 @@ final class ParentAgentTaskStore {
 
     var tasks: [ParentAgentTask] = []
     var activeTaskID: UUID?
+    let persistence: ParentAgentTaskPersistence
 
-    private init() {}
+    private init(persistence: ParentAgentTaskPersistence = ParentAgentTaskPersistence()) {
+        self.persistence = persistence
+        load()
+    }
 
     var activeTask: ParentAgentTask? {
         guard let activeTaskID else { return nil }
@@ -20,13 +24,19 @@ final class ParentAgentTaskStore {
               let toolID = task.pendingQuestionToolID,
               let question = task.pendingQuestion
         else { return nil }
-        return ParentAgentPendingQuestion(taskID: task.id, toolID: toolID, question: question)
+        return ParentAgentPendingQuestion(
+            taskID: task.id,
+            toolID: toolID,
+            question: question,
+            options: task.pendingQuestionOptions
+        )
     }
 
     func start(prompt: String) -> ParentAgentTask {
         let task = ParentAgentTask(prompt: prompt)
         tasks.append(task)
         activeTaskID = task.id
+        save()
         return task
     }
 
@@ -38,6 +48,7 @@ final class ParentAgentTaskStore {
         tasks[index].status = .running
         tasks[index].timeline.append(ParentAgentTimelineItem(kind: .user, title: "You", detail: prompt))
         tasks[index].updatedAt = Date()
+        save()
         return tasks[index]
     }
 
@@ -61,6 +72,7 @@ final class ParentAgentTaskStore {
              .user:
             tasks[index].status = .running
         }
+        save()
     }
 
     func appendChildRun(taskID: UUID, runID: UUID, title: String, detail: String) {
@@ -76,6 +88,7 @@ final class ParentAgentTaskStore {
         ))
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func registerSpawn(taskID: UUID, fingerprint: String) {
@@ -84,6 +97,7 @@ final class ParentAgentTaskStore {
             tasks[index].spawnFingerprints.append(fingerprint)
         }
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func appendAssistantDelta(taskID: UUID, text: String) {
@@ -95,6 +109,7 @@ final class ParentAgentTaskStore {
         }
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func appendThinkingDelta(taskID: UUID, text: String) {
@@ -111,6 +126,7 @@ final class ParentAgentTaskStore {
         }
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func finishThinking(taskID: UUID) {
@@ -118,29 +134,40 @@ final class ParentAgentTaskStore {
         guard let itemIndex = tasks[index].timeline.lastIndex(where: { $0.kind == .thinking && !$0.isComplete }) else { return }
         tasks[index].timeline[itemIndex].isComplete = true
         tasks[index].updatedAt = Date()
+        save()
     }
 
-    func setPendingQuestion(taskID: UUID, toolID: String, question: String) {
+    func setPendingQuestion(
+        taskID: UUID,
+        toolID: String,
+        question: String,
+        options: [ParentAgentQuestionOption] = []
+    ) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         tasks[index].pendingQuestion = question
         tasks[index].pendingQuestionToolID = toolID
+        tasks[index].pendingQuestionOptions = options
         tasks[index].status = .waitingForUser
         tasks[index].timeline.append(ParentAgentTimelineItem(kind: .event, title: "Question", detail: question))
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func clearPendingQuestion(taskID: UUID) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         tasks[index].pendingQuestion = nil
         tasks[index].pendingQuestionToolID = nil
+        tasks[index].pendingQuestionOptions = []
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func complete(taskID: UUID) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         tasks[index].status = .completed
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func cancelActiveTask() {
@@ -150,10 +177,12 @@ final class ParentAgentTaskStore {
         tasks[index].status = .cancelled
         tasks[index].timeline.append(ParentAgentTimelineItem(kind: .event, title: "Stopped", detail: "Parent agent stopped."))
         tasks[index].updatedAt = Date()
+        save()
     }
 
     func clearActiveTask() {
         activeTaskID = nil
+        save()
     }
 }
 
@@ -161,4 +190,5 @@ struct ParentAgentPendingQuestion: Hashable {
     let taskID: UUID
     let toolID: String
     let question: String
+    let options: [ParentAgentQuestionOption]
 }

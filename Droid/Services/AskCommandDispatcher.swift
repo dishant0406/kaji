@@ -118,11 +118,12 @@ enum AskCommandDispatcher {
         return "\(ShellEscaper.escape(resolved)) \(parts[1])"
     }
 
-    static func startupCommand(for provider: AskProvider, prompt: String) -> String {
+    static func startupCommand(for provider: AskProvider, prompt: String, model: String? = nil) -> String {
         let base = launchCommand(for: provider)
         guard !base.isEmpty else { return "" }
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return base }
+        let modelArguments = modelArguments(for: provider, model: model)
+        guard !trimmed.isEmpty else { return ([base] + modelArguments).joined(separator: " ") }
         let escapedPrompt = ShellEscaper.escape(trimmed)
 
         switch provider {
@@ -130,9 +131,24 @@ enum AskCommandDispatcher {
             return prompt
         case .codex,
              .claude:
-            return "\(base) \(escapedPrompt)"
+            return ([base] + modelArguments + [escapedPrompt]).joined(separator: " ")
         case .opencode:
-            return "\(base) --prompt \(escapedPrompt)"
+            return ([base] + modelArguments + ["--prompt", escapedPrompt]).joined(separator: " ")
+        }
+    }
+
+    private static func modelArguments(for provider: AskProvider, model: String?) -> [String] {
+        guard let model = model?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty else { return [] }
+        let escaped = ShellEscaper.escape(model)
+        switch provider {
+        case .codex:
+            return ["--model", escaped]
+        case .claude:
+            return ["--model", escaped]
+        case .opencode:
+            return ["--model", escaped]
+        case .terminal:
+            return []
         }
     }
 
