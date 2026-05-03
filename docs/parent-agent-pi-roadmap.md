@@ -102,6 +102,8 @@ Scope: add `droid.spawn_agent` using existing `AskCommandDispatcher` and `AppSta
 
 Acceptance criteria: a parent prompt can open a provider tab and send a prompt, the parent UI shows provider/project/worktree/pane/status, attention and completion events appear under the task, and the user can jump to the child terminal.
 
+Status: Complete for the first actionable provider-agent loop. The parent agent can call `droid.spawn_agent`, `droid.send_prompt`, `droid.get_agent_status`, and `droid.jump_to_agent`; Droid opens provider tabs through the native dispatcher, creates tracked run records, shows child-agent rows, and can navigate back to live panes.
+
 ## V2: Native Workspace Control
 
 Goal: Let Pi control Droid workspace structure through safe native tools instead of terminal hacks.

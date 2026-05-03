@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum DroidSelectVariant {
+    case filled
+    case plain
+}
+
 struct DroidSelectOption<Value: Hashable>: Identifiable {
     let id: String
     let title: String
@@ -11,6 +16,7 @@ struct DroidSelect<Value: Hashable>: View {
     @Binding var selection: Value
     var placeholder: String?
     var width: CGFloat?
+    var variant: DroidSelectVariant = .filled
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
     @State private var isPresented = false
 
@@ -35,7 +41,7 @@ struct DroidSelect<Value: Hashable>: View {
             .background(controlBackground, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                    .stroke(isPresented ? DroidTheme.accent.opacity(0.6) : DroidTheme.border, lineWidth: 1)
+                    .stroke(controlBorder, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -79,7 +85,13 @@ struct DroidSelect<Value: Hashable>: View {
     }
 
     private var controlBackground: Color {
-        transparencyEnabled ? DroidTheme.surface.opacity(0.5) : DroidTheme.surface
+        if variant == .plain { return .clear }
+        return transparencyEnabled ? DroidTheme.surface.opacity(0.5) : DroidTheme.surface
+    }
+
+    private var controlBorder: Color {
+        if variant == .plain { return isPresented ? DroidTheme.border.opacity(0.7) : .clear }
+        return isPresented ? DroidTheme.accent.opacity(0.6) : DroidTheme.border
     }
 }
 

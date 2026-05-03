@@ -1,6 +1,8 @@
 import SwiftUI
+import AppKit
 
 struct ParentAgentHeaderControls: View {
+    let task: ParentAgentTask?
     let onNewThread: () -> Void
     let showsNewThread: Bool
 
@@ -24,6 +26,15 @@ struct ParentAgentHeaderControls: View {
                     action: onNewThread
                 )
                 .help("Start a new parent-agent thread")
+
+                DroidPill(
+                    title: "Copy thread",
+                    leadingIcon: "doc.on.doc",
+                    variant: .plain
+                ) {
+                    copyThread()
+                }
+                .help("Copy full parent-agent thread")
             }
         }
     }
@@ -32,10 +43,37 @@ struct ParentAgentHeaderControls: View {
         let settings = ParentAgentSettingsStore.shared
         return "\(settings.provider.title) / \(settings.modelID)"
     }
+
+    private func copyThread() {
+        guard let task else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(threadText(task), forType: .string)
+    }
+
+    private func threadText(_ task: ParentAgentTask) -> String {
+        var lines: [String] = []
+        lines.append("Parent Agent Thread")
+        lines.append("Task ID: \(task.id.uuidString)")
+        lines.append("Status: \(task.status.rawValue)")
+        lines.append("")
+        for item in task.timeline {
+            lines.append("[\(item.kind.rawValue)] \(item.title)")
+            if !item.detail.isEmpty {
+                lines.append(item.detail)
+            }
+            if let childRunID = item.childRunID {
+                lines.append("childRunID: \(childRunID.uuidString)")
+            }
+            lines.append("")
+        }
+        return lines.joined(separator: "\n")
+    }
 }
 
 struct ParentAgentTimelineRow: View {
     let item: ParentAgentTimelineItem
+    @State private var runStore = AgentRunStore.shared
+    @State private var feedStore = ChildAgentFeedStore.shared
 
     var body: some View {
         switch item.kind {
@@ -47,6 +85,9 @@ struct ParentAgentTimelineRow: View {
             assistantRow
                 .padding(.top, 4)
                 .padding(.bottom, 20)
+        case .childRun:
+            childRunRow
+                .padding(.vertical, 10)
         case .error:
             systemRow(color: DroidTheme.diffRemoveFg)
                 .padding(.vertical, 10)
@@ -79,6 +120,52 @@ struct ParentAgentTimelineRow: View {
             MarkdownInlineText(content: item.detail, color: DroidTheme.fgMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var childRunRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            DroidIcon(systemName: "terminal", size: 12)
+                .foregroundStyle(DroidTheme.fgMuted)
+                .frame(width: 18, height: 20)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(childRunTitle)
+                    .droidFont(size: 12, weight: .semibold)
+                    .foregroundStyle(DroidTheme.fg)
+                Text(childRunDetail)
+                    .droidFont(size: 12)
+                    .foregroundStyle(DroidTheme.fgDim)
+                if let recentEventText {
+                    Text(recentEventText)
+                        .droidFont(size: 12)
+                        .foregroundStyle(DroidTheme.fgDim)
+                        .lineLimit(3)
+                }
+            }
+        }
+    }
+
+    private var liveRun: AgentRun? {
+        guard let childRunID = item.childRunID else { return nil }
+        return runStore.run(id: childRunID)
+    }
+
+    private var childRunTitle: String {
+        liveRun.map { AgentMissionControlSnapshotBuilder.providerName(for: $0.providerID) } ?? item.title
+    }
+
+    private var childRunDetail: String {
+        guard let liveRun else { return item.detail }
+        return "\(liveRun.status.rawValue) · \(liveRun.title)"
+    }
+
+    private var recentEventText: String? {
+        if let childRunID = item.childRunID,
+           let text = feedStore.recentText(runID: childRunID, limit: 1).first
+        {
+            return text
+        }
+        guard let event = liveRun?.events.last else { return nil }
+        return event.text
     }
 
     private func systemRow(color: Color) -> some View {

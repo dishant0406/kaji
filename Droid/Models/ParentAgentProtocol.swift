@@ -45,16 +45,32 @@ struct ParentAgentToolResult: Codable {
     var activeProject: ParentAgentProjectContext?
     var message: String?
     var answer: String?
+    var childRun: ParentAgentChildRunContext?
+    var childRuns: [ParentAgentChildRunContext]?
 
     init(
         projects: [ParentAgentProjectContext]? = nil,
         activeProject: ParentAgentProjectContext? = nil,
         message: String? = nil,
-        answer: String? = nil
+        answer: String? = nil,
+        childRun: ParentAgentChildRunContext? = nil,
+        childRuns: [ParentAgentChildRunContext]? = nil
     ) {
         self.projects = projects
         self.activeProject = activeProject
         self.message = message
         self.answer = answer
+        self.childRun = childRun
+        self.childRuns = childRuns
     }
+}
+
+struct ParentAgentChildRunContext: Codable, Hashable {
+    let id: String
+    let provider: String
+    let project: String
+    let status: String
+    let title: String
+    let lastEvent: String?
+    let recentEvents: [String]?
 }

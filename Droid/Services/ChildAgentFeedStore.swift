@@ -1,0 +1,48 @@
+import Foundation
+
+@MainActor
+@Observable
+final class ChildAgentFeedStore {
+    static let shared = ChildAgentFeedStore()
+
+    private(set) var feeds: [UUID: ChildAgentFeed] = [:]
+    private let maxEntries = 24
+
+    private init() {}
+
+    func feed(for runID: UUID) -> ChildAgentFeed? {
+        feeds[runID]
+    }
+
+    func append(runID: UUID, kind: ChildAgentFeedEntryKind, text: String) {
+        let trimmed = normalized(text)
+        guard !trimmed.isEmpty else { return }
+        var feed = feeds[runID] ?? ChildAgentFeed(id: runID)
+        if feed.entries.last?.text == trimmed { return }
+        feed.entries = Array((feed.entries + [ChildAgentFeedEntry(kind: kind, text: trimmed)]).suffix(maxEntries))
+        if kind == .final {
+            feed.finalAnswer = trimmed
+        }
+        feed.updatedAt = Date()
+        feeds[runID] = feed
+    }
+
+    func recentText(runID: UUID, limit: Int = 6) -> [String] {
+        Array((feeds[runID]?.entries ?? []).suffix(limit)).map(\.text)
+    }
+
+    func finalAnswer(runID: UUID) -> String? {
+        feeds[runID]?.finalAnswer
+    }
+
+    private func normalized(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\r", with: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .suffix(12)
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}

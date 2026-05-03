@@ -8,6 +8,7 @@ struct ParentAgentProvider: Identifiable, Hashable {
     let environmentKeys: [String]
     let authKey: String
     let oauthKey: String?
+    let supportsThinking: Bool
 }
 
 enum ParentAgentProviderRegistry {
@@ -22,7 +23,8 @@ enum ParentAgentProviderRegistry {
             models: ["claude-sonnet-4-5", "claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5"],
             environmentKeys: ["ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY"],
             authKey: "anthropic",
-            oauthKey: "anthropic"
+            oauthKey: "anthropic",
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "openai-codex",
@@ -31,7 +33,8 @@ enum ParentAgentProviderRegistry {
             models: ["gpt-5.5", "gpt-5.4", "gpt-5.1"],
             environmentKeys: ["OPENAI_CODEX_OAUTH_TOKEN"],
             authKey: "openai-codex",
-            oauthKey: "openai-codex"
+            oauthKey: "openai-codex",
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "github-copilot",
@@ -40,7 +43,8 @@ enum ParentAgentProviderRegistry {
             models: ["gpt-5.4", "claude-sonnet-4-5", "gemini-3.1-pro-preview"],
             environmentKeys: ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
             authKey: "github-copilot",
-            oauthKey: "github-copilot"
+            oauthKey: "github-copilot",
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "openai",
@@ -49,7 +53,8 @@ enum ParentAgentProviderRegistry {
             models: ["gpt-5.4", "gpt-5.1", "gpt-4.1"],
             environmentKeys: ["OPENAI_API_KEY"],
             authKey: "openai",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "google",
@@ -58,7 +63,8 @@ enum ParentAgentProviderRegistry {
             models: ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
             environmentKeys: ["GEMINI_API_KEY"],
             authKey: "google",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "zai",
@@ -67,7 +73,8 @@ enum ParentAgentProviderRegistry {
             models: ["glm-5.1", "glm-4.7"],
             environmentKeys: ["ZAI_API_KEY"],
             authKey: "zai",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "kimi-coding",
@@ -76,7 +83,8 @@ enum ParentAgentProviderRegistry {
             models: ["kimi-for-coding"],
             environmentKeys: ["KIMI_API_KEY"],
             authKey: "kimi-coding",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: false
         ),
         ParentAgentProvider(
             id: "openrouter",
@@ -85,7 +93,8 @@ enum ParentAgentProviderRegistry {
             models: ["moonshotai/kimi-k2.6", "anthropic/claude-sonnet-4.5", "openai/gpt-5.1"],
             environmentKeys: ["OPENROUTER_API_KEY"],
             authKey: "openrouter",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "xai",
@@ -94,7 +103,8 @@ enum ParentAgentProviderRegistry {
             models: ["grok-4.20-0309-reasoning", "grok-4"],
             environmentKeys: ["XAI_API_KEY"],
             authKey: "xai",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "deepseek",
@@ -103,7 +113,8 @@ enum ParentAgentProviderRegistry {
             models: ["deepseek-v4-pro", "deepseek-chat"],
             environmentKeys: ["DEEPSEEK_API_KEY"],
             authKey: "deepseek",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: true
         ),
         ParentAgentProvider(
             id: "mistral",
@@ -112,7 +123,8 @@ enum ParentAgentProviderRegistry {
             models: ["devstral-medium-latest", "mistral-large-latest"],
             environmentKeys: ["MISTRAL_API_KEY"],
             authKey: "mistral",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: false
         ),
         ParentAgentProvider(
             id: "groq",
@@ -121,7 +133,8 @@ enum ParentAgentProviderRegistry {
             models: ["openai/gpt-oss-120b"],
             environmentKeys: ["GROQ_API_KEY"],
             authKey: "groq",
-            oauthKey: nil
+            oauthKey: nil,
+            supportsThinking: false
         ),
     ]
 

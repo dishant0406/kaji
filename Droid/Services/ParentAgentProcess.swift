@@ -20,6 +20,13 @@ final class ParentAgentProcess {
         }
     }
 
+    func stop() {
+        process?.terminate()
+        process = nil
+        inputPipe = nil
+        outputBuffer = Data()
+    }
+
     private func startIfNeeded() throws {
         if process?.isRunning == true { return }
         guard let launch = Self.launch else {

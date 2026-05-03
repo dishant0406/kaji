@@ -54,11 +54,36 @@ final class ParentAgentTaskStore {
             tasks[index].status = .running
         case .thinking:
             tasks[index].status = .running
+        case .childRun:
+            tasks[index].status = .running
         case .tool,
              .event,
              .user:
             tasks[index].status = .running
         }
+    }
+
+    func appendChildRun(taskID: UUID, runID: UUID, title: String, detail: String) {
+        guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
+        if !tasks[index].childRunIDs.contains(runID) {
+            tasks[index].childRunIDs.append(runID)
+        }
+        tasks[index].timeline.append(ParentAgentTimelineItem(
+            kind: .childRun,
+            title: title,
+            detail: detail,
+            childRunID: runID
+        ))
+        tasks[index].status = .running
+        tasks[index].updatedAt = Date()
+    }
+
+    func registerSpawn(taskID: UUID, fingerprint: String) {
+        guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
+        if !tasks[index].spawnFingerprints.contains(fingerprint) {
+            tasks[index].spawnFingerprints.append(fingerprint)
+        }
+        tasks[index].updatedAt = Date()
     }
 
     func appendAssistantDelta(taskID: UUID, text: String) {
@@ -115,6 +140,15 @@ final class ParentAgentTaskStore {
     func complete(taskID: UUID) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         tasks[index].status = .completed
+        tasks[index].updatedAt = Date()
+    }
+
+    func cancelActiveTask() {
+        guard let activeTaskID,
+              let index = tasks.firstIndex(where: { $0.id == activeTaskID })
+        else { return }
+        tasks[index].status = .cancelled
+        tasks[index].timeline.append(ParentAgentTimelineItem(kind: .event, title: "Stopped", detail: "Parent agent stopped."))
         tasks[index].updatedAt = Date()
     }
 

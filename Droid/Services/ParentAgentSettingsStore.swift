@@ -6,6 +6,7 @@ final class ParentAgentSettingsStore {
     static let shared = ParentAgentSettingsStore()
     static let providerIDKey = "droid.parentAgent.providerID"
     static let modelIDKey = "droid.parentAgent.modelID"
+    static let thinkingLevelKey = "droid.parentAgent.thinkingLevel"
 
     var providerID: String {
         didSet {
@@ -18,6 +19,10 @@ final class ParentAgentSettingsStore {
         didSet { UserDefaults.standard.set(modelID, forKey: Self.modelIDKey) }
     }
 
+    var thinkingLevel: String {
+        didSet { UserDefaults.standard.set(thinkingLevel, forKey: Self.thinkingLevelKey) }
+    }
+
     private var authStatusVersion = 0
 
     private init() {
@@ -26,6 +31,8 @@ final class ParentAgentSettingsStore {
         providerID = storedProviderID
         modelID = UserDefaults.standard.string(forKey: Self.modelIDKey)
             ?? ParentAgentProviderRegistry.provider(id: storedProviderID).defaultModel
+        thinkingLevel = UserDefaults.standard.string(forKey: Self.thinkingLevelKey)
+            ?? ParentAgentThinkingLevel.off.rawValue
         normalizeModelForProvider()
     }
 
@@ -35,6 +42,14 @@ final class ParentAgentSettingsStore {
 
     var modelOptions: [String] {
         ParentAgentProviderRegistry.modelOptions(for: providerID)
+    }
+
+    var selectedThinkingLevel: ParentAgentThinkingLevel {
+        ParentAgentThinkingLevel(rawValue: thinkingLevel) ?? .off
+    }
+
+    var thinkingSupported: Bool {
+        provider.supportsThinking
     }
 
     var authStatus: ParentAgentAuthStatus {
@@ -64,6 +79,7 @@ final class ParentAgentSettingsStore {
         environment.removeValue(forKey: "NODE_TLS_REJECT_UNAUTHORIZED")
         environment["DROID_PARENT_PROVIDER"] = provider.id
         environment["DROID_PARENT_MODEL"] = modelID
+        environment["DROID_PARENT_THINKING"] = thinkingSupported ? selectedThinkingLevel.environmentValue : "off"
         if let credential = PiAuthFileReader.credential(for: provider.authKey),
            let key = provider.environmentKeys.last
         {

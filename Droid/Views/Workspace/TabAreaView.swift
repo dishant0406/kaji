@@ -21,6 +21,7 @@ struct TabAreaView: View {
     @Environment(TabDragCoordinator.self) private var dragCoordinator
     @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
     @Environment(AppState.self) private var appState
+    @Environment(\.workspaceOccluded) private var workspaceOccluded
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,7 +76,7 @@ struct TabAreaView: View {
                     TabContentView(
                         tab: tab,
                         focused: isActive && isFocused && isActiveProject,
-                        visible: isActive && isActiveProject,
+                        visible: isActive && isActiveProject && !workspaceOccluded,
                         onFocus: onFocus,
                         onProcessExit: { onForceCloseTab(tab.id) },
                         onSplitRequest: { direction, position in

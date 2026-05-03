@@ -179,6 +179,19 @@ final class CodexSessionMonitor: @unchecked Sendable {
                     body: completion.message,
                     appState: appState
                 )
+                AgentRunStore.shared.complete(
+                    providerID: "codex",
+                    projectID: context.projectID,
+                    worktreeID: context.worktreeID,
+                    message: completion.message
+                )
+                if let run = AgentRunStore.shared.runs.first(where: { run in
+                    run.providerID == "codex" &&
+                        run.projectID == context.projectID &&
+                        run.worktreeID == context.worktreeID
+                }) {
+                    ChildAgentFeedStore.shared.append(runID: run.id, kind: .final, text: completion.message)
+                }
                 return
             }
 
