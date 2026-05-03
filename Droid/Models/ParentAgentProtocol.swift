@@ -47,6 +47,10 @@ struct ParentAgentToolResult: Codable {
     var answer: String?
     var childRun: ParentAgentChildRunContext?
     var childRuns: [ParentAgentChildRunContext]?
+    var worktree: ParentAgentWorktreeContext?
+    var changedFiles: [ParentAgentChangedFileContext]?
+    var verification: ParentAgentVerificationContext?
+    var codingProviders: [ParentAgentCodingProviderContext]?
 
     init(
         projects: [ParentAgentProjectContext]? = nil,
@@ -54,7 +58,11 @@ struct ParentAgentToolResult: Codable {
         message: String? = nil,
         answer: String? = nil,
         childRun: ParentAgentChildRunContext? = nil,
-        childRuns: [ParentAgentChildRunContext]? = nil
+        childRuns: [ParentAgentChildRunContext]? = nil,
+        worktree: ParentAgentWorktreeContext? = nil,
+        changedFiles: [ParentAgentChangedFileContext]? = nil,
+        verification: ParentAgentVerificationContext? = nil,
+        codingProviders: [ParentAgentCodingProviderContext]? = nil
     ) {
         self.projects = projects
         self.activeProject = activeProject
@@ -62,6 +70,10 @@ struct ParentAgentToolResult: Codable {
         self.answer = answer
         self.childRun = childRun
         self.childRuns = childRuns
+        self.worktree = worktree
+        self.changedFiles = changedFiles
+        self.verification = verification
+        self.codingProviders = codingProviders
     }
 }
 
@@ -73,4 +85,28 @@ struct ParentAgentChildRunContext: Codable, Hashable {
     let title: String
     let lastEvent: String?
     let recentEvents: [String]?
+}
+
+struct ParentAgentChangedFileContext: Codable, Hashable {
+    let path: String
+    let oldPath: String?
+    let status: String
+    let additions: Int?
+    let deletions: Int?
+    let isBinary: Bool
+}
+
+struct ParentAgentVerificationContext: Codable, Hashable {
+    let status: String
+    let command: String?
+    let output: String?
+}
+
+struct ParentAgentCodingProviderContext: Codable, Hashable {
+    let id: String
+    let title: String
+    let installed: Bool
+    let enabled: Bool
+    let models: [String]
+    let defaultModel: String?
 }

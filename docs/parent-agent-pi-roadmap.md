@@ -26,14 +26,15 @@ Droid native APIs + terminal coding providers
 
 No sockets for Droid-to-Pi communication. Droid launches Pi as a child process, writes JSONL requests to stdin, reads JSONL events from stdout, and treats stderr as logs only.
 
-## Fork Strategy
+## Runtime Strategy
 
-- Fork `badlogic/pi-mono` into a Droid-controlled fork.
-- Add `packages/droid-agent` for Droid-specific orchestration.
-- Reuse Pi provider and agent-runtime packages where useful.
+- Vendor Pi source into `Vendor/pi-mono` so Droid and its parent-agent runtime live in one repo.
+- Add `Vendor/pi-mono/packages/droid-agent` for Droid-specific orchestration.
+- Reuse Pi provider and `@mariozechner/pi-agent-core` packages where useful.
 - Avoid Pi TUI as the main UI; Droid's UI is native SwiftUI.
-- Bundle the built Pi engine into Droid app resources.
-- Suggested local layout: `External/pi-mono/`, `Droid/Resources/pi/droid-agent.js`, `scripts/build-pi.sh`.
+- Bundle the built Pi engine into Droid app resources as `Droid/Resources/pi/droid-agent.mjs` and `Droid/Resources/pi/oauth-login.mjs`.
+- Build bundled runtime files with `scripts/build-parent-agent.sh`; release builds call this before Swift release packaging.
+- Do not bundle Node.js. Droid checks for user-installed Node and surfaces install guidance in Settings when it is missing.
 
 ## Protocol Contract
 
@@ -60,7 +61,7 @@ Core events: `task.created`, `task.planning`, `task.plan_ready`, `task.step_star
 
 V0 tools: `droid.list_projects`, `droid.get_active_context`, `droid.ask_user`.
 
-V1 tools: `droid.spawn_agent`, `droid.send_prompt`, `droid.get_agent_status`, `droid.jump_to_agent`.
+V1 tools: `droid.spawn_agent`, `droid.send_prompt`, `droid.get_agent_status`, `droid.observe_agents`, `droid.sleep`, `droid.wait_for_agents`, `droid.jump_to_agent`.
 
 V2 tools: `droid.open_project`, `droid.select_project`, `droid.select_worktree`, `droid.open_terminal`, `droid.open_split`, `droid.stop_agent`, `droid.resume_agent`.
 
@@ -92,7 +93,9 @@ Scope: add `ParentAgentProcess`, Swift JSONL message types, `ParentAgentHome`, i
 
 Acceptance criteria: Droid opens the parent screen on launch, submitting a prompt starts Pi if needed, Pi task events render in SwiftUI, Droid can answer Pi tool calls, and Pi crash or malformed JSON becomes a recoverable task error.
 
-Status: Complete after V0 polish. The implementation also includes real Pi provider streaming, provider/model settings, OAuth connect for Anthropic, ChatGPT/Codex, and GitHub Copilot, manual OAuth paste fallback, `droid.ask_user`, and a new-task reset.
+Status: Complete. The implementation includes the native shell, JSONL process bridge, in-memory task store, recoverable process errors, `droid.list_projects`, `droid.get_active_context`, `droid.ask_user`, streamed assistant text, thinking streams, grouped tool events, and a new-thread reset.
+
+Additional shipped scope: Parent Agent can be enabled or disabled in Settings, checks Node/runtime readiness, supports provider/model/thinking settings, OAuth connect for Anthropic, ChatGPT/Codex, and GitHub Copilot, reads API keys from environment or Pi auth, and uses Pi's real core agent runtime instead of a placeholder loop.
 
 ## V1: Spawn One Provider Agent
 
@@ -102,7 +105,9 @@ Scope: add `droid.spawn_agent` using existing `AskCommandDispatcher` and `AppSta
 
 Acceptance criteria: a parent prompt can open a provider tab and send a prompt, the parent UI shows provider/project/worktree/pane/status, attention and completion events appear under the task, and the user can jump to the child terminal.
 
-Status: Complete for the first actionable provider-agent loop. The parent agent can call `droid.spawn_agent`, `droid.send_prompt`, `droid.get_agent_status`, and `droid.jump_to_agent`; Droid opens provider tabs through the native dispatcher, creates tracked run records, shows child-agent rows, and can navigate back to live panes.
+Status: Complete for the first actionable provider-agent loop. The parent agent can call `droid.spawn_agent`, `droid.send_prompt`, `droid.get_agent_status`, `droid.observe_agents`, `droid.sleep`, `droid.wait_for_agents`, and `droid.jump_to_agent`; Droid opens provider splits through the native dispatcher, creates tracked run records, shows child-agent rows, captures feed/final output, and can navigate back to live panes.
+
+Additional shipped scope: Droid enforces spawn guardrails with one active worker per parent task by default, max child-run limits, duplicate-work blocking, and explicit opt-in for parallel workers. Workspace content remains mounted behind the Parent Agent screen so spawned terminals can run while the Parent Agent UI is visible. Child-agent provider/model selection is no longer hardcoded in Pi: Droid exposes only enabled and installed coding agents, the parent must call `droid.choose_agent` before `droid.spawn_agent`, and spawn requests require the selected provider and model.
 
 ## V2: Native Workspace Control
 
@@ -112,13 +117,17 @@ Scope: add project selection, worktree selection, terminal tab creation, split c
 
 Acceptance criteria: Pi can request tabs and splits, Droid opens them natively, all created panes are tracked, and invalid project/worktree requests fail safely with visible errors.
 
+Status: Partially complete. `droid.spawn_agent` already selects a project/worktree, opens command splits, and `droid.jump_to_agent` navigates to tracked child panes. Remaining V2 work is exposing direct workspace-control tools such as `droid.open_project`, `droid.select_project`, `droid.select_worktree`, `droid.open_terminal`, `droid.open_split`, `droid.stop_agent`, and `droid.resume_agent`.
+
 ## V3: Worktree Safety And Verification
 
 Goal: Make delegated work isolated and reviewable.
 
-Scope: add `droid.create_worktree`, changed-file collection, diff opening, verification command execution, persisted parent tasks, and final result cards with verification state.
+Scope: add `droid.create_worktree`, changed-file collection, diff opening, verification command execution, and persisted parent tasks.
 
 Acceptance criteria: parent tasks can create isolated worktrees, completed runs show changed files honestly, verification can run from the parent task, and parent tasks survive app restart.
+
+Status: Complete for the current parent-agent architecture. The parent agent can call `droid.create_worktree`, `droid.get_changed_files`, `droid.open_diff`, and `droid.run_verification`; Droid creates/selects worktrees natively, snapshots changed files from Git, opens native diff tabs, and starts existing verification flows for tracked child runs. Parent tasks now persist across restarts, unfinished tasks are restored as stale instead of pretending they are still live, and completed turns keep the parent agent's final answer as the single visible summary.
 
 ## V4: Multi-Agent Task Plans
 
@@ -187,12 +196,11 @@ Acceptance criteria: advanced users can define workflows without editing Droid s
 
 ## Open Decisions
 
-- Whether the Pi fork is a submodule, subtree, sibling checkout, or vendored source.
-- Whether the bundled engine ships with Node or uses the user's Node runtime.
-- Which Pi coding-agent pieces are reused versus bypassed.
+- Whether Parent Agent history should be persisted and whether it should be encrypted at rest.
+- Which V2 workspace tools should be exposed first versus kept internal behind `droid.spawn_agent`.
 - Which provider/model powers the parent agent by default.
-- Whether parent-agent history should be encrypted at rest.
+- How much of Pi's full coding-agent application layer should be adopted later versus continuing to use Pi core with Droid-native tools.
 
 ## Immediate Next Step
 
-Build V0 only: process bridge, JSONL protocol, native parent screen, in-memory task store, and a minimal forked Pi `droid-agent` entrypoint that emits task events and requests simple Droid tools.
+Finish V2 workspace-control basics: expose direct project/worktree selection and terminal/split opening tools through the JSONL protocol, keep Droid authoritative for pane IDs, and fail invalid workspace requests safely with visible parent-agent errors.

@@ -2,7 +2,13 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import readline from "node:readline";
-import { Agent, type AgentEvent, type AgentTool, type AgentToolResult, type ThinkingLevel } from "@mariozechner/pi-agent-core";
+import {
+	Agent,
+	type AgentEvent,
+	type AgentTool,
+	type AgentToolResult,
+	type ThinkingLevel,
+} from "@mariozechner/pi-agent-core";
 import { type Api, getEnvApiKey, getModels, type KnownProvider, type Model, Type } from "@mariozechner/pi-ai";
 import { getOAuthApiKey, type OAuthCredentials } from "@mariozechner/pi-ai/oauth";
 
@@ -42,7 +48,8 @@ function selectedModel(): Model<Api> | undefined {
 
 function selectedThinking(): ThinkingLevel {
 	const value = process.env.DROID_PARENT_THINKING ?? "off";
-	if (value === "minimal" || value === "low" || value === "medium" || value === "high" || value === "xhigh") return value;
+	if (value === "minimal" || value === "low" || value === "medium" || value === "high" || value === "xhigh")
+		return value;
 	return "off";
 }
 
@@ -83,7 +90,12 @@ function systemPrompt() {
 	return [
 		"You are Droid's parent agent.",
 		"You control Droid by calling Droid tools, not by inventing shell commands.",
-		"Use Droid tools to inspect projects, spawn child coding agents, observe them, and report final results.",
+		"Use Droid tools to inspect projects, spawn child coding agents, observe them, and answer with the final outcome directly.",
+		"Do not add a separate result summary/card after already giving the final answer.",
+		"Only use coding agents returned by Droid tools as enabled and installed. Never assume Codex, Claude Code, or OpenCode are available.",
+		"Before calling droid_spawn_agent for any task, call droid_choose_agent for that specific task/project. Droid will ask the user in two native steps: provider first, then model for that provider. Use the exact provider and model returned by the user.",
+		"For multi-project requests, identify each project-specific task first, then call droid_choose_agent separately for each task/project before spawning.",
+		"The droid_choose_agent answer is newline-delimited key=value text. Pass provider, model, and project from that answer into droid_spawn_agent.",
 		"Do not spawn multiple child agents by default. Start with one worker, observe it, and wait for useful output before starting another.",
 		"Only spawn additional child agents when the user explicitly asks for parallel work, the first worker fails, or a clearly separate verification/review worker is necessary.",
 		"When you spawn child agents, supervise them explicitly: observe, reason, sleep briefly if still running, then observe again.",
@@ -96,13 +108,26 @@ function systemPrompt() {
 function droidProtocolToolName(name: string) {
 	if (name === "droid_list_projects") return "droid.list_projects";
 	if (name === "droid_get_active_context") return "droid.get_active_context";
+	if (name === "droid_list_coding_agents") return "droid.list_coding_agents";
 	if (name === "droid_ask_user") return "droid.ask_user";
+	if (name === "droid_choose_agent") return "droid.choose_agent";
+	if (name === "droid_open_project") return "droid.open_project";
+	if (name === "droid_select_project") return "droid.select_project";
+	if (name === "droid_select_worktree") return "droid.select_worktree";
+	if (name === "droid_open_terminal") return "droid.open_terminal";
+	if (name === "droid_open_split") return "droid.open_split";
 	if (name === "droid_spawn_agent") return "droid.spawn_agent";
 	if (name === "droid_send_prompt") return "droid.send_prompt";
 	if (name === "droid_get_agent_status") return "droid.get_agent_status";
 	if (name === "droid_observe_agents") return "droid.observe_agents";
 	if (name === "droid_sleep") return "droid.sleep";
 	if (name === "droid_jump_to_agent") return "droid.jump_to_agent";
+	if (name === "droid_stop_agent") return "droid.stop_agent";
+	if (name === "droid_resume_agent") return "droid.resume_agent";
+	if (name === "droid_create_worktree") return "droid.create_worktree";
+	if (name === "droid_get_changed_files") return "droid.get_changed_files";
+	if (name === "droid_open_diff") return "droid.open_diff";
+	if (name === "droid_run_verification") return "droid.run_verification";
 	return name;
 }
 
@@ -126,7 +151,7 @@ function tool(name: string, description: string, parameters: ReturnType<typeof T
 		parameters,
 		execute: async (_toolCallId, params, signal): Promise<AgentToolResult<unknown>> => {
 			if (signal?.aborted) throw new Error("Tool call aborted");
-		const result = await callDroidTool(name, params as Record<string, unknown>, activeTaskID);
+			const result = await callDroidTool(name, params as Record<string, unknown>, activeTaskID);
 			trackDroidToolResult(name, result);
 			return { content: [{ type: "text", text: stringifyResult(result) }], details: result };
 		},
@@ -136,23 +161,139 @@ function tool(name: string, description: string, parameters: ReturnType<typeof T
 function droidTools(): AgentTool[] {
 	return [
 		tool("droid_list_projects", "List projects available in Droid.", Type.Object({})),
-		tool("droid_get_active_context", "Get Droid's active project and workspace context.", Type.Object({})),
-		tool("droid_ask_user", "Ask the user one concise question when required information is missing.", Type.Object({ question: Type.String() })),
+		tool(
+			"droid_get_active_context",
+			"Get Droid's active project, worktrees, and workspace context.",
+			Type.Object({}),
+		),
+		tool(
+			"droid_list_coding_agents",
+			"List enabled and installed coding agents with available model choices. Use this before planning delegation.",
+			Type.Object({}),
+		),
+		tool(
+			"droid_ask_user",
+			"Ask the user one concise question when required information is missing.",
+			Type.Object({ question: Type.String() }),
+		),
+		tool(
+			"droid_choose_agent",
+			"Ask the user to choose the coding agent and model for one specific task/project. Call once per task before spawning.",
+			Type.Object({ task: Type.String(), project: Type.Optional(Type.String()) }),
+		),
+		tool(
+			"droid_open_project",
+			"Open and select a Droid project by id, name, or path.",
+			Type.Object({ project: Type.Optional(Type.String()), worktree: Type.Optional(Type.String()) }),
+		),
+		tool(
+			"droid_select_project",
+			"Select a Droid project by id, name, or path without spawning an agent.",
+			Type.Object({ project: Type.Optional(Type.String()), worktree: Type.Optional(Type.String()) }),
+		),
+		tool(
+			"droid_select_worktree",
+			"Select a worktree by id, name, path, or branch for the active or named project.",
+			Type.Object({ project: Type.Optional(Type.String()), worktree: Type.Optional(Type.String()) }),
+		),
+		tool(
+			"droid_open_terminal",
+			"Open a native Droid terminal tab. Optional command runs in the selected project/worktree.",
+			Type.Object({
+				project: Type.Optional(Type.String()),
+				worktree: Type.Optional(Type.String()),
+				title: Type.Optional(Type.String()),
+				command: Type.Optional(Type.String()),
+			}),
+		),
+		tool(
+			"droid_open_split",
+			"Open a native Droid split. Optional command runs in the selected project/worktree. Direction may be horizontal or vertical for empty splits.",
+			Type.Object({
+				project: Type.Optional(Type.String()),
+				worktree: Type.Optional(Type.String()),
+				title: Type.Optional(Type.String()),
+				command: Type.Optional(Type.String()),
+				direction: Type.Optional(Type.String()),
+			}),
+		),
 		tool(
 			"droid_spawn_agent",
-			"Start one terminal coding agent in Droid. Providers: codex, claude, opencode, terminal. Droid enforces one active worker per parent task unless the user explicitly requested parallel work and allowParallel is true. If rejected, observe the returned existing run instead.",
+			"Start one terminal coding agent in Droid. Provider and model must come from droid_choose_agent. Droid enforces one active worker per parent task unless the user explicitly requested parallel work and allowParallel is true. If rejected, observe the returned existing run instead.",
 			Type.Object({
 				prompt: Type.String(),
-				provider: Type.Optional(Type.String()),
+				provider: Type.String(),
+				model: Type.String(),
 				project: Type.Optional(Type.String()),
 				allowParallel: Type.Optional(Type.String()),
 			}),
 		),
-		tool("droid_send_prompt", "Send a follow-up prompt to an existing child agent run by runID.", Type.Object({ runID: Type.String(), prompt: Type.String() })),
+		tool(
+			"droid_send_prompt",
+			"Send a follow-up prompt to an existing child agent run by runID.",
+			Type.Object({ runID: Type.String(), prompt: Type.String() }),
+		),
 		tool("droid_get_agent_status", "Get recent child agent run status from Droid.", Type.Object({})),
-		tool("droid_observe_agents", "Observe live child agent run status, recent events, and transcript snippets.", Type.Object({ runIDs: Type.Optional(Type.String()) })),
-		tool("droid_sleep", "Pause briefly before observing child agents again. Use seconds between 3 and 30.", Type.Object({ seconds: Type.Optional(Type.String()), reason: Type.Optional(Type.String()) })),
-		tool("droid_jump_to_agent", "Navigate Droid to a child agent run by runID.", Type.Object({ runID: Type.String() })),
+		tool(
+			"droid_observe_agents",
+			"Observe live child agent run status, recent events, and transcript snippets.",
+			Type.Object({ runIDs: Type.Optional(Type.String()) }),
+		),
+		tool(
+			"droid_sleep",
+			"Pause briefly before observing child agents again. Use seconds between 3 and 30.",
+			Type.Object({ seconds: Type.Optional(Type.String()), reason: Type.Optional(Type.String()) }),
+		),
+		tool(
+			"droid_jump_to_agent",
+			"Navigate Droid to a child agent run by runID.",
+			Type.Object({ runID: Type.String() }),
+		),
+		tool(
+			"droid_stop_agent",
+			"Stop a child agent run by runID by interrupting its terminal.",
+			Type.Object({ runID: Type.String() }),
+		),
+		tool(
+			"droid_resume_agent",
+			"Resume a child agent run by runID when Droid has a provider session ID.",
+			Type.Object({ runID: Type.String() }),
+		),
+		tool(
+			"droid_create_worktree",
+			"Create and select an isolated Git worktree for a project. By default creates a new branch; pass createBranch false to use an existing branch.",
+			Type.Object({
+				project: Type.Optional(Type.String()),
+				name: Type.String(),
+				branch: Type.Optional(Type.String()),
+				createBranch: Type.Optional(Type.String()),
+			}),
+		),
+		tool(
+			"droid_get_changed_files",
+			"Get changed files for a runID or selected project/worktree. If runID is provided, Droid attaches the snapshot to that run.",
+			Type.Object({
+				runID: Type.Optional(Type.String()),
+				project: Type.Optional(Type.String()),
+				worktree: Type.Optional(Type.String()),
+			}),
+		),
+		tool(
+			"droid_open_diff",
+			"Open Droid's native diff viewer for a file. Prefer passing runID plus path when reviewing child-agent output.",
+			Type.Object({
+				runID: Type.Optional(Type.String()),
+				project: Type.Optional(Type.String()),
+				worktree: Type.Optional(Type.String()),
+				path: Type.Optional(Type.String()),
+				staged: Type.Optional(Type.String()),
+			}),
+		),
+		tool(
+			"droid_run_verification",
+			"Run the configured verification command for a tracked child agent run.",
+			Type.Object({ runID: Type.String() }),
+		),
 	];
 }
 
@@ -204,13 +345,23 @@ function observePrompt(sessionID: string) {
 function handleAgentEvent(event: AgentEvent) {
 	if (event.type === "message_update") {
 		const streamEvent = event.assistantMessageEvent;
-		if (streamEvent.type === "text_delta") send({ type: "assistant_delta", taskID: activeTaskID, message: streamEvent.delta });
-		if (streamEvent.type === "thinking_delta") send({ type: "thinking_delta", taskID: activeTaskID, message: streamEvent.delta });
+		if (streamEvent.type === "text_delta")
+			send({ type: "assistant_delta", taskID: activeTaskID, message: streamEvent.delta });
+		if (streamEvent.type === "thinking_delta")
+			send({ type: "thinking_delta", taskID: activeTaskID, message: streamEvent.delta });
 		if (streamEvent.type === "thinking_end") send({ type: "thinking_end", taskID: activeTaskID });
-		if (streamEvent.type === "toolcall_end") send({ type: "task_event", taskID: activeTaskID, event: "tool.requested", message: streamEvent.toolCall.name });
+		if (streamEvent.type === "toolcall_end")
+			send({
+				type: "task_event",
+				taskID: activeTaskID,
+				event: "tool.requested",
+				message: streamEvent.toolCall.name,
+			});
 	}
-	if (event.type === "tool_execution_start") send({ type: "task_event", taskID: activeTaskID, event: "tool.started", message: event.toolName });
-	if (event.type === "tool_execution_end") send({ type: "task_event", taskID: activeTaskID, event: "tool.completed", message: event.toolName });
+	if (event.type === "tool_execution_start")
+		send({ type: "task_event", taskID: activeTaskID, event: "tool.started", message: event.toolName });
+	if (event.type === "tool_execution_end")
+		send({ type: "task_event", taskID: activeTaskID, event: "tool.completed", message: event.toolName });
 }
 
 function createAgent(model: Model<Api>) {
@@ -248,19 +399,32 @@ async function runPrompt(message: ProtocolMessage) {
 		return;
 	}
 
-	send({ type: "task_event", taskID: message.taskID, event: "task.planning", message: `Using ${model.provider}/${model.id}.` });
+	send({
+		type: "task_event",
+		taskID: message.taskID,
+		event: "task.planning",
+		message: `Using ${model.provider}/${model.id}.`,
+	});
 	const sessionID = message.taskID ?? "default";
 	const agent = sessions.get(sessionID) ?? createAgent(model);
 	sessions.set(sessionID, agent);
 	await agent.prompt(message.prompt ?? "");
 
 	for (let i = 0; i < 24 && supervisedRunIDs(sessionID).length > 0; i++) {
-		agent.followUp({ role: "user", content: [{ type: "text", text: observePrompt(sessionID) }], timestamp: Date.now() });
+		agent.followUp({
+			role: "user",
+			content: [{ type: "text", text: observePrompt(sessionID) }],
+			timestamp: Date.now(),
+		});
 		await agent.continue();
 		if (supervisedRunIDs(sessionID).length === 0) break;
 		const stopReason = latestAssistantStopReason(agent);
 		if (stopReason && stopReason !== "toolUse") {
-			agent.followUp({ role: "user", content: [{ type: "text", text: observePrompt(sessionID) }], timestamp: Date.now() });
+			agent.followUp({
+				role: "user",
+				content: [{ type: "text", text: observePrompt(sessionID) }],
+				timestamp: Date.now(),
+			});
 		}
 	}
 	send({ type: "final_response", taskID: message.taskID, message: "Parent agent turn completed." });
