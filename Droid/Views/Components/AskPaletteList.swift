@@ -17,24 +17,13 @@ struct AskPaletteList: View {
                     Spacer()
                 }
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(spacing: 2) {
-                            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                                AskPaletteRow(entry: entry, isHighlighted: index == highlightedIndex)
-                                    .padding(.horizontal, 8)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { onSelect(entry) }
-                                    .id(entry.id)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    .onChange(of: highlightedIndex) { _, newIndex in
-                        guard let newIndex, newIndex < entries.count else { return }
-                        proxy.scrollTo(entries[newIndex].id, anchor: .center)
-                    }
+                VirtualizedList(items: entries, rowHeight: 52, highlightedIndex: highlightedIndex) { index, entry in
+                    AskPaletteRow(entry: entry, isHighlighted: index == highlightedIndex)
+                        .padding(.horizontal, 8)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onSelect(entry) }
                 }
+                .padding(.vertical, 8)
             }
         }
         .frame(maxHeight: .infinity)
