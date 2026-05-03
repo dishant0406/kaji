@@ -79,24 +79,13 @@ struct PaletteOverlay<Item: Identifiable & Sendable>: View {
                     Spacer()
                 }
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(spacing: 2) {
-                            ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
-                                row(item, index == highlightedIndex)
-                                    .padding(.horizontal, 8)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { onSelect(item) }
-                                    .id(item.id)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    .onChange(of: highlightedIndex) { _, newIndex in
-                        guard let newIndex, newIndex < results.count else { return }
-                        proxy.scrollTo(results[newIndex].id, anchor: .center)
-                    }
+                VirtualizedList(items: results, rowHeight: 52, highlightedIndex: highlightedIndex) { index, item in
+                    row(item, index == highlightedIndex)
+                        .padding(.horizontal, 8)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onSelect(item) }
                 }
+                .padding(.vertical, 8)
             }
         }
         .frame(maxHeight: .infinity)

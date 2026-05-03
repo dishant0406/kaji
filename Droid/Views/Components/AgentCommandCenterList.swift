@@ -14,20 +14,23 @@ struct AgentCommandCenterList: View {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: false) {
                         LazyVStack(spacing: 0) {
-                            ForEach(sections) { section in
-                                AgentCommandCenterSectionHeader(section: section)
-                                ForEach(section.entries) { entry in
+                            ForEach(rows) { row in
+                                switch row.kind {
+                                case let .section(section):
+                                    AgentCommandCenterSectionHeader(section: section)
+                                        .id(row.id)
+                                case let .entry(entry):
                                     AgentCommandCenterRow(entry: entry, isHighlighted: entry.id == highlightedEntryID)
                                         .padding(.horizontal, 8)
-                                        .id(entry.id)
+                                        .id(row.id)
                                 }
                             }
                         }
                         .padding(.vertical, 6)
                     }
-                    .onChange(of: highlightedIndex) { _, index in
-                        guard let index, index < entries.count else { return }
-                        proxy.scrollTo(entries[index].id, anchor: .center)
+                    .onChange(of: highlightedRowID) { _, id in
+                        guard let id else { return }
+                        proxy.scrollTo(id, anchor: .center)
                     }
                 }
             }
@@ -35,9 +38,45 @@ struct AgentCommandCenterList: View {
         .frame(maxHeight: .infinity)
     }
 
+    private var rows: [AgentCommandCenterListRow] {
+        sections.flatMap { section in
+            [AgentCommandCenterListRow(kind: .section(section))] + section.entries.map { entry in
+                AgentCommandCenterListRow(kind: .entry(entry))
+            }
+        }
+    }
+
+    private var highlightedRowID: String? {
+        guard let highlightedEntryID else { return nil }
+        return rows.first { row in
+            if case let .entry(entry) = row.kind {
+                return entry.id == highlightedEntryID
+            }
+            return false
+        }?.id
+    }
+
     private var emptyText: some View {
         Text("No matching agent actions")
             .droidFont(size: 12)
             .foregroundStyle(DroidTheme.fgDim)
+    }
+}
+
+private struct AgentCommandCenterListRow: Identifiable {
+    let kind: Kind
+
+    var id: String {
+        switch kind {
+        case let .section(section):
+            "section-\(section.id)"
+        case let .entry(entry):
+            "entry-\(entry.id)"
+        }
+    }
+
+    enum Kind {
+        case section(AgentCommandCenterSection)
+        case entry(AgentCommandCenterEntry)
     }
 }
