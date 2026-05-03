@@ -19,6 +19,7 @@ struct Sidebar: View {
     @State private var dragState = ProjectDragState()
     @State private var expanded = UserDefaults.standard.bool(forKey: "droid.sidebarExpanded")
     @Binding var showAIUsagePopover: Bool
+    @Binding var parentAgentSelected: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +29,8 @@ struct Sidebar: View {
 
             SidebarFooter(
                 expanded: expanded,
-                showAIUsagePopover: $showAIUsagePopover
+                showAIUsagePopover: $showAIUsagePopover,
+                parentAgentSelected: $parentAgentSelected
             )
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -149,6 +151,7 @@ struct Sidebar: View {
         )
         else { return }
         appState.selectProject(project, worktree: worktree)
+        NotificationCenter.default.post(name: .hideParentAgentHome, object: nil)
     }
 
     private func remove(_ project: Project) {
@@ -200,6 +203,7 @@ private struct ProjectDragState {
 struct SidebarFooter: View {
     var expanded: Bool = false
     @Binding var showAIUsagePopover: Bool
+    @Binding var parentAgentSelected: Bool
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
@@ -337,8 +341,21 @@ struct SidebarFooter: View {
             }
     }
 
+    private var parentAgentButton: some View {
+        IconButton(
+            symbol: "sparkles",
+            color: parentAgentSelected ? DroidTheme.fg : DroidTheme.fgMuted,
+            selected: parentAgentSelected,
+            accessibilityLabel: "Parent Agent"
+        ) {
+            NotificationCenter.default.post(name: .showParentAgentHome, object: nil)
+        }
+        .help("Parent Agent")
+    }
+
     private var collapsedFooter: some View {
         VStack(spacing: 6) {
+            parentAgentButton
             if usageEnabled {
                 aiUsageButton
             }
@@ -388,6 +405,7 @@ struct SidebarFooter: View {
 
             Spacer()
 
+            parentAgentButton
             if usageEnabled {
                 aiUsageButton
             }
