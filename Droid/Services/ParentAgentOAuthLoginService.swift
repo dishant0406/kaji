@@ -129,14 +129,13 @@ final class ParentAgentOAuthLoginService {
     }
 
     private func launchConfiguration(providerID: String) throws -> ParentAgentOAuthLaunch {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let piRoot = root.appending(path: "Vendor/pi-mono")
-        let script = piRoot.appending(path: "packages/droid-agent/src/oauth-login.ts")
-        let tsx = piRoot.appending(path: "node_modules/.bin/tsx")
-        guard FileManager.default.fileExists(atPath: script.path),
-              FileManager.default.fileExists(atPath: tsx.path)
-        else { throw ParentAgentOAuthLoginError.helperMissing }
-        return ParentAgentOAuthLaunch(arguments: [tsx.path, script.path, providerID], directory: piRoot)
+        if let launch = ParentAgentRuntimeLocator.sourceOAuthLaunch(providerID: providerID) {
+            return ParentAgentOAuthLaunch(arguments: launch.arguments, directory: launch.directory)
+        }
+        if let launch = ParentAgentRuntimeLocator.bundledOAuthLaunch(providerID: providerID) {
+            return ParentAgentOAuthLaunch(arguments: launch.arguments, directory: launch.directory)
+        }
+        throw ParentAgentOAuthLoginError.helperMissing
     }
 }
 
@@ -156,7 +155,7 @@ private struct ParentAgentOAuthPromptResponse: Codable {
 
 private struct ParentAgentOAuthLaunch {
     let arguments: [String]
-    let directory: URL
+    let directory: URL?
 }
 
 private enum ParentAgentOAuthLoginError: LocalizedError {

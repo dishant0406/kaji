@@ -64,6 +64,7 @@ rm -rf "$APP_BUNDLE"
 
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
+"$SCRIPT_DIR/build-parent-agent.sh"
 swift build -c release --triple "$TRIPLE"
 swift build -c release --triple "$TRIPLE" --target DroidHookClient
 
