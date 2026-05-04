@@ -24,8 +24,7 @@ enum ParentAgentRuntimeLocator {
     }
 
     static func bundledScriptURL() -> URL? {
-        Bundle.module.url(forResource: "droid-agent", withExtension: "mjs", subdirectory: "pi")
-            ?? Bundle.main.url(forResource: "droid-agent", withExtension: "mjs", subdirectory: "pi")
+        bundledResourceURL(named: "droid-agent")
             ?? bundledDevScriptURL()
     }
 
@@ -35,8 +34,7 @@ enum ParentAgentRuntimeLocator {
     }
 
     static func bundledOAuthLaunch(providerID: String) -> ParentAgentLaunch? {
-        guard let script = Bundle.module.url(forResource: "oauth-login", withExtension: "mjs", subdirectory: "pi")
-            ?? Bundle.main.url(forResource: "oauth-login", withExtension: "mjs", subdirectory: "pi")
+        guard let script = bundledResourceURL(named: "oauth-login")
             ?? bundledDevOAuthScriptURL()
             , let node = nodeExecutablePath()
         else { return nil }
@@ -45,6 +43,15 @@ enum ParentAgentRuntimeLocator {
 
     static func nodeExecutablePath() -> String? {
         AIProviderExecutableLocator.resolvePath(for: "node")
+    }
+
+    private static func bundledResourceURL(named name: String) -> URL? {
+        Bundle.module.url(forResource: name, withExtension: "mjs", subdirectory: "pi")
+            ?? Bundle.module.url(forResource: name, withExtension: "mjs")
+            ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "pi")
+            ?? Bundle.main.url(forResource: name, withExtension: "mjs")
+            ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "Droid_Droid.bundle/pi")
+            ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "Droid_Droid.bundle")
     }
 
     private static func bundledDevScriptURL() -> URL? {
