@@ -8,6 +8,7 @@ final class TerminalTab: Identifiable {
         case vcs
         case editor
         case diffViewer
+        case parentAgent
     }
 
     enum Content {
@@ -15,6 +16,7 @@ final class TerminalTab: Identifiable {
         case vcs(VCSTabState)
         case editor(EditorTabState)
         case diffViewer(DiffViewerTabState)
+        case parentAgent(ParentAgentTabState)
 
         var kind: Kind {
             switch self {
@@ -22,6 +24,7 @@ final class TerminalTab: Identifiable {
             case .vcs: .vcs
             case .editor: .editor
             case .diffViewer: .diffViewer
+            case .parentAgent: .parentAgent
             }
         }
 
@@ -51,6 +54,7 @@ final class TerminalTab: Identifiable {
             case let .vcs(state): state.projectPath
             case let .editor(state): state.projectPath
             case let .diffViewer(state): state.projectPath
+            case let .parentAgent(state): state.projectPath
             }
         }
     }
@@ -76,6 +80,8 @@ final class TerminalTab: Identifiable {
             return state.displayTitle
         case let .diffViewer(state):
             return state.displayTitle
+        case .parentAgent:
+            return "Droid"
         }
     }
 
@@ -95,6 +101,10 @@ final class TerminalTab: Identifiable {
         content = .diffViewer(diffViewerState)
     }
 
+    init(parentAgentState: ParentAgentTabState) {
+        content = .parentAgent(parentAgentState)
+    }
+
     init(restoring snapshot: TerminalTabSnapshot) {
         customTitle = snapshot.customTitle
         colorID = snapshot.colorID
@@ -112,6 +122,8 @@ final class TerminalTab: Identifiable {
             }
         case .diffViewer:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
+        case .parentAgent:
+            content = .parentAgent(ParentAgentTabState(projectPath: snapshot.projectPath))
         }
     }
 

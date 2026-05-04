@@ -506,6 +506,7 @@ private struct TabCell: View {
         case .vcs: label += ", Source Control"
         case .editor: label += ", Editor"
         case .diffViewer: label += ", Diff Viewer"
+        case .parentAgent: label += ", Droid Agent"
         }
         if tab.isPinned { label += ", Pinned" }
         if hasUnread { label += ", Unread" }
@@ -522,6 +523,8 @@ private struct TabCell: View {
             DroidIcon(systemName: "pencil.line", size: 12)
         } else if tab.kind == .diffViewer {
             DroidIcon(systemName: "rectangle.split.2x1", size: 11)
+        } else if tab.kind == .parentAgent {
+            DroidIcon(systemName: "sparkles", size: 12)
         } else {
             DroidIcon(systemName: "terminal", size: 12)
         }

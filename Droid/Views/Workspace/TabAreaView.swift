@@ -181,6 +181,8 @@ private struct TabContentView: View {
             EditorPane(state: editorState, focused: focused, onFocus: onFocus)
         case let .diffViewer(diffState):
             DiffViewerPane(state: diffState, focused: focused, onFocus: onFocus)
+        case .parentAgent:
+            ParentAgentTabContent()
         }
     }
 }
