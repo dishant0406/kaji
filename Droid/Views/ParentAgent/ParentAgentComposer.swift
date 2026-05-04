@@ -29,13 +29,12 @@ struct ParentAgentComposer: View {
 
             ParentAgentPromptTextView(
                 text: $prompt,
-                isFocused: isFocused,
                 placeholder: placeholder,
                 isEnabled: !isBusy && isReady,
                 onSubmit: onSubmit,
                 onAttach: onAttach
             )
-                .frame(minHeight: 20, maxHeight: 62)
+                .frame(height: 22)
                 .disabled(isBusy || !isReady)
 
             if isBusy {

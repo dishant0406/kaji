@@ -16,6 +16,9 @@ enum AskPaletteAction: Hashable {
     case mention(AskMentionOption)
     case directory(AskDirectoryOption)
     case attach
+    case runScript(DroidKitScript)
+    case openScriptForm(DroidKitScript?)
+    case deleteScript(DroidKitScript)
     case launchProvider(AskProvider)
     case submit
 }
@@ -58,6 +61,12 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "directory:\(option.path)"
         case .attach:
             "attach"
+        case let .runScript(script):
+            "run-script:\(script.id.uuidString)"
+        case let .openScriptForm(script):
+            "script-form:\(script?.id.uuidString ?? "new")"
+        case let .deleteScript(script):
+            "delete-script:\(script.id.uuidString)"
         case let .launchProvider(provider):
             "launch:\(provider.rawValue)"
         case .submit:

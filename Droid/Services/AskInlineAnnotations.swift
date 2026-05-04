@@ -122,7 +122,11 @@ enum AskInlineAnnotations {
              .taskEdit,
              .taskDelete,
              .projectAdd,
-             .attach:
+             .attach,
+             .execute,
+             .executeAdd,
+             .executeEdit,
+             .executeDelete:
             false
         case .project,
              .worktree:

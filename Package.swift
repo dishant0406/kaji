@@ -9,6 +9,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.1"),
+        .package(url: "https://github.com/tree-sitter/swift-tree-sitter", from: "0.25.0"),
+        .package(url: "https://github.com/tree-sitter/tree-sitter-bash", from: "0.25.0"),
     ],
     targets: [
         .target(
@@ -21,6 +23,8 @@ let package = Package(
             dependencies: [
                 "GhosttyKit",
                 .product(name: "Sparkle", package: "Sparkle"),
+                .product(name: "SwiftTreeSitter", package: "swift-tree-sitter"),
+                .product(name: "TreeSitterBash", package: "tree-sitter-bash"),
             ],
             path: "Droid",
             exclude: ["Info.plist", "Droid.entitlements"],

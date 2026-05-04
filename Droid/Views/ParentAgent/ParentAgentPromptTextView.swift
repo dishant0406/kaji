@@ -3,7 +3,6 @@ import SwiftUI
 
 struct ParentAgentPromptTextView: NSViewRepresentable {
     @Binding var text: String
-    var isFocused: FocusState<Bool>.Binding
     let placeholder: String
     let isEnabled: Bool
     let onSubmit: () -> Void
@@ -14,90 +13,68 @@ struct ParentAgentPromptTextView: NSViewRepresentable {
         Coordinator(parent: self)
     }
 
-    func makeNSView(context: Context) -> NSScrollView {
-        let textView = ParentAgentPromptNSTextView()
-        textView.delegate = context.coordinator
-        textView.onSubmit = onSubmit
-        textView.onAttach = onAttach
-        textView.placeholder = placeholder
-        textView.font = typography.nsFont(size: 13)
-        textView.textColor = NSColor(DroidTheme.fg)
-        textView.backgroundColor = .clear
-        textView.drawsBackground = false
-        textView.isRichText = false
-        textView.allowsUndo = true
-        textView.isVerticallyResizable = true
-        textView.isHorizontallyResizable = false
-        textView.textContainer?.widthTracksTextView = true
-        textView.textContainerInset = NSSize(width: 0, height: 2)
-        textView.registerForDraggedTypes([.fileURL])
-
-        let scrollView = NSScrollView()
-        scrollView.drawsBackground = false
-        scrollView.hasVerticalScroller = false
-        scrollView.hasHorizontalScroller = false
-        scrollView.documentView = textView
-
-        DispatchQueue.main.async {
-            if isFocused.wrappedValue {
-                textView.window?.makeFirstResponder(textView)
-            }
-        }
-        return scrollView
+    func makeNSView(context: Context) -> NSTextField {
+        let field = ParentAgentPromptNSTextField()
+        field.delegate = context.coordinator
+        field.isBordered = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = typography.nsFont(size: 13)
+        field.textColor = NSColor(DroidTheme.fg)
+        field.placeholderString = placeholder
+        field.cell?.sendsActionOnEndEditing = false
+        field.onSubmit = onSubmit
+        field.onAttach = onAttach
+        field.registerForDraggedTypes([.fileURL])
+        return field
     }
 
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+    func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.parent = self
-        guard let textView = scrollView.documentView as? ParentAgentPromptNSTextView else { return }
-        if textView.string != text {
-            textView.string = text
+        if field.stringValue != text {
+            field.stringValue = text
         }
-        textView.onSubmit = onSubmit
-        textView.onAttach = onAttach
-        textView.placeholder = placeholder
-        textView.font = typography.nsFont(size: 13)
-        textView.isEditable = isEnabled
-        textView.isSelectable = isEnabled
-        if isFocused.wrappedValue, textView.window?.firstResponder !== textView {
-            DispatchQueue.main.async { textView.window?.makeFirstResponder(textView) }
+        field.font = typography.nsFont(size: 13)
+        field.textColor = NSColor(DroidTheme.fg)
+        field.placeholderString = placeholder
+        field.isEnabled = isEnabled
+        if let field = field as? ParentAgentPromptNSTextField {
+            field.onSubmit = onSubmit
+            field.onAttach = onAttach
         }
-        textView.needsDisplay = true
     }
 
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: ParentAgentPromptTextView
 
         init(parent: ParentAgentPromptTextView) {
             self.parent = parent
         }
 
-        func textDidChange(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-            parent.text = textView.string
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            parent.text = field.stringValue
+        }
+
+        func control(_ control: NSControl, textView _: NSTextView, doCommandBy selector: Selector) -> Bool {
+            guard let field = control as? NSTextField else { return false }
+            parent.text = field.stringValue
+            guard selector == #selector(NSResponder.insertNewline(_:)) else { return false }
+            parent.onSubmit()
+            return true
         }
     }
 }
 
-private final class ParentAgentPromptNSTextView: NSTextView {
+private final class ParentAgentPromptNSTextField: NSTextField {
     var onSubmit: (() -> Void)?
     var onAttach: (([AskAttachment]) -> Void)?
-    var placeholder = ""
 
-    override func keyDown(with event: NSEvent) {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command), event.keyCode == 9, attach(from: .general) {
-            return
+            return true
         }
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if event.keyCode == 36, flags != .shift {
-            onSubmit?()
-            return
-        }
-        super.keyDown(with: event)
-    }
-
-    override func paste(_ sender: Any?) {
-        if attach(from: .general) { return }
-        super.paste(sender)
+        return super.performKeyEquivalent(with: event)
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
@@ -106,16 +83,6 @@ private final class ParentAgentPromptNSTextView: NSTextView {
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         attach(from: sender.draggingPasteboard)
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard string.isEmpty, !placeholder.isEmpty else { return }
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font ?? NSFont.systemFont(ofSize: 13),
-            .foregroundColor: NSColor(DroidTheme.fgDim),
-        ]
-        placeholder.draw(at: NSPoint(x: textContainerInset.width, y: textContainerInset.height), withAttributes: attributes)
     }
 
     private func attach(from pasteboard: NSPasteboard) -> Bool {

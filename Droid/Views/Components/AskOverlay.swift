@@ -31,6 +31,12 @@ struct AskOverlay: View {
     @State var taskFormPrompt = ""
     @State var taskFormScope = AskTaskRecipeScope.global.rawValue
     @State var editingTaskID: String?
+    @State var scriptStore = DroidKitScriptStore.shared
+    @State var scriptRunner = DroidKitScriptRunner()
+    @State var isScriptFormVisible = false
+    @State var scriptDraft = DroidKitScriptDraft()
+    @State var scriptPlan: DroidKitScriptRunPlan?
+    @State var pendingRiskyScript: DroidKitScript?
 
     var body: some View {
         ZStack {
@@ -39,34 +45,42 @@ struct AskOverlay: View {
                 .onTapGesture { onDismiss() }
 
             VStack(spacing: 0) {
-                searchField
-                Divider().overlay(DroidTheme.border.opacity(0.75))
-                targetSummary
-                Divider().overlay(DroidTheme.border.opacity(0.75))
-                if !attachments.isEmpty {
-                    AskAttachmentStrip(attachments: attachments, onRemove: removeAttachment, onPreview: { previewAttachment = $0 })
-                    Divider().overlay(DroidTheme.border.opacity(0.75))
-                }
-                if isTaskFormVisible {
-                    AskTaskRecipeForm(
-                        name: $taskFormName,
-                        prompt: $taskFormPrompt,
-                        scope: $taskFormScope,
-                        onSave: saveTaskForm,
-                        onCancel: closeTaskForm
-                    )
+                if scriptPlan != nil {
+                    DroidKitScriptRunnerView(runner: scriptRunner, onStop: stopScriptRun, onClose: finishScriptRun)
+                } else if isScriptFormVisible {
+                    DroidKitScriptForm(draft: $scriptDraft, onSave: saveScriptForm, onCancel: closeScriptForm)
                 } else {
-                    AskPaletteList(
-                        entries: entries,
-                        highlightedIndex: highlightedIndex,
-                        emptyLabel: emptyLabel,
-                        onSelect: apply
-                    )
+                    searchField
+                    Divider().overlay(DroidTheme.border.opacity(0.75))
+                    targetSummary
+                    Divider().overlay(DroidTheme.border.opacity(0.75))
+                    if let pendingRiskyScript {
+                        DroidKitScriptConfirmationView(script: pendingRiskyScript, onRun: confirmPendingScript, onCancel: cancelPendingScript)
+                    } else if isTaskFormVisible {
+                        AskTaskRecipeForm(
+                            name: $taskFormName,
+                            prompt: $taskFormPrompt,
+                            scope: $taskFormScope,
+                            onSave: saveTaskForm,
+                            onCancel: closeTaskForm
+                        )
+                    } else {
+                        if !attachments.isEmpty {
+                            AskAttachmentStrip(attachments: attachments, onRemove: removeAttachment, onPreview: { previewAttachment = $0 })
+                            Divider().overlay(DroidTheme.border.opacity(0.75))
+                        }
+                        AskPaletteList(
+                            entries: entries,
+                            highlightedIndex: highlightedIndex,
+                            emptyLabel: emptyLabel,
+                            onSelect: apply
+                        )
+                    }
+                    Divider().overlay(DroidTheme.border.opacity(0.75))
+                    footer
                 }
-                Divider().overlay(DroidTheme.border.opacity(0.75))
-                footer
             }
-            .frame(width: 580, height: 420)
+            .frame(width: modalWidth, height: modalHeight)
             .background(DroidTheme.bg)
             .clipShape(RoundedRectangle(cornerRadius: DroidShape.modalRadius))
             .overlay(
@@ -101,6 +115,17 @@ struct AskOverlay: View {
                 onPaste: pasteAttachments
             )
         )
+    }
+
+    private var modalWidth: CGFloat {
+        if isScriptFormVisible || scriptPlan != nil { return 780 }
+        return 580
+    }
+
+    private var modalHeight: CGFloat {
+        if isScriptFormVisible { return 700 }
+        if scriptPlan != nil { return 520 }
+        return 420
     }
 
     private var searchField: some View {
