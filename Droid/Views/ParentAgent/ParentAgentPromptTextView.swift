@@ -2,7 +2,12 @@ import AppKit
 import SwiftUI
 
 struct ParentAgentPromptTextView: NSViewRepresentable {
+    static let minimumHeight: CGFloat = 22
+    static let maximumHeight: CGFloat = 112
+
     @Binding var text: String
+    @Binding var height: CGFloat
+    var isFocused: FocusState<Bool>.Binding
     let placeholder: String
     let isEnabled: Bool
     let onSubmit: () -> Void
@@ -13,62 +18,161 @@ struct ParentAgentPromptTextView: NSViewRepresentable {
         Coordinator(parent: self)
     }
 
-    func makeNSView(context: Context) -> NSTextField {
-        let field = ParentAgentPromptNSTextField()
-        field.delegate = context.coordinator
-        field.isBordered = false
-        field.drawsBackground = false
-        field.focusRingType = .none
-        field.font = typography.nsFont(size: 13)
-        field.textColor = NSColor(DroidTheme.fg)
-        field.placeholderString = placeholder
-        field.cell?.sendsActionOnEndEditing = false
-        field.onSubmit = onSubmit
-        field.onAttach = onAttach
-        field.registerForDraggedTypes([.fileURL])
-        return field
+    func makeNSView(context: Context) -> ParentAgentPromptContainerView {
+        let view = ParentAgentPromptContainerView()
+        view.textView.delegate = context.coordinator
+        view.textView.font = typography.nsFont(size: 13)
+        view.textView.textColor = NSColor(DroidTheme.fg)
+        view.textView.onSubmit = onSubmit
+        view.textView.onAttach = onAttach
+        view.textView.registerForDraggedTypes([.fileURL])
+        view.placeholder.stringValue = placeholder
+        context.coordinator.view = view
+        context.coordinator.recalculateHeight()
+        return view
     }
 
-    func updateNSView(_ field: NSTextField, context: Context) {
+    func updateNSView(_ view: ParentAgentPromptContainerView, context: Context) {
         context.coordinator.parent = self
-        if field.stringValue != text {
-            field.stringValue = text
+        context.coordinator.view = view
+        if view.textView.string != text {
+            view.textView.string = text
         }
-        field.font = typography.nsFont(size: 13)
-        field.textColor = NSColor(DroidTheme.fg)
-        field.placeholderString = placeholder
-        field.isEnabled = isEnabled
-        if let field = field as? ParentAgentPromptNSTextField {
-            field.onSubmit = onSubmit
-            field.onAttach = onAttach
+        view.textView.font = typography.nsFont(size: 13)
+        view.textView.textColor = NSColor(DroidTheme.fg)
+        view.textView.isEditable = isEnabled
+        view.textView.onSubmit = onSubmit
+        view.textView.onAttach = onAttach
+        view.placeholder.stringValue = placeholder
+        view.placeholder.isHidden = !text.isEmpty
+        context.coordinator.recalculateHeight()
+        if isEnabled, isFocused.wrappedValue {
+            view.focusTextView()
         }
     }
 
-    final class Coordinator: NSObject, NSTextFieldDelegate {
+    @MainActor
+    final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: ParentAgentPromptTextView
+        weak var view: ParentAgentPromptContainerView?
 
         init(parent: ParentAgentPromptTextView) {
             self.parent = parent
         }
 
-        func controlTextDidChange(_ notification: Notification) {
-            guard let field = notification.object as? NSTextField else { return }
-            parent.text = field.stringValue
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
+            view?.placeholder.isHidden = !textView.string.isEmpty
+            recalculateHeight()
         }
 
-        func control(_ control: NSControl, textView _: NSTextView, doCommandBy selector: Selector) -> Bool {
-            guard let field = control as? NSTextField else { return false }
-            parent.text = field.stringValue
-            guard selector == #selector(NSResponder.insertNewline(_:)) else { return false }
-            parent.onSubmit()
-            return true
+        func textDidBeginEditing(_: Notification) {
+            parent.isFocused.wrappedValue = true
+        }
+
+        func textDidEndEditing(_: Notification) {
+            parent.isFocused.wrappedValue = false
+        }
+
+        func recalculateHeight() {
+            guard let view else { return }
+            guard let textContainer = view.textView.textContainer else { return }
+            view.textView.layoutManager?.ensureLayout(for: textContainer)
+            let usedHeight = view.textView.layoutManager?.usedRect(for: textContainer).height ?? 0
+            let next = min(
+                max(ceil(usedHeight) + 2, ParentAgentPromptTextView.minimumHeight),
+                ParentAgentPromptTextView.maximumHeight
+            )
+            view.updateDocumentHeight(max(next, ceil(usedHeight) + 2))
+            view.scrollView.hasVerticalScroller = next >= ParentAgentPromptTextView.maximumHeight
+            guard abs(parent.height - next) > 0.5 else { return }
+            DispatchQueue.main.async { self.parent.height = next }
         }
     }
 }
 
-private final class ParentAgentPromptNSTextField: NSTextField {
+final class ParentAgentPromptContainerView: NSView {
+    let scrollView = NSScrollView()
+    let textView = ParentAgentPromptNSTextView()
+    let placeholder = NSTextField(labelWithString: "")
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.hasVerticalScroller = false
+        scrollView.documentView = textView
+        textView.drawsBackground = false
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.allowsUndo = true
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.textContainerInset = .zero
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.widthTracksTextView = true
+        textView.autoresizingMask = [.width]
+        placeholder.textColor = NSColor(DroidTheme.fgDim)
+        placeholder.backgroundColor = .clear
+        placeholder.isBordered = false
+        placeholder.isEditable = false
+        placeholder.isEnabled = false
+        placeholder.isSelectable = false
+        addSubview(scrollView)
+        addSubview(placeholder)
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        nil
+    }
+
+    override func layout() {
+        super.layout()
+        scrollView.frame = bounds
+        textView.frame = NSRect(origin: .zero, size: bounds.size)
+        textView.textContainer?.containerSize = NSSize(width: bounds.width, height: .greatestFiniteMagnitude)
+        placeholder.frame = NSRect(x: 0, y: bounds.height - 18, width: bounds.width, height: 18)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let hit = super.hitTest(point)
+        return hit === placeholder ? textView : hit
+    }
+
+    func updateDocumentHeight(_ height: CGFloat) {
+        let documentHeight = max(bounds.height, height)
+        textView.frame = NSRect(origin: .zero, size: NSSize(width: bounds.width, height: documentHeight))
+    }
+
+    func focusTextView() {
+        focusTextView(attemptsRemaining: 12)
+    }
+
+    private func focusTextView(attemptsRemaining: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self else { return }
+            if window?.firstResponder !== textView {
+                window?.makeFirstResponder(textView)
+            }
+            guard window?.firstResponder !== textView, attemptsRemaining > 0 else { return }
+            focusTextView(attemptsRemaining: attemptsRemaining - 1)
+        }
+    }
+}
+
+final class ParentAgentPromptNSTextView: NSTextView {
     var onSubmit: (() -> Void)?
     var onAttach: (([AskAttachment]) -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 36 || event.keyCode == 76, !event.modifierFlags.contains(.shift) {
+            onSubmit?()
+            return
+        }
+        super.keyDown(with: event)
+    }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command), event.keyCode == 9, attach(from: .general) {

@@ -5,6 +5,7 @@ final class ParentAgentProcess {
     private var process: Process?
     private var inputPipe: Pipe?
     private var outputBuffer = Data()
+    private var configurationSignature: String?
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     var onMessage: ((ParentAgentEnvelope) -> Void)?
@@ -29,10 +30,16 @@ final class ParentAgentProcess {
         process = nil
         inputPipe = nil
         outputBuffer = Data()
+        configurationSignature = nil
     }
 
     private func startIfNeeded() throws {
-        if process?.isRunning == true { return }
+        let environment = ParentAgentSettingsStore.shared.launchEnvironment()
+        let signature = Self.configurationSignature(for: environment)
+        if process?.isRunning == true, configurationSignature == signature { return }
+        if process?.isRunning == true {
+            stop()
+        }
         guard let launch = Self.launch else {
             throw ParentAgentProcessError.scriptMissing
         }
@@ -44,7 +51,7 @@ final class ParentAgentProcess {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = launch.arguments
         process.currentDirectoryURL = launch.directory
-        process.environment = ParentAgentSettingsStore.shared.launchEnvironment()
+        process.environment = environment
         process.standardInput = inputPipe
         process.standardOutput = outputPipe
         process.standardError = errorPipe
@@ -61,6 +68,15 @@ final class ParentAgentProcess {
         try process.run()
         self.process = process
         self.inputPipe = inputPipe
+        configurationSignature = signature
+    }
+
+    private static func configurationSignature(for environment: [String: String]) -> String {
+        [
+            environment["DROID_PARENT_PROVIDER"] ?? "",
+            environment["DROID_PARENT_MODEL"] ?? "",
+            environment["DROID_PARENT_THINKING"] ?? "",
+        ].joined(separator: "\u{1f}")
     }
 
     private func consume(_ data: Data) {

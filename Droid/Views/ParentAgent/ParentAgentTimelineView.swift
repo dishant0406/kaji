@@ -44,6 +44,7 @@ struct ParentAgentTimelineView: View {
         case let .tools(items):
             ParentAgentToolGroup(
                 items: items,
+                isActive: activeToolGroupID == items[0].id,
                 isExpanded: expandedToolGroupIDs.contains(items[0].id),
                 onToggle: { toggleToolGroup(items[0].id) }
             )
@@ -73,6 +74,12 @@ struct ParentAgentTimelineView: View {
         }
         flushTools()
         return blocks
+    }
+
+    private var activeToolGroupID: UUID? {
+        guard task.status == .planning || task.status == .running || task.status == .waitingForUser else { return nil }
+        guard case let .tools(items) = timelineBlocks.last else { return nil }
+        return items.first?.id
     }
 
     private func isToolLike(_ item: ParentAgentTimelineItem) -> Bool {

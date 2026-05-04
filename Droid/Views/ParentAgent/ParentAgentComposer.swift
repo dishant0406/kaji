@@ -11,6 +11,7 @@ struct ParentAgentComposer: View {
     let onStop: () -> Void
     let onSubmit: () -> Void
     @State private var settings = ParentAgentSettingsStore.shared
+    @State private var promptHeight: CGFloat = ParentAgentPromptTextView.minimumHeight
 
     var body: some View {
         HStack(spacing: 10) {
@@ -29,13 +30,14 @@ struct ParentAgentComposer: View {
 
             ParentAgentPromptTextView(
                 text: $prompt,
+                height: $promptHeight,
+                isFocused: isFocused,
                 placeholder: placeholder,
                 isEnabled: !isBusy && isReady,
                 onSubmit: onSubmit,
                 onAttach: onAttach
             )
-                .frame(height: 22)
-                .disabled(isBusy || !isReady)
+                .frame(height: promptHeight)
 
             if isBusy {
                 HStack(spacing: 6) {
