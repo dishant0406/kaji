@@ -6,7 +6,7 @@ extension ParentAgentController {
         guard let taskID = uuid(from: message.taskID) else { return }
         let task = message.arguments?["task"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "this task"
         let project = message.arguments?["project"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let options = providerChoiceOptions(project: project, task: task)
+        let options = providerChoiceOptions(project: project, taskID: taskID)
         guard !options.isEmpty else {
             sendToolError(id: toolID, message: "No enabled and installed coding agents are available.")
             return
@@ -46,15 +46,35 @@ extension ParentAgentController {
         return true
     }
 
-    func providerChoiceOptions(project: String?, task: String) -> [ParentAgentQuestionOption] {
+    func providerChoiceOptions(project: String?, taskID: UUID? = nil) -> [ParentAgentQuestionOption] {
         let projectPath = projectPath(for: project)
-        return ParentAgentCodingProviderCatalog.availableProviders().map { provider in
+        let providers = ParentAgentCodingProviderCatalog.availableProviders().map { provider in
             let defaultModel = CodingAgentRegistry.shared.agent(id: provider.id)?.defaultModel(projectPath: projectPath)
             return ParentAgentQuestionOption(
                 id: provider.id,
                 title: provider.title,
                 detail: defaultModel.map { "Default: \($0)" } ?? "Choose a model next",
                 value: providerStageValue(project: project, providerID: provider.id)
+            )
+        }
+        return continuationOptions(project: project, taskID: taskID) + providers
+    }
+
+    private func continuationOptions(project: String?, taskID: UUID?) -> [ParentAgentQuestionOption] {
+        guard let taskID,
+              let task = store.tasks.first(where: { $0.id == taskID })
+        else { return [] }
+        let runs = task.childRunIDs.compactMap(resolveChildRun).filter { run in
+            guard run.paneID != nil else { return false }
+            guard let project else { return true }
+            return projectName(for: run.projectID) == project || run.projectID?.uuidString == project
+        }
+        return runs.map { run in
+            ParentAgentQuestionOption(
+                id: "continue-\(run.id.uuidString)",
+                title: "Continue in \(AgentMissionControlSnapshotBuilder.providerName(for: run.providerID))",
+                detail: "\(run.status.rawValue) · \(run.title)",
+                value: continuationChoiceValue(project: project, runID: run.id)
             )
         }
     }
@@ -90,6 +110,14 @@ extension ParentAgentController {
         [
             "provider=\(providerID)",
             "model=\(model)",
+            project.map { "project=\($0)" },
+        ].compactMap(\.self).joined(separator: "\n")
+    }
+
+    private func continuationChoiceValue(project: String?, runID: UUID) -> String {
+        [
+            "mode=continue",
+            "runID=\(runID.uuidString)",
             project.map { "project=\($0)" },
         ].compactMap(\.self).joined(separator: "\n")
     }

@@ -41,8 +41,7 @@ extension ParentAgentController {
         let spawnRequest = ParentAgentSpawnRequest(
             provider: provider,
             project: project,
-            prompt: prompt,
-            allowParallel: message.arguments?["allowParallel"] == "true"
+            prompt: prompt
         )
         switch ParentAgentPolicy.decideSpawn(task: parentTask(message), request: spawnRequest, runs: AgentRunStore.shared.runs) {
         case .allowed:

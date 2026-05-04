@@ -4,7 +4,6 @@ struct ParentAgentSpawnRequest {
     let provider: AskProvider
     let project: Project
     let prompt: String
-    let allowParallel: Bool
 }
 
 enum ParentAgentPolicyDecision: Equatable {
@@ -14,9 +13,8 @@ enum ParentAgentPolicyDecision: Equatable {
 
 @MainActor
 enum ParentAgentPolicy {
-    static let maxActiveWorkersPerTask = 1
-    static let maxChildRunsPerTask = 3
-    static let maxSpawnAttemptsPerTask = 4
+    static let maxChildRunsPerTask = 8
+    static let maxSpawnAttemptsPerTask = 12
 
     static func decideSpawn(
         task: ParentAgentTask?,
@@ -25,30 +23,16 @@ enum ParentAgentPolicy {
     ) -> ParentAgentPolicyDecision {
         guard let task else { return .allowed }
 
-        if !task.spawnFingerprints.isEmpty, !parallelAllowed(task: task, request: request) {
-            return .blocked(
-                "This parent task already spawned a child agent. Observe that worker before starting another.",
-                existingRunID: task.childRunIDs.first
-            )
-        }
-
         let taskRuns = runs.filter { task.childRunIDs.contains($0.id) }
-        if !taskRuns.isEmpty, !parallelAllowed(task: task, request: request) {
-            return .blocked(
-                "This parent task already has a child agent. Observe that run instead of spawning another.",
-                existingRunID: taskRuns.first?.id
-            )
-        }
-
         let activeRuns = taskRuns.filter { isActive($0.status) }
-        if !activeRuns.isEmpty, !parallelAllowed(task: task, request: request) {
+        if let duplicate = duplicateRun(for: request, in: activeRuns) {
             return .blocked(
-                "A child agent is already running. Observe it before spawning another worker.",
-                existingRunID: activeRuns.first?.id
+                "A child agent is already working on this same task. Observe that run instead.",
+                existingRunID: duplicate.id
             )
         }
 
-        if taskRuns.count >= maxChildRunsPerTask {
+        if task.childRunIDs.count >= maxChildRunsPerTask {
             return .blocked("This parent task has reached the child-agent limit.", existingRunID: taskRuns.last?.id)
         }
 
@@ -56,36 +40,7 @@ enum ParentAgentPolicy {
             return .blocked("This parent task has reached the spawn-attempt limit.", existingRunID: taskRuns.last?.id)
         }
 
-        if let duplicate = duplicateRun(for: request, in: taskRuns) {
-            return .blocked(
-                "A child agent has already been assigned this same work. Observe that run instead.",
-                existingRunID: duplicate.id
-            )
-        }
-
         return .allowed
-    }
-
-    private static func parallelAllowed(task: ParentAgentTask, request: ParentAgentSpawnRequest) -> Bool {
-        request.allowParallel && userExplicitlyRequestedParallel(task: task)
-    }
-
-    private static func userExplicitlyRequestedParallel(task: ParentAgentTask) -> Bool {
-        let text = task.timeline
-            .filter { $0.kind == .user }
-            .map(\.detail)
-            .joined(separator: " ")
-            .lowercased()
-        let markers = [
-            "parallel",
-            "multiple agents",
-            "multi agent",
-            "multi-agent",
-            "two agents",
-            "both agents",
-            "run both",
-        ]
-        return markers.contains { text.contains($0) }
     }
 
     private static func duplicateRun(for request: ParentAgentSpawnRequest, in runs: [AgentRun]) -> AgentRun? {
@@ -100,9 +55,7 @@ enum ParentAgentPolicy {
     }
 
     private static func spawnAttempts(in task: ParentAgentTask) -> Int {
-        task.timeline.filter { item in
-            item.kind == .tool && item.title == "droid.spawn_agent"
-        }.count
+        task.spawnFingerprints.count
     }
 
     private static func isActive(_ status: AgentRunStatus) -> Bool {

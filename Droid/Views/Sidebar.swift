@@ -19,7 +19,7 @@ struct Sidebar: View {
     @State private var dragState = ProjectDragState()
     @State private var expanded = UserDefaults.standard.bool(forKey: "droid.sidebarExpanded")
     @Binding var showAIUsagePopover: Bool
-    @Binding var parentAgentSelected: Bool
+    let parentAgentSelected: Bool
     let parentAgentEnabled: Bool
 
     var body: some View {
@@ -129,11 +129,11 @@ struct Sidebar: View {
     }
 
     private var parentAgentButton: some View {
-        ParentAgentTabButton(selected: parentAgentSelected) {
+        ParentAgentTabButton(selected: parentAgentSelected, expanded: expanded) {
             NotificationCenter.default.post(name: .showParentAgentHome, object: nil)
         }
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
-        .help("Parent Agent")
+        .help("Droid")
     }
 
     private func projectDragGesture(for project: Project) -> some Gesture {
@@ -162,7 +162,6 @@ struct Sidebar: View {
         )
         else { return }
         appState.selectProject(project, worktree: worktree)
-        NotificationCenter.default.post(name: .hideParentAgentHome, object: nil)
     }
 
     private func remove(_ project: Project) {

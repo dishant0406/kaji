@@ -31,6 +31,16 @@ enum TabReducer {
         }
     }
 
+    static func createParentAgentTab(projectID: UUID, areaID _: UUID?, state: inout WorkspaceState) {
+        _ = appendWorkspaceTab(projectID: projectID, state: &state) { path in
+            let area = TabArea(
+                projectPath: path,
+                existingTab: TerminalTab(parentAgentState: ParentAgentTabState(projectPath: path))
+            )
+            return WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        }
+    }
+
     static func createCommandTab(
         projectID: UUID,
         areaID _: UUID?,

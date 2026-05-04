@@ -36,6 +36,7 @@ final class AppState {
         case createStartupCommandTab(projectID: UUID, areaID: UUID?, title: String, command: String)
         case createCommandSplit(projectID: UUID, title: String, command: String)
         case createVCSTab(projectID: UUID, areaID: UUID?)
+        case createParentAgentTab(projectID: UUID, areaID: UUID?)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
         case createExternalEditorTab(projectID: UUID, areaID: UUID?, filePath: String, command: String)
         case createDiffViewerTab(projectID: UUID, areaID: UUID?, request: DiffViewerRequest)
@@ -228,6 +229,16 @@ final class AppState {
 
     func createVCSTab(projectID: UUID) {
         dispatch(.createVCSTab(projectID: projectID, areaID: nil))
+    }
+
+    func openParentAgentTab(projectID: UUID) {
+        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
+            area.tabs.contains(where: { $0.kind == .parentAgent })
+        }) {
+            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
+            return
+        }
+        dispatch(.createParentAgentTab(projectID: projectID, areaID: nil))
     }
 
     func createCommandTab(projectID: UUID, title: String, command: String) {

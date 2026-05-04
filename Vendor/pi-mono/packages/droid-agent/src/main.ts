@@ -111,11 +111,12 @@ function systemPrompt() {
 		"Use Droid tools to inspect projects, spawn child coding agents, observe them, and answer with the final outcome directly.",
 		"Do not add a separate result summary/card after already giving the final answer.",
 		"Only use coding agents returned by Droid tools as enabled and installed. Never assume Codex, Claude Code, or OpenCode are available.",
-		"Before calling droid_spawn_agent for any task, call droid_choose_agent for that specific task/project. Droid will ask the user in two native steps: provider first, then model for that provider. Use the exact provider and model returned by the user.",
+		"Before calling droid_spawn_agent for any new task, call droid_choose_agent for that specific task/project. Droid will ask the user in native steps. Use the exact provider and model returned by the user.",
+		"For requests with multiple independent fixes/features, even in the same project, split them into separate concrete tasks and call droid_choose_agent separately for each task before spawning.",
 		"For multi-project requests, identify each project-specific task first, then call droid_choose_agent separately for each task/project before spawning.",
-		"The droid_choose_agent answer is newline-delimited key=value text. Pass provider, model, and project from that answer into droid_spawn_agent.",
-		"Do not spawn multiple child agents by default. Start with one worker, observe it, and wait for useful output before starting another.",
-		"Only spawn additional child agents when the user explicitly asks for parallel work, the first worker fails, or a clearly separate verification/review worker is necessary.",
+		"The droid_choose_agent answer is newline-delimited key=value text. If it includes mode=continue and runID, use droid_send_prompt with that runID. Otherwise pass provider, model, and project into droid_spawn_agent.",
+		"Do not spawn multiple child agents for the same concrete task. For independent subtasks, spawn separate child agents and supervise each run.",
+		"When a follow-up should continue an existing child run, choose the continue option from droid_choose_agent and use droid_send_prompt instead of spawning.",
 		"When you spawn child agents, supervise them explicitly: observe, reason, sleep briefly if still running, then observe again.",
 		"Do not claim a child agent is done until droid_observe_agents shows a meaningful final answer or useful completed output.",
 		"If an agent is still running, call droid_sleep and then droid_observe_agents again.",
@@ -233,7 +234,7 @@ function droidTools(): AgentTool[] {
 		),
 		tool(
 			"droid_choose_agent",
-			"Ask the user to choose the coding agent and model for one specific task/project. Call once per task before spawning.",
+			"Ask the user whether to continue an existing child run or choose a coding agent/model for one specific task/project. Call once per independent task before spawning.",
 			Type.Object({ task: Type.String(), project: Type.Optional(Type.String()) }),
 		),
 		tool(
@@ -274,7 +275,7 @@ function droidTools(): AgentTool[] {
 		),
 		tool(
 			"droid_spawn_agent",
-			"Start one terminal coding agent in Droid. Provider and model must come from droid_choose_agent. Droid enforces one active worker per parent task unless the user explicitly requested parallel work and allowParallel is true. If rejected, observe the returned existing run instead.",
+			"Start one terminal coding agent in Droid for one concrete task. Provider and model must come from droid_choose_agent. Droid blocks duplicate active workers. If rejected, observe the returned existing run instead.",
 			Type.Object({
 				prompt: Type.String(),
 				provider: Type.String(),

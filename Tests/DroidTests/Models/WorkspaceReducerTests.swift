@@ -276,4 +276,25 @@ struct WorkspaceReducerTests {
         #expect(activeTab.root.allAreas().count == 1)
         #expect(activeTab.activeContent?.kind == .editor)
     }
+
+    @Test("createParentAgentTab opens Droid as a top-level workspace tab")
+    func createParentAgentTabCreatesWorkspaceTab() throws {
+        let projectID = UUID()
+        let worktreeID = UUID()
+        var state = makeState(projectID: projectID, worktreeID: worktreeID)
+        let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
+
+        _ = WorkspaceReducer.reduce(
+            action: .createParentAgentTab(projectID: projectID, areaID: nil),
+            state: &state
+        )
+
+        let workspace = try #require(state.workspaces[key])
+        let activeTab = try #require(workspace.activeTab)
+
+        #expect(workspace.tabs.count == 2)
+        #expect(activeTab.root.allAreas().count == 1)
+        #expect(activeTab.activeContent?.kind == .parentAgent)
+        #expect(activeTab.title == "Droid")
+    }
 }

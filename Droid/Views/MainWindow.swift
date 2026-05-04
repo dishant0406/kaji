@@ -60,7 +60,6 @@ struct MainWindow: View {
     @State private var showWorktreeSwitcher = false
     @State private var showSettings = false
     @State private var showCreateThemeModal = false
-    @State private var showParentAgentHome = true
     @State private var parentAgentSettings = ParentAgentSettingsStore.shared
     @State private var createWorktreeProjectID: UUID?
     @State private var showSidebarAIUsagePopover = false
@@ -162,14 +161,11 @@ struct MainWindow: View {
                         showSettings = true
                         return
                     }
-                    showParentAgentHome = true
                     showQuickOpen = false
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .hideParentAgentHome)) { _ in
-                    showParentAgentHome = false
+                    openParentAgentTab()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
                     showWorktreeSwitcher.toggle()
@@ -291,7 +287,7 @@ struct MainWindow: View {
                 HStack(spacing: 0) {
                     Sidebar(
                         showAIUsagePopover: $showSidebarAIUsagePopover,
-                        parentAgentSelected: $showParentAgentHome,
+                        parentAgentSelected: parentAgentSelected,
                         parentAgentEnabled: parentAgentSettings.isEnabled
                     )
                     Rectangle().fill(DroidTheme.border).frame(width: 1)
@@ -308,16 +304,6 @@ struct MainWindow: View {
                 ZStack {
                     DroidTheme.bg
                     workspaceContent
-                        .opacity(parentAgentVisible ? 0 : 1)
-                        .allowsHitTesting(!parentAgentVisible)
-                        .environment(\.workspaceOccluded, parentAgentVisible)
-                        .zIndex(0)
-                    if parentAgentVisible {
-                        ParentAgentHome { prompt, attachments in
-                            handleParentAgentPrompt(prompt, attachments: attachments)
-                        }
-                        .zIndex(1)
-                    }
                 }
 
                 if vcsPanelVisible, let state = activeVCSState {
@@ -366,28 +352,6 @@ struct MainWindow: View {
         }
     }
 
-    private func handleParentAgentPrompt(_ prompt: String, attachments: [AskAttachment]) {
-        if ParentAgentController.shared.hasPendingQuestion {
-            ParentAgentController.shared.answerPendingQuestion(
-                ParentAgentAttachmentFormatter.prompt(prompt, attachments: attachments),
-                displayText: prompt.isEmpty ? "Attached files" : prompt,
-                attachments: ParentAgentAttachmentFormatter.contexts(attachments)
-            )
-            return
-        }
-        ParentAgentController.shared.submit(
-            prompt: prompt,
-            attachments: attachments,
-            appState: appState,
-            projectStore: projectStore,
-            worktreeStore: worktreeStore
-        )
-    }
-
-    private var parentAgentVisible: Bool {
-        showParentAgentHome && parentAgentSettings.isEnabled
-    }
-
     @ViewBuilder
     private var workspaceContent: some View {
         if let project = activeProject,
@@ -413,6 +377,19 @@ struct MainWindow: View {
                 .zIndex(key == activeKey ? 1 : 0)
             }
         }
+    }
+
+    private func openParentAgentTab() {
+        if let project = activeProject {
+            appState.openParentAgentTab(projectID: project.id)
+            return
+        }
+
+        guard let project = projectStore.projects.first else { return }
+        worktreeStore.ensurePrimary(for: project)
+        guard let worktree = worktreeStore.preferred(for: project.id, matching: nil) else { return }
+        appState.selectProject(project, worktree: worktree)
+        appState.openParentAgentTab(projectID: project.id)
     }
 
     @ViewBuilder
@@ -559,15 +536,12 @@ struct MainWindow: View {
                 projectID: project.id,
                 onSelectTab: { tabID in
                     appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tabID))
-                    showParentAgentHome = false
                 },
                 onCreateTab: {
                     appState.dispatch(.createTab(projectID: project.id, areaID: nil))
-                    showParentAgentHome = false
                 },
                 onCreateVCSTab: {
                     openVCS(for: project, preferredAreaID: areaID)
-                    showParentAgentHome = false
                 },
                 onCloseTab: { tabID in
                     appState.closeTab(tabID, areaID: areaID, projectID: project.id)
@@ -714,6 +688,11 @@ struct MainWindow: View {
     private var activeProject: Project? {
         guard let pid = appState.activeProjectID else { return nil }
         return projectStore.projects.first { $0.id == pid }
+    }
+
+    private var parentAgentSelected: Bool {
+        guard let project = activeProject else { return false }
+        return appState.activeTab(for: project.id)?.kind == .parentAgent
     }
 
     private var activeQuickOpenProjectPath: String? {

@@ -17,6 +17,8 @@ enum PaneHeaderTitle {
             return state.displayTitle
         case let .diffViewer(state):
             return state.displayTitle
+        case .parentAgent:
+            return "Droid"
         }
     }
 
