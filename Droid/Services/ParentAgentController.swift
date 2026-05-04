@@ -20,15 +20,18 @@ final class ParentAgentController {
         }
     }
 
-    func submit(prompt: String, appState: AppState, projectStore: ProjectStore, worktreeStore: WorktreeStore) {
+    func submit(prompt: String, attachments: [AskAttachment] = [], appState: AppState, projectStore: ProjectStore, worktreeStore: WorktreeStore) {
         self.appState = appState
         self.projectStore = projectStore
         self.worktreeStore = worktreeStore
-        let task = store.continueActiveTask(prompt: prompt) ?? store.start(prompt: prompt)
+        let attachmentContexts = ParentAgentAttachmentFormatter.contexts(attachments)
+        let task = store.continueActiveTask(prompt: prompt, attachments: attachmentContexts)
+            ?? store.start(prompt: prompt, attachments: attachmentContexts)
         process.send(ParentAgentEnvelope(
             type: "user_prompt",
             taskID: task.id.uuidString,
             prompt: prompt,
+            attachments: attachmentContexts,
             projects: projectContexts(projectStore.projects)
         ))
     }
@@ -42,12 +45,16 @@ final class ParentAgentController {
         store.cancelActiveTask()
     }
 
-    func answerPendingQuestion(_ answer: String, displayText: String? = nil) {
+    func answerPendingQuestion(
+        _ answer: String,
+        displayText: String? = nil,
+        attachments: [ParentAgentAttachmentContext] = []
+    ) {
         guard let pending = store.pendingQuestion else { return }
         if continueAgentChoice(answer, pending: pending) {
             return
         }
-        store.append(taskID: pending.taskID, kind: .user, title: "You", detail: displayText ?? answer)
+        store.append(taskID: pending.taskID, kind: .user, title: "You", detail: displayText ?? answer, attachments: attachments)
         store.clearPendingQuestion(taskID: pending.taskID)
         process.send(ParentAgentEnvelope(
             type: "tool_result",

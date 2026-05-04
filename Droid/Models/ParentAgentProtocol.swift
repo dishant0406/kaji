@@ -10,6 +10,7 @@ struct ParentAgentEnvelope: Codable {
     var name: String?
     var arguments: [String: String]?
     var ok: Bool?
+    var attachments: [ParentAgentAttachmentContext]?
     var projects: [ParentAgentProjectContext]?
     var result: ParentAgentToolResult?
 
@@ -23,6 +24,7 @@ struct ParentAgentEnvelope: Codable {
         name: String? = nil,
         arguments: [String: String]? = nil,
         ok: Bool? = nil,
+        attachments: [ParentAgentAttachmentContext]? = nil,
         projects: [ParentAgentProjectContext]? = nil,
         result: ParentAgentToolResult? = nil
     ) {
@@ -35,9 +37,18 @@ struct ParentAgentEnvelope: Codable {
         self.name = name
         self.arguments = arguments
         self.ok = ok
+        self.attachments = attachments
         self.projects = projects
         self.result = result
     }
+}
+
+struct ParentAgentAttachmentContext: Codable, Hashable {
+    let name: String
+    let path: String
+    let kind: String
+    let mimeType: String
+    let data: String?
 }
 
 struct ParentAgentToolResult: Codable {
