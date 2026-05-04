@@ -9752,7 +9752,7 @@ var MODELS = {
         cacheRead: 0.024999999999999998,
         cacheWrite: 0.08333333333333334
       },
-      contextWindow: 1048576,
+      contextWindow: 1e6,
       maxTokens: 8192
     },
     "google/gemini-2.0-flash-lite-001": {
@@ -12666,13 +12666,13 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 0.1625,
-        output: 1.3,
-        cacheRead: 0,
+        input: 0.15,
+        output: 1,
+        cacheRead: 0.049999999999999996,
         cacheWrite: 0
       },
       contextWindow: 262144,
-      maxTokens: 65536
+      maxTokens: 262144
     },
     "qwen/qwen3.5-397b-a17b": {
       id: "qwen/qwen3.5-397b-a17b",
@@ -12775,6 +12775,23 @@ var MODELS = {
       },
       contextWindow: 262144,
       maxTokens: 81920
+    },
+    "qwen/qwen3.6-35b-a3b": {
+      id: "qwen/qwen3.6-35b-a3b",
+      name: "Qwen: Qwen3.6 35B A3B",
+      api: "openai-completions",
+      provider: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      reasoning: true,
+      input: ["text", "image"],
+      cost: {
+        input: 0.15,
+        output: 1,
+        cacheRead: 0.049999999999999996,
+        cacheWrite: 0
+      },
+      contextWindow: 262144,
+      maxTokens: 262144
     },
     "qwen/qwen3.6-flash": {
       id: "qwen/qwen3.6-flash",
@@ -13380,13 +13397,13 @@ var MODELS = {
       reasoning: true,
       input: ["text"],
       cost: {
-        input: 0.38,
-        output: 1.74,
-        cacheRead: 0,
+        input: 0.39999999999999997,
+        output: 1.75,
+        cacheRead: 0.08,
         cacheWrite: 0
       },
       contextWindow: 202752,
-      maxTokens: 4096
+      maxTokens: 131072
     },
     "z-ai/glm-4.7-flash": {
       id: "z-ai/glm-4.7-flash",
@@ -15006,23 +15023,6 @@ var MODELS = {
       },
       contextWindow: 131072,
       maxTokens: 131072
-    },
-    "moonshotai/kimi-k2-0905": {
-      id: "moonshotai/kimi-k2-0905",
-      name: "Kimi K2 0905",
-      api: "anthropic-messages",
-      provider: "vercel-ai-gateway",
-      baseUrl: "https://ai-gateway.vercel.sh",
-      reasoning: false,
-      input: ["text"],
-      cost: {
-        input: 0.6,
-        output: 2.5,
-        cacheRead: 0.3,
-        cacheWrite: 0
-      },
-      contextWindow: 256e3,
-      maxTokens: 128e3
     },
     "moonshotai/kimi-k2-thinking": {
       id: "moonshotai/kimi-k2-thinking",
@@ -16986,7 +16986,7 @@ var MODELS = {
     },
     "glm-5v-turbo": {
       id: "glm-5v-turbo",
-      name: "glm-5v-turbo",
+      name: "GLM-5V-Turbo",
       api: "openai-completions",
       provider: "zai",
       baseUrl: "https://api.z.ai/api/coding/paas/v4",
