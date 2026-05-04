@@ -30,9 +30,7 @@ struct Sidebar: View {
 
             SidebarFooter(
                 expanded: expanded,
-                showAIUsagePopover: $showAIUsagePopover,
-                parentAgentSelected: $parentAgentSelected,
-                parentAgentEnabled: parentAgentEnabled
+                showAIUsagePopover: $showAIUsagePopover
             )
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -112,6 +110,9 @@ struct Sidebar: View {
                     .gesture(projectDragGesture(for: project))
                 }
                 addButton
+                if parentAgentEnabled {
+                    parentAgentButton
+                }
             }
             .padding(.horizontal, expanded ? 10 : 8)
             .padding(.vertical, 6)
@@ -125,6 +126,14 @@ struct Sidebar: View {
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {
         "\(name) (\(KeyBindingStore.shared.combo(for: action).displayString))"
+    }
+
+    private var parentAgentButton: some View {
+        ParentAgentTabButton(selected: parentAgentSelected) {
+            NotificationCenter.default.post(name: .showParentAgentHome, object: nil)
+        }
+        .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
+        .help("Parent Agent")
     }
 
     private func projectDragGesture(for project: Project) -> some Gesture {
@@ -205,8 +214,6 @@ private struct ProjectDragState {
 struct SidebarFooter: View {
     var expanded: Bool = false
     @Binding var showAIUsagePopover: Bool
-    @Binding var parentAgentSelected: Bool
-    let parentAgentEnabled: Bool
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
@@ -344,23 +351,8 @@ struct SidebarFooter: View {
             }
     }
 
-    private var parentAgentButton: some View {
-        IconButton(
-            symbol: "sparkles",
-            color: parentAgentSelected ? DroidTheme.fg : DroidTheme.fgMuted,
-            selected: parentAgentSelected,
-            accessibilityLabel: "Parent Agent"
-        ) {
-            NotificationCenter.default.post(name: .showParentAgentHome, object: nil)
-        }
-        .help("Parent Agent")
-    }
-
     private var collapsedFooter: some View {
         VStack(spacing: 6) {
-            if parentAgentEnabled {
-                parentAgentButton
-            }
             if usageEnabled {
                 aiUsageButton
             }
@@ -410,9 +402,6 @@ struct SidebarFooter: View {
 
             Spacer()
 
-            if parentAgentEnabled {
-                parentAgentButton
-            }
             if usageEnabled {
                 aiUsageButton
             }

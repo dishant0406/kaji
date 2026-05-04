@@ -308,11 +308,11 @@ struct MainWindow: View {
                 ZStack {
                     DroidTheme.bg
                     workspaceContent
-                        .opacity(showParentAgentHome ? 0 : 1)
-                        .allowsHitTesting(!showParentAgentHome)
-                        .environment(\.workspaceOccluded, showParentAgentHome)
+                        .opacity(parentAgentVisible ? 0 : 1)
+                        .allowsHitTesting(!parentAgentVisible)
+                        .environment(\.workspaceOccluded, parentAgentVisible)
                         .zIndex(0)
-                    if showParentAgentHome && parentAgentSettings.isEnabled {
+                    if parentAgentVisible {
                         ParentAgentHome { prompt, attachments in
                             handleParentAgentPrompt(prompt, attachments: attachments)
                         }
@@ -382,6 +382,10 @@ struct MainWindow: View {
             projectStore: projectStore,
             worktreeStore: worktreeStore
         )
+    }
+
+    private var parentAgentVisible: Bool {
+        showParentAgentHome && parentAgentSettings.isEnabled
     }
 
     @ViewBuilder
@@ -555,12 +559,15 @@ struct MainWindow: View {
                 projectID: project.id,
                 onSelectTab: { tabID in
                     appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tabID))
+                    showParentAgentHome = false
                 },
                 onCreateTab: {
                     appState.dispatch(.createTab(projectID: project.id, areaID: nil))
+                    showParentAgentHome = false
                 },
                 onCreateVCSTab: {
                     openVCS(for: project, preferredAreaID: areaID)
+                    showParentAgentHome = false
                 },
                 onCloseTab: { tabID in
                     appState.closeTab(tabID, areaID: areaID, projectID: project.id)
@@ -617,7 +624,6 @@ struct MainWindow: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    .allowsHitTesting(false)
                 }
                 .overlay(alignment: .trailing) {
                     HStack(spacing: 0) {

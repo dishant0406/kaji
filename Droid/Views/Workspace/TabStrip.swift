@@ -119,7 +119,7 @@ struct PaneTabStrip: View {
     private func tabRow(availableWidth: CGFloat) -> some View {
         let count = max(tabs.count, 1)
         let effectiveWidth = availableWidth > 0
-            ? max(0, availableWidth - addButtonWidth - 6)
+            ? max(0, availableWidth - trailingTabButtonWidth - 6)
             : TabCell.maxWidth * CGFloat(count)
         let perTabIdeal = effectiveWidth / CGFloat(count)
         let perTabWidth = max(TabCell.minWidth, min(TabCell.maxWidth, perTabIdeal))
@@ -174,6 +174,10 @@ struct PaneTabStrip: View {
             TabAddButton(action: onCreateTab)
                 .frame(width: addButtonWidth, height: 36, alignment: .center)
         }
+    }
+
+    private var trailingTabButtonWidth: CGFloat {
+        addButtonWidth
     }
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {

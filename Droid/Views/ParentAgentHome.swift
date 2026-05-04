@@ -45,10 +45,14 @@ struct ParentAgentHome: View {
         .background(DroidTheme.bg)
         .overlay { attachmentPreview }
         .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })
-        .onAppear { focused = true }
+        .onAppear { requestFocus() }
+        .onChange(of: isReady) { _, ready in
+            guard ready else { return }
+            requestFocus()
+        }
         .onChange(of: taskStore.activeTask?.status) { _, status in
             guard status == .completed || status == .waitingForUser else { return }
-            focused = true
+            requestFocus()
         }
     }
 
@@ -101,12 +105,12 @@ struct ParentAgentHome: View {
         prompt = ""
         attachments = []
         taskStore.clearActiveTask()
-        focused = true
+        requestFocus()
     }
 
     private func attach(_ newAttachments: [AskAttachment]) {
         attachments.append(contentsOf: newAttachments)
-        focused = true
+        requestFocus()
     }
 
     private func removeAttachment(_ attachment: AskAttachment) {
@@ -115,7 +119,12 @@ struct ParentAgentHome: View {
 
     private func stopParentAgent() {
         ParentAgentController.shared.stop()
-        focused = true
+        requestFocus()
+    }
+
+    private func requestFocus() {
+        focused = false
+        DispatchQueue.main.async { focused = true }
     }
 
     private func submit() {

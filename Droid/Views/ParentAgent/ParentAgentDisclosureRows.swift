@@ -7,7 +7,12 @@ struct ParentAgentThinkingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            disclosureButton(title: item.isComplete ? "Thinking" : "Thinking...", count: nil, isExpanded: isExpanded, action: onToggle)
+            disclosureButton(
+                title: item.isComplete ? "Thinking" : "Thinking...",
+                count: nil,
+                isExpanded: isExpanded,
+                action: onToggle
+            )
             if isExpanded, !item.detail.isEmpty {
                 ParentAgentMarkdownText(content: item.detail, size: 12, color: DroidTheme.fgDim)
                     .padding(.leading, 22)
@@ -19,12 +24,19 @@ struct ParentAgentThinkingRow: View {
 
 struct ParentAgentToolGroup: View {
     let items: [ParentAgentTimelineItem]
+    let isActive: Bool
     let isExpanded: Bool
     let onToggle: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            disclosureButton(title: "Tools", count: items.count, isExpanded: isExpanded, action: onToggle)
+            disclosureButton(
+                title: title,
+                count: isActive ? nil : items.count,
+                isExpanded: isExpanded,
+                isBusy: isActive,
+                action: onToggle
+            )
             if isExpanded {
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(items) { item in
@@ -35,6 +47,12 @@ struct ParentAgentToolGroup: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    private var title: String {
+        guard isActive, let item = items.last else { return "Tools" }
+        if item.detail.isEmpty { return item.title }
+        return "\(item.title): \(item.detail)"
     }
 }
 
@@ -61,13 +79,24 @@ private struct ParentAgentToolSummaryRow: View {
 }
 
 @MainActor
-private func disclosureButton(title: String, count: Int?, isExpanded: Bool, action: @escaping () -> Void) -> some View {
+private func disclosureButton(
+    title: String,
+    count: Int?,
+    isExpanded: Bool,
+    isBusy: Bool = false,
+    action: @escaping () -> Void
+) -> some View {
     Button(action: action) {
         HStack(spacing: 8) {
-            DroidIcon(systemName: isExpanded ? "chevron.down" : "chevron.right", size: 10)
-                .foregroundStyle(DroidTheme.fgDim)
+            if isBusy {
+                DroidSpinner(size: 10)
+            } else {
+                DroidIcon(systemName: isExpanded ? "chevron.down" : "chevron.right", size: 10)
+                    .foregroundStyle(DroidTheme.fgDim)
+            }
             Text(title)
                 .droidFont(size: 12, weight: .medium)
+                .lineLimit(1)
             if let count {
                 Text("\(count)")
                     .droidFont(size: 12)
