@@ -105,7 +105,7 @@ enum AskCommandDispatcher {
                 return resolvedCommand(saved)
             }
         }
-        return resolvedCommand(provider.rawValue)
+        return resolvedCommand(provider.definition?.defaultCommand ?? provider.rawValue)
     }
 
     private static func resolvedCommand(_ command: String) -> String {
@@ -119,37 +119,11 @@ enum AskCommandDispatcher {
     }
 
     static func startupCommand(for provider: AskProvider, prompt: String, model: String? = nil) -> String {
+        if provider == .terminal { return prompt }
+        guard let agent = CodingAgentRegistry.shared.agent(id: provider.rawValue) else { return "" }
         let base = launchCommand(for: provider)
         guard !base.isEmpty else { return "" }
-        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let modelArguments = modelArguments(for: provider, model: model)
-        guard !trimmed.isEmpty else { return ([base] + modelArguments).joined(separator: " ") }
-        let escapedPrompt = ShellEscaper.escape(trimmed)
-
-        switch provider {
-        case .terminal:
-            return prompt
-        case .codex,
-             .claude:
-            return ([base] + modelArguments + [escapedPrompt]).joined(separator: " ")
-        case .opencode:
-            return ([base] + modelArguments + ["--prompt", escapedPrompt]).joined(separator: " ")
-        }
-    }
-
-    private static func modelArguments(for provider: AskProvider, model: String?) -> [String] {
-        guard let model = model?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty else { return [] }
-        let escaped = ShellEscaper.escape(model)
-        switch provider {
-        case .codex:
-            return ["--model", escaped]
-        case .claude:
-            return ["--model", escaped]
-        case .opencode:
-            return ["--model", escaped]
-        case .terminal:
-            return []
-        }
+        return agent.startupCommand(baseCommand: base, prompt: prompt, model: model)
     }
 
     static func resumeCommand(for provider: AskProvider, history: AskHistoryOption, prompt: String) -> String {
@@ -157,40 +131,17 @@ enum AskCommandDispatcher {
     }
 
     static func resumeCommand(for provider: AskProvider, sessionID: String, prompt: String) -> String {
+        if provider == .terminal { return prompt.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard let agent = CodingAgentRegistry.shared.agent(id: provider.rawValue) else { return "" }
         let base = launchCommand(for: provider)
         guard !base.isEmpty else { return "" }
-        let escapedID = ShellEscaper.escape(sessionID)
-        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let escapedPrompt = trimmed.isEmpty ? nil : ShellEscaper.escape(trimmed)
-
-        switch provider {
-        case .terminal:
-            return trimmed
-        case .codex:
-            return [base, "resume", escapedID, escapedPrompt].compactMap(\.self).joined(separator: " ")
-        case .claude:
-            return [base, "--resume", escapedID, escapedPrompt].compactMap(\.self).joined(separator: " ")
-        case .opencode:
-            if let escapedPrompt {
-                return "\(base) --session \(escapedID) --prompt \(escapedPrompt)"
-            }
-            return "\(base) --session \(escapedID)"
-        }
+        return agent.resumeCommand(baseCommand: base, sessionID: sessionID, prompt: prompt)
     }
 
     static func adaptedPrompt(for request: AskDispatchRequest) -> String {
         let prompt = request.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let skill = request.skill else { return prompt }
 
-        switch request.provider {
-        case .claude:
-            return prompt.isEmpty ? "/\(skill.name)" : "/\(skill.name) \(prompt)"
-        case .codex,
-             .opencode:
-            let base = "Use the \(skill.name) skill. Follow the instructions in \(skill.path)."
-            return prompt.isEmpty ? base : "\(base) \(prompt)"
-        case .terminal:
-            return prompt
-        }
+        return CodingAgentRegistry.shared.agent(id: request.provider.rawValue)?.skillPrompt(skill: skill, prompt: prompt) ?? prompt
     }
 }

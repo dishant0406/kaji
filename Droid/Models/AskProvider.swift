@@ -1,86 +1,56 @@
 import Foundation
 
-enum AskProvider: String, CaseIterable, Hashable, Identifiable {
-    case terminal
-    case codex
-    case claude
-    case opencode
+struct AskProvider: Hashable, Identifiable {
+    static let terminal = AskProvider(id: "terminal", title: "Terminal", annotationValue: "terminal", iconName: "terminal")
+    static let codex = AskProvider(agentID: "codex")
+    static let claude = AskProvider(agentID: "claude")
+    static let opencode = AskProvider(agentID: "opencode")
 
-    var id: String { rawValue }
+    let id: String
+    let title: String
+    let annotationValue: String
+    let iconName: String
 
-    var title: String {
-        switch self {
-        case .terminal:
-            "Terminal"
-        case .codex:
-            "Codex"
-        case .claude:
-            "Claude Code"
-        case .opencode:
-            "OpenCode"
-        }
+    var rawValue: String { id }
+    var commandTitle: String { title }
+    var launcherID: String? { self == .terminal ? nil : id }
+    var definition: CodingAgentDefinition? { CodingAgentRegistry.shared.definition(id: id) }
+
+    static var allCases: [AskProvider] {
+        [.terminal] + CodingAgentRegistry.shared.definitions.map { AskProvider(definition: $0) }
     }
 
-    var annotationValue: String {
-        switch self {
-        case .terminal:
-            "terminal"
-        case .codex:
-            "codex"
-        case .claude:
-            "claude"
-        case .opencode:
-            "opencode"
-        }
+    init(id: String, title: String, annotationValue: String, iconName: String) {
+        self.id = id
+        self.title = title
+        self.annotationValue = annotationValue
+        self.iconName = iconName
     }
 
-    var commandTitle: String {
-        switch self {
-        case .terminal:
-            "Terminal"
-        case .codex:
-            "Codex"
-        case .claude:
-            "Claude Code"
-        case .opencode:
-            "OpenCode"
-        }
+    init(definition: CodingAgentDefinition) {
+        self.init(
+            id: definition.id,
+            title: definition.displayName,
+            annotationValue: definition.annotationValues.first ?? definition.id,
+            iconName: definition.iconName
+        )
     }
 
-    var launcherID: String? {
-        switch self {
-        case .terminal:
-            nil
-        case .codex:
-            "codex"
-        case .claude:
-            "claude"
-        case .opencode:
-            "opencode"
+    init(agentID: String) {
+        if let definition = CodingAgentRegistry.shared.definition(id: agentID) {
+            self.init(definition: definition)
+        } else {
+            self.init(id: agentID, title: agentID.capitalized, annotationValue: agentID, iconName: "sparkles")
         }
     }
 
     func matches(title: String) -> Bool {
-        switch self {
-        case .terminal:
-            Self.detect(from: title) == .terminal
-        default:
-            Self.detect(from: title) == self
-        }
+        Self.detect(from: title) == self
     }
 
     static func detect(from title: String) -> Self {
-        let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if normalized == "codex" || normalized.hasPrefix("codex ") {
-            return .codex
-        }
-        if normalized == "claude code" || normalized == "claude" || normalized.hasPrefix("claude code ") {
-            return .claude
-        }
-        if normalized == "opencode" || normalized.hasPrefix("opencode ") {
-            return .opencode
-        }
-        return .terminal
+        CodingAgentRegistry.shared.detect(title: title, startupCommand: nil, injectedCommand: nil, processNames: [])
+            .map(AskProvider.init(definition:)) ?? .terminal
     }
 
     static func detect(
@@ -89,45 +59,17 @@ enum AskProvider: String, CaseIterable, Hashable, Identifiable {
         injectedCommand: String?,
         processNames: [String] = []
     ) -> Self {
-        let fromTitle = detect(from: title)
-        if fromTitle != .terminal {
-            return fromTitle
-        }
-
-        let candidates = [startupCommand, injectedCommand].compactMap { commandBase(from: $0) } + processNames
-        for candidate in candidates {
-            let normalized = candidate.lowercased()
-            if normalized == "codex" {
-                return .codex
-            }
-            if normalized == "claude" || normalized == "claude-code" {
-                return .claude
-            }
-            if normalized == "opencode" {
-                return .opencode
-            }
-        }
-
-        return .terminal
+        CodingAgentRegistry.shared.detect(
+            title: title,
+            startupCommand: startupCommand,
+            injectedCommand: injectedCommand,
+            processNames: processNames
+        ).map(AskProvider.init(definition:)) ?? .terminal
     }
 
     static func resolveAnnotation(_ value: String) -> Self? {
-        let normalized = value.lowercased()
-        return allCases.first { provider in
-            provider.annotationValue == normalized ||
-                provider.rawValue == normalized ||
-                provider.title.lowercased() == normalized ||
-                (provider == .claude && ["claude-code", "claudecode"].contains(normalized)) ||
-                (provider == .terminal && ["term", "shell"].contains(normalized))
-        }
-    }
-
-    private static func commandBase(from command: String?) -> String? {
-        guard let command else { return nil }
-        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        guard let firstToken = trimmed.split(whereSeparator: \.isWhitespace).first else { return nil }
-        let token = String(firstToken).trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
-        return URL(fileURLWithPath: token).lastPathComponent
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if ["terminal", "term", "shell"].contains(normalized) { return .terminal }
+        return CodingAgentRegistry.shared.resolve(value).map(AskProvider.init(definition:))
     }
 }

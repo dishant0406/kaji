@@ -26,13 +26,16 @@ enum AskSkillCatalog {
     private static func roots(provider: AskProvider, projectPath: String?, env: [String: String]) -> [(url: URL, source: String)] {
         guard provider != .terminal else { return [] }
         let home = env["HOME"] ?? NSHomeDirectory()
+        let definition = provider.definition
         var roots: [(URL, String)] = []
         if let projectPath {
-            roots.append((URL(fileURLWithPath: projectPath).appendingPathComponent(".agents/skills", isDirectory: true), "Project"))
+            for directory in definition?.projectSkillDirectories ?? [".agents/skills"] {
+                roots.append((URL(fileURLWithPath: projectPath).appendingPathComponent(directory, isDirectory: true), "Project"))
+            }
         }
         roots.append((URL(fileURLWithPath: home).appendingPathComponent(".agents/skills", isDirectory: true), "Agents"))
-        if provider == .claude {
-            roots.append((URL(fileURLWithPath: home).appendingPathComponent(".claude/skills", isDirectory: true), "Claude"))
+        for directory in definition?.homeSkillDirectories ?? [] {
+            roots.append((URL(fileURLWithPath: home).appendingPathComponent(directory, isDirectory: true), provider.title))
         }
         return roots
     }

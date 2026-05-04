@@ -102,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProviderEventReceiver.shared.start()
         CodexSessionMonitor.shared.start()
         SystemWakeCoordinator.shared.start()
+        _ = CLILauncherSettings.shared
         AIProviderRegistry.shared.installAll()
         _ = AIUsageSettingsStore.isUsageEnabled()
     }

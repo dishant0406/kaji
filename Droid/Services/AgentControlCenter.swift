@@ -151,7 +151,7 @@ final class AgentControlCenter {
     }
 
     private func stopEscapeCount(for run: AgentRun) -> Int {
-        provider(for: run) == .opencode ? 2 : 1
+        CodingAgentRegistry.shared.definition(id: run.providerID)?.stopEscapeCount ?? 1
     }
 
     private func restart(runID: UUID) -> AgentRunControlResult {

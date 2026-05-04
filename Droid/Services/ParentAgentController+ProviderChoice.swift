@@ -22,7 +22,8 @@ extension ParentAgentController {
               let provider = AskProvider.resolveAnnotation(providerID)
         else { return false }
         let project = fields["project"]
-        let models = ParentAgentCodingProviderCatalog.modelOptions(for: provider)
+        let projectPath = projectPath(for: project)
+        let models = ParentAgentCodingProviderCatalog.modelOptions(for: provider, projectPath: projectPath)
         guard !models.isEmpty else {
             sendToolError(id: pending.toolID, message: "No models are available for \(provider.title).")
             store.clearPendingQuestion(taskID: pending.taskID)
@@ -46,11 +47,13 @@ extension ParentAgentController {
     }
 
     func providerChoiceOptions(project: String?, task: String) -> [ParentAgentQuestionOption] {
-        ParentAgentCodingProviderCatalog.availableProviders().map { provider in
-            ParentAgentQuestionOption(
+        let projectPath = projectPath(for: project)
+        return ParentAgentCodingProviderCatalog.availableProviders().map { provider in
+            let defaultModel = CodingAgentRegistry.shared.agent(id: provider.id)?.defaultModel(projectPath: projectPath)
+            return ParentAgentQuestionOption(
                 id: provider.id,
                 title: provider.title,
-                detail: provider.defaultModel.map { "Default: \($0)" } ?? "Choose a model next",
+                detail: defaultModel.map { "Default: \($0)" } ?? "Choose a model next",
                 value: providerStageValue(project: project, providerID: provider.id)
             )
         }
@@ -68,6 +71,11 @@ extension ParentAgentController {
             return "Choose a \(provider.title) model for `\(project)`"
         }
         return "Choose a \(provider.title) model"
+    }
+
+    private func projectPath(for project: String?) -> String? {
+        guard let projectStore, let appState else { return nil }
+        return resolveProject(project, projectStore: projectStore, appState: appState)?.path
     }
 
     private func providerStageValue(project: String?, providerID: String) -> String {

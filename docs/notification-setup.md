@@ -1,16 +1,16 @@
 # Notification Setup
 
-Droid's built-in Codex, Claude Code, and OpenCode integrations use the bundled `DroidHookClient` helper. The helper is a native Swift executable inside the app bundle and posts normalized events to Droid through macOS `DistributedNotificationCenter`.
+Droid's coding-agent integrations use the bundled `DroidHookClient` helper. The helper is a native Swift executable inside the app bundle and posts normalized events to Droid through macOS `DistributedNotificationCenter`.
 
 ## Built-In Integrations
 
-Toggle providers under **Settings -> Notifications**. Droid installs provider hooks that call the native helper directly:
+Toggle agents under **Settings -> Coding Agents**. Droid installs enabled agent hooks that call the native helper directly:
 
 ```bash
 /Applications/Droid.app/Contents/MacOS/DroidHookClient send custom "$DROID_PANE_ID" "Build finished" "All tests passed"
 ```
 
-Codex completion notifications come from Droid's native `CodexSessionMonitor`, which reads Codex session JSONL files in-process. Droid no longer installs Codex `notify` shell hooks.
+Built-in agent hook behavior lives under `Droid/Services/CodingAgents/<AgentName>/`. Codex completion notifications come from Droid's native `CodexSessionMonitor`, which reads Codex session JSONL files in-process. Droid no longer installs Codex `notify` shell hooks.
 
 ## Environment
 
@@ -62,7 +62,7 @@ Codex activity hooks use:
 "$DROID_HOOK_CLIENT_PATH" codex-activity codex stop
 ```
 
-OpenCode's plugin calls the same helper with `send` for activity, transcript, and completion events.
+OpenCode's plugin calls the same helper with `send` for activity, transcript, and completion events. New coding-agent modules should either install native hooks through their `CodingAgentModule` or call `send`/`codex-activity` directly from their own integration script.
 
 ## Delivery Settings
 

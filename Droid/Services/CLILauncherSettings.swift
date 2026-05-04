@@ -22,19 +22,21 @@ struct CLILauncherConfiguration: Identifiable, Equatable {
 final class CLILauncherSettings {
     static let shared = CLILauncherSettings()
 
-    static let catalog: [CLILauncherDefinition] = [
-        .init(id: "codex", displayName: "Codex", iconName: "codex", defaultCommand: "codex"),
-        .init(id: "claude", displayName: "Claude Code", iconName: "claude", defaultCommand: "claude"),
-        .init(id: "opencode", displayName: "OpenCode", iconName: "opencode", defaultCommand: "opencode"),
-    ]
+    static var catalog: [CLILauncherDefinition] {
+        CodingAgentRegistry.shared.definitions.map {
+            .init(id: $0.id, displayName: $0.displayName, iconName: $0.iconName, defaultCommand: $0.defaultCommand)
+        }
+    }
 
     private(set) var launchers: [CLILauncherConfiguration] = []
 
     @ObservationIgnored private let fileURL: URL
+    @ObservationIgnored private let syncProviderState: Bool
     @ObservationIgnored private var isBatchLoading = false
 
-    init(fileURL: URL = DroidFileStorage.fileURL(filename: "cli-launchers.json")) {
+    init(fileURL: URL = DroidFileStorage.fileURL(filename: "cli-launchers.json"), syncProviderState: Bool = true) {
         self.fileURL = fileURL
+        self.syncProviderState = syncProviderState
         load()
     }
 
@@ -45,7 +47,13 @@ final class CLILauncherSettings {
     func setEnabled(_ enabled: Bool, for id: String) {
         guard let index = launchers.firstIndex(where: { $0.id == id }) else { return }
         launchers[index].isEnabled = enabled
+        if syncProviderState {
+            provider(for: id)?.isEnabled = enabled
+        }
         save()
+        if syncProviderState {
+            AIProviderRegistry.shared.installAll()
+        }
     }
 
     func setCommand(_ command: String, for id: String) {
@@ -80,9 +88,22 @@ final class CLILauncherSettings {
                     : saved.command
             }
             isBatchLoading = false
+            syncProviders()
         } catch {
+            isBatchLoading = false
             cliLauncherLogger.error("Failed to load CLI launcher settings: \(error.localizedDescription)")
         }
+    }
+
+    private func syncProviders() {
+        guard syncProviderState else { return }
+        for launcher in launchers {
+            provider(for: launcher.id)?.isEnabled = launcher.isEnabled
+        }
+    }
+
+    private func provider(for id: String) -> AIProviderIntegration? {
+        AIProviderRegistry.shared.providers.first { $0.id == id }
     }
 
     private func save() {

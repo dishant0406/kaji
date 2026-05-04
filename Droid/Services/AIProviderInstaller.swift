@@ -1,22 +1,13 @@
 import Foundation
 
 enum AIProviderInstaller {
-    struct InstallCommand: Equatable {
+    struct InstallCommand: Hashable {
         let executable: String
         let arguments: [String]
     }
 
     static func command(for provider: AIProviderIntegration) -> InstallCommand? {
-        switch provider.id {
-        case "codex":
-            InstallCommand(executable: "/bin/zsh", arguments: ["-lc", "npm install -g @openai/codex"])
-        case "claude":
-            InstallCommand(executable: "/bin/zsh", arguments: ["-lc", "npm install -g @anthropic-ai/claude-code"])
-        case "opencode":
-            InstallCommand(executable: "/bin/zsh", arguments: ["-lc", "curl -fsSL https://opencode.ai/install | bash"])
-        default:
-            nil
-        }
+        CodingAgentRegistry.shared.definition(id: provider.id)?.installCommand
     }
 
     static func install(_ provider: AIProviderIntegration) async -> Result<Void, Error> {

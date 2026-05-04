@@ -81,8 +81,8 @@ enum ParentAgentPolicy {
             "multiple agents",
             "multi agent",
             "multi-agent",
-            "codex and claude",
-            "claude and codex",
+            "two agents",
+            "both agents",
             "run both",
         ]
         return markers.contains { text.contains($0) }

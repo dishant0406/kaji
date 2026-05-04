@@ -32,12 +32,7 @@ enum NotificationEventNormalizer {
         case .osc:
             .terminal
         case let .aiProvider(id):
-            switch id {
-            case "codex": .codex
-            case "claude": .claude
-            case "opencode": .opencode
-            default: .custom
-            }
+            CodingAgentRegistry.shared.definition(id: id).map { NotificationRouteSource(rawValue: $0.displayName) } ?? .custom
         case .socket:
             .custom
         }
@@ -59,7 +54,7 @@ enum NotificationEventNormalizer {
         {
             return .attention
         }
-        if source == .codex || source == .claude || source == .opencode {
+        if isCodingAgent(source) {
             return .completed
         }
         return .info
@@ -83,7 +78,7 @@ enum NotificationEventNormalizer {
         title: String,
         project: String
     ) -> String {
-        guard source == .codex || source == .claude || source == .opencode,
+        guard isCodingAgent(source),
               !project.isEmpty,
               !title.contains(project)
         else {
@@ -91,5 +86,9 @@ enum NotificationEventNormalizer {
         }
 
         return title + " · " + project
+    }
+
+    private static func isCodingAgent(_ source: NotificationRouteSource) -> Bool {
+        CodingAgentRegistry.shared.definitions.contains { $0.displayName == source.rawValue }
     }
 }

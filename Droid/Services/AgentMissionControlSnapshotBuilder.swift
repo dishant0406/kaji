@@ -31,27 +31,11 @@ enum AgentMissionControlSnapshotBuilder {
     }
 
     static func providerName(for providerID: String) -> String {
-        switch providerID {
-        case "codex":
-            "Codex"
-        case "claude":
-            "Claude Code"
-        case "opencode":
-            "OpenCode"
-        default:
-            providerID.isEmpty ? "Agent" : providerID.capitalized
-        }
+        CodingAgentRegistry.shared.definition(id: providerID)?.displayName ?? (providerID.isEmpty ? "Agent" : providerID.capitalized)
     }
 
     static func providerIconName(for providerID: String) -> String {
-        switch providerID {
-        case "codex",
-             "claude",
-             "opencode":
-            providerID
-        default:
-            "sparkles"
-        }
+        CodingAgentRegistry.shared.definition(id: providerID)?.iconName ?? "sparkles"
     }
 
     static func status(for notification: DroidNotification, now: Date = Date()) -> AgentMissionControlStatus {
