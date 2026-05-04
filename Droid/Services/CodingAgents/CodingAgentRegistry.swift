@@ -6,11 +6,13 @@ final class CodingAgentRegistry: @unchecked Sendable {
     private let codex = CodexAgentModule()
     private let claude = ClaudeCodeAgentModule()
     private let openCode = OpenCodeAgentModule()
+    private let pi = PiAgentModule()
 
     lazy var agents: [any CodingAgentModule] = [
         codex,
         claude,
         openCode,
+        pi,
     ]
 
     private init() {}

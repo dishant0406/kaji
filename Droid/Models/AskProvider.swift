@@ -5,6 +5,7 @@ struct AskProvider: Hashable, Identifiable {
     static let codex = AskProvider(agentID: "codex")
     static let claude = AskProvider(agentID: "claude")
     static let opencode = AskProvider(agentID: "opencode")
+    static let pi = AskProvider(agentID: "pi")
 
     let id: String
     let title: String
