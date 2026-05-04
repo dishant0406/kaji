@@ -70,7 +70,7 @@ struct DroidHookClient {
         guard args.count >= 2 else { return }
         let provider = args[0]
         let state = args[1]
-        guard ["codex", "claude", "opencode"].contains(provider), ["start", "stop"].contains(state) else { return }
+        guard !provider.isEmpty, ["start", "stop"].contains(state) else { return }
         if provider == "codex", let object = HookJSONExtractor.object(from: input), HookJSONExtractor.hasTruthyKey(object, keys: ["agent_id", "agent_type"]) {
             return
         }

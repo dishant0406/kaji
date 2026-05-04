@@ -12,7 +12,7 @@ struct AgentSettingsView: View {
             SettingsSection(
                 "Parent Agent",
                 footer: "The parent model plans and calls Droid tools. "
-                    + "Worker agents such as Codex, Claude Code, and OpenCode remain separate."
+                    + "Worker agents are enabled in Coding Agents."
             ) {
                 SettingsToggleRow(label: "Enable parent agent", isOn: parentAgentEnabled)
 

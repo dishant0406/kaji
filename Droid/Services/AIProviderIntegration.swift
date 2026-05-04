@@ -24,7 +24,10 @@ extension AIProviderIntegration {
     }
 
     func isToolInstalled() -> Bool {
-        AIProviderExecutableLocator.isInstalled(executableNames: executableNames)
+        AIProviderExecutableLocator.isInstalled(
+            executableNames: executableNames,
+            extraDirectories: (self as? any CodingAgentModule)?.definition.executableSearchDirectories ?? []
+        )
     }
 }
 
@@ -32,19 +35,13 @@ extension AIProviderIntegration {
 final class AIProviderRegistry {
     static let shared = AIProviderRegistry()
 
-    private let codexProvider = CodexProvider()
-    private let claudeCodeProvider = ClaudeCodeProvider()
-    private let openCodeProvider = OpenCodeProvider()
+    var providers: [AIProviderIntegration] {
+        CodingAgentRegistry.shared.agents.map { $0 as AIProviderIntegration }
+    }
 
-    lazy var providers: [AIProviderIntegration] = [
-        codexProvider,
-        claudeCodeProvider,
-        openCodeProvider,
-    ]
-
-    lazy var usageProviders: [any AIUsageProvider] = [
-        codexProvider,
-        claudeCodeProvider,
+    lazy var usageProviders: [any AIUsageProvider] = CodingAgentRegistry.shared.agents.compactMap { module in
+        (module as? any CodingAgentModule & AIUsageProvider).map(CodingAgentUsageAdapter.init(module:))
+    } + [
         CopilotUsageProvider(),
         AmpUsageProvider(),
         ZaiUsageProvider(),

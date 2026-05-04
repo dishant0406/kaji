@@ -5,14 +5,16 @@ enum AIProviderExecutableLocator {
         executableNames: [String],
         env: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        extraDirectories: [String] = []
     ) -> Bool {
         executableNames.contains { name in
             guard let path = resolvePath(
                 for: name,
                 env: env,
                 homeDirectory: homeDirectory,
-                fileManager: fileManager
+                fileManager: fileManager,
+                extraDirectories: extraDirectories
             )
             else {
                 return false
@@ -25,9 +27,16 @@ enum AIProviderExecutableLocator {
         for executableName: String,
         env: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        extraDirectories: [String] = []
     ) -> String? {
-        for path in candidatePaths(for: executableName, env: env, homeDirectory: homeDirectory, fileManager: fileManager)
+        for path in candidatePaths(
+            for: executableName,
+            env: env,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager,
+            extraDirectories: extraDirectories
+        )
             where fileManager.isExecutableFile(atPath: path)
         {
             return path
@@ -39,7 +48,8 @@ enum AIProviderExecutableLocator {
         for executableName: String,
         env: [String: String],
         homeDirectory: String,
-        fileManager: FileManager
+        fileManager: FileManager,
+        extraDirectories: [String] = []
     ) -> [String] {
         var paths = [String]()
         let pathVariable = env["PATH"]?.split(separator: ":").map(String.init) ?? []
@@ -47,7 +57,9 @@ enum AIProviderExecutableLocator {
             paths.append((directory as NSString).appendingPathComponent(executableName))
         }
 
-        let staticDirectories = [
+        let staticDirectories = extraDirectories.map { directory in
+            directory.hasPrefix("/") ? directory : "\(homeDirectory)/\(directory)"
+        } + [
             "\(homeDirectory)/.opencode/bin",
             "\(homeDirectory)/.local/bin",
             "\(homeDirectory)/.volta/bin",

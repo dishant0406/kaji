@@ -32,7 +32,7 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
         case .worktree:
             "Target a specific worktree inside the selected project"
         case .provider:
-            "Switch between Terminal, Codex, Claude Code, or OpenCode"
+            "Switch between Terminal and enabled coding agents"
         case .session:
             "Pick Best Match, Existing Session, or New Terminal"
         }

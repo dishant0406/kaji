@@ -3,7 +3,7 @@ import SwiftUI
 private enum SettingsPane: String, CaseIterable, Identifiable {
     case general = "General"
     case appearance = "Appearance"
-    case cli = "CLI"
+    case cli = "Coding Agents"
     case agents = "Agents"
     case editor = "Editor"
     case shortcuts = "Shortcuts"

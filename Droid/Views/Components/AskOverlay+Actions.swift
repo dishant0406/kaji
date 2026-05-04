@@ -330,7 +330,11 @@ extension AskOverlay {
     }
 
     func startScript(_ script: DroidKitScript) {
-        guard let plan = try? DroidKitScriptPlanner.plan(script: script, project: selectedProject, worktree: selectedWorktree) else { return }
+        guard let plan = try? DroidKitScriptPlanner.plan(
+            script: script,
+            project: selectedProject,
+            worktree: selectedWorktree
+        ) else { return }
         scriptPlan = plan
         scriptRunner.run(plan)
     }
@@ -591,7 +595,7 @@ extension AskOverlay {
             return annotated
         }
         if task != nil, provider == .terminal {
-            return .opencode
+            return CLILauncherSettings.shared.enabledLaunchers.first.map { AskProvider(agentID: $0.id) } ?? .terminal
         }
         return provider
     }

@@ -1,15 +1,34 @@
 import Foundation
 
 struct NotificationRoutingRule: Identifiable, Codable, Equatable {
-    enum SourceFilter: String, CaseIterable, Codable, Identifiable {
-        case any = "Any Source"
-        case codex = "Codex"
-        case claude = "Claude Code"
-        case opencode = "OpenCode"
-        case terminal = "Terminal"
-        case custom = "Custom"
+    struct SourceFilter: RawRepresentable, CaseIterable, Codable, Hashable, Identifiable {
+        static let any = SourceFilter(rawValue: "Any Source")
+        static let codex = SourceFilter(rawValue: "Codex")
+        static let claude = SourceFilter(rawValue: "Claude Code")
+        static let opencode = SourceFilter(rawValue: "OpenCode")
+        static let terminal = SourceFilter(rawValue: "Terminal")
+        static let custom = SourceFilter(rawValue: "Custom")
 
+        let rawValue: String
         var id: String { rawValue }
+
+        static var allCases: [SourceFilter] {
+            [.any] + CodingAgentRegistry.shared.definitions.map { SourceFilter(rawValue: $0.displayName) } + [.terminal, .custom]
+        }
+
+        init(rawValue: String) {
+            self.rawValue = rawValue
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            rawValue = try container.decode(String.self)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(rawValue)
+        }
     }
 
     enum KindFilter: String, CaseIterable, Codable, Identifiable {
