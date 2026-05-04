@@ -13,6 +13,10 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
     case taskDelete = "td"
     case projectAdd = "pa"
     case attach = "attach"
+    case execute = "x"
+    case executeAdd = "xa"
+    case executeEdit = "xe"
+    case executeDelete = "xd"
 
     var token: String {
         ":\(rawValue):"
@@ -44,6 +48,14 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
             "Project Add"
         case .attach:
             "Attach"
+        case .execute:
+            "Run Script"
+        case .executeAdd:
+            "Add Script"
+        case .executeEdit:
+            "Edit Script"
+        case .executeDelete:
+            "Delete Script"
         }
     }
 

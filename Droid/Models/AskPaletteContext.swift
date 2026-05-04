@@ -11,6 +11,7 @@ struct AskPaletteContext {
     let historyOptions: [AskHistoryOption]
     let skillOptions: [AskSkillOption]
     let taskRecipes: [AskTaskRecipe]
+    let scripts: [DroidKitScript]
     let mentionOptions: [AskMentionOption]
     let directoryOptions: [AskDirectoryOption]
     let projectName: String
@@ -27,6 +28,7 @@ struct AskPaletteContext {
         historyOptions: [AskHistoryOption],
         skillOptions: [AskSkillOption],
         taskRecipes: [AskTaskRecipe] = AskTaskRecipe.builtIns,
+        scripts: [DroidKitScript] = [],
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
         projectName: String,
@@ -42,6 +44,7 @@ struct AskPaletteContext {
         self.historyOptions = historyOptions
         self.skillOptions = skillOptions
         self.taskRecipes = taskRecipes
+        self.scripts = scripts
         self.mentionOptions = mentionOptions
         self.directoryOptions = directoryOptions
         self.projectName = projectName

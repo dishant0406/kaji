@@ -32,10 +32,20 @@ extension AskOverlay {
             saveTaskForm()
             return
         }
+        if isScriptFormVisible {
+            saveScriptForm()
+            return
+        }
+        if pendingRiskyScript != nil {
+            confirmPendingScript()
+            return
+        }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
         fieldText = latestFieldText
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
+
+        if handleResolvedScriptAnnotation(parsed) { return }
 
         if AskMentionParser.activeMention(in: latestFieldText) != nil {
             confirmHighlight()
@@ -111,6 +121,12 @@ extension AskOverlay {
             openTaskForm()
         case .attach:
             attachments.append(contentsOf: AskAttachmentLoader.openPanel())
+        case .executeAdd:
+            openScriptForm()
+        case .execute,
+             .executeEdit,
+             .executeDelete:
+            confirmHighlight()
         case .taskEdit,
              .taskDelete,
              .projectAdd:
@@ -125,6 +141,26 @@ extension AskOverlay {
             return false
         }
         return true
+    }
+
+    func handleResolvedScriptAnnotation(_ parsed: AskParsedInput) -> Bool {
+        if let slug = parsed.annotations[.execute], let script = scriptStore.resolve(slug: slug, projectID: projectID) {
+            runScript(script)
+            return true
+        }
+        if parsed.annotations[.executeAdd] != nil {
+            openScriptForm()
+            return true
+        }
+        if let slug = parsed.annotations[.executeEdit], let script = scriptStore.resolve(slug: slug, projectID: projectID) {
+            openScriptForm(script: script)
+            return true
+        }
+        if let slug = parsed.annotations[.executeDelete], let script = scriptStore.resolve(slug: slug, projectID: projectID) {
+            scriptStore.delete(script)
+            return true
+        }
+        return false
     }
 
     func confirmHighlight() {
@@ -166,6 +202,13 @@ extension AskOverlay {
             fieldText = "\(AskAnnotationKey.projectAdd.token)\(directory.path)/"
         case .attach:
             attachments.append(contentsOf: AskAttachmentLoader.openPanel())
+        case let .runScript(script):
+            runScript(script)
+        case let .openScriptForm(script):
+            openScriptForm(script: script)
+        case let .deleteScript(script):
+            scriptStore.delete(script)
+            highlightedIndex = entries.isEmpty ? nil : 0
         case .launchProvider:
             submit()
         case .submit:
@@ -227,6 +270,7 @@ extension AskOverlay {
     }
 
     func openTaskForm() {
+        isScriptFormVisible = false
         isTaskFormVisible = true
         editingTaskID = nil
         taskFormName = ""
@@ -245,6 +289,61 @@ extension AskOverlay {
     func closeTaskForm() {
         isTaskFormVisible = false
         editingTaskID = nil
+    }
+
+    func openScriptForm(script: DroidKitScript? = nil) {
+        isTaskFormVisible = false
+        isScriptFormVisible = true
+        scriptDraft = script.map(DroidKitScriptDraft.init(script:)) ?? DroidKitScriptDraft()
+        if script == nil {
+            scriptDraft.scope = projectID == nil ? .global : .project
+        }
+    }
+
+    func closeScriptForm() {
+        isScriptFormVisible = false
+        scriptDraft = DroidKitScriptDraft()
+    }
+
+    func saveScriptForm() {
+        scriptStore.save(scriptDraft, projectID: projectID)
+        closeScriptForm()
+        highlightedIndex = entries.isEmpty ? nil : 0
+    }
+
+    func runScript(_ script: DroidKitScript) {
+        if script.confirmation == .always || script.confirmation == .risky && DroidKitScriptPlanner.isRisky(script) {
+            pendingRiskyScript = script
+            return
+        }
+        startScript(script)
+    }
+
+    func confirmPendingScript() {
+        guard let script = pendingRiskyScript else { return }
+        pendingRiskyScript = nil
+        startScript(script)
+    }
+
+    func cancelPendingScript() {
+        pendingRiskyScript = nil
+    }
+
+    func startScript(_ script: DroidKitScript) {
+        guard let plan = try? DroidKitScriptPlanner.plan(script: script, project: selectedProject, worktree: selectedWorktree) else { return }
+        scriptPlan = plan
+        scriptRunner.run(plan)
+    }
+
+    func stopScriptRun() {
+        scriptRunner.stop()
+        finishScriptRun()
+    }
+
+    func finishScriptRun() {
+        scriptRunner.stop()
+        scriptPlan = nil
+        onDismiss()
     }
 
     func saveTaskForm() {
@@ -305,6 +404,7 @@ extension AskOverlay {
             historyOptions: historyOptions,
             skillOptions: skillOptions,
             taskRecipes: taskRecipeStore.recipes(for: projectID),
+            scripts: scriptStore.visibleScripts(projectID: projectID),
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
@@ -350,6 +450,9 @@ extension AskOverlay {
              .openTaskForm,
              .editTaskRecipe,
              .deleteTaskRecipe,
+             .runScript,
+             .openScriptForm,
+             .deleteScript,
              .mention,
              .directory,
              .attach,
@@ -417,7 +520,11 @@ extension AskOverlay {
              .taskEdit,
              .taskDelete,
              .projectAdd,
-             .attach:
+             .attach,
+             .execute,
+             .executeAdd,
+             .executeEdit,
+             .executeDelete:
             return nil
         }
     }
@@ -538,7 +645,11 @@ extension AskOverlay {
              .taskEdit,
              .taskDelete,
              .projectAdd,
-             .attach:
+             .attach,
+             .execute,
+             .executeAdd,
+             .executeEdit,
+             .executeDelete:
             return false
         case .provider,
              .mode,

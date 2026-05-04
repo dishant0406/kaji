@@ -15,6 +15,7 @@ enum AskPaletteEntries {
         let historyOptions: [AskHistoryOption]
         let skillOptions: [AskSkillOption]
         let taskRecipes: [AskTaskRecipe]
+        let scripts: [DroidKitScript]
         let directoryOptions: [AskDirectoryOption]
     }
 
@@ -46,6 +47,20 @@ enum AskPaletteEntries {
             return directoryEntries(annotation.directoryOptions)
         case .attach:
             return [.init(action: .attach, title: "Attach", detail: "Pick files, folders, or images", annotation: "Enter")]
+        case .execute:
+            return filteredScripts(annotation.scripts, query: annotation.active.value).map {
+                .init(action: .runScript($0), title: $0.title, detail: scriptDetail($0), annotation: $0.slug)
+            }
+        case .executeAdd:
+            return [.init(action: .openScriptForm(nil), title: "Add script", detail: "Create a DroidKit script in ~/.droidkit", annotation: "Enter")]
+        case .executeEdit:
+            return filteredScripts(annotation.scripts, query: annotation.active.value).map {
+                .init(action: .openScriptForm($0), title: $0.title, detail: scriptDetail($0), annotation: $0.slug)
+            }
+        case .executeDelete:
+            return filteredScripts(annotation.scripts, query: annotation.active.value).map {
+                .init(action: .deleteScript($0), title: $0.title, detail: scriptDetail($0), annotation: $0.slug)
+            }
         }
     }
 
@@ -76,6 +91,7 @@ enum AskPaletteEntries {
                 historyOptions: context.historyOptions,
                 skillOptions: context.skillOptions,
                 taskRecipes: context.taskRecipes,
+                scripts: context.scripts,
                 directoryOptions: context.directoryOptions
             ))
         }
@@ -150,6 +166,16 @@ enum AskPaletteEntries {
     private static func filteredProjects(_ projects: [Project], query: String) -> [AskPaletteEntry] {
         let filtered = projects.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         return filtered.map { .init(action: .project($0), title: $0.name, detail: $0.path, annotation: nil) }
+    }
+
+    private static func filteredScripts(_ scripts: [DroidKitScript], query: String) -> [DroidKitScript] {
+        scripts.filter { script in
+            query.isEmpty || script.slug.localizedCaseInsensitiveContains(query) || script.title.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private static func scriptDetail(_ script: DroidKitScript) -> String {
+        "\(script.scope.rawValue.capitalized) · \(script.kind.rawValue) · \(script.command)"
     }
 
     private static func filteredWorktrees(_ worktrees: [Worktree], query: String) -> [AskPaletteEntry] {

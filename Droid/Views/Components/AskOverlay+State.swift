@@ -17,6 +17,7 @@ extension AskOverlay {
             historyOptions: historyOptions,
             skillOptions: skillOptions,
             taskRecipes: taskRecipeStore.recipes(for: projectID),
+            scripts: scriptStore.visibleScripts(projectID: projectID),
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
@@ -105,6 +106,9 @@ extension AskOverlay {
 
     var footerText: String {
         if activeAnnotation != nil {
+            if activeAnnotation?.key == .execute {
+                return "Enter runs the highlighted script. Esc closes."
+            }
             return "Enter applies the highlighted option. Esc closes."
         }
         if AskMentionParser.activeMention(in: fieldText) != nil {

@@ -111,6 +111,10 @@ private struct AskPaletteRow: View {
             "folder"
         case .attach:
             "paperclip"
+        case .runScript,
+             .openScriptForm,
+             .deleteScript:
+            "chevron.left.forwardslash.chevron.right"
         case .launchProvider:
             "play"
         case .submit:
