@@ -3,6 +3,7 @@ struct ParentAgentTimelineRow: View {
     let item: ParentAgentTimelineItem
     @State private var runStore = AgentRunStore.shared
     @State private var feedStore = ChildAgentFeedStore.shared
+    @State private var previewAttachment: AskAttachment?
 
     var body: some View {
         switch item.kind {
@@ -10,6 +11,7 @@ struct ParentAgentTimelineRow: View {
             userRow
                 .padding(.top, 18)
                 .padding(.bottom, 10)
+                .overlay { attachmentPreview }
         case .assistant:
             assistantRow
                 .padding(.top, 4)
@@ -33,11 +35,25 @@ struct ParentAgentTimelineRow: View {
     private var userRow: some View {
         HStack(alignment: .top) {
             Spacer(minLength: 90)
-            ParentAgentMarkdownText(content: item.detail, color: DroidTheme.fg)
+            VStack(alignment: .leading, spacing: 8) {
+                if !item.detail.isEmpty {
+                    ParentAgentMarkdownText(content: item.detail, color: DroidTheme.fg)
+                }
+                if !item.attachments.isEmpty {
+                    ParentAgentTimelineAttachmentStrip(attachments: item.attachments) { previewAttachment = $0 }
+                }
+            }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(DroidTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
                 .frame(maxWidth: 520, alignment: .trailing)
+        }
+    }
+
+    @ViewBuilder
+    private var attachmentPreview: some View {
+        if let previewAttachment {
+            AskAttachmentPreviewOverlay(attachment: previewAttachment) { self.previewAttachment = nil }
         }
     }
 
@@ -46,8 +62,16 @@ struct ParentAgentTimelineRow: View {
             DroidIcon(systemName: "sparkles", size: 13)
                 .foregroundStyle(DroidTheme.fgDim)
                 .frame(width: 18, height: 20)
-            ParentAgentMarkdownText(content: item.detail, color: DroidTheme.fgMuted)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if item.isComplete {
+                ParentAgentMarkdownText(content: item.detail, color: DroidTheme.fgMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(item.detail)
+                    .droidFont(size: 13)
+                    .foregroundStyle(DroidTheme.fgMuted)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 

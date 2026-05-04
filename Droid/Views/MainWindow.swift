@@ -313,8 +313,8 @@ struct MainWindow: View {
                         .environment(\.workspaceOccluded, showParentAgentHome)
                         .zIndex(0)
                     if showParentAgentHome && parentAgentSettings.isEnabled {
-                        ParentAgentHome { prompt in
-                            handleParentAgentPrompt(prompt)
+                        ParentAgentHome { prompt, attachments in
+                            handleParentAgentPrompt(prompt, attachments: attachments)
                         }
                         .zIndex(1)
                     }
@@ -366,13 +366,18 @@ struct MainWindow: View {
         }
     }
 
-    private func handleParentAgentPrompt(_ prompt: String) {
+    private func handleParentAgentPrompt(_ prompt: String, attachments: [AskAttachment]) {
         if ParentAgentController.shared.hasPendingQuestion {
-            ParentAgentController.shared.answerPendingQuestion(prompt)
+            ParentAgentController.shared.answerPendingQuestion(
+                ParentAgentAttachmentFormatter.prompt(prompt, attachments: attachments),
+                displayText: prompt.isEmpty ? "Attached files" : prompt,
+                attachments: ParentAgentAttachmentFormatter.contexts(attachments)
+            )
             return
         }
         ParentAgentController.shared.submit(
             prompt: prompt,
+            attachments: attachments,
             appState: appState,
             projectStore: projectStore,
             worktreeStore: worktreeStore

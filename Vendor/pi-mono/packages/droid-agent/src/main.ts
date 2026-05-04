@@ -9,16 +9,34 @@ import {
 	type AgentToolResult,
 	type ThinkingLevel,
 } from "@mariozechner/pi-agent-core";
-import { type Api, getEnvApiKey, getModels, type KnownProvider, type Model, Type } from "@mariozechner/pi-ai";
+import {
+	type Api,
+	getEnvApiKey,
+	getModels,
+	type ImageContent,
+	type KnownProvider,
+	type Model,
+	type TextContent,
+	Type,
+} from "@mariozechner/pi-ai";
 import { getOAuthApiKey, type OAuthCredentials } from "@mariozechner/pi-ai/oauth";
 
 type ProtocolMessage = {
 	type: string;
 	taskID?: string;
 	prompt?: string;
+	attachments?: ProtocolAttachment[];
 	id?: string;
 	ok?: boolean;
 	result?: unknown;
+};
+
+type ProtocolAttachment = {
+	name: string;
+	path: string;
+	kind: string;
+	mimeType: string;
+	data?: string;
 };
 
 type PendingTool = {
@@ -134,6 +152,43 @@ function droidProtocolToolName(name: string) {
 function stringifyResult(result: unknown) {
 	if (typeof result === "string") return result;
 	return JSON.stringify(result, null, 2);
+}
+
+function attachmentSummary(attachments: ProtocolAttachment[]) {
+	if (attachments.length === 0) return "";
+	return [
+		"Attached files:",
+		...attachments.map(
+			(attachment) => `- ${attachment.name} (${attachment.kind}, ${attachment.mimeType}) at ${attachment.path}`,
+		),
+	].join("\n");
+}
+
+function imageContent(attachment: ProtocolAttachment): ImageContent | undefined {
+	if (attachment.kind !== "image") return undefined;
+	try {
+		return {
+			type: "image",
+			data: attachment.data ?? readFileSync(attachment.path).toString("base64"),
+			mimeType: attachment.mimeType,
+		};
+	} catch {
+		return undefined;
+	}
+}
+
+function promptContent(message: ProtocolMessage): Array<TextContent | ImageContent> {
+	const prompt = message.prompt?.trim() || "Please review the attached files.";
+	const attachments = message.attachments ?? [];
+	const summary = attachmentSummary(attachments);
+	const content: Array<TextContent | ImageContent> = [
+		{ type: "text", text: summary ? `${prompt}\n\n${summary}` : prompt },
+	];
+	for (const attachment of attachments) {
+		const image = imageContent(attachment);
+		if (image) content.push(image);
+	}
+	return content;
 }
 
 function callDroidTool(name: string, args: Record<string, unknown>, taskID: string | undefined): Promise<unknown> {
@@ -408,7 +463,7 @@ async function runPrompt(message: ProtocolMessage) {
 	const sessionID = message.taskID ?? "default";
 	const agent = sessions.get(sessionID) ?? createAgent(model);
 	sessions.set(sessionID, agent);
-	await agent.prompt(message.prompt ?? "");
+	await agent.prompt({ role: "user", content: promptContent(message), timestamp: Date.now() });
 
 	for (let i = 0; i < 24 && supervisedRunIDs(sessionID).length > 0; i++) {
 		agent.followUp({

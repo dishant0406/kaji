@@ -6,32 +6,36 @@ struct ParentAgentComposer: View {
     let placeholder: String
     let isBusy: Bool
     let isReady: Bool
-    let onNewTask: () -> Void
+    let hasAttachments: Bool
+    let onAttach: ([AskAttachment]) -> Void
     let onStop: () -> Void
     let onSubmit: () -> Void
     @State private var settings = ParentAgentSettingsStore.shared
 
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: onNewTask, label: {
+            Button(action: attachFromPanel, label: {
                 DroidIcon(systemName: "plus", size: 14)
                     .frame(width: 24, height: 24)
             })
             .buttonStyle(.plain)
             .foregroundStyle(DroidTheme.fgMuted)
-            .help("New task")
+            .disabled(isBusy || !isReady)
+            .help("Attach files")
 
             Rectangle()
                 .fill(DroidTheme.borderStrong.opacity(0.55))
                 .frame(width: 1, height: 22)
 
-            TextField(placeholder, text: $prompt, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1 ... 3)
-                .droidFont(size: 13)
-                .foregroundStyle(DroidTheme.fg)
-                .focused(isFocused)
-                .onSubmit(onSubmit)
+            ParentAgentPromptTextView(
+                text: $prompt,
+                isFocused: isFocused,
+                placeholder: placeholder,
+                isEnabled: !isBusy && isReady,
+                onSubmit: onSubmit,
+                onAttach: onAttach
+            )
+                .frame(minHeight: 20, maxHeight: 62)
                 .disabled(isBusy || !isReady)
 
             if isBusy {
@@ -56,7 +60,7 @@ struct ParentAgentComposer: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(sendForeground)
-            .disabled(trimmedPrompt.isEmpty || isBusy || !isReady)
+            .disabled(!canSubmit || isBusy || !isReady)
         }
         .padding(.leading, 12)
         .padding(.trailing, 8)
@@ -73,14 +77,17 @@ struct ParentAgentComposer: View {
                 variant: .plain
             )
             .disabled(!settings.thinkingSupported || isBusy)
-
-            Button(action: {}, label: {
-                DroidIcon(systemName: "mic", size: 13)
-                    .frame(width: 24, height: 24)
-            })
-            .buttonStyle(.plain)
-            .foregroundStyle(DroidTheme.fgMuted)
         }
+    }
+
+    private var canSubmit: Bool {
+        !trimmedPrompt.isEmpty || hasAttachments
+    }
+
+    private func attachFromPanel() {
+        let selected = AskAttachmentLoader.openPanel()
+        guard !selected.isEmpty else { return }
+        onAttach(selected)
     }
 
     private var trimmedPrompt: String {
@@ -88,11 +95,11 @@ struct ParentAgentComposer: View {
     }
 
     private var sendBackground: Color {
-        trimmedPrompt.isEmpty || !isReady ? DroidTheme.surfaceMuted : DroidTheme.fg
+        !canSubmit || !isReady ? DroidTheme.surfaceMuted : DroidTheme.fg
     }
 
     private var sendForeground: Color {
-        trimmedPrompt.isEmpty ? DroidTheme.fgDim : DroidTheme.bg
+        canSubmit ? DroidTheme.bg : DroidTheme.fgDim
     }
 
     private var thinkingOptions: [DroidSelectOption<String>] {

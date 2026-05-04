@@ -32,29 +32,37 @@ final class ParentAgentTaskStore {
         )
     }
 
-    func start(prompt: String) -> ParentAgentTask {
-        let task = ParentAgentTask(prompt: prompt)
+    func start(prompt: String, attachments: [ParentAgentAttachmentContext] = []) -> ParentAgentTask {
+        let task = ParentAgentTask(prompt: prompt, attachments: attachments)
         tasks.append(task)
         activeTaskID = task.id
         save()
         return task
     }
 
-    func continueActiveTask(prompt: String) -> ParentAgentTask? {
+    func continueActiveTask(prompt: String, attachments: [ParentAgentAttachmentContext] = []) -> ParentAgentTask? {
         guard let activeTaskID,
               let index = tasks.firstIndex(where: { $0.id == activeTaskID })
         else { return nil }
         tasks[index].prompt = prompt
         tasks[index].status = .running
-        tasks[index].timeline.append(ParentAgentTimelineItem(kind: .user, title: "You", detail: prompt))
+        finishStreamingAssistant(index: index)
+        tasks[index].timeline.append(ParentAgentTimelineItem(kind: .user, title: "You", detail: prompt, attachments: attachments))
         tasks[index].updatedAt = Date()
         save()
         return tasks[index]
     }
 
-    func append(taskID: UUID, kind: ParentAgentTimelineKind, title: String, detail: String) {
+    func append(
+        taskID: UUID,
+        kind: ParentAgentTimelineKind,
+        title: String,
+        detail: String,
+        attachments: [ParentAgentAttachmentContext] = []
+    ) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
-        tasks[index].timeline.append(ParentAgentTimelineItem(kind: kind, title: title, detail: detail))
+        finishStreamingAssistant(index: index)
+        tasks[index].timeline.append(ParentAgentTimelineItem(kind: kind, title: title, detail: detail, attachments: attachments))
         tasks[index].updatedAt = Date()
         switch kind {
         case .final:
@@ -77,6 +85,7 @@ final class ParentAgentTaskStore {
 
     func appendChildRun(taskID: UUID, runID: UUID, title: String, detail: String) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
+        finishStreamingAssistant(index: index)
         if !tasks[index].childRunIDs.contains(runID) {
             tasks[index].childRunIDs.append(runID)
         }
@@ -104,8 +113,9 @@ final class ParentAgentTaskStore {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
         if let last = tasks[index].timeline.last, last.kind == .assistant {
             tasks[index].timeline[tasks[index].timeline.count - 1].detail += text
+            tasks[index].timeline[tasks[index].timeline.count - 1].isComplete = false
         } else {
-            tasks[index].timeline.append(ParentAgentTimelineItem(kind: .assistant, title: "Droid", detail: text))
+            tasks[index].timeline.append(ParentAgentTimelineItem(kind: .assistant, title: "Droid", detail: text, isComplete: false))
         }
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
@@ -165,6 +175,7 @@ final class ParentAgentTaskStore {
 
     func complete(taskID: UUID) {
         guard let index = tasks.firstIndex(where: { $0.id == taskID }) else { return }
+        finishStreamingAssistant(index: index)
         tasks[index].status = .completed
         tasks[index].updatedAt = Date()
         save()
@@ -183,6 +194,11 @@ final class ParentAgentTaskStore {
     func clearActiveTask() {
         activeTaskID = nil
         save()
+    }
+
+    private func finishStreamingAssistant(index: Int) {
+        guard let itemIndex = tasks[index].timeline.lastIndex(where: { $0.kind == .assistant && !$0.isComplete }) else { return }
+        tasks[index].timeline[itemIndex].isComplete = true
     }
 }
 

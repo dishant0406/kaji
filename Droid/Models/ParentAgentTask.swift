@@ -26,18 +26,50 @@ struct ParentAgentTimelineItem: Identifiable, Codable, Hashable {
     let kind: ParentAgentTimelineKind
     var title: String
     var detail: String
+    var attachments: [ParentAgentAttachmentContext]
     var childRunID: UUID?
     var isComplete: Bool
     var createdAt: Date
 
-    init(kind: ParentAgentTimelineKind, title: String, detail: String, childRunID: UUID? = nil, isComplete: Bool = true) {
+    init(
+        kind: ParentAgentTimelineKind,
+        title: String,
+        detail: String,
+        attachments: [ParentAgentAttachmentContext] = [],
+        childRunID: UUID? = nil,
+        isComplete: Bool = true
+    ) {
         self.id = UUID()
         self.kind = kind
         self.title = title
         self.detail = detail
+        self.attachments = attachments
         self.childRunID = childRunID
         self.isComplete = isComplete
         self.createdAt = Date()
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case title
+        case detail
+        case attachments
+        case childRunID
+        case isComplete
+        case createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        kind = try container.decode(ParentAgentTimelineKind.self, forKey: .kind)
+        title = try container.decode(String.self, forKey: .title)
+        detail = try container.decode(String.self, forKey: .detail)
+        attachments = try container.decodeIfPresent([ParentAgentAttachmentContext].self, forKey: .attachments) ?? []
+        childRunID = try container.decodeIfPresent(UUID.self, forKey: .childRunID)
+        isComplete = try container.decode(Bool.self, forKey: .isComplete)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
     }
 }
 
@@ -54,11 +86,11 @@ struct ParentAgentTask: Identifiable, Codable, Hashable {
     var createdAt: Date
     var updatedAt: Date
 
-    init(prompt: String) {
+    init(prompt: String, attachments: [ParentAgentAttachmentContext] = []) {
         self.id = UUID()
         self.prompt = prompt
         self.status = .planning
-        self.timeline = [ParentAgentTimelineItem(kind: .user, title: "You", detail: prompt)]
+        self.timeline = [ParentAgentTimelineItem(kind: .user, title: "You", detail: prompt, attachments: attachments)]
         self.childRunIDs = []
         self.spawnFingerprints = []
         self.pendingQuestionOptions = []
