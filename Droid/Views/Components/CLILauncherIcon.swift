@@ -12,7 +12,7 @@ struct CLILauncherIcon: View {
             ProviderIconView(
                 iconName: iconName,
                 size: size,
-                style: iconName == "opencode" ? .colored : .monochrome(color)
+                style: ["opencode", "pi"].contains(iconName) ? .colored : .monochrome(color)
             )
         } else {
             DroidIcon(systemName: iconName, size: size)
