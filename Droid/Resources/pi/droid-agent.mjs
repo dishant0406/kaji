@@ -9488,7 +9488,7 @@ var init_models_generated = __esm({
             cacheRead: 0.024999999999999998,
             cacheWrite: 0.08333333333333334
           },
-          contextWindow: 1048576,
+          contextWindow: 1e6,
           maxTokens: 8192
         },
         "google/gemini-2.0-flash-lite-001": {
