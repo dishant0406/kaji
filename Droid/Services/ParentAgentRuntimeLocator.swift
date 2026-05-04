@@ -30,30 +30,21 @@ enum ParentAgentRuntimeLocator {
     }
 
     static func bundledLaunch() -> ParentAgentLaunch? {
-        guard let script = bundledScriptURL() else { return nil }
-        return ParentAgentLaunch(arguments: ["node", script.path], directory: nil)
+        guard let script = bundledScriptURL(), let node = nodeExecutablePath() else { return nil }
+        return ParentAgentLaunch(arguments: [node, script.path], directory: nil)
     }
 
     static func bundledOAuthLaunch(providerID: String) -> ParentAgentLaunch? {
         guard let script = Bundle.module.url(forResource: "oauth-login", withExtension: "mjs", subdirectory: "pi")
             ?? Bundle.main.url(forResource: "oauth-login", withExtension: "mjs", subdirectory: "pi")
             ?? bundledDevOAuthScriptURL()
+            , let node = nodeExecutablePath()
         else { return nil }
-        return ParentAgentLaunch(arguments: ["node", script.path, providerID], directory: nil)
+        return ParentAgentLaunch(arguments: [node, script.path, providerID], directory: nil)
     }
 
     static func nodeExecutablePath() -> String? {
-        var candidates = [
-            "/opt/homebrew/bin/node",
-            "/usr/local/bin/node",
-            "/usr/bin/node",
-        ]
-
-        if let path = ProcessInfo.processInfo.environment["PATH"] {
-            candidates.append(contentsOf: path.split(separator: ":").map { String($0) + "/node" })
-        }
-
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+        AIProviderExecutableLocator.resolvePath(for: "node")
     }
 
     private static func bundledDevScriptURL() -> URL? {
