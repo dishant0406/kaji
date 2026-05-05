@@ -27,7 +27,11 @@ final class DroidCodeLineNumberRuler: NSRulerView {
 
         while glyphIndex < NSMaxRange(glyphRange) {
             var effectiveRange = NSRange()
-            let rect = layoutManager.lineFragmentRect(forGlyphAt: glyphIndex, effectiveRange: &effectiveRange, withoutAdditionalLayout: true)
+            let rect = layoutManager.lineFragmentRect(
+                forGlyphAt: glyphIndex,
+                effectiveRange: &effectiveRange,
+                withoutAdditionalLayout: true
+            )
             draw(line: line, y: rect.minY + textView.textContainerInset.height - visible.minY)
             glyphIndex = NSMaxRange(effectiveRange)
             line += 1

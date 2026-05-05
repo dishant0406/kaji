@@ -133,7 +133,8 @@ final class ParentAgentController {
             chooseAgent(message, toolID: id)
         case "droid.subagent":
             handleSubagent(message, toolID: id)
-        case "droid.open_project", "droid.select_project":
+        case "droid.open_project",
+             "droid.select_project":
             selectProject(message, toolID: id)
         case "droid.select_worktree":
             selectWorktree(message, toolID: id)
@@ -145,7 +146,8 @@ final class ParentAgentController {
             enqueueMutation { await self.spawnAgent(message, toolID: id) }
         case "droid.send_prompt":
             enqueueMutation { await self.sendPrompt(message, toolID: id) }
-        case "droid.get_agent_status", "droid.observe_agents":
+        case "droid.get_agent_status",
+             "droid.observe_agents":
             observeAgents(message, toolID: id)
         case "droid.sleep":
             Task { await sleep(message, toolID: id) }

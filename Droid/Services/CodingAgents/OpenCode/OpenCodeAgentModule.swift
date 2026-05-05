@@ -127,7 +127,8 @@ struct OpenCodeAgentModule: CodingAgentModule {
         guard fileManager.fileExists(atPath: path) else { return ["$schema": "https://opencode.ai/config.json"] }
         guard let config = try JSONSerialization.jsonObject(
             with: Data(contentsOf: URL(fileURLWithPath: path))
-        ) as? [String: Any] else { throw CocoaError(.fileReadCorruptFile) }
+        ) as? [String: Any]
+        else { throw CocoaError(.fileReadCorruptFile) }
         return config
     }
 

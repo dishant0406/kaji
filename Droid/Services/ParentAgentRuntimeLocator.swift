@@ -35,8 +35,8 @@ enum ParentAgentRuntimeLocator {
 
     static func bundledOAuthLaunch(providerID: String) -> ParentAgentLaunch? {
         guard let script = bundledResourceURL(named: "oauth-login")
-            ?? bundledDevOAuthScriptURL()
-            , let node = nodeExecutablePath()
+            ?? bundledDevOAuthScriptURL(),
+            let node = nodeExecutablePath()
         else { return nil }
         return ParentAgentLaunch(arguments: [node, script.path, providerID], directory: nil)
     }

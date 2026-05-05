@@ -38,7 +38,8 @@ extension ParentAgentController {
         switch run.status {
         case .running:
             return .running
-        case .waiting, .needsAttention:
+        case .waiting,
+             .needsAttention:
             return .waitingForUser
         case .failed:
             return .failed

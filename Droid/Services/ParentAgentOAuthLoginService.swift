@@ -118,7 +118,7 @@ final class ParentAgentOAuthLoginService {
                 id: pendingPromptID,
                 value: promptValue
             )
-            inputPipe?.fileHandleForWriting.write(try encoder.encode(message) + Data([10]))
+            try inputPipe?.fileHandleForWriting.write(encoder.encode(message) + Data([10]))
             promptMessage = nil
             self.pendingPromptID = nil
             promptValue = ""

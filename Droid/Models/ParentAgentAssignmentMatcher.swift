@@ -13,7 +13,7 @@ enum ParentAgentAssignmentMatcher {
     }
 
     static func tokens(_ text: String) -> Set<String> {
-        let stopWords: Set<String> = [
+        let stopWords: Set = [
             "a", "an", "and", "app", "can", "code", "current", "for", "in", "is", "it", "new", "of", "on", "or", "so",
             "that", "the", "this", "to", "with", "needed", "need", "needs", "retry", "replace", "replacing", "attempt",
             "previous", "current", "complete", "finish", "fix", "update", "updating", "change", "changes",

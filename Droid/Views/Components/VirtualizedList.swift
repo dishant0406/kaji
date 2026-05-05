@@ -29,8 +29,8 @@ struct VirtualizedList<Item: Identifiable, Row: View>: View {
     var body: some View {
         GeometryReader { geometry in
             content(viewportHeight: geometry.size.height)
-            .onAppear { viewportHeight = geometry.size.height }
-            .onChange(of: geometry.size.height) { _, height in viewportHeight = height }
+                .onAppear { viewportHeight = geometry.size.height }
+                .onChange(of: geometry.size.height) { _, height in viewportHeight = height }
         }
     }
 
@@ -115,7 +115,6 @@ struct VirtualizedList<Item: Identifiable, Row: View>: View {
             itemCount: items.count
         )
     }
-
 }
 
 private struct VirtualizedListOffsetKey: PreferenceKey {

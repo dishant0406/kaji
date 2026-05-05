@@ -1,7 +1,13 @@
 import Foundation
 
 enum PiAgentHistory {
-    static func options(projectPath: String?, query: String, limit: Int, env: [String: String], fileManager: FileManager) -> [AskHistoryOption] {
+    static func options(
+        projectPath: String?,
+        query: String,
+        limit: Int,
+        env: [String: String],
+        fileManager: FileManager
+    ) -> [AskHistoryOption] {
         let root = sessionsRoot(env: env)
         let files = CodingAgentHistoryTools.recentFiles(
             under: root,

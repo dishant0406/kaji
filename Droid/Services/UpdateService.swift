@@ -98,7 +98,13 @@ final class UpdateService {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Could not check for updates"
-        alert.informativeText = "GitHub release check failed. You can update manually with:\n\n\(Self.upgradeCommand)\n\n\(error.localizedDescription)"
+        alert.informativeText = """
+        GitHub release check failed. You can update manually with:
+
+        \(Self.upgradeCommand)
+
+        \(error.localizedDescription)
+        """
         alert.addButton(withTitle: "Copy Command")
         alert.addButton(withTitle: "OK")
         if alert.runModal() == .alertFirstButtonReturn {
@@ -119,12 +125,12 @@ final class UpdateService {
         normalizedVersion(current).lexicographicallyPrecedes(normalizedVersion(candidate))
     }
 
-    private nonisolated static func normalizedVersion(_ version: String) -> [Int] {
+    nonisolated private static func normalizedVersion(_ version: String) -> [Int] {
         let parts = trimmedVersion(version).split(separator: ".").map { Int($0) ?? 0 }
         return Array((parts + [0, 0, 0]).prefix(3))
     }
 
-    private nonisolated static func trimmedVersion(_ version: String) -> String {
+    nonisolated private static func trimmedVersion(_ version: String) -> String {
         version.hasPrefix("v") ? String(version.dropFirst()) : version
     }
 }

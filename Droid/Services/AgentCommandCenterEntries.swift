@@ -1,6 +1,7 @@
 import Foundation
 
-@MainActor enum AgentCommandCenterEntries {
+@MainActor
+enum AgentCommandCenterEntries {
     private struct EntryTemplate {
         let category: String
         let title: String
@@ -46,7 +47,7 @@ import Foundation
             title: "Jump",
             detail: item.detail,
             shortcut: "enter",
-            action: .jump,
+            action: .jump
         )))
 
         if capabilities.reply.isVisible {

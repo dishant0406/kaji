@@ -39,7 +39,8 @@ extension ParentAgentController {
         switch result {
         case let .succeeded(message):
             process.send(ParentAgentEnvelope(type: "tool_result", id: toolID, ok: true, result: ParentAgentToolResult(message: message)))
-        case let .failed(message), let .unavailable(message):
+        case let .failed(message),
+             let .unavailable(message):
             sendToolError(id: toolID, message: message)
         }
     }

@@ -7,12 +7,12 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
     case mode = "m"
     case history = "h"
     case skill = "s"
-    case task = "task"
+    case task
     case taskAdd = "ta"
     case taskEdit = "te"
     case taskDelete = "td"
     case projectAdd = "pa"
-    case attach = "attach"
+    case attach
     case execute = "x"
     case executeAdd = "xa"
     case executeEdit = "xe"

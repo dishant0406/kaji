@@ -88,7 +88,8 @@ enum ProviderEventDispatcher {
             for: paneID,
             appState: appState,
             worktreeStore: worktreeStore
-        ) else { return }
+        )
+        else { return }
         AgentRunStore.shared.start(
             providerID: providerID,
             paneID: paneID,

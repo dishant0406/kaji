@@ -132,37 +132,48 @@ struct AgentCommandCenterOverlay: View {
     private func perform(_ entry: AgentCommandCenterEntry) {
         switch entry.action {
         case .jump:
-            _ = controlCenter.perform(.jump(entry.item)); onDismiss()
+            _ = controlCenter.perform(.jump(entry.item))
+            onDismiss()
         case .reply:
-            replyTarget = entry.item; query = ""
+            replyTarget = entry.item
+            query = ""
         case .stop:
             guard let runID = entry.item.runID else { return }
             _ = controlCenter.perform(.stop(runID))
         case .newRun:
             guard let runID = entry.item.runID else { return }
-            _ = controlCenter.perform(.restart(runID)); onDismiss()
+            _ = controlCenter.perform(.restart(runID))
+            onDismiss()
         case .resume:
             guard let runID = entry.item.runID else { return }
-            _ = controlCenter.perform(.resume(runID)); onDismiss()
+            _ = controlCenter.perform(.resume(runID))
+            onDismiss()
         case .verify:
             guard let runID = entry.item.runID else { return }
             _ = controlCenter.perform(.verify(runID))
         case let .openFile(file):
             guard let runID = entry.item.runID else { return }
-            _ = controlCenter.perform(.openFile(runID, file)); onDismiss()
+            _ = controlCenter.perform(.openFile(runID, file))
+            onDismiss()
         case let .openDiff(file):
             guard let runID = entry.item.runID else { return }
-            _ = controlCenter.perform(.openDiff(runID, file)); onDismiss()
+            _ = controlCenter.perform(.openDiff(runID, file))
+            onDismiss()
         }
     }
 
     private func escape() {
-        if replyTarget != nil { replyTarget = nil; query = ""; return }
+        if replyTarget != nil { replyTarget = nil
+            query = ""
+            return
+        }
         onDismiss()
     }
 
     private func moveHighlight(_ delta: Int) {
-        guard !filteredEntries.isEmpty else { highlightedIndex = nil; return }
+        guard !filteredEntries.isEmpty else { highlightedIndex = nil
+            return
+        }
         highlightedIndex = ((highlightedIndex ?? 0) + delta + filteredEntries.count) % filteredEntries.count
     }
 }

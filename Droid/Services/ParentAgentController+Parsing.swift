@@ -14,7 +14,7 @@ extension ParentAgentController {
     }
 
     func timeout(from value: String?) -> TimeInterval {
-        guard let value, let parsed = TimeInterval(value) else { return 1_800 }
+        guard let value, let parsed = TimeInterval(value) else { return 1800 }
         return max(5, min(parsed, 600))
     }
 

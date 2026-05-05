@@ -334,7 +334,8 @@ extension AskOverlay {
             script: script,
             project: selectedProject,
             worktree: selectedWorktree
-        ) else { return }
+        )
+        else { return }
         scriptPlan = plan
         scriptRunner.run(plan)
     }
