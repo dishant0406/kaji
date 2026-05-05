@@ -47,4 +47,36 @@ struct PiAgentModule: CodingAgentModule {
     ) -> [AskHistoryOption] {
         PiAgentHistory.options(projectPath: projectPath, query: query, limit: limit, env: env, fileManager: fileManager)
     }
+
+    func install(hookClientPath: String) throws {
+        try install(hookClientPath: hookClientPath, homeDirectory: NSHomeDirectory(), fileManager: .default)
+    }
+
+    func uninstall() throws {
+        for path in Self.extensionPaths() where FileManager.default.fileExists(atPath: path) {
+            try FileManager.default.removeItem(atPath: path)
+        }
+    }
+
+    func install(hookClientPath: String, homeDirectory: String, fileManager: FileManager) throws {
+        guard let source = Self.findExtensionSource(near: hookClientPath) else { return }
+        let sourceData = try Data(contentsOf: URL(fileURLWithPath: source))
+        for path in Self.extensionPaths(homeDirectory: homeDirectory) {
+            let existingData = try? Data(contentsOf: URL(fileURLWithPath: path))
+            guard !fileManager.fileExists(atPath: path) || existingData != sourceData else { continue }
+            try fileManager.createDirectory(atPath: (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+            if fileManager.fileExists(atPath: path) { try fileManager.removeItem(atPath: path) }
+            try fileManager.copyItem(atPath: source, toPath: path)
+        }
+    }
+
+    static func extensionPaths(homeDirectory: String = NSHomeDirectory()) -> [String] {
+        ["\(homeDirectory)/.pi/agent/extensions/droid-notify.ts"]
+    }
+
+    private static func findExtensionSource(near hookClientPath: String) -> String? {
+        if let bundled = DroidNotificationHooks.scriptPath(named: "pi-droid-extension", extension: "ts") { return bundled }
+        let candidate = ((hookClientPath as NSString).deletingLastPathComponent as NSString).appendingPathComponent("pi-droid-extension.ts")
+        return FileManager.default.fileExists(atPath: candidate) ? candidate : nil
+    }
 }

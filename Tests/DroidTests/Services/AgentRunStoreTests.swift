@@ -27,6 +27,39 @@ struct AgentRunStoreTests {
     }
 
     @Test
+    func repeatedStartForOpenPaneKeepsRunIdentity() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(
+            providerID: "codex",
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: "/tmp/first",
+            title: "Tracked run"
+        )
+        let runID = store.runs[0].id
+        store.start(
+            providerID: "codex",
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: "/tmp/first"
+        )
+
+        #expect(store.runs.count == 1)
+        #expect(store.runs[0].id == runID)
+        #expect(store.runs[0].title == "Tracked run")
+        #expect(store.runs[0].status == .running)
+        store.reset()
+    }
+
+    @Test
     func sameProviderCanRunInDifferentWorktrees() {
         let store = AgentRunStore.shared
         store.reset()
@@ -191,6 +224,23 @@ struct AgentRunStoreTests {
 
         #expect(store.runs.first?.status == .needsAttention)
         #expect(store.runs.first?.events.last?.kind == .attention)
+        store.reset()
+    }
+
+    @Test
+    func structuredAttentionPreservesKindLabel() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        store.recordAttention(providerID: "codex", paneID: paneID, kind: "permission", text: "Bash: npm install")
+
+        #expect(store.runs.first?.status == .needsAttention)
+        #expect(store.runs.first?.events.last?.kind == .attention)
+        #expect(store.runs.first?.events.last?.label == "permission")
+        #expect(store.runs.first?.events.last?.text == "Bash: npm install")
         store.reset()
     }
 

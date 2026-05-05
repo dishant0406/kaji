@@ -58,6 +58,8 @@ struct ParentAgentToolResult: Codable {
     var answer: String?
     var childRun: ParentAgentChildRunContext?
     var childRuns: [ParentAgentChildRunContext]?
+    var assignment: ParentAgentAssignmentContext?
+    var assignments: [ParentAgentAssignmentContext]?
     var worktree: ParentAgentWorktreeContext?
     var changedFiles: [ParentAgentChangedFileContext]?
     var verification: ParentAgentVerificationContext?
@@ -70,6 +72,8 @@ struct ParentAgentToolResult: Codable {
         answer: String? = nil,
         childRun: ParentAgentChildRunContext? = nil,
         childRuns: [ParentAgentChildRunContext]? = nil,
+        assignment: ParentAgentAssignmentContext? = nil,
+        assignments: [ParentAgentAssignmentContext]? = nil,
         worktree: ParentAgentWorktreeContext? = nil,
         changedFiles: [ParentAgentChangedFileContext]? = nil,
         verification: ParentAgentVerificationContext? = nil,
@@ -81,11 +85,35 @@ struct ParentAgentToolResult: Codable {
         self.answer = answer
         self.childRun = childRun
         self.childRuns = childRuns
+        self.assignment = assignment
+        self.assignments = assignments
         self.worktree = worktree
         self.changedFiles = changedFiles
         self.verification = verification
         self.codingProviders = codingProviders
     }
+}
+
+struct ParentAgentAssignmentContext: Codable, Hashable {
+    let id: String
+    let title: String
+    let prompt: String
+    let project: String?
+    let worktree: String?
+    let provider: String?
+    let model: String?
+    let runID: String?
+    let status: String
+    let mode: String
+    let isolation: String
+    let lastEvent: String?
+    let recentEvents: [String]
+    let finalSummary: String?
+    let changedFiles: [ParentAgentChangedFileContext]
+    let verification: ParentAgentVerificationContext?
+    let attention: ParentAgentAttention?
+    let blockerReason: String?
+    let nextAction: String?
 }
 
 struct ParentAgentChildRunContext: Codable, Hashable {

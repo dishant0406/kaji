@@ -154,6 +154,7 @@ struct TerminalBridge: NSViewRepresentable {
             (key: "DROID_PROJECT_ID", value: key.projectID.uuidString),
             (key: "DROID_WORKTREE_ID", value: key.worktreeID.uuidString),
             (key: "DROID_WORKTREE_PATH", value: worktreePath),
+            (key: "DROID_PI_PERMISSION_MODE", value: "prompt"),
         ]
         if let hookClientPath = DroidNotificationHooks.hookClientPath {
             vars.append((key: "DROID_HOOK_CLIENT_PATH", value: hookClientPath))

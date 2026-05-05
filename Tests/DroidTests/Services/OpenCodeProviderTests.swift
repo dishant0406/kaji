@@ -38,6 +38,8 @@ struct OpenCodeProviderTests {
             if (raw === "busy" || raw === "retry") return raw
             if (event.type === "tui.command.execute") return
             if (event.type === "tool.execute.before") return
+            if (event.type === "permission.asked") await send("opencode_attention", "permission", "detail")
+            if (event.type === "question.asked") await send("opencode_attention", "question", "detail")
             if (event.type === "session.idle") await stop()
             if (projectID && worktreeID) return
           },
@@ -63,6 +65,9 @@ struct OpenCodeProviderTests {
             let text = try String(contentsOfFile: path, encoding: .utf8)
             #expect(text.contains("tui.command.execute"))
             #expect(text.contains("tool.execute.before"))
+            #expect(text.contains("opencode_attention"))
+            #expect(text.contains("permission.asked"))
+            #expect(text.contains("question.asked"))
             #expect(text.contains("await stop()"))
             #expect(text.contains("typeof raw === \"string\""))
             #expect(text.contains("raw.type"))

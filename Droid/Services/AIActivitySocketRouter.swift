@@ -36,6 +36,17 @@ enum AIActivitySocketRouter {
             return true
         }
 
+        if payload.type.hasSuffix("_attention") {
+            let providerID = String(payload.type.dropLast("_attention".count))
+            AIActivityStore.shared.recordAttention(
+                providerID: providerID,
+                paneID: paneID,
+                kind: payload.title,
+                text: payload.body
+            )
+            return true
+        }
+
         guard payload.type.hasSuffix("_activity") else { return false }
         let providerID = String(payload.type.dropLast("_activity".count))
         let context = explicitContext(from: payload.body)

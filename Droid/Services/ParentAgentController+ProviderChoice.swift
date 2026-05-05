@@ -6,7 +6,9 @@ extension ParentAgentController {
         guard let taskID = uuid(from: message.taskID) else { return }
         let task = message.arguments?["task"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "this task"
         let project = message.arguments?["project"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let options = providerChoiceOptions(project: project, taskID: taskID)
+        let assignmentID = uuid(from: message.arguments?["assignmentID"])
+        reconcileAssignments(taskID: taskID)
+        let options = providerChoiceOptions(project: project, task: task, taskID: taskID, assignmentID: assignmentID)
         guard !options.isEmpty else {
             sendToolError(id: toolID, message: "No enabled and installed coding agents are available.")
             return
@@ -22,6 +24,17 @@ extension ParentAgentController {
               let provider = AskProvider.resolveAnnotation(providerID)
         else { return false }
         let project = fields["project"]
+        let mode = fields["mode"]
+        let assignmentID = fields["assignmentID"]
+        if mode == "isolate", let assignmentID = assignmentID.flatMap(UUID.init(uuidString:)) {
+            store.setAssignmentIsolation(
+                taskID: pending.taskID,
+                assignmentID: assignmentID,
+                isolation: .isolatedWorktree
+            )
+            store.clearPendingQuestion(taskID: pending.taskID)
+            return true
+        }
         let projectPath = projectPath(for: project)
         let models = ParentAgentCodingProviderCatalog.modelOptions(for: provider, projectPath: projectPath)
         guard !models.isEmpty else {
@@ -30,11 +43,18 @@ extension ParentAgentController {
             return true
         }
         let options = models.map { model in
-            ParentAgentQuestionOption(
+            let value = providerChoiceValue(
+                project: project,
+                providerID: provider.rawValue,
+                model: model,
+                mode: mode,
+                assignmentID: assignmentID
+            )
+            return ParentAgentQuestionOption(
                 id: "\(provider.rawValue)-\(model)",
                 title: model,
                 detail: provider.title,
-                value: providerChoiceValue(project: project, providerID: provider.rawValue, model: model)
+                value: value
             )
         }
         store.setPendingQuestion(
@@ -46,35 +66,171 @@ extension ParentAgentController {
         return true
     }
 
-    func providerChoiceOptions(project: String?, taskID: UUID? = nil) -> [ParentAgentQuestionOption] {
+    func providerChoiceOptions(
+        project: String?,
+        task: String,
+        taskID: UUID? = nil,
+        assignmentID: UUID? = nil
+    ) -> [ParentAgentQuestionOption] {
         let projectPath = projectPath(for: project)
         let providers = ParentAgentCodingProviderCatalog.availableProviders().map { provider in
             let defaultModel = CodingAgentRegistry.shared.agent(id: provider.id)?.defaultModel(projectPath: projectPath)
+            let value = providerStageValue(project: project, providerID: provider.id, mode: "new", assignmentID: nil)
             return ParentAgentQuestionOption(
                 id: provider.id,
                 title: provider.title,
                 detail: defaultModel.map { "Default: \($0)" } ?? "Choose a model next",
-                value: providerStageValue(project: project, providerID: provider.id)
+                value: value
             )
         }
-        return continuationOptions(project: project, taskID: taskID) + providers
+        if let taskID, let assignmentID, let assignment = store.assignment(taskID: taskID, assignmentID: assignmentID) {
+            return choices(for: assignment, providers: providers, project: project)
+        }
+        let assignmentOptions = assignmentChoiceOptions(project: project, task: task, taskID: taskID)
+        if !assignmentOptions.isEmpty { return assignmentOptions }
+        return providers
     }
 
-    private func continuationOptions(project: String?, taskID: UUID?) -> [ParentAgentQuestionOption] {
+    private func choices(
+        for assignment: ParentAgentAssignment,
+        providers: [ParentAgentQuestionOption],
+        project: String?
+    ) -> [ParentAgentQuestionOption] {
+        if assignment.status.canContinue {
+            return [
+                ParentAgentQuestionOption(
+                    id: "continue-\(assignment.id.uuidString)",
+                    title: "Continue: \(assignment.title)",
+                    detail: assignmentChoiceDetail(assignment),
+                    value: continuationChoiceValue(project: project, assignment: assignment),
+                ),
+            ]
+        }
+        if assignment.status == .requiresIsolation {
+            return [
+                ParentAgentQuestionOption(
+                    id: "isolate-\(assignment.id.uuidString)",
+                    title: "Use isolated worktree: \(assignment.title)",
+                    detail: assignment.blockerReason,
+                    value: isolationChoiceValue(project: project, assignment: assignment),
+                ),
+            ]
+        }
+        if assignment.status.canReplace || assignment.status == .planned || assignment.status == .blocked {
+            return providers.map { provider in
+                ParentAgentQuestionOption(
+                    id: "assignment-\(assignment.id.uuidString)-\(provider.id)",
+                    title: provider.title,
+                    detail: provider.detail,
+                    value: providerStageValue(
+                        project: project,
+                        providerID: provider.id,
+                        mode: "new",
+                        assignmentID: assignment.id.uuidString
+                    )
+                )
+            }
+        }
+        return []
+    }
+
+    private func assignmentChoiceOptions(project: String?, task: String, taskID: UUID?) -> [ParentAgentQuestionOption] {
         guard let taskID,
-              let task = store.tasks.first(where: { $0.id == taskID })
+              let parentTask = store.tasks.first(where: { $0.id == taskID })
         else { return [] }
-        let runs = task.childRunIDs.compactMap(resolveChildRun).filter { run in
+        let assignments = parentTask.assignments.filter { assignment in
+            guard let project else { return true }
+            return assignment.projectName == project || assignment.projectID?.uuidString == project
+        }.filter { assignment in
+            ParentAgentAssignmentMatcher.matches(task: task, assignment: assignment)
+        }
+        let continuations = assignments.filter { assignment in
+            assignment.status.canContinue && assignment.runID.flatMap(resolveChildRun)?.paneID != nil
+        }.map { assignment in
+            ParentAgentQuestionOption(
+                id: "continue-\(assignment.id.uuidString)",
+                title: "Continue: \(assignment.title)",
+                detail: assignmentChoiceDetail(assignment),
+                value: continuationChoiceValue(project: project, assignment: assignment)
+            )
+        }
+        let replacements = assignments.filter(\.status.canReplace).flatMap { assignment in
+            ParentAgentCodingProviderCatalog.availableProviders().map { provider in
+                let value = providerStageValue(
+                    project: project,
+                    providerID: provider.id,
+                    mode: "replacement",
+                    assignmentID: assignment.id.uuidString
+                )
+                return ParentAgentQuestionOption(
+                    id: "replace-\(assignment.id.uuidString)-\(provider.id)",
+                    title: "Replace: \(assignment.title) with \(provider.title)",
+                    detail: assignmentChoiceDetail(assignment),
+                    value: value
+                )
+            }
+        }
+        return continuations + replacements
+    }
+
+    private func assignmentChoiceDetail(_ assignment: ParentAgentAssignment) -> String {
+        let provider = assignment.providerID.map { AgentMissionControlSnapshotBuilder.providerName(for: $0) } ?? "Agent"
+        let run = assignment.runID.map { String($0.uuidString.prefix(8)) } ?? "no run"
+        let worktree = assignment.worktreeName ?? "worktree"
+        return "\(provider) - \(assignment.status.rawValue) - \(worktree) - \(run)"
+    }
+
+    private func continuationChoiceValue(project: String?, assignment: ParentAgentAssignment) -> String {
+        [
+            "mode=continue",
+            "assignmentID=\(assignment.id.uuidString)",
+            assignment.runID.map { "runID=\($0.uuidString)" },
+            project.map { "project=\($0)" },
+        ].compactMap(\.self).joined(separator: "\n")
+    }
+
+    private func isolationChoiceValue(project: String?, assignment: ParentAgentAssignment) -> String {
+        [
+            "mode=isolate",
+            "assignmentID=\(assignment.id.uuidString)",
+            "isolation=\(ParentAgentAssignmentIsolation.isolatedWorktree.rawValue)",
+            project.map { "project=\($0)" },
+        ].compactMap(\.self).joined(separator: "\n")
+    }
+
+    private func providerStageValue(project: String?, providerID: String, mode: String?, assignmentID: String?) -> String {
+        [
+            "stage=provider",
+            mode.map { "mode=\($0)" },
+            assignmentID.map { "assignmentID=\($0)" },
+            "provider=\(providerID)",
+            project.map { "project=\($0)" },
+        ].compactMap(\.self).joined(separator: "\n")
+    }
+
+    private func providerChoiceValue(project: String?, providerID: String, model: String, mode: String?, assignmentID: String?) -> String {
+        [
+            mode.map { "mode=\($0)" },
+            assignmentID.map { "assignmentID=\($0)" },
+            "provider=\(providerID)",
+            "model=\(model)",
+            project.map { "project=\($0)" },
+        ].compactMap(\.self).joined(separator: "\n")
+    }
+
+    private func legacyContinuationChoiceOptions(project: String?, task: ParentAgentTask) -> [ParentAgentQuestionOption] {
+        let assignedRunIDs = Set(task.assignments.compactMap(\.runID))
+        let runs = task.childRunIDs.filter { !assignedRunIDs.contains($0) }.compactMap(resolveChildRun).filter { run in
             guard run.paneID != nil else { return false }
             guard let project else { return true }
             return projectName(for: run.projectID) == project || run.projectID?.uuidString == project
         }
         return runs.map { run in
             ParentAgentQuestionOption(
-                id: "continue-\(run.id.uuidString)",
-                title: "Continue in \(AgentMissionControlSnapshotBuilder.providerName(for: run.providerID))",
-                detail: "\(run.status.rawValue) · \(run.title)",
-                value: continuationChoiceValue(project: project, runID: run.id)
+                id: "continue-legacy-\(run.id.uuidString)",
+                title: "Continue legacy run: \(AgentMissionControlSnapshotBuilder.providerName(for: run.providerID))",
+                detail: "\(run.status.rawValue) - \(run.title) - \(String(run.id.uuidString.prefix(8)))",
+                value: legacyContinuationChoiceValue(project: project, runID: run.id)
             )
         }
     }
@@ -98,23 +254,7 @@ extension ParentAgentController {
         return resolveProject(project, projectStore: projectStore, appState: appState)?.path
     }
 
-    private func providerStageValue(project: String?, providerID: String) -> String {
-        [
-            "stage=provider",
-            "provider=\(providerID)",
-            project.map { "project=\($0)" },
-        ].compactMap(\.self).joined(separator: "\n")
-    }
-
-    private func providerChoiceValue(project: String?, providerID: String, model: String) -> String {
-        [
-            "provider=\(providerID)",
-            "model=\(model)",
-            project.map { "project=\($0)" },
-        ].compactMap(\.self).joined(separator: "\n")
-    }
-
-    private func continuationChoiceValue(project: String?, runID: UUID) -> String {
+    private func legacyContinuationChoiceValue(project: String?, runID: UUID) -> String {
         [
             "mode=continue",
             "runID=\(runID.uuidString)",

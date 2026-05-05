@@ -59,6 +59,25 @@ struct PiAgentModuleTests {
         #expect(options[0].title == "Fix the issue")
     }
 
+    @Test
+    func installCopiesDroidExtension() throws {
+        let fileManager = FileManager.default
+        let root = tempDirectory()
+        let scripts = root.appendingPathComponent("scripts", isDirectory: true)
+        let home = root.appendingPathComponent("home", isDirectory: true)
+        try fileManager.createDirectory(at: scripts, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
+        let hookClient = scripts.appendingPathComponent("DroidHookClient")
+        let extensionFile = scripts.appendingPathComponent("pi-droid-extension.ts")
+        try "hook\n".write(to: hookClient, atomically: true, encoding: .utf8)
+        try "export default function () { send('pi_attention') }\n".write(to: extensionFile, atomically: true, encoding: .utf8)
+
+        try PiAgentModule().install(hookClientPath: hookClient.path, homeDirectory: home.path, fileManager: fileManager)
+
+        let installed = try String(contentsOfFile: PiAgentModule.extensionPaths(homeDirectory: home.path)[0], encoding: .utf8)
+        #expect(installed.contains("pi_attention"))
+    }
+
     private func tempDirectory() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     }

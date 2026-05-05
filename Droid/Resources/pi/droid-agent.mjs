@@ -144032,8 +144032,7 @@ async function getOAuthApiKey(providerId, credentials) {
 var rl = readline.createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
 var pendingTools = /* @__PURE__ */ new Map();
 var sessions = /* @__PURE__ */ new Map();
-var supervisedRunIDsBySession = /* @__PURE__ */ new Map();
-var activeTaskID;
+var promptQueue = Promise.resolve();
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}
 `);
@@ -144088,15 +144087,19 @@ function systemPrompt() {
     "Use Droid tools to inspect projects, spawn child coding agents, observe them, and answer with the final outcome directly.",
     "Do not add a separate result summary/card after already giving the final answer.",
     "Only use coding agents returned by Droid tools as enabled and installed. Never assume Codex, Claude Code, or OpenCode are available.",
-    "Before calling droid_spawn_agent for any new task, call droid_choose_agent for that specific task/project. Droid will ask the user in native steps. Use the exact provider and model returned by the user.",
+    "Use droid_subagent for delegated coding work. Treat each independent fix or feature as a separate subagent assignment with a clear title.",
+    "For each implementation assignment, call droid_subagent action=plan before droid_choose_agent. Pass assignmentID to droid_choose_agent after planning.",
+    "If droid_subagent action=plan returns requiresIsolation, ask the user or choose isolatedWorktree before selecting a provider.",
+    "Before calling droid_subagent action=spawn or action=replace, call droid_choose_agent for that specific task/project. Droid will ask the user in native steps. Use the exact provider and model returned by the user.",
     "For requests with multiple independent fixes/features, even in the same project, split them into separate concrete tasks and call droid_choose_agent separately for each task before spawning.",
     "For multi-project requests, identify each project-specific task first, then call droid_choose_agent separately for each task/project before spawning.",
-    "The droid_choose_agent answer is newline-delimited key=value text. If it includes mode=continue and runID, use droid_send_prompt with that runID. Otherwise pass provider, model, and project into droid_spawn_agent.",
+    "If you run multiple implementation assignments in parallel for the same project, set isolation=isolatedWorktree on each droid_subagent spawn/replace. Use sharedWorktree only for sequential work or read-only investigation.",
+    "The droid_choose_agent answer is newline-delimited key=value text. If it includes mode=continue and assignmentID, use droid_subagent action=send with that assignmentID. If it includes mode=replacement, use droid_subagent action=replace with that assignmentID plus provider/model. Otherwise use droid_subagent action=spawn.",
     "Do not spawn multiple child agents for the same concrete task. For independent subtasks, spawn separate child agents and supervise each run.",
-    "When a follow-up should continue an existing child run, choose the continue option from droid_choose_agent and use droid_send_prompt instead of spawning.",
+    "When a follow-up should continue an existing child run, choose the continue option from droid_choose_agent and use droid_subagent action=send instead of spawning.",
     "When you spawn child agents, supervise them explicitly: observe, reason, sleep briefly if still running, then observe again.",
-    "Do not claim a child agent is done until droid_observe_agents shows a meaningful final answer or useful completed output.",
-    "If an agent is still running, call droid_sleep and then droid_observe_agents again.",
+    "Use droid_subagent action=wait and action=result instead of manual polling loops.",
+    "Do not claim a child agent is done until droid_subagent action=result reports a completed assignment with a meaningful final summary or changed files.",
     "Be concise and honest about what has or has not been executed."
   ].join("\n");
 }
@@ -144106,19 +144109,13 @@ function droidProtocolToolName(name) {
   if (name === "droid_list_coding_agents") return "droid.list_coding_agents";
   if (name === "droid_ask_user") return "droid.ask_user";
   if (name === "droid_choose_agent") return "droid.choose_agent";
+  if (name === "droid_subagent") return "droid.subagent";
   if (name === "droid_open_project") return "droid.open_project";
   if (name === "droid_select_project") return "droid.select_project";
   if (name === "droid_select_worktree") return "droid.select_worktree";
   if (name === "droid_open_terminal") return "droid.open_terminal";
   if (name === "droid_open_split") return "droid.open_split";
-  if (name === "droid_spawn_agent") return "droid.spawn_agent";
-  if (name === "droid_send_prompt") return "droid.send_prompt";
-  if (name === "droid_get_agent_status") return "droid.get_agent_status";
-  if (name === "droid_observe_agents") return "droid.observe_agents";
-  if (name === "droid_sleep") return "droid.sleep";
   if (name === "droid_jump_to_agent") return "droid.jump_to_agent";
-  if (name === "droid_stop_agent") return "droid.stop_agent";
-  if (name === "droid_resume_agent") return "droid.resume_agent";
   if (name === "droid_create_worktree") return "droid.create_worktree";
   if (name === "droid_get_changed_files") return "droid.get_changed_files";
   if (name === "droid_open_diff") return "droid.open_diff";
@@ -144165,13 +144162,13 @@ ${summary}` : prompt }
   }
   return content;
 }
-function callDroidTool(name, args, taskID) {
+function callDroidTool(name, args, context) {
   const id = createID("tool");
   const promise2 = new Promise((resolve, reject) => pendingTools.set(id, { resolve, reject }));
-  send({ type: "tool_call", id, taskID, name: droidProtocolToolName(name), arguments: args });
+  send({ type: "tool_call", id, taskID: context.taskID, name: droidProtocolToolName(name), arguments: args });
   return promise2;
 }
-function tool(name, description, parameters) {
+function tool(name, description, parameters, context) {
   return {
     name,
     label: name,
@@ -144179,49 +144176,71 @@ function tool(name, description, parameters) {
     parameters,
     execute: async (_toolCallId, params, signal) => {
       if (signal?.aborted) throw new Error("Tool call aborted");
-      const result = await callDroidTool(name, params, activeTaskID);
-      trackDroidToolResult(name, result);
+      const result = await callDroidTool(name, params, context);
       return { content: [{ type: "text", text: stringifyResult(result) }], details: result };
     }
   };
 }
-function droidTools() {
+function droidTools(context) {
   return [
-    tool("droid_list_projects", "List projects available in Droid.", typebox_exports.Object({})),
+    tool("droid_list_projects", "List projects available in Droid.", typebox_exports.Object({}), context),
     tool(
       "droid_get_active_context",
       "Get Droid's active project, worktrees, and workspace context.",
-      typebox_exports.Object({})
+      typebox_exports.Object({}),
+      context
     ),
     tool(
       "droid_list_coding_agents",
       "List enabled and installed coding agents with available model choices. Use this before planning delegation.",
-      typebox_exports.Object({})
+      typebox_exports.Object({}),
+      context
     ),
     tool(
       "droid_ask_user",
       "Ask the user one concise question when required information is missing.",
-      typebox_exports.Object({ question: typebox_exports.String() })
+      typebox_exports.Object({ question: typebox_exports.String() }),
+      context
     ),
     tool(
       "droid_choose_agent",
       "Ask the user whether to continue an existing child run or choose a coding agent/model for one specific task/project. Call once per independent task before spawning.",
-      typebox_exports.Object({ task: typebox_exports.String(), project: typebox_exports.Optional(typebox_exports.String()) })
+      typebox_exports.Object({ task: typebox_exports.String(), project: typebox_exports.Optional(typebox_exports.String()) }),
+      context
+    ),
+    tool(
+      "droid_subagent",
+      "Manage Droid subagent assignments. Use spawn for new work, replace for incomplete/stale work, send for continuing an assignment, status/result/wait for supervision, and stop to interrupt.",
+      typebox_exports.Object({
+        action: typebox_exports.String(),
+        assignmentID: typebox_exports.Optional(typebox_exports.String()),
+        title: typebox_exports.Optional(typebox_exports.String()),
+        prompt: typebox_exports.Optional(typebox_exports.String()),
+        project: typebox_exports.Optional(typebox_exports.String()),
+        provider: typebox_exports.Optional(typebox_exports.String()),
+        model: typebox_exports.Optional(typebox_exports.String()),
+        isolation: typebox_exports.Optional(typebox_exports.String()),
+        timeoutSeconds: typebox_exports.Optional(typebox_exports.String())
+      }),
+      context
     ),
     tool(
       "droid_open_project",
       "Open and select a Droid project by id, name, or path.",
-      typebox_exports.Object({ project: typebox_exports.Optional(typebox_exports.String()), worktree: typebox_exports.Optional(typebox_exports.String()) })
+      typebox_exports.Object({ project: typebox_exports.Optional(typebox_exports.String()), worktree: typebox_exports.Optional(typebox_exports.String()) }),
+      context
     ),
     tool(
       "droid_select_project",
       "Select a Droid project by id, name, or path without spawning an agent.",
-      typebox_exports.Object({ project: typebox_exports.Optional(typebox_exports.String()), worktree: typebox_exports.Optional(typebox_exports.String()) })
+      typebox_exports.Object({ project: typebox_exports.Optional(typebox_exports.String()), worktree: typebox_exports.Optional(typebox_exports.String()) }),
+      context
     ),
     tool(
       "droid_select_worktree",
       "Select a worktree by id, name, path, or branch for the active or named project.",
-      typebox_exports.Object({ project: typebox_exports.Optional(typebox_exports.String()), worktree: typebox_exports.Optional(typebox_exports.String()) })
+      typebox_exports.Object({ project: typebox_exports.Optional(typebox_exports.String()), worktree: typebox_exports.Optional(typebox_exports.String()) }),
+      context
     ),
     tool(
       "droid_open_terminal",
@@ -144231,7 +144250,8 @@ function droidTools() {
         worktree: typebox_exports.Optional(typebox_exports.String()),
         title: typebox_exports.Optional(typebox_exports.String()),
         command: typebox_exports.Optional(typebox_exports.String())
-      })
+      }),
+      context
     ),
     tool(
       "droid_open_split",
@@ -144242,49 +144262,14 @@ function droidTools() {
         title: typebox_exports.Optional(typebox_exports.String()),
         command: typebox_exports.Optional(typebox_exports.String()),
         direction: typebox_exports.Optional(typebox_exports.String())
-      })
-    ),
-    tool(
-      "droid_spawn_agent",
-      "Start one terminal coding agent in Droid for one concrete task. Provider and model must come from droid_choose_agent. Droid blocks duplicate active workers. If rejected, observe the returned existing run instead.",
-      typebox_exports.Object({
-        prompt: typebox_exports.String(),
-        provider: typebox_exports.String(),
-        model: typebox_exports.String(),
-        project: typebox_exports.Optional(typebox_exports.String()),
-        allowParallel: typebox_exports.Optional(typebox_exports.String())
-      })
-    ),
-    tool(
-      "droid_send_prompt",
-      "Send a follow-up prompt to an existing child agent run by runID.",
-      typebox_exports.Object({ runID: typebox_exports.String(), prompt: typebox_exports.String() })
-    ),
-    tool("droid_get_agent_status", "Get recent child agent run status from Droid.", typebox_exports.Object({})),
-    tool(
-      "droid_observe_agents",
-      "Observe live child agent run status, recent events, and transcript snippets.",
-      typebox_exports.Object({ runIDs: typebox_exports.Optional(typebox_exports.String()) })
-    ),
-    tool(
-      "droid_sleep",
-      "Pause briefly before observing child agents again. Use seconds between 3 and 30.",
-      typebox_exports.Object({ seconds: typebox_exports.Optional(typebox_exports.String()), reason: typebox_exports.Optional(typebox_exports.String()) })
+      }),
+      context
     ),
     tool(
       "droid_jump_to_agent",
       "Navigate Droid to a child agent run by runID.",
-      typebox_exports.Object({ runID: typebox_exports.String() })
-    ),
-    tool(
-      "droid_stop_agent",
-      "Stop a child agent run by runID by interrupting its terminal.",
-      typebox_exports.Object({ runID: typebox_exports.String() })
-    ),
-    tool(
-      "droid_resume_agent",
-      "Resume a child agent run by runID when Droid has a provider session ID.",
-      typebox_exports.Object({ runID: typebox_exports.String() })
+      typebox_exports.Object({ runID: typebox_exports.String() }),
+      context
     ),
     tool(
       "droid_create_worktree",
@@ -144294,7 +144279,8 @@ function droidTools() {
         name: typebox_exports.String(),
         branch: typebox_exports.Optional(typebox_exports.String()),
         createBranch: typebox_exports.Optional(typebox_exports.String())
-      })
+      }),
+      context
     ),
     tool(
       "droid_get_changed_files",
@@ -144303,7 +144289,8 @@ function droidTools() {
         runID: typebox_exports.Optional(typebox_exports.String()),
         project: typebox_exports.Optional(typebox_exports.String()),
         worktree: typebox_exports.Optional(typebox_exports.String())
-      })
+      }),
+      context
     ),
     tool(
       "droid_open_diff",
@@ -144314,99 +144301,54 @@ function droidTools() {
         worktree: typebox_exports.Optional(typebox_exports.String()),
         path: typebox_exports.Optional(typebox_exports.String()),
         staged: typebox_exports.Optional(typebox_exports.String())
-      })
+      }),
+      context
     ),
     tool(
       "droid_run_verification",
       "Run the configured verification command for a tracked child agent run.",
-      typebox_exports.Object({ runID: typebox_exports.String() })
+      typebox_exports.Object({ runID: typebox_exports.String() }),
+      context
     )
   ];
 }
-function trackDroidToolResult(toolName, result) {
-  if (toolName === "droid_observe_agents" || toolName === "droid_get_agent_status") {
-    updateSupervisedRunsFromObservation(result);
-    return;
-  }
-  if (toolName !== "droid_spawn_agent") return;
-  const childRun = result && typeof result === "object" && "childRun" in result ? result.childRun : void 0;
-  if (!childRun || typeof childRun !== "object" || !("id" in childRun) || typeof childRun.id !== "string") return;
-  const sessionID = activeTaskID ?? "default";
-  const set2 = supervisedRunIDsBySession.get(sessionID) ?? /* @__PURE__ */ new Set();
-  set2.add(childRun.id);
-  supervisedRunIDsBySession.set(sessionID, set2);
-}
-function updateSupervisedRunsFromObservation(result) {
-  if (!result || typeof result !== "object" || !("childRuns" in result) || !Array.isArray(result.childRuns)) return;
-  const sessionID = activeTaskID ?? "default";
-  const set2 = supervisedRunIDsBySession.get(sessionID);
-  if (!set2) return;
-  for (const run of result.childRuns) {
-    if (!run || typeof run !== "object" || !("id" in run) || typeof run.id !== "string") continue;
-    if (isClosedRun(run)) set2.delete(run.id);
-  }
-  supervisedRunIDsBySession.set(sessionID, set2);
-}
-function isClosedRun(run) {
-  const status = String(run.status ?? "");
-  return status === "completed" || status === "failed" || status === "stale";
-}
-function supervisedRunIDs(sessionID) {
-  return Array.from(supervisedRunIDsBySession.get(sessionID) ?? []);
-}
-function observePrompt(sessionID) {
-  const ids = supervisedRunIDs(sessionID);
-  return [
-    "Continue supervising the child agents.",
-    ids.length > 0 ? `Use droid_observe_agents with runIDs: ${ids.join(",")}.` : "Use droid_observe_agents.",
-    "If any child agent is still running, think briefly, call droid_sleep, then observe again.",
-    "Only answer the user after you have a meaningful final result from the child agent feed."
-  ].join(" ");
-}
-function handleAgentEvent(event) {
+function handleAgentEvent(event, context) {
   if (event.type === "message_update") {
     const streamEvent = event.assistantMessageEvent;
     if (streamEvent.type === "text_delta")
-      send({ type: "assistant_delta", taskID: activeTaskID, message: streamEvent.delta });
+      send({ type: "assistant_delta", taskID: context.taskID, message: streamEvent.delta });
     if (streamEvent.type === "thinking_delta")
-      send({ type: "thinking_delta", taskID: activeTaskID, message: streamEvent.delta });
-    if (streamEvent.type === "thinking_end") send({ type: "thinking_end", taskID: activeTaskID });
+      send({ type: "thinking_delta", taskID: context.taskID, message: streamEvent.delta });
+    if (streamEvent.type === "thinking_end") send({ type: "thinking_end", taskID: context.taskID });
     if (streamEvent.type === "toolcall_end")
       send({
         type: "task_event",
-        taskID: activeTaskID,
+        taskID: context.taskID,
         event: "tool.requested",
         message: streamEvent.toolCall.name
       });
   }
   if (event.type === "tool_execution_start")
-    send({ type: "task_event", taskID: activeTaskID, event: "tool.started", message: event.toolName });
+    send({ type: "task_event", taskID: context.taskID, event: "tool.started", message: event.toolName });
   if (event.type === "tool_execution_end")
-    send({ type: "task_event", taskID: activeTaskID, event: "tool.completed", message: event.toolName });
+    send({ type: "task_event", taskID: context.taskID, event: "tool.completed", message: event.toolName });
 }
-function createAgent(model) {
+function createAgent(model, context) {
   const agent = new Agent({
     initialState: {
       systemPrompt: systemPrompt(),
       model,
       thinkingLevel: selectedThinking(),
-      tools: droidTools()
+      tools: droidTools(context)
     },
     getApiKey: (provider) => resolveApiKey2(provider),
     toolExecution: "sequential"
   });
-  agent.subscribe((event) => handleAgentEvent(event));
+  agent.subscribe((event) => handleAgentEvent(event, context));
   return agent;
 }
-function latestAssistantStopReason(agent) {
-  for (let index2 = agent.state.messages.length - 1; index2 >= 0; index2--) {
-    const message = agent.state.messages[index2];
-    if (message?.role === "assistant") return message.stopReason;
-  }
-  return void 0;
-}
 async function runPrompt(message) {
-  activeTaskID = message.taskID;
+  const context = { taskID: message.taskID, sessionID: message.taskID ?? "default" };
   const model = selectedModel();
   if (!model) {
     send({ type: "error", taskID: message.taskID, message: "Parent model was not found." });
@@ -144422,27 +144364,9 @@ async function runPrompt(message) {
     event: "task.planning",
     message: `Using ${model.provider}/${model.id}.`
   });
-  const sessionID = message.taskID ?? "default";
-  const agent = sessions.get(sessionID) ?? createAgent(model);
-  sessions.set(sessionID, agent);
+  const agent = sessions.get(context.sessionID) ?? createAgent(model, context);
+  sessions.set(context.sessionID, agent);
   await agent.prompt({ role: "user", content: promptContent(message), timestamp: Date.now() });
-  for (let i2 = 0; i2 < 24 && supervisedRunIDs(sessionID).length > 0; i2++) {
-    agent.followUp({
-      role: "user",
-      content: [{ type: "text", text: observePrompt(sessionID) }],
-      timestamp: Date.now()
-    });
-    await agent.continue();
-    if (supervisedRunIDs(sessionID).length === 0) break;
-    const stopReason = latestAssistantStopReason(agent);
-    if (stopReason && stopReason !== "toolUse") {
-      agent.followUp({
-        role: "user",
-        content: [{ type: "text", text: observePrompt(sessionID) }],
-        timestamp: Date.now()
-      });
-    }
-  }
   send({ type: "final_response", taskID: message.taskID, message: "Parent agent turn completed." });
 }
 function handleToolResult(message) {
@@ -144456,10 +144380,16 @@ function handleToolResult(message) {
 rl.on("line", (line) => {
   try {
     const message = JSON.parse(line);
-    if (message.type === "user_prompt") void runPrompt(message);
+    if (message.type === "user_prompt") {
+      promptQueue = promptQueue.then(() => runPrompt(message)).catch((error51) => send({
+        type: "error",
+        taskID: message.taskID,
+        message: error51 instanceof Error ? error51.message : String(error51)
+      }));
+    }
     if (message.type === "tool_result") handleToolResult(message);
   } catch (error51) {
-    send({ type: "error", taskID: activeTaskID, message: error51 instanceof Error ? error51.message : String(error51) });
+    send({ type: "error", message: error51 instanceof Error ? error51.message : String(error51) });
   }
 });
 send({ type: "heartbeat", message: "droid-pi-parent-agent-ready" });

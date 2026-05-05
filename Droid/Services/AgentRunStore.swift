@@ -31,6 +31,18 @@ final class AgentRunStore {
         if ignoresLateRestart(providerID: providerID, paneID: paneID) {
             return
         }
+        if updateExistingOpenRun(.init(
+            providerID: providerID,
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: worktreePath,
+            title: title,
+            confidence: confidence
+        )) {
+            persist()
+            return
+        }
         removeActiveRun(providerID: providerID, paneID: paneID)
         let sharedWorktree = hasConcurrentOpenRun(paneID: paneID, projectID: projectID, worktreeID: worktreeID)
         if sharedWorktree {
@@ -138,7 +150,20 @@ final class AgentRunStore {
             appendEvent(.init(kind: eventKind, label: label, text: trimmed), to: &run)
             if eventKind == .attention {
                 run.status = .needsAttention
+            } else if run.status == .needsAttention {
+                run.status = .running
             }
+        }
+        persist()
+    }
+
+    func recordAttention(providerID: String, paneID: UUID, kind: String, text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        updateRun(providerID: providerID, paneID: paneID) { run in
+            let label = kind.isEmpty ? "attention" : kind
+            appendEvent(.init(kind: .attention, label: label, text: trimmed), to: &run)
+            run.status = .needsAttention
         }
         persist()
     }
@@ -244,6 +269,31 @@ final class AgentRunStore {
                 run.paneID == paneID &&
                 isOpen(run.status)
         }
+    }
+
+    private struct OpenRunUpdate {
+        let providerID: String
+        let paneID: UUID
+        let projectID: UUID
+        let worktreeID: UUID
+        let worktreePath: String?
+        let title: String?
+        let confidence: AgentSourceConfidence
+    }
+
+    private func updateExistingOpenRun(_ update: OpenRunUpdate) -> Bool {
+        guard let index = runs.firstIndex(where: { run in
+            run.providerID == update.providerID && run.paneID == update.paneID && isOpen(run.status)
+        }) else { return false }
+        runs[index].projectID = update.projectID
+        runs[index].worktreeID = update.worktreeID
+        runs[index].worktreePath = update.worktreePath
+        if let title = update.title, !title.isEmpty {
+            runs[index].title = title
+        }
+        runs[index].sourceConfidence = update.confidence
+        runs[index].lastEventAt = Date()
+        return true
     }
 
     private func ignoresLateRestart(providerID: String, paneID: UUID) -> Bool {
