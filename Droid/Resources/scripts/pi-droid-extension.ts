@@ -15,6 +15,10 @@ export default function (pi: ExtensionAPI) {
     } catch {}
   }
 
+  const start = () => send("pi_activity", "start", context())
+  const stop = () => send("pi_activity", "stop", context())
+  const notify = (body: string) => send("pi", "Pi", body)
+
   const summarize = (event: any) => {
     const tool = sanitize(event?.toolName || event?.name || "tool")
     const input = event?.input || event?.args || {}
@@ -30,18 +34,45 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.on("before_agent_start", async () => {
-    send("pi_activity", "start", context())
+    start()
   })
 
   pi.on("tool_call", async (event: any, ctx: any) => {
     if (!shouldPrompt(event)) return
     const detail = summarize(event)
     send("pi_attention", "permission", detail)
+    notify(`Needs permission: ${detail}`)
     const confirm = ctx?.ui?.confirm
     if (typeof confirm !== "function") return
-    const approved = await confirm(`Allow ${detail}?`)
+    const approved = await confirm("Pi needs permission", `Allow ${detail}?`)
     if (approved === false) return { block: true, reason: "Denied by user" }
   })
+
+  pi.on("agent_end", async (event: any) => {
+    stop()
+    const summary = latestAssistantText(event)
+    if (summary) notify(summary)
+  })
+
+  pi.on("session_shutdown", async () => {
+    stop()
+  })
+}
+
+function latestAssistantText(event: any) {
+  const messages = Array.isArray(event?.messages) ? event.messages : []
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if (message?.role !== "assistant") continue
+    const content = Array.isArray(message.content) ? message.content : []
+    const text = content
+      .filter((part: any) => part?.type === "text")
+      .map((part: any) => sanitize(part?.text))
+      .join(" ")
+      .trim()
+    if (text) return text.slice(0, 200)
+  }
+  return ""
 }
 
 function context() {
