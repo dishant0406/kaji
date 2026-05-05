@@ -155,6 +155,7 @@ struct Sidebar: View {
     }
 
     private func select(_ project: Project) {
+        appState.hideParentAgentHome()
         worktreeStore.ensurePrimary(for: project)
         guard let worktree = worktreeStore.preferred(
             for: project.id,
