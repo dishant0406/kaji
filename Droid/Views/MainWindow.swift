@@ -48,6 +48,12 @@ struct MainWindow: View {
         }
     }
 
+    private struct ProjectLogoCropRequest: Identifiable {
+        let id = UUID()
+        let projectID: UUID
+        let image: NSImage
+    }
+
     @State private var vcsPanelVisible = false
     @State private var vcsPanelWidth: CGFloat = AttachedVCSLayout.defaultWidth
     @State private var vcsStates: [WorktreeKey: VCSTabState] = [:]
@@ -62,6 +68,7 @@ struct MainWindow: View {
     @State private var showCreateThemeModal = false
     @State private var parentAgentSettings = ParentAgentSettingsStore.shared
     @State private var createWorktreeProjectID: UUID?
+    @State private var projectLogoCropRequest: ProjectLogoCropRequest?
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage("droid.notifications.toastPosition") private var toastPositionRaw = ToastPosition.topCenter.rawValue
@@ -76,7 +83,7 @@ struct MainWindow: View {
                 .environment(
                     \.overlayActive,
                     showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showSettings || showCreateThemeModal ||
-                        createWorktreeProjectID != nil
+                        createWorktreeProjectID != nil || projectLogoCropRequest != nil
                 )
                 .overlay(alignment: toastAlignment) {
                     toastOverlay
@@ -102,9 +109,13 @@ struct MainWindow: View {
                 .overlay {
                     createThemeOverlay
                 }
+                .overlay {
+                    projectLogoCropperOverlay
+                }
                 .animation(.easeInOut(duration: 0.15), value: showSettings)
                 .animation(.easeInOut(duration: 0.15), value: showCreateThemeModal)
                 .animation(.easeInOut(duration: 0.15), value: createWorktreeProjectID)
+                .animation(.easeInOut(duration: 0.15), value: projectLogoCropRequest?.id)
                 .animation(.easeInOut(duration: 0.2), value: ToastState.shared.message != nil)
                 .task(id: activeQuickOpenProjectPath) {
                     guard let path = activeQuickOpenProjectPath else { return }
@@ -189,6 +200,12 @@ struct MainWindow: View {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .requestCreateThemeModal)) { _ in
                     showCreateThemeModal = true
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .requestProjectLogoCropper)) { notification in
+                    guard let projectID = notification.userInfo?["projectID"] as? UUID,
+                          let image = notification.userInfo?["image"] as? NSImage
+                    else { return }
+                    projectLogoCropRequest = ProjectLogoCropRequest(projectID: projectID, image: image)
                 }
         )
 
@@ -518,6 +535,28 @@ struct MainWindow: View {
                 CreateThemeModal {
                     showCreateThemeModal = false
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var projectLogoCropperOverlay: some View {
+        if let request = projectLogoCropRequest {
+            DroidModalOverlay {
+                projectLogoCropRequest = nil
+            } content: {
+                LogoCropperSheet(
+                    sourceImage: request.image,
+                    onConfirm: { cropped in
+                        let logoPath = ProjectLogoStorage.save(
+                            croppedImage: cropped,
+                            forProjectID: request.projectID
+                        )
+                        projectStore.setLogo(id: request.projectID, to: logoPath)
+                        projectLogoCropRequest = nil
+                    },
+                    onCancel: { projectLogoCropRequest = nil }
+                )
             }
         }
     }

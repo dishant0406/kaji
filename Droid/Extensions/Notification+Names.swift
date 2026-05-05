@@ -24,4 +24,5 @@ extension Notification.Name {
     static let vcsRepoDidChange = Notification.Name("DroidVCSRepoDidChange")
     static let requestCreateWorktreeModal = Notification.Name("DroidRequestCreateWorktreeModal")
     static let requestCreateThemeModal = Notification.Name("DroidRequestCreateThemeModal")
+    static let requestProjectLogoCropper = Notification.Name("DroidRequestProjectLogoCropper")
 }

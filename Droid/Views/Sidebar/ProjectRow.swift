@@ -21,9 +21,9 @@ struct ProjectRow: View {
     @State private var renameText = ""
     @State private var showWorktreePopover = false
     @State private var isGitRepo = false
-    @State private var logoCropImage: IdentifiableImage?
     @State private var isRefreshingWorktrees = false
     @State private var showColorPicker = false
+    @State private var showProjectMenu = false
 
     private var isActive: Bool {
         appState.activeProjectID == project.id
@@ -68,27 +68,56 @@ struct ProjectRow: View {
             .task(id: project.path) {
                 isGitRepo = await GitWorktreeService.shared.isGitRepository(project.path)
             }
-            .contextMenu {
-                Button("Set Logo...") { pickLogoImage() }
-                if project.logo != nil {
-                    Button("Remove Logo") { onSetLogo(nil) }
+            .overlay {
+                SecondaryClickView {
+                    guard !isAnyDragging else { return }
+                    showProjectMenu = true
                 }
-                Button("Set Icon Color...") { showColorPicker = true }
-                if project.iconColor != nil {
-                    Button("Reset Icon Color") { onSetIconColor(nil) }
-                }
-                Divider()
-                Button("Rename Project") { startRename() }
-                if isGitRepo {
-                    Divider()
-                    Button("Refresh Worktrees") { Task { await refreshWorktrees() } }
-                    Button("New Worktree…") { requestCreateWorktree() }
-                    if worktrees.count > 1 {
-                        Button("Switch Worktree…") { showWorktreePopover = true }
+            }
+            .droidPopover(isPresented: $showProjectMenu, preferredEdge: .trailing) {
+                ProjectContextMenu(
+                    hasLogo: project.logo != nil,
+                    hasIconColor: project.iconColor != nil,
+                    isGitRepo: isGitRepo,
+                    canSwitchWorktree: worktrees.count > 1,
+                    isRefreshingWorktrees: isRefreshingWorktrees,
+                    onSetLogo: {
+                        showProjectMenu = false
+                        pickLogoImage()
+                    },
+                    onRemoveLogo: {
+                        showProjectMenu = false
+                        onSetLogo(nil)
+                    },
+                    onSetIconColor: {
+                        showProjectMenu = false
+                        showColorPicker = true
+                    },
+                    onResetIconColor: {
+                        showProjectMenu = false
+                        onSetIconColor(nil)
+                    },
+                    onRename: {
+                        showProjectMenu = false
+                        startRename()
+                    },
+                    onRefreshWorktrees: {
+                        showProjectMenu = false
+                        Task { await refreshWorktrees() }
+                    },
+                    onNewWorktree: {
+                        showProjectMenu = false
+                        requestCreateWorktree()
+                    },
+                    onSwitchWorktree: {
+                        showProjectMenu = false
+                        showWorktreePopover = true
+                    },
+                    onRemoveProject: {
+                        showProjectMenu = false
+                        onRemove()
                     }
-                }
-                Divider()
-                Button("Remove Project", role: .destructive, action: onRemove)
+                )
             }
             .droidPopover(isPresented: $showWorktreePopover, preferredEdge: .trailing) {
                 WorktreePopover(
@@ -102,20 +131,6 @@ struct ProjectRow: View {
                 )
                 .environment(appState)
                 .environment(worktreeStore)
-            }
-            .sheet(item: $logoCropImage) { item in
-                LogoCropperSheet(
-                    sourceImage: item.image,
-                    onConfirm: { cropped in
-                        logoCropImage = nil
-                        let logoPath = ProjectLogoStorage.save(
-                            croppedImage: cropped,
-                            forProjectID: project.id
-                        )
-                        onSetLogo(logoPath)
-                    },
-                    onCancel: { logoCropImage = nil }
-                )
             }
             .overlay {
                 if showShortcutBadge, let shortcutIndex,
@@ -240,7 +255,14 @@ struct ProjectRow: View {
               let image = NSImage(contentsOf: url)
         else { return }
 
-        logoCropImage = IdentifiableImage(image: image)
+        NotificationCenter.default.post(
+            name: .requestProjectLogoCropper,
+            object: nil,
+            userInfo: [
+                "projectID": project.id,
+                "image": image,
+            ]
+        )
     }
 
     private func requestCreateWorktree() {
@@ -312,9 +334,4 @@ private struct RenamePopover: View {
         .frame(width: 200)
         .onAppear { isFocused = true }
     }
-}
-
-private struct IdentifiableImage: Identifiable {
-    let id = UUID()
-    let image: NSImage
 }
