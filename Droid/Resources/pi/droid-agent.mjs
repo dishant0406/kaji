@@ -8870,7 +8870,7 @@ var init_models_generated = __esm({
             cacheWrite: 3.75
           },
           contextWindow: 2e5,
-          maxTokens: 128e3
+          maxTokens: 64e3
         },
         "anthropic/claude-3.7-sonnet:thinking": {
           id: "anthropic/claude-3.7-sonnet:thinking",
@@ -9488,7 +9488,7 @@ var init_models_generated = __esm({
             cacheRead: 0.024999999999999998,
             cacheWrite: 0.08333333333333334
           },
-          contextWindow: 1e6,
+          contextWindow: 1048576,
           maxTokens: 8192
         },
         "google/gemini-2.0-flash-lite-001": {
@@ -10271,6 +10271,23 @@ var init_models_generated = __esm({
             cacheWrite: 0
           },
           contextWindow: 131072,
+          maxTokens: 4096
+        },
+        "mistralai/mistral-medium-3-5": {
+          id: "mistralai/mistral-medium-3-5",
+          name: "Mistral: Mistral Medium 3.5",
+          api: "openai-completions",
+          provider: "openrouter",
+          baseUrl: "https://openrouter.ai/api/v1",
+          reasoning: true,
+          input: ["text", "image"],
+          cost: {
+            input: 1.5,
+            output: 7.5,
+            cacheRead: 0,
+            cacheWrite: 0
+          },
+          contextWindow: 262144,
           maxTokens: 4096
         },
         "mistralai/mistral-medium-3.1": {
@@ -13133,13 +13150,13 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text"],
           cost: {
-            input: 0.39999999999999997,
-            output: 1.75,
-            cacheRead: 0.08,
+            input: 0.38,
+            output: 1.74,
+            cacheRead: 0,
             cacheWrite: 0
           },
           contextWindow: 202752,
-          maxTokens: 131072
+          maxTokens: 4096
         },
         "z-ai/glm-4.7-flash": {
           id: "z-ai/glm-4.7-flash",
@@ -144381,11 +144398,13 @@ rl.on("line", (line) => {
   try {
     const message = JSON.parse(line);
     if (message.type === "user_prompt") {
-      promptQueue = promptQueue.then(() => runPrompt(message)).catch((error51) => send({
-        type: "error",
-        taskID: message.taskID,
-        message: error51 instanceof Error ? error51.message : String(error51)
-      }));
+      promptQueue = promptQueue.then(() => runPrompt(message)).catch(
+        (error51) => send({
+          type: "error",
+          taskID: message.taskID,
+          message: error51 instanceof Error ? error51.message : String(error51)
+        })
+      );
     }
     if (message.type === "tool_result") handleToolResult(message);
   } catch (error51) {
