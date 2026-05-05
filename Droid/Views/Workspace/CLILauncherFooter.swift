@@ -4,6 +4,7 @@ struct CLILauncherFooter: View {
     let projectID: UUID
     @Environment(AppState.self) private var appState
     @State private var settings = CLILauncherSettings.shared
+    @State private var showsShortcuts = false
 
     private var enabledLaunchers: [CLILauncherConfiguration] {
         settings.enabledLaunchers
@@ -24,6 +25,14 @@ struct CLILauncherFooter: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 4) {
+                IconButton(symbol: "keyboard", selected: showsShortcuts, accessibilityLabel: "Shortcuts") {
+                    showsShortcuts.toggle()
+                }
+                .help("Shortcuts")
+                .droidPopover(isPresented: $showsShortcuts, preferredEdge: .top) {
+                    ShortcutReferencePopover()
+                }
+
                 IconButton(symbol: "square.split.2x1", accessibilityLabel: "Split Right") {
                     appState.splitFocusedArea(direction: .horizontal, projectID: projectID)
                 }
