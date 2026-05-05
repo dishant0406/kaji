@@ -50,6 +50,7 @@ enum HugeIconCatalog {
         "line.3.horizontal.decrease.circle.fill": "filter-horizontal",
         "lock.fill": "lock",
         "macwindow.badge.plus": "dashboard-square-add",
+        "memorychip": "chip",
         "magnifyingglass": "search-01",
         "minus": "minus-sign",
         "network": "globe",

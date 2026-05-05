@@ -66,7 +66,7 @@ struct AIUsageMetricRowView: View {
                     }
                     .buttonStyle(.plain)
                     .onHover { pinHovered = $0 }
-                    .help(isPinned ? "Unpin from sidebar" : "Show this usage in the sidebar")
+                    .help(isPinned ? "Unpin from top bar" : "Show this usage in the top bar")
                 }
 
                 Spacer()
