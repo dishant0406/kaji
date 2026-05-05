@@ -65,6 +65,7 @@ final class AppState {
     var onProjectsEmptied: (([UUID]) -> Void)?
 
     var activeProjectID: UUID?
+    var isParentAgentHomePresented = false
 
     var activeWorktreeID: [UUID: UUID] = [:]
     var activeWorktreePath: [UUID: String] = [:]
@@ -183,6 +184,14 @@ final class AppState {
     func focusedAreaID(for projectID: UUID) -> UUID? {
         guard let key = activeWorktreeKey(for: projectID) else { return nil }
         return focusedAreaID[key]
+    }
+
+    func showParentAgentHome() {
+        isParentAgentHomePresented = true
+    }
+
+    func hideParentAgentHome() {
+        isParentAgentHomePresented = false
     }
 
     func selectProject(_ project: Project, worktree: Worktree) {

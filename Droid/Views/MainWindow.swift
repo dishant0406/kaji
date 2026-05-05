@@ -165,7 +165,10 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
-                    openParentAgentTab()
+                    appState.showParentAgentHome()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .hideParentAgentHome)) { _ in
+                    appState.hideParentAgentHome()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
                     showWorktreeSwitcher.toggle()
@@ -329,10 +332,12 @@ struct MainWindow: View {
                         FileTreeView(
                             state: treeState,
                             onOpenFile: { filePath in
+                                activateWorkspace()
                                 guard let projectID = appState.activeProjectID else { return }
                                 appState.openFile(filePath, projectID: projectID)
                             },
                             onOpenTerminal: { directory in
+                                activateWorkspace()
                                 guard let projectID = appState.activeProjectID else { return }
                                 appState.dispatch(.createTabInDirectory(
                                     projectID: projectID,
@@ -354,11 +359,14 @@ struct MainWindow: View {
 
     @ViewBuilder
     private var workspaceContent: some View {
-        if let project = activeProject,
-           appState.workspaceRoot(for: project.id) == nil,
-           resolvedActiveWorktree(for: project) != nil
+        if appState.isParentAgentHomePresented {
+            ParentAgentTabContent()
+        } else if let project = activeProject,
+                  appState.workspaceRoot(for: project.id) == nil,
+                  resolvedActiveWorktree(for: project) != nil
         {
             EmptyProjectPlaceholder(project: project) {
+                activateWorkspace()
                 appState.createTab(projectID: project.id)
             }
         } else if projectsWithWorkspaces.isEmpty {
@@ -377,19 +385,6 @@ struct MainWindow: View {
                 .zIndex(key == activeKey ? 1 : 0)
             }
         }
-    }
-
-    private func openParentAgentTab() {
-        if let project = activeProject {
-            appState.openParentAgentTab(projectID: project.id)
-            return
-        }
-
-        guard let project = projectStore.projects.first else { return }
-        worktreeStore.ensurePrimary(for: project)
-        guard let worktree = worktreeStore.preferred(for: project.id, matching: nil) else { return }
-        appState.selectProject(project, worktree: worktree)
-        appState.openParentAgentTab(projectID: project.id)
     }
 
     @ViewBuilder
@@ -423,6 +418,7 @@ struct MainWindow: View {
             QuickOpenOverlay(
                 projectPath: activeWorktreePath(for: project),
                 onSelect: { filePath in
+                    activateWorkspace()
                     showQuickOpen = false
                     appState.openFile(filePath, projectID: project.id)
                 },
@@ -456,6 +452,7 @@ struct MainWindow: View {
                 items: worktreeSwitcherItems,
                 activeKey: activeWorktreeKey,
                 onSelect: { item in
+                    activateWorkspace()
                     showWorktreeSwitcher = false
                     guard let project = projectStore.projects.first(where: { $0.id == item.projectID }) else { return }
                     if appState.activeProjectID == item.projectID {
@@ -521,10 +518,36 @@ struct MainWindow: View {
 
     @ViewBuilder
     private var topBarContent: some View {
-        if let project = activeProject,
-           let workspace = appState.workspace(for: project.id),
-           let activeWorkspaceTab = workspace.activeTab,
-           let areaID = activeWorkspaceTab.activeArea?.id
+        if appState.isParentAgentHomePresented {
+            WindowDragRepresentable(alwaysEnabled: true)
+                .overlay {
+                    HStack {
+                        Text("Droid")
+                            .droidFont(size: 13, weight: .semibold)
+                            .foregroundStyle(DroidTheme.fgMuted)
+                            .padding(.leading, 14)
+                        Spacer(minLength: 0)
+                    }
+                }
+                .overlay(alignment: .trailing) {
+                    HStack(spacing: 0) {
+                        if let version = UpdateService.shared.availableUpdateVersion {
+                            UpdateBadge(version: version) {
+                                UpdateService.shared.checkForUpdates()
+                            }
+                            .padding(.trailing, 4)
+                        }
+                        IconButton(symbol: "gearshape", size: 12, accessibilityLabel: "Settings") {
+                            NotificationCenter.default.post(name: .toggleSettings, object: nil)
+                        }
+                        .help("Settings (⌘,)")
+                    }
+                    .padding(.trailing, 8)
+                }
+        } else if let project = activeProject,
+                  let workspace = appState.workspace(for: project.id),
+                  let activeWorkspaceTab = workspace.activeTab,
+                  let areaID = activeWorkspaceTab.activeArea?.id
         {
             PaneTabStrip(
                 areaID: areaID,
@@ -535,18 +558,23 @@ struct MainWindow: View {
                 showVCSButton: true,
                 projectID: project.id,
                 onSelectTab: { tabID in
+                    activateWorkspace()
                     appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tabID))
                 },
                 onCreateTab: {
+                    activateWorkspace()
                     appState.dispatch(.createTab(projectID: project.id, areaID: nil))
                 },
                 onCreateVCSTab: {
+                    activateWorkspace()
                     openVCS(for: project, preferredAreaID: areaID)
                 },
                 onCloseTab: { tabID in
+                    activateWorkspace()
                     appState.closeTab(tabID, areaID: areaID, projectID: project.id)
                 },
                 onSplit: { dir in
+                    activateWorkspace()
                     appState.dispatch(.splitArea(.init(
                         projectID: project.id,
                         areaID: areaID,
@@ -555,9 +583,11 @@ struct MainWindow: View {
                     )))
                 },
                 onDropAction: { result in
+                    activateWorkspace()
                     appState.dispatch(result.action(projectID: project.id))
                 },
                 onCreateTabAdjacent: { tabID, side in
+                    activateWorkspace()
                     let path = activeWorktreePath(for: project)
                     let area = TabArea(projectPath: path)
                     let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
@@ -691,8 +721,7 @@ struct MainWindow: View {
     }
 
     private var parentAgentSelected: Bool {
-        guard let project = activeProject else { return false }
-        return appState.activeTab(for: project.id)?.kind == .parentAgent
+        appState.isParentAgentHomePresented
     }
 
     private var activeQuickOpenProjectPath: String? {
@@ -701,6 +730,9 @@ struct MainWindow: View {
     }
 
     private var windowTitle: String {
+        if appState.isParentAgentHomePresented {
+            return "Droid"
+        }
         guard let project = activeProject else { return "Droid" }
         guard let tabTitle = appState.activeTab(for: project.id)?.title,
               !tabTitle.isEmpty
@@ -735,9 +767,14 @@ struct MainWindow: View {
     }
 
     private func handleShortcutAction(_ action: ShortcutAction) -> Bool {
-        shortcutDispatcher.perform(action, activeProject: activeProject) { project in
+        let handled = shortcutDispatcher.perform(action, activeProject: activeProject) { project in
             openVCS(for: project)
         }
+        guard handled else { return false }
+        if action.exitsParentAgentHome {
+            activateWorkspace()
+        }
+        return true
     }
 
     private var activeProjectHasSplitWorkspace: Bool {
@@ -750,6 +787,10 @@ struct MainWindow: View {
 
     private var projectsWithWorkspaces: [Project] {
         projectStore.projects.filter { appState.workspaceRoot(for: $0.id) != nil }
+    }
+
+    private func activateWorkspace() {
+        appState.hideParentAgentHome()
     }
 
     private func sidePanelResizeHandle(onDrag: @escaping (CGFloat) -> Void) -> some View {
@@ -812,6 +853,7 @@ struct MainWindow: View {
             return
         }
 
+        activateWorkspace()
         ensureVCSState(for: project)
         let isShowing = !vcsPanelVisible
         vcsPanelVisible = isShowing
@@ -826,6 +868,7 @@ struct MainWindow: View {
             return
         }
 
+        activateWorkspace()
         ensureFileTreeState(for: project)
         let isShowing = !fileTreePanelVisible
         fileTreePanelVisible = isShowing
@@ -856,6 +899,7 @@ struct MainWindow: View {
 
     private func openVCS(for project: Project, preferredAreaID: UUID? = nil) {
         _ = preferredAreaID
+        activateWorkspace()
         ensureVCSState(for: project)
         let isShowing = !vcsPanelVisible
         vcsPanelVisible = isShowing
@@ -865,6 +909,7 @@ struct MainWindow: View {
     }
 
     private func requestCreateWorktree(projectID: UUID) {
+        activateWorkspace()
         showQuickOpen = false
         showWorktreeSwitcher = false
         showSettings = false
@@ -1016,6 +1061,64 @@ private struct WindowTitleUpdater: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let window = nsView.window, window.title != title else { return }
         window.title = title
+    }
+}
+
+private extension ShortcutAction {
+    var exitsParentAgentHome: Bool {
+        switch self {
+        case .ask,
+             .agentCommandCenter,
+             .toggleSidebar,
+             .toggleThemePicker,
+             .toggleAIUsage,
+             .navigateBack,
+             .navigateForward,
+             .openProject,
+             .newProject,
+             .reloadConfig:
+            false
+        case .quickOpen,
+             .switchWorktree,
+             .openVCSTab,
+             .toggleFileTree,
+             .newTab,
+             .closeTab,
+             .renameTab,
+             .pinUnpinTab,
+             .splitRight,
+             .splitDown,
+             .closePane,
+             .focusPaneLeft,
+             .focusPaneRight,
+             .focusPaneUp,
+             .focusPaneDown,
+             .nextTab,
+             .previousTab,
+             .selectTab1,
+             .selectTab2,
+             .selectTab3,
+             .selectTab4,
+             .selectTab5,
+             .selectTab6,
+             .selectTab7,
+             .selectTab8,
+             .selectTab9,
+             .nextProject,
+             .previousProject,
+             .selectProject1,
+             .selectProject2,
+             .selectProject3,
+             .selectProject4,
+             .selectProject5,
+             .selectProject6,
+             .selectProject7,
+             .selectProject8,
+             .selectProject9,
+             .findInTerminal,
+             .saveFile:
+            true
+        }
     }
 }
 
