@@ -25,44 +25,17 @@ struct LogoCropperSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Crop Logo")
-                .droidFont(size: 14, weight: .semibold)
-                .foregroundStyle(DroidTheme.fg)
-
-            ZStack {
-                Color.black
-
-                Image(nsImage: sourceImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(
-                        width: imageSize.width * scale,
-                        height: imageSize.height * scale
-                    )
-                    .offset(offset)
-                    .gesture(dragGesture)
-                    .gesture(magnificationGesture)
-
-                RoundedRectangle(cornerRadius: cropSize * (8.0 / 32.0))
-                    .stroke(.white.opacity(0.8), lineWidth: 2)
-                    .frame(width: cropSize, height: cropSize)
-                    .allowsHitTesting(false)
-
-                cropMask
-            }
-            .frame(width: cropSize + 40, height: cropSize + 40)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay {
-                ScrollWheelView { delta in
-                    let zoomFactor: CGFloat = 1.0 + delta * 0.03
-                    scale = max(0.5, min(5.0, scale * zoomFactor))
-                    clampOffset()
-                }
-                .allowsHitTesting(false)
+        VStack(spacing: 14) {
+            HStack {
+                Text("Crop Logo")
+                    .droidFont(size: 13, weight: .semibold)
+                    .foregroundStyle(DroidTheme.fg)
+                Spacer()
             }
 
-            HStack(spacing: 12) {
+            cropCanvas
+
+            HStack(spacing: 10) {
                 previewIcon
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Preview")
@@ -77,15 +50,68 @@ struct LogoCropperSheet: View {
 
             HStack(spacing: 8) {
                 Button("Cancel") { onCancel() }
+                    .buttonStyle(DroidButtonStyle(.ghost, size: .small))
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Apply") { applyCrop() }
+                    .buttonStyle(DroidButtonStyle(.primary, size: .small))
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(20)
-        .frame(width: 300)
+        .padding(14)
+        .frame(width: 286)
+        .background(
+            TranslucentSurface(
+                base: DroidTheme.tertiaryBackground,
+                material: .menu,
+                tintOpacity: 0.84
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: DroidShape.panelRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: DroidShape.panelRadius)
+                .strokeBorder(DroidTheme.border.opacity(0.8), lineWidth: 1)
+        }
+        .preferredColorScheme(DroidTheme.colorScheme)
         .onAppear { fitImageInitially() }
+    }
+
+    private var cropCanvas: some View {
+        ZStack {
+            DroidTheme.bg
+
+            Image(nsImage: sourceImage)
+                .resizable()
+                .scaledToFill()
+                .frame(
+                    width: imageSize.width * scale,
+                    height: imageSize.height * scale
+                )
+                .offset(offset)
+                .gesture(dragGesture)
+                .gesture(magnificationGesture)
+
+            RoundedRectangle(cornerRadius: cropSize * (8.0 / 32.0))
+                .stroke(DroidTheme.fg.opacity(0.82), lineWidth: 2)
+                .frame(width: cropSize, height: cropSize)
+                .allowsHitTesting(false)
+
+            cropMask
+        }
+        .frame(width: cropSize + 34, height: cropSize + 34)
+        .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: DroidShape.tileRadius)
+                .strokeBorder(DroidTheme.border, lineWidth: 1)
+        }
+        .overlay {
+            ScrollWheelView { delta in
+                let zoomFactor: CGFloat = 1.0 + delta * 0.03
+                scale = max(0.5, min(5.0, scale * zoomFactor))
+                clampOffset()
+            }
+            .allowsHitTesting(false)
+        }
     }
 
     private var previewIcon: some View {
@@ -128,7 +154,7 @@ struct LogoCropperSheet: View {
 
             context.fill(
                 Path(CGRect(origin: .zero, size: size)),
-                with: .color(.black.opacity(0.6))
+                with: .color(DroidTheme.bg.opacity(0.62))
             )
             context.blendMode = .destinationOut
             context.fill(

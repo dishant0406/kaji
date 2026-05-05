@@ -1,0 +1,125 @@
+import SwiftUI
+
+struct ProjectContextMenu: View {
+    let hasLogo: Bool
+    let hasIconColor: Bool
+    let isGitRepo: Bool
+    let canSwitchWorktree: Bool
+    let isRefreshingWorktrees: Bool
+    let onSetLogo: () -> Void
+    let onRemoveLogo: () -> Void
+    let onSetIconColor: () -> Void
+    let onResetIconColor: () -> Void
+    let onRename: () -> Void
+    let onRefreshWorktrees: () -> Void
+    let onNewWorktree: () -> Void
+    let onSwitchWorktree: () -> Void
+    let onRemoveProject: () -> Void
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ProjectContextMenuButton(title: "Set Logo...", icon: "photo", action: onSetLogo)
+            if hasLogo {
+                ProjectContextMenuButton(title: "Remove Logo", icon: "trash", action: onRemoveLogo)
+            }
+            ProjectContextMenuButton(title: "Set Icon Color...", icon: "paintpalette", action: onSetIconColor)
+            if hasIconColor {
+                ProjectContextMenuButton(title: "Reset Icon Color", icon: "arrow.counterclockwise", action: onResetIconColor)
+            }
+
+            ProjectContextMenuDivider()
+            ProjectContextMenuButton(title: "Rename Project", icon: "pencil", action: onRename)
+
+            if isGitRepo {
+                ProjectContextMenuDivider()
+                ProjectContextMenuButton(
+                    title: "Refresh Worktrees",
+                    icon: "arrow.clockwise",
+                    isBusy: isRefreshingWorktrees,
+                    action: onRefreshWorktrees
+                )
+                ProjectContextMenuButton(title: "New Worktree...", icon: "plus", action: onNewWorktree)
+                if canSwitchWorktree {
+                    ProjectContextMenuButton(title: "Switch Worktree...", icon: "arrow.left.arrow.right", action: onSwitchWorktree)
+                }
+            }
+
+            ProjectContextMenuDivider()
+            ProjectContextMenuButton(
+                title: "Remove Project",
+                icon: "trash",
+                role: .destructive,
+                action: onRemoveProject
+            )
+        }
+        .padding(5)
+        .frame(width: 202)
+        .background(
+            TranslucentSurface(
+                base: DroidTheme.tertiaryBackground,
+                material: .menu,
+                tintOpacity: 0.82
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: DroidShape.panelRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: DroidShape.panelRadius)
+                .strokeBorder(DroidTheme.border.opacity(0.78), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.22), radius: 14, x: 0, y: 8)
+    }
+}
+
+private struct ProjectContextMenuButton: View {
+    let title: String
+    let icon: String
+    var role: ButtonRole?
+    var isBusy = false
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(role: role, action: action) {
+            HStack(spacing: 7) {
+                if isBusy {
+                    DroidSpinner(size: 11, lineWidth: 1.4)
+                        .frame(width: 13, height: 13)
+                } else {
+                    DroidIcon(systemName: icon, size: 11)
+                        .frame(width: 13, height: 13)
+                }
+
+                Text(title)
+                    .droidFont(size: 12, weight: .medium)
+                    .lineLimit(1)
+
+                Spacer(minLength: 8)
+            }
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 8)
+            .frame(height: 26)
+            .background(hovered ? DroidTheme.surface : .clear, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+        }
+        .buttonStyle(.plain)
+        .disabled(isBusy)
+        .onHover { hovered = $0 }
+    }
+
+    private var foreground: Color {
+        if role == .destructive {
+            return hovered ? DroidTheme.diffRemoveFg : DroidTheme.diffRemoveFg.opacity(0.86)
+        }
+        return hovered ? DroidTheme.fg : DroidTheme.fgMuted
+    }
+}
+
+private struct ProjectContextMenuDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(DroidTheme.border.opacity(0.64))
+            .frame(height: 1)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+    }
+}

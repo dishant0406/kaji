@@ -23,10 +23,10 @@ struct ExpandedProjectRow: View {
     @State private var isRenaming = false
     @State private var renameText = ""
     @State private var isGitRepo = false
-    @State private var logoCropImage: IdentifiableExpandedImage?
     @State private var worktreesExpanded = false
     @State private var isRefreshingWorktrees = false
     @State private var showColorPicker = false
+    @State private var showProjectMenu = false
 
     private var isActive: Bool {
         appState.activeProjectID == project.id
@@ -74,39 +74,6 @@ struct ExpandedProjectRow: View {
             withAnimation(.easeInOut(duration: 0.15)) {
                 worktreesExpanded = true
             }
-        }
-        .contextMenu {
-            Button("Set Logo...") { pickLogoImage() }
-            if project.logo != nil {
-                Button("Remove Logo") { onSetLogo(nil) }
-            }
-            Button("Set Icon Color...") { showColorPicker = true }
-            if project.iconColor != nil {
-                Button("Reset Icon Color") { onSetIconColor(nil) }
-            }
-            Divider()
-            Button("Rename Project") { startRename() }
-            if isGitRepo {
-                Divider()
-                Button("Refresh Worktrees") { Task { await refreshWorktrees() } }
-                Button("New Worktree…") { requestCreateWorktree() }
-            }
-            Divider()
-            Button("Remove Project", role: .destructive, action: onRemove)
-        }
-        .sheet(item: $logoCropImage) { item in
-            LogoCropperSheet(
-                sourceImage: item.image,
-                onConfirm: { cropped in
-                    logoCropImage = nil
-                    let logoPath = ProjectLogoStorage.save(
-                        croppedImage: cropped,
-                        forProjectID: project.id
-                    )
-                    onSetLogo(logoPath)
-                },
-                onCancel: { logoCropImage = nil }
-            )
         }
         .droidPopover(isPresented: $isRenaming, preferredEdge: .trailing) {
             ExpandedRenamePopover(
@@ -189,6 +156,56 @@ struct ExpandedProjectRow: View {
                     ShortcutBadge(label: KeyBindingStore.shared.combo(for: action).displayString)
                 }
             }
+        }
+        .overlay {
+            SecondaryClickView {
+                guard !isAnyDragging else { return }
+                showProjectMenu = true
+            }
+        }
+        .droidPopover(isPresented: $showProjectMenu, preferredEdge: .trailing) {
+            ProjectContextMenu(
+                hasLogo: project.logo != nil,
+                hasIconColor: project.iconColor != nil,
+                isGitRepo: isGitRepo,
+                canSwitchWorktree: false,
+                isRefreshingWorktrees: isRefreshingWorktrees,
+                onSetLogo: {
+                    showProjectMenu = false
+                    pickLogoImage()
+                },
+                onRemoveLogo: {
+                    showProjectMenu = false
+                    onSetLogo(nil)
+                },
+                onSetIconColor: {
+                    showProjectMenu = false
+                    showColorPicker = true
+                },
+                onResetIconColor: {
+                    showProjectMenu = false
+                    onSetIconColor(nil)
+                },
+                onRename: {
+                    showProjectMenu = false
+                    startRename()
+                },
+                onRefreshWorktrees: {
+                    showProjectMenu = false
+                    Task { await refreshWorktrees() }
+                },
+                onNewWorktree: {
+                    showProjectMenu = false
+                    requestCreateWorktree()
+                },
+                onSwitchWorktree: {
+                    showProjectMenu = false
+                },
+                onRemoveProject: {
+                    showProjectMenu = false
+                    onRemove()
+                }
+            )
         }
     }
 
@@ -332,7 +349,14 @@ struct ExpandedProjectRow: View {
               let image = NSImage(contentsOf: url)
         else { return }
 
-        logoCropImage = IdentifiableExpandedImage(image: image)
+        NotificationCenter.default.post(
+            name: .requestProjectLogoCropper,
+            object: nil,
+            userInfo: [
+                "projectID": project.id,
+                "image": image,
+            ]
+        )
     }
 
     private func requestCreateWorktree() {
@@ -455,9 +479,4 @@ private struct ExpandedRenamePopover: View {
         .frame(width: 200)
         .onAppear { isFocused = true }
     }
-}
-
-private struct IdentifiableExpandedImage: Identifiable {
-    let id = UUID()
-    let image: NSImage
 }
