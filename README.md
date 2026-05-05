@@ -12,8 +12,6 @@
   Run Codex, Claude Code, OpenCode, Pi, and terminal sessions across projects and worktrees without losing context, control, or verification.
 </p>
 
-<p align="center"><a href="https://discord.gg/4eMXAmJQ2n">Discord</a></p>
-
 <div align="center">
   <img src="https://img.shields.io/github/downloads/dishant0406/droid/total" alt="Downloads" />
   <img src="https://img.shields.io/github/v/release/dishant0406/droid" alt="Release" />
