@@ -58,15 +58,15 @@ private struct ParentAgentAssignmentCard: View {
             }
             if !changedFiles.isEmpty || verificationText != nil {
                 HStack(spacing: 8) {
-                if !changedFiles.isEmpty {
-                    assignmentBadge("\(changedFiles.count) files")
-                }
-                if assignment.attention != nil {
-                    assignmentBadge("needs attention")
-                }
-                if let verificationText {
-                    assignmentBadge(verificationText)
-                }
+                    if !changedFiles.isEmpty {
+                        assignmentBadge("\(changedFiles.count) files")
+                    }
+                    if assignment.attention != nil {
+                        assignmentBadge("needs attention")
+                    }
+                    if let verificationText {
+                        assignmentBadge(verificationText)
+                    }
                 }
                 .padding(.leading, 18)
             }
@@ -104,7 +104,8 @@ private struct ParentAgentAssignmentCard: View {
         switch run?.status {
         case .running:
             return .running
-        case .waiting, .needsAttention:
+        case .waiting,
+             .needsAttention:
             return .waitingForUser
         case .completed:
             return hasEvidence ? .completed : .incomplete
@@ -127,13 +128,20 @@ private struct ParentAgentAssignmentCard: View {
         switch status {
         case .completed:
             DroidTheme.diffAddFg
-        case .running, .queued, .planned, .choosingAgent:
+        case .running,
+             .queued,
+             .planned,
+             .choosingAgent:
             DroidTheme.accent
         case .waitingForUser:
             DroidTheme.diffHunkFg
-        case .blocked, .requiresIsolation:
+        case .blocked,
+             .requiresIsolation:
             DroidTheme.diffHunkFg
-        case .incomplete, .failed, .stopped, .stale:
+        case .incomplete,
+             .failed,
+             .stopped,
+             .stale:
             DroidTheme.diffRemoveFg
         }
     }

@@ -102,7 +102,7 @@ extension ParentAgentController {
                     id: "continue-\(assignment.id.uuidString)",
                     title: "Continue: \(assignment.title)",
                     detail: assignmentChoiceDetail(assignment),
-                    value: continuationChoiceValue(project: project, assignment: assignment),
+                    value: continuationChoiceValue(project: project, assignment: assignment)
                 ),
             ]
         }
@@ -112,7 +112,7 @@ extension ParentAgentController {
                     id: "isolate-\(assignment.id.uuidString)",
                     title: "Use isolated worktree: \(assignment.title)",
                     detail: assignment.blockerReason,
-                    value: isolationChoiceValue(project: project, assignment: assignment),
+                    value: isolationChoiceValue(project: project, assignment: assignment)
                 ),
             ]
         }

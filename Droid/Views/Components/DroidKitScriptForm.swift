@@ -50,7 +50,7 @@ struct DroidKitScriptForm: View {
                 .disabled(!canSave)
         }
         .padding(.horizontal, 16)
-            .padding(.top, 14)
+        .padding(.top, 14)
         .padding(.bottom, 12)
     }
 
@@ -70,7 +70,11 @@ struct DroidKitScriptForm: View {
             items.append(.init(line: 1, severity: .warning, message: "Full shell scripts should start with a shebang."))
         }
         if DroidKitScriptPlanner.isRisky(scriptPreview) {
-            items.append(.init(line: nil, severity: .warning, message: "This script contains risky shell operations and will require confirmation."))
+            items.append(.init(
+                line: nil,
+                severity: .warning,
+                message: "This script contains risky shell operations and will require confirmation."
+            ))
         }
         return items
     }

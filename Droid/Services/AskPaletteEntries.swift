@@ -52,7 +52,13 @@ enum AskPaletteEntries {
                 .init(action: .runScript($0), title: $0.title, detail: scriptDetail($0), annotation: $0.slug)
             }
         case .executeAdd:
-            return [.init(action: .openScriptForm(nil), title: "Add script", detail: "Create a DroidKit script in ~/.droidkit", annotation: "Enter")]
+            let entry = AskPaletteEntry(
+                action: .openScriptForm(nil),
+                title: "Add script",
+                detail: "Create a DroidKit script in ~/.droidkit",
+                annotation: "Enter"
+            )
+            return [entry]
         case .executeEdit:
             return filteredScripts(annotation.scripts, query: annotation.active.value).map {
                 .init(action: .openScriptForm($0), title: $0.title, detail: scriptDetail($0), annotation: $0.slug)

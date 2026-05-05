@@ -38,7 +38,8 @@ extension ParentAgentController {
             .permission
         case "question":
             .question
-        case "error", "blocked":
+        case "error",
+             "blocked":
             .blocked
         default:
             .idle

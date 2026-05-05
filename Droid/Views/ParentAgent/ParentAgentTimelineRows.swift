@@ -1,4 +1,5 @@
 import SwiftUI
+
 struct ParentAgentTimelineRow: View {
     let item: ParentAgentTimelineItem
     @State private var runStore = AgentRunStore.shared
@@ -43,10 +44,10 @@ struct ParentAgentTimelineRow: View {
                     ParentAgentTimelineAttachmentStrip(attachments: item.attachments) { previewAttachment = $0 }
                 }
             }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(DroidTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
-                .frame(maxWidth: 520, alignment: .trailing)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(DroidTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
+            .frame(maxWidth: 520, alignment: .trailing)
         }
     }
 

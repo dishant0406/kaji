@@ -58,7 +58,8 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         var hooks = settings["hooks"] as? [String: Any] ?? [:]
         guard !commands.allSatisfy({ key, command in
             Self.droidHookMatches(entries: hooks[key] as? [[String: Any]], expectedCommand: command)
-        }) else { return }
+        })
+        else { return }
         for (key, command) in commands {
             hooks[key] = Self.mergeHookArray(
                 existing: hooks[key] as? [[String: Any]],
@@ -117,7 +118,7 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         guard let endpoint = Self.usageEndpoint else { throw AIUsageAuthError.missingCredentials }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
-        request.setValue("Bearer \(try readAccessToken())", forHTTPHeaderField: "Authorization")
+        try request.setValue("Bearer \(readAccessToken())", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")

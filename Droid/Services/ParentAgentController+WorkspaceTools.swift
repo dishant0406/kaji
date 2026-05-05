@@ -29,7 +29,8 @@ extension ParentAgentController {
             project: project,
             worktreeStore: worktreeStore,
             appState: appState
-        ) else {
+        )
+        else {
             sendToolError(id: toolID, message: "No worktree is available for \(project.name).")
             return
         }
@@ -62,7 +63,8 @@ extension ParentAgentController {
             project: project,
             worktreeStore: worktreeStore,
             appState: appState
-        ) else {
+        )
+        else {
             sendToolError(id: toolID, message: "No matching worktree is available for \(project.name).")
             return
         }
@@ -96,7 +98,8 @@ extension ParentAgentController {
             project: project,
             worktreeStore: worktreeStore,
             appState: appState
-        ) else {
+        )
+        else {
             sendToolError(id: toolID, message: "No worktree is available for \(project.name).")
             return
         }

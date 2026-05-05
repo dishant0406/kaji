@@ -284,7 +284,8 @@ final class AgentRunStore {
     private func updateExistingOpenRun(_ update: OpenRunUpdate) -> Bool {
         guard let index = runs.firstIndex(where: { run in
             run.providerID == update.providerID && run.paneID == update.paneID && isOpen(run.status)
-        }) else { return false }
+        })
+        else { return false }
         runs[index].projectID = update.projectID
         runs[index].worktreeID = update.worktreeID
         runs[index].worktreePath = update.worktreePath

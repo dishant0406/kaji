@@ -33,7 +33,8 @@ final class ProviderEventReceiver: NSObject {
         isListening = false
     }
 
-    @objc private func handleNotification(_ notification: Notification) {
+    @objc
+    private func handleNotification(_ notification: Notification) {
         guard let event = ProviderEvent(userInfo: notification.userInfo) else {
             providerEventReceiverLogger.warning("Ignored malformed provider event")
             return

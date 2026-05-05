@@ -35,7 +35,9 @@ enum TreeSitterShellHighlighter {
         switch name {
         case "keyword": .keyword
         case "function": .function
-        case "property", "variable", "variable.parameter": .variable
+        case "property",
+             "variable",
+             "variable.parameter": .variable
         case "string": .string
         case "comment": .comment
         case "number": .number

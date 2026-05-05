@@ -8,7 +8,8 @@ enum CodingAgentCommandRunner {
         guard let path = AIProviderExecutableLocator.resolvePath(
             for: executableName,
             extraDirectories: extraDirectories
-        ) else { return [] }
+        )
+        else { return [] }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments

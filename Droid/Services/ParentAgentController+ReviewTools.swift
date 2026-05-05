@@ -84,7 +84,10 @@ extension ParentAgentController {
                 return
             }
             sendControlResult(
-                AgentControlCenter(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore).perform(.openDiff(run.id, file)),
+                AgentControlCenter(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore).perform(.openDiff(
+                    run.id,
+                    file
+                )),
                 toolID: toolID
             )
             return

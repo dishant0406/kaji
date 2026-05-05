@@ -2,7 +2,8 @@ import AppKit
 import UniformTypeIdentifiers
 
 enum AskAttachmentLoader {
-    @MainActor static func openPanel() -> [AskAttachment] {
+    @MainActor
+    static func openPanel() -> [AskAttachment] {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
@@ -11,7 +12,8 @@ enum AskAttachmentLoader {
         return panel.runModal() == .OK ? panel.urls.map { AskAttachment(url: $0) } : []
     }
 
-    @MainActor static func attachments(from pasteboard: NSPasteboard = .general) -> [AskAttachment] {
+    @MainActor
+    static func attachments(from pasteboard: NSPasteboard = .general) -> [AskAttachment] {
         let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] ?? []
         let fileAttachments = fileURLs.map { AskAttachment(url: $0) }
         if !fileAttachments.isEmpty { return fileAttachments }

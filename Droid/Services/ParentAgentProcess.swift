@@ -86,7 +86,7 @@ final class ParentAgentProcess {
             outputBuffer.removeSubrange(...newline)
             guard !line.isEmpty else { continue }
             do {
-                onMessage?(try decoder.decode(ParentAgentEnvelope.self, from: Data(line)))
+                try onMessage?(decoder.decode(ParentAgentEnvelope.self, from: Data(line)))
             } catch {
                 onError?(error.localizedDescription)
             }

@@ -5,11 +5,17 @@ extension ParentAgentController {
     func handleSubagent(_ message: ParentAgentEnvelope, toolID: String) {
         let action = message.arguments?["action"] ?? "status"
         switch action {
-        case "plan", "preflight", "spawn", "send", "stop", "replace":
+        case "plan",
+             "preflight",
+             "spawn",
+             "send",
+             "stop",
+             "replace":
             enqueueMutation { await self.handleMutatingSubagent(message, toolID: toolID, action: action) }
         case "jump":
             jumpToAgent(message, toolID: toolID)
-        case "status", "attention":
+        case "status",
+             "attention":
             sendSubagentStatus(message, toolID: toolID)
         case "result":
             Task { await self.sendSubagentResult(message, toolID: toolID) }
@@ -26,7 +32,8 @@ extension ParentAgentController {
             planSubagent(message, toolID: toolID)
         case "preflight":
             preflightSubagent(message, toolID: toolID)
-        case "spawn", "replace":
+        case "spawn",
+             "replace":
             await spawnSubagent(message, toolID: toolID, mode: action == "replace" ? .replacement : .fresh)
         case "send":
             await sendSubagentPrompt(message, toolID: toolID)
@@ -71,7 +78,8 @@ extension ParentAgentController {
             project: project,
             worktree: worktree,
             isolation: isolation
-        ) else {
+        )
+        else {
             sendToolError(id: toolID, message: "Parent assignment could not be planned.")
             return
         }
@@ -100,7 +108,13 @@ extension ParentAgentController {
         case .allowed:
             return
         case let .blocked(reason, _):
-            store.blockAssignment(taskID: taskID, assignmentID: assignment.id, status: .blocked, reason: reason, nextAction: .waitForAssignment)
+            store.blockAssignment(
+                taskID: taskID,
+                assignmentID: assignment.id,
+                status: .blocked,
+                reason: reason,
+                nextAction: .waitForAssignment
+            )
         case let .requiresIsolation(reason, _):
             store.blockAssignment(
                 taskID: taskID,
@@ -204,7 +218,8 @@ extension ParentAgentController {
             worktree: worktree,
             mode: mode,
             isolation: isolation
-        ) else {
+        )
+        else {
             sendToolError(id: toolID, message: "Parent assignment could not be created.")
             return
         }
@@ -214,7 +229,12 @@ extension ParentAgentController {
         let providerCommand = AskCommandDispatcher.startupCommand(for: provider, prompt: prompt, model: model)
         let command = AskCommandDispatcher.commandWithCompletionNotification(providerCommand, provider: provider)
         guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            store.updateAssignmentStatus(taskID: taskID, assignmentID: assignment.id, status: .failed, event: "Provider command unavailable")
+            store.updateAssignmentStatus(
+                taskID: taskID,
+                assignmentID: assignment.id,
+                status: .failed,
+                event: "Provider command unavailable"
+            )
             sendToolError(id: toolID, message: "Provider command is unavailable.")
             return
         }

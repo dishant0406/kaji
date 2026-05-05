@@ -55,7 +55,11 @@ struct AskOverlay: View {
                     targetSummary
                     Divider().overlay(DroidTheme.border.opacity(0.75))
                     if let pendingRiskyScript {
-                        DroidKitScriptConfirmationView(script: pendingRiskyScript, onRun: confirmPendingScript, onCancel: cancelPendingScript)
+                        DroidKitScriptConfirmationView(
+                            script: pendingRiskyScript,
+                            onRun: confirmPendingScript,
+                            onCancel: cancelPendingScript
+                        )
                     } else if isTaskFormVisible {
                         AskTaskRecipeForm(
                             name: $taskFormName,

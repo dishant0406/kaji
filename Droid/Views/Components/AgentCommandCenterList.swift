@@ -9,7 +9,10 @@ struct AgentCommandCenterList: View {
     var body: some View {
         Group {
             if entries.isEmpty {
-                VStack { Spacer(); emptyText; Spacer() }
+                VStack { Spacer()
+                    emptyText
+                    Spacer()
+                }
             } else {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: false) {

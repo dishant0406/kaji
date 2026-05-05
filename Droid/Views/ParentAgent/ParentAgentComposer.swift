@@ -37,7 +37,7 @@ struct ParentAgentComposer: View {
                 onSubmit: onSubmit,
                 onAttach: onAttach
             )
-                .frame(height: promptHeight)
+            .frame(height: promptHeight)
 
             if isBusy {
                 HStack(spacing: 6) {

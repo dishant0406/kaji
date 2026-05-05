@@ -115,9 +115,19 @@ extension ParentAgentController {
 
     func isTerminalStatus(_ status: ParentAgentAssignmentStatus) -> Bool {
         switch status {
-        case .completed, .incomplete, .failed, .stopped, .stale, .blocked, .requiresIsolation:
+        case .completed,
+             .incomplete,
+             .failed,
+             .stopped,
+             .stale,
+             .blocked,
+             .requiresIsolation:
             true
-        case .planned, .choosingAgent, .queued, .running, .waitingForUser:
+        case .planned,
+             .choosingAgent,
+             .queued,
+             .running,
+             .waitingForUser:
             false
         }
     }
@@ -157,9 +167,19 @@ extension ParentAgentController {
 
     func isTerminalAssignment(_ assignment: ParentAgentAssignment) -> Bool {
         switch effectiveAssignmentStatus(assignment, run: assignment.runID.flatMap(resolveChildRun)) {
-        case .completed, .incomplete, .failed, .stopped, .stale, .blocked, .requiresIsolation:
+        case .completed,
+             .incomplete,
+             .failed,
+             .stopped,
+             .stale,
+             .blocked,
+             .requiresIsolation:
             true
-        case .planned, .choosingAgent, .queued, .running, .waitingForUser:
+        case .planned,
+             .choosingAgent,
+             .queued,
+             .running,
+             .waitingForUser:
             false
         }
     }
