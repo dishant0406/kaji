@@ -33,14 +33,14 @@ struct KeyboardShortcutsSettingsView: View {
     }
 
     private var shortcutsList: some View {
-        let visibleCategories = ShortcutAction.categories.filter { !filteredActions(for: $0).isEmpty }
+        let visibleGroups = filteredGroups
         return ScrollView(.vertical, showsIndicators: true) {
             VStack(spacing: 0) {
-                ForEach(visibleCategories, id: \.self) { category in
+                ForEach(visibleGroups) { group in
                     categorySection(
-                        title: category,
-                        actions: filteredActions(for: category),
-                        isLast: category == visibleCategories.last
+                        title: group.title,
+                        actions: group.actions,
+                        isLast: group.id == visibleGroups.last?.id
                     )
                 }
             }
@@ -70,10 +70,18 @@ struct KeyboardShortcutsSettingsView: View {
         }
     }
 
-    private func filteredActions(for category: String) -> [ShortcutAction] {
-        let actions = ShortcutAction.allCases.filter { $0.category == category }
-        guard !searchText.isEmpty else { return actions }
-        return actions.filter { $0.displayName.localizedCaseInsensitiveContains(searchText) }
+    private var filteredGroups: [ShortcutReferenceGroup] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return ShortcutReferenceCatalog.keyboardGroups }
+        return ShortcutReferenceCatalog.keyboardGroups.compactMap { group in
+            let actions = group.actions.filter { action in
+                action.displayName.localizedCaseInsensitiveContains(query) ||
+                    group.title.localizedCaseInsensitiveContains(query) ||
+                    store.combo(for: action).displayString.localizedCaseInsensitiveContains(query)
+            }
+            guard !actions.isEmpty else { return nil }
+            return ShortcutReferenceGroup(title: group.title, actions: actions)
+        }
     }
 
     private func handleRecord(action: ShortcutAction, combo: KeyCombo) {
