@@ -9488,7 +9488,7 @@ var init_models_generated = __esm({
             cacheRead: 0.024999999999999998,
             cacheWrite: 0.08333333333333334
           },
-          contextWindow: 1048576,
+          contextWindow: 1e6,
           maxTokens: 8192
         },
         "google/gemini-2.0-flash-lite-001": {
@@ -11440,6 +11440,23 @@ var init_models_generated = __esm({
           },
           contextWindow: 128e3,
           maxTokens: 16384
+        },
+        "openai/gpt-chat-latest": {
+          id: "openai/gpt-chat-latest",
+          name: "OpenAI: GPT Chat Latest",
+          api: "openai-completions",
+          provider: "openrouter",
+          baseUrl: "https://openrouter.ai/api/v1",
+          reasoning: false,
+          input: ["text", "image"],
+          cost: {
+            input: 5,
+            output: 30,
+            cacheRead: 0.5,
+            cacheWrite: 0
+          },
+          contextWindow: 4e5,
+          maxTokens: 128e3
         },
         "openai/gpt-oss-120b": {
           id: "openai/gpt-oss-120b",
@@ -16636,7 +16653,7 @@ var init_models_generated = __esm({
           provider: "xiaomi",
           baseUrl: "https://token-plan-ams.xiaomimimo.com/anthropic",
           reasoning: true,
-          input: ["text"],
+          input: ["text", "image"],
           cost: {
             input: 0.4,
             output: 2,
@@ -16653,7 +16670,7 @@ var init_models_generated = __esm({
           provider: "xiaomi",
           baseUrl: "https://token-plan-ams.xiaomimimo.com/anthropic",
           reasoning: true,
-          input: ["text", "image"],
+          input: ["text"],
           cost: {
             input: 1,
             output: 3,
