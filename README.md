@@ -45,6 +45,22 @@ It is built with SwiftUI and embeds upstream [libghostty](https://github.com/gho
 - **Run evidence**: completed runs can attach git changed-file snapshots and expose per-file open/diff actions.
 - **Verification**: run configured checks for a project, or default Swift package verification with `swift build && swift test`.
 
+#### Cmd+K Routing Tokens
+Type these anywhere in the Ask palette prompt, then choose from the highlighted matches.
+
+| Token | Routes or action |
+| --- | --- |
+| `:p:`, `:wt:` | Project and worktree |
+| `:t:` | Provider: `terminal`, `codex`, `claude`, `opencode`, or `pi` |
+| `:m:` | Session mode: `best`, `existing`, or `new` |
+| `:h:`, `:s:` | Provider history and skill, unavailable for Terminal |
+| `:task:`, `:ta:`, `:te:`, `:td:` | Run, add, edit, or delete saved task recipes |
+| `:pa:` | Add a project from a directory path |
+| `:attach:` | Attach files, folders, or images |
+| `:x:`, `:xa:`, `:xe:`, `:xd:` | Run, add, edit, or delete DroidKit scripts |
+| `@path` | Attach file or folder context from the current worktree |
+| `/project`, `/worktree`, `/provider`, `/session` | Slash-command aliases for the main route pickers |
+
 ### Parent Agent And Providers
 
 - Droid includes a native Parent Agent surface backed by a bundled Pi runtime.
