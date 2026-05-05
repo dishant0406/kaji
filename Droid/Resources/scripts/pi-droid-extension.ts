@@ -17,7 +17,8 @@ export default function (pi: ExtensionAPI) {
 
   const start = () => send("pi_activity", "start", context())
   const stop = () => send("pi_activity", "stop", context())
-  const notify = (body: string) => send("pi", "Pi", body)
+  const notifyCompletion = (body: string) => send("pi", "Pi", body)
+  const notifyPermission = (body: string) => send("pi_permission_notice", "Pi", body)
 
   const summarize = (event: any) => {
     const tool = sanitize(event?.toolName || event?.name || "tool")
@@ -41,7 +42,7 @@ export default function (pi: ExtensionAPI) {
     if (!shouldPrompt(event)) return
     const detail = summarize(event)
     send("pi_attention", "permission", detail)
-    notify(`Needs permission: ${detail}`)
+    notifyPermission(`Needs permission: ${detail}`)
     const confirm = ctx?.ui?.confirm
     if (typeof confirm !== "function") return
     const approved = await confirm("Pi needs permission", `Allow ${detail}?`)
@@ -51,7 +52,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_end", async (event: any) => {
     stop()
     const summary = latestAssistantText(event)
-    if (summary) notify(summary)
+    if (summary) notifyCompletion(summary)
   })
 
   pi.on("session_shutdown", async () => {
