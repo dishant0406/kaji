@@ -10,6 +10,7 @@ final class ParentAgentController {
     weak var projectStore: ProjectStore?
     weak var worktreeStore: WorktreeStore?
     var childRunLocators: [UUID: ParentAgentChildRunLocator] = [:]
+    var mutationTail: Task<Void, Never>?
 
     private init() {
         process.onMessage = { [weak self] message in
@@ -20,7 +21,13 @@ final class ParentAgentController {
         }
     }
 
-    func submit(prompt: String, attachments: [AskAttachment] = [], appState: AppState, projectStore: ProjectStore, worktreeStore: WorktreeStore) {
+    func submit(
+        prompt: String,
+        attachments: [AskAttachment] = [],
+        appState: AppState,
+        projectStore: ProjectStore,
+        worktreeStore: WorktreeStore
+    ) {
         self.appState = appState
         self.projectStore = projectStore
         self.worktreeStore = worktreeStore
@@ -124,6 +131,8 @@ final class ParentAgentController {
             store.setPendingQuestion(taskID: taskID, toolID: id, question: question)
         case "droid.choose_agent":
             chooseAgent(message, toolID: id)
+        case "droid.subagent":
+            handleSubagent(message, toolID: id)
         case "droid.open_project", "droid.select_project":
             selectProject(message, toolID: id)
         case "droid.select_worktree":
@@ -133,9 +142,9 @@ final class ParentAgentController {
         case "droid.open_split":
             openTerminal(message, toolID: id, split: true)
         case "droid.spawn_agent":
-            Task { await spawnAgent(message, toolID: id) }
+            enqueueMutation { await self.spawnAgent(message, toolID: id) }
         case "droid.send_prompt":
-            Task { await sendPrompt(message, toolID: id) }
+            enqueueMutation { await self.sendPrompt(message, toolID: id) }
         case "droid.get_agent_status", "droid.observe_agents":
             observeAgents(message, toolID: id)
         case "droid.sleep":
@@ -149,7 +158,7 @@ final class ParentAgentController {
         case "droid.resume_agent":
             resumeAgent(message, toolID: id)
         case "droid.create_worktree":
-            Task { await createWorktree(message, toolID: id) }
+            enqueueMutation { await self.createWorktree(message, toolID: id) }
         case "droid.get_changed_files":
             Task { await getChangedFiles(message, toolID: id) }
         case "droid.open_diff":
@@ -159,6 +168,15 @@ final class ParentAgentController {
         default:
             sendToolError(id: id, message: "Unsupported Droid tool: \(message.name ?? "unknown")")
         }
+    }
+
+    func enqueueMutation(_ operation: @escaping @MainActor () async -> Void) {
+        let previous = mutationTail
+        let next = Task { @MainActor in
+            await previous?.value
+            await operation()
+        }
+        mutationTail = next
     }
 
     func append(_ message: ParentAgentEnvelope, kind: ParentAgentTimelineKind, title: String) {

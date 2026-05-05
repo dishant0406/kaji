@@ -114,4 +114,32 @@ struct AIActivitySocketRouterTests {
         #expect(AgentRunStore.shared.runs.first?.events.last?.text == "Read Package.swift")
         store.reset()
     }
+
+    @Test
+    func attentionPayloadMarksRunNeedsAttention() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        let handled = AIActivitySocketRouter.handle(
+            .init(
+                type: "codex_attention",
+                title: "permission",
+                body: "Bash: npm install",
+                paneIDString: paneID.uuidString
+            ),
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(handled)
+        #expect(store.activitiesByPaneID[paneID]?.transcriptEntries.first?.kind == "permission")
+        #expect(AgentRunStore.shared.runs.first?.status == .needsAttention)
+        #expect(AgentRunStore.shared.runs.first?.events.last?.kind == .attention)
+        #expect(AgentRunStore.shared.runs.first?.events.last?.label == "permission")
+        #expect(AgentRunStore.shared.runs.first?.events.last?.text == "Bash: npm install")
+        store.reset()
+    }
 }

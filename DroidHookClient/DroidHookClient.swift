@@ -50,10 +50,21 @@ struct DroidHookClient {
             let keys = ["prompt", "message", "text", "content"]
             HookEventEmitter.emitTranscript(provider: "claude", kind: "user", text: extractedText(input, keys: keys, limit: 500))
         case "permissionrequest":
-            HookEventEmitter.emitActivity(provider: "claude", state: "stop")
-            emitClaudeNotification(body: "Needs permission")
+            let detail = extractedText(input, keys: ["tool_name", "tool", "command", "path", "reason", "message"], limit: 200)
+            HookEventEmitter.emit(
+                type: "claude_attention",
+                paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
+                title: "permission",
+                body: detail.isEmpty ? "Needs permission" : detail
+            )
+            emitClaudeNotification(body: detail.isEmpty ? "Needs permission" : "Needs permission: \(detail)")
         case "notification":
-            HookEventEmitter.emitActivity(provider: "claude", state: "stop")
+            HookEventEmitter.emit(
+                type: "claude_attention",
+                paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
+                title: "question",
+                body: "Needs attention"
+            )
             emitClaudeNotification(body: "Needs attention")
         case "stop":
             HookEventEmitter.emitActivity(provider: "claude", state: "stop")
@@ -70,8 +81,21 @@ struct DroidHookClient {
         guard args.count >= 2 else { return }
         let provider = args[0]
         let state = args[1]
-        guard !provider.isEmpty, ["start", "stop"].contains(state) else { return }
-        if provider == "codex", let object = HookJSONExtractor.object(from: input), HookJSONExtractor.hasTruthyKey(object, keys: ["agent_id", "agent_type"]) {
+        guard !provider.isEmpty, ["start", "stop", "attention"].contains(state) else { return }
+        if provider == "codex",
+           let object = HookJSONExtractor.object(from: input),
+           HookJSONExtractor.hasTruthyKey(object, keys: ["agent_id", "agent_type"])
+        {
+            return
+        }
+        if state == "attention" {
+            let detail = extractedText(input, keys: ["tool_name", "tool", "command", "path", "reason", "message"], limit: 500)
+            HookEventEmitter.emit(
+                type: "\(provider)_attention",
+                paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
+                title: "permission",
+                body: detail.isEmpty ? "PermissionRequest" : detail
+            )
             return
         }
         HookEventEmitter.emitActivity(provider: provider, state: state)

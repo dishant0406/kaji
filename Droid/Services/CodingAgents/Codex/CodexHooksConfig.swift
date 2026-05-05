@@ -14,7 +14,7 @@ enum CodexHooksConfig {
     static func uninstall(from hooksContent: String) -> String {
         var root = parseRoot(hooksContent)
         var hooks = root["hooks"] as? [String: Any] ?? [:]
-        for event in ["UserPromptSubmit", "Stop"] {
+        for event in ["UserPromptSubmit", "Stop", "PermissionRequest"] {
             guard let existing = hooks[event] as? [[String: Any]] else { continue }
             let filtered = existing.filter { !isDroidHookEntry($0) }
             if filtered.isEmpty {
@@ -42,6 +42,10 @@ enum CodexHooksConfig {
         hooks["Stop"] = merge(
             entries: hooks["Stop"] as? [[String: Any]],
             command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "stop")
+        )
+        hooks["PermissionRequest"] = merge(
+            entries: hooks["PermissionRequest"] as? [[String: Any]],
+            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "attention")
         )
 
         root["hooks"] = hooks

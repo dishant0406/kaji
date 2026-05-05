@@ -105,6 +105,17 @@ final class AIActivityStore {
         AgentRunStore.shared.appendTranscript(providerID: providerID, paneID: paneID, kind: kind, text: trimmed)
     }
 
+    func recordAttention(providerID: String, paneID: UUID, kind: String, text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let detail = trimmed.isEmpty ? "Needs attention" : trimmed
+        if var activity = activitiesByPaneID[paneID], activity.providerID == providerID {
+            let entry = AgentTranscriptEntry(kind: kind.isEmpty ? "attention" : kind, text: detail)
+            activity.transcriptEntries = Array((activity.transcriptEntries + [entry]).suffix(8))
+            activitiesByPaneID[paneID] = activity
+        }
+        AgentRunStore.shared.recordAttention(providerID: providerID, paneID: paneID, kind: kind, text: detail)
+    }
+
     func stop(
         providerID: String,
         projectID: UUID,

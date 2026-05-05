@@ -31,6 +31,23 @@ export const DroidNotificationPlugin = async ({ client }) => {
         await send("opencode_transcript", kind, cleaned)
       }
 
+      const attentionDetail = () => {
+        const properties = event.properties || {}
+        return sanitize(
+          properties.question ||
+            properties.message ||
+            properties.permission ||
+            properties.tool ||
+            properties.command ||
+            properties.description ||
+            event.type,
+        )
+      }
+
+      const sendAttention = async (kind) => {
+        await send("opencode_attention", kind, attentionDetail() || kind)
+      }
+
       const sessionStatus = () => {
         const raw = event.properties?.status
         if (typeof raw === "string") return raw
@@ -91,13 +108,18 @@ export const DroidNotificationPlugin = async ({ client }) => {
         return
       }
 
-      if (
-        event.type === "question.asked" ||
-        event.type === "permission.asked" ||
-        event.type === "session.error"
-      ) {
-        await stop()
-        await sendTranscript("attention", event.properties?.question || event.properties?.message || event.type)
+      if (event.type === "permission.asked") {
+        await sendAttention("permission")
+        return
+      }
+
+      if (event.type === "question.asked") {
+        await sendAttention("question")
+        return
+      }
+
+      if (event.type === "session.error") {
+        await sendAttention("error")
         return
       }
 

@@ -78,6 +78,7 @@ struct ParentAgentTask: Identifiable, Codable, Hashable {
     var prompt: String
     var status: ParentAgentTaskStatus
     var timeline: [ParentAgentTimelineItem]
+    var assignments: [ParentAgentAssignment]
     var childRunIDs: [UUID]
     var spawnFingerprints: [String]
     var pendingQuestion: String?
@@ -91,6 +92,7 @@ struct ParentAgentTask: Identifiable, Codable, Hashable {
         self.prompt = prompt
         self.status = .planning
         self.timeline = [ParentAgentTimelineItem(kind: .user, title: "You", detail: prompt, attachments: attachments)]
+        self.assignments = []
         self.childRunIDs = []
         self.spawnFingerprints = []
         self.pendingQuestionOptions = []
@@ -103,6 +105,7 @@ struct ParentAgentTask: Identifiable, Codable, Hashable {
         case prompt
         case status
         case timeline
+        case assignments
         case childRunIDs
         case spawnFingerprints
         case pendingQuestion
@@ -118,6 +121,7 @@ struct ParentAgentTask: Identifiable, Codable, Hashable {
         prompt = try container.decode(String.self, forKey: .prompt)
         status = try container.decode(ParentAgentTaskStatus.self, forKey: .status)
         timeline = try container.decode([ParentAgentTimelineItem].self, forKey: .timeline)
+        assignments = try container.decodeIfPresent([ParentAgentAssignment].self, forKey: .assignments) ?? []
         childRunIDs = try container.decodeIfPresent([UUID].self, forKey: .childRunIDs) ?? []
         spawnFingerprints = try container.decodeIfPresent([String].self, forKey: .spawnFingerprints) ?? []
         pendingQuestion = try container.decodeIfPresent(String.self, forKey: .pendingQuestion)

@@ -9,6 +9,10 @@ struct ParentAgentTimelineView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
+                    if !task.assignments.isEmpty {
+                        ParentAgentAssignmentGroup(assignments: task.assignments)
+                            .id(task.assignments.map(\.updatedAt).hashValue)
+                    }
                     ForEach(timelineBlocks) { block in
                         timelineBlock(block)
                             .id(block.id)

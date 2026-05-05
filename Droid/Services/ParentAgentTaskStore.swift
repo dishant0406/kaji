@@ -9,7 +9,7 @@ final class ParentAgentTaskStore {
     var activeTaskID: UUID?
     let persistence: ParentAgentTaskPersistence
 
-    private init(persistence: ParentAgentTaskPersistence = ParentAgentTaskPersistence()) {
+    init(persistence: ParentAgentTaskPersistence = ParentAgentTaskPersistence()) {
         self.persistence = persistence
         load()
     }

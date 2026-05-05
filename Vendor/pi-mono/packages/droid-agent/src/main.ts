@@ -44,11 +44,15 @@ type PendingTool = {
 	reject: (error: Error) => void;
 };
 
+type RuntimeContext = {
+	taskID?: string;
+	sessionID: string;
+};
+
 const rl = readline.createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
 const pendingTools = new Map<string, PendingTool>();
 const sessions = new Map<string, Agent>();
-const supervisedRunIDsBySession = new Map<string, Set<string>>();
-let activeTaskID: string | undefined;
+let promptQueue = Promise.resolve();
 
 function send(message: Record<string, unknown>) {
 	process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -111,15 +115,19 @@ function systemPrompt() {
 		"Use Droid tools to inspect projects, spawn child coding agents, observe them, and answer with the final outcome directly.",
 		"Do not add a separate result summary/card after already giving the final answer.",
 		"Only use coding agents returned by Droid tools as enabled and installed. Never assume Codex, Claude Code, or OpenCode are available.",
-		"Before calling droid_spawn_agent for any new task, call droid_choose_agent for that specific task/project. Droid will ask the user in native steps. Use the exact provider and model returned by the user.",
+		"Use droid_subagent for delegated coding work. Treat each independent fix or feature as a separate subagent assignment with a clear title.",
+		"For each implementation assignment, call droid_subagent action=plan before droid_choose_agent. Pass assignmentID to droid_choose_agent after planning.",
+		"If droid_subagent action=plan returns requiresIsolation, ask the user or choose isolatedWorktree before selecting a provider.",
+		"Before calling droid_subagent action=spawn or action=replace, call droid_choose_agent for that specific task/project. Droid will ask the user in native steps. Use the exact provider and model returned by the user.",
 		"For requests with multiple independent fixes/features, even in the same project, split them into separate concrete tasks and call droid_choose_agent separately for each task before spawning.",
 		"For multi-project requests, identify each project-specific task first, then call droid_choose_agent separately for each task/project before spawning.",
-		"The droid_choose_agent answer is newline-delimited key=value text. If it includes mode=continue and runID, use droid_send_prompt with that runID. Otherwise pass provider, model, and project into droid_spawn_agent.",
+		"If you run multiple implementation assignments in parallel for the same project, set isolation=isolatedWorktree on each droid_subagent spawn/replace. Use sharedWorktree only for sequential work or read-only investigation.",
+		"The droid_choose_agent answer is newline-delimited key=value text. If it includes mode=continue and assignmentID, use droid_subagent action=send with that assignmentID. If it includes mode=replacement, use droid_subagent action=replace with that assignmentID plus provider/model. Otherwise use droid_subagent action=spawn.",
 		"Do not spawn multiple child agents for the same concrete task. For independent subtasks, spawn separate child agents and supervise each run.",
-		"When a follow-up should continue an existing child run, choose the continue option from droid_choose_agent and use droid_send_prompt instead of spawning.",
+		"When a follow-up should continue an existing child run, choose the continue option from droid_choose_agent and use droid_subagent action=send instead of spawning.",
 		"When you spawn child agents, supervise them explicitly: observe, reason, sleep briefly if still running, then observe again.",
-		"Do not claim a child agent is done until droid_observe_agents shows a meaningful final answer or useful completed output.",
-		"If an agent is still running, call droid_sleep and then droid_observe_agents again.",
+		"Use droid_subagent action=wait and action=result instead of manual polling loops.",
+		"Do not claim a child agent is done until droid_subagent action=result reports a completed assignment with a meaningful final summary or changed files.",
 		"Be concise and honest about what has or has not been executed.",
 	].join("\n");
 }
@@ -130,19 +138,13 @@ function droidProtocolToolName(name: string) {
 	if (name === "droid_list_coding_agents") return "droid.list_coding_agents";
 	if (name === "droid_ask_user") return "droid.ask_user";
 	if (name === "droid_choose_agent") return "droid.choose_agent";
+	if (name === "droid_subagent") return "droid.subagent";
 	if (name === "droid_open_project") return "droid.open_project";
 	if (name === "droid_select_project") return "droid.select_project";
 	if (name === "droid_select_worktree") return "droid.select_worktree";
 	if (name === "droid_open_terminal") return "droid.open_terminal";
 	if (name === "droid_open_split") return "droid.open_split";
-	if (name === "droid_spawn_agent") return "droid.spawn_agent";
-	if (name === "droid_send_prompt") return "droid.send_prompt";
-	if (name === "droid_get_agent_status") return "droid.get_agent_status";
-	if (name === "droid_observe_agents") return "droid.observe_agents";
-	if (name === "droid_sleep") return "droid.sleep";
 	if (name === "droid_jump_to_agent") return "droid.jump_to_agent";
-	if (name === "droid_stop_agent") return "droid.stop_agent";
-	if (name === "droid_resume_agent") return "droid.resume_agent";
 	if (name === "droid_create_worktree") return "droid.create_worktree";
 	if (name === "droid_get_changed_files") return "droid.get_changed_files";
 	if (name === "droid_open_diff") return "droid.open_diff";
@@ -192,14 +194,19 @@ function promptContent(message: ProtocolMessage): Array<TextContent | ImageConte
 	return content;
 }
 
-function callDroidTool(name: string, args: Record<string, unknown>, taskID: string | undefined): Promise<unknown> {
+function callDroidTool(name: string, args: Record<string, unknown>, context: RuntimeContext): Promise<unknown> {
 	const id = createID("tool");
 	const promise = new Promise<unknown>((resolve, reject) => pendingTools.set(id, { resolve, reject }));
-	send({ type: "tool_call", id, taskID, name: droidProtocolToolName(name), arguments: args });
+	send({ type: "tool_call", id, taskID: context.taskID, name: droidProtocolToolName(name), arguments: args });
 	return promise;
 }
 
-function tool(name: string, description: string, parameters: ReturnType<typeof Type.Object>): AgentTool {
+function tool(
+	name: string,
+	description: string,
+	parameters: ReturnType<typeof Type.Object>,
+	context: RuntimeContext,
+): AgentTool {
 	return {
 		name,
 		label: name,
@@ -207,50 +214,72 @@ function tool(name: string, description: string, parameters: ReturnType<typeof T
 		parameters,
 		execute: async (_toolCallId, params, signal): Promise<AgentToolResult<unknown>> => {
 			if (signal?.aborted) throw new Error("Tool call aborted");
-			const result = await callDroidTool(name, params as Record<string, unknown>, activeTaskID);
-			trackDroidToolResult(name, result);
+			const result = await callDroidTool(name, params as Record<string, unknown>, context);
 			return { content: [{ type: "text", text: stringifyResult(result) }], details: result };
 		},
 	};
 }
 
-function droidTools(): AgentTool[] {
+function droidTools(context: RuntimeContext): AgentTool[] {
 	return [
-		tool("droid_list_projects", "List projects available in Droid.", Type.Object({})),
+		tool("droid_list_projects", "List projects available in Droid.", Type.Object({}), context),
 		tool(
 			"droid_get_active_context",
 			"Get Droid's active project, worktrees, and workspace context.",
 			Type.Object({}),
+			context,
 		),
 		tool(
 			"droid_list_coding_agents",
 			"List enabled and installed coding agents with available model choices. Use this before planning delegation.",
 			Type.Object({}),
+			context,
 		),
 		tool(
 			"droid_ask_user",
 			"Ask the user one concise question when required information is missing.",
 			Type.Object({ question: Type.String() }),
+			context,
 		),
 		tool(
 			"droid_choose_agent",
 			"Ask the user whether to continue an existing child run or choose a coding agent/model for one specific task/project. Call once per independent task before spawning.",
 			Type.Object({ task: Type.String(), project: Type.Optional(Type.String()) }),
+			context,
+		),
+		tool(
+			"droid_subagent",
+			"Manage Droid subagent assignments. Use spawn for new work, replace for incomplete/stale work, send for continuing an assignment, status/result/wait for supervision, and stop to interrupt.",
+			Type.Object({
+				action: Type.String(),
+				assignmentID: Type.Optional(Type.String()),
+				title: Type.Optional(Type.String()),
+				prompt: Type.Optional(Type.String()),
+				project: Type.Optional(Type.String()),
+				provider: Type.Optional(Type.String()),
+				model: Type.Optional(Type.String()),
+				isolation: Type.Optional(Type.String()),
+				timeoutSeconds: Type.Optional(Type.String()),
+			}),
+			context,
 		),
 		tool(
 			"droid_open_project",
 			"Open and select a Droid project by id, name, or path.",
 			Type.Object({ project: Type.Optional(Type.String()), worktree: Type.Optional(Type.String()) }),
+			context,
 		),
 		tool(
 			"droid_select_project",
 			"Select a Droid project by id, name, or path without spawning an agent.",
 			Type.Object({ project: Type.Optional(Type.String()), worktree: Type.Optional(Type.String()) }),
+			context,
 		),
 		tool(
 			"droid_select_worktree",
 			"Select a worktree by id, name, path, or branch for the active or named project.",
 			Type.Object({ project: Type.Optional(Type.String()), worktree: Type.Optional(Type.String()) }),
+			context,
 		),
 		tool(
 			"droid_open_terminal",
@@ -261,6 +290,7 @@ function droidTools(): AgentTool[] {
 				title: Type.Optional(Type.String()),
 				command: Type.Optional(Type.String()),
 			}),
+			context,
 		),
 		tool(
 			"droid_open_split",
@@ -272,48 +302,13 @@ function droidTools(): AgentTool[] {
 				command: Type.Optional(Type.String()),
 				direction: Type.Optional(Type.String()),
 			}),
-		),
-		tool(
-			"droid_spawn_agent",
-			"Start one terminal coding agent in Droid for one concrete task. Provider and model must come from droid_choose_agent. Droid blocks duplicate active workers. If rejected, observe the returned existing run instead.",
-			Type.Object({
-				prompt: Type.String(),
-				provider: Type.String(),
-				model: Type.String(),
-				project: Type.Optional(Type.String()),
-				allowParallel: Type.Optional(Type.String()),
-			}),
-		),
-		tool(
-			"droid_send_prompt",
-			"Send a follow-up prompt to an existing child agent run by runID.",
-			Type.Object({ runID: Type.String(), prompt: Type.String() }),
-		),
-		tool("droid_get_agent_status", "Get recent child agent run status from Droid.", Type.Object({})),
-		tool(
-			"droid_observe_agents",
-			"Observe live child agent run status, recent events, and transcript snippets.",
-			Type.Object({ runIDs: Type.Optional(Type.String()) }),
-		),
-		tool(
-			"droid_sleep",
-			"Pause briefly before observing child agents again. Use seconds between 3 and 30.",
-			Type.Object({ seconds: Type.Optional(Type.String()), reason: Type.Optional(Type.String()) }),
+			context,
 		),
 		tool(
 			"droid_jump_to_agent",
 			"Navigate Droid to a child agent run by runID.",
 			Type.Object({ runID: Type.String() }),
-		),
-		tool(
-			"droid_stop_agent",
-			"Stop a child agent run by runID by interrupting its terminal.",
-			Type.Object({ runID: Type.String() }),
-		),
-		tool(
-			"droid_resume_agent",
-			"Resume a child agent run by runID when Droid has a provider session ID.",
-			Type.Object({ runID: Type.String() }),
+			context,
 		),
 		tool(
 			"droid_create_worktree",
@@ -324,6 +319,7 @@ function droidTools(): AgentTool[] {
 				branch: Type.Optional(Type.String()),
 				createBranch: Type.Optional(Type.String()),
 			}),
+			context,
 		),
 		tool(
 			"droid_get_changed_files",
@@ -333,6 +329,7 @@ function droidTools(): AgentTool[] {
 				project: Type.Optional(Type.String()),
 				worktree: Type.Optional(Type.String()),
 			}),
+			context,
 		),
 		tool(
 			"droid_open_diff",
@@ -344,107 +341,56 @@ function droidTools(): AgentTool[] {
 				path: Type.Optional(Type.String()),
 				staged: Type.Optional(Type.String()),
 			}),
+			context,
 		),
 		tool(
 			"droid_run_verification",
 			"Run the configured verification command for a tracked child agent run.",
 			Type.Object({ runID: Type.String() }),
+			context,
 		),
 	];
 }
 
-function trackDroidToolResult(toolName: string, result: unknown) {
-	if (toolName === "droid_observe_agents" || toolName === "droid_get_agent_status") {
-		updateSupervisedRunsFromObservation(result);
-		return;
-	}
-	if (toolName !== "droid_spawn_agent") return;
-	const childRun = result && typeof result === "object" && "childRun" in result ? result.childRun : undefined;
-	if (!childRun || typeof childRun !== "object" || !("id" in childRun) || typeof childRun.id !== "string") return;
-	const sessionID = activeTaskID ?? "default";
-	const set = supervisedRunIDsBySession.get(sessionID) ?? new Set<string>();
-	set.add(childRun.id);
-	supervisedRunIDsBySession.set(sessionID, set);
-}
-
-function updateSupervisedRunsFromObservation(result: unknown) {
-	if (!result || typeof result !== "object" || !("childRuns" in result) || !Array.isArray(result.childRuns)) return;
-	const sessionID = activeTaskID ?? "default";
-	const set = supervisedRunIDsBySession.get(sessionID);
-	if (!set) return;
-	for (const run of result.childRuns) {
-		if (!run || typeof run !== "object" || !("id" in run) || typeof run.id !== "string") continue;
-		if (isClosedRun(run)) set.delete(run.id);
-	}
-	supervisedRunIDsBySession.set(sessionID, set);
-}
-
-function isClosedRun(run: Record<string, unknown>) {
-	const status = String(run.status ?? "");
-	return status === "completed" || status === "failed" || status === "stale";
-}
-
-function supervisedRunIDs(sessionID: string) {
-	return Array.from(supervisedRunIDsBySession.get(sessionID) ?? []);
-}
-
-function observePrompt(sessionID: string) {
-	const ids = supervisedRunIDs(sessionID);
-	return [
-		"Continue supervising the child agents.",
-		ids.length > 0 ? `Use droid_observe_agents with runIDs: ${ids.join(",")}.` : "Use droid_observe_agents.",
-		"If any child agent is still running, think briefly, call droid_sleep, then observe again.",
-		"Only answer the user after you have a meaningful final result from the child agent feed.",
-	].join(" ");
-}
-
-function handleAgentEvent(event: AgentEvent) {
+function handleAgentEvent(event: AgentEvent, context: RuntimeContext) {
 	if (event.type === "message_update") {
 		const streamEvent = event.assistantMessageEvent;
 		if (streamEvent.type === "text_delta")
-			send({ type: "assistant_delta", taskID: activeTaskID, message: streamEvent.delta });
+			send({ type: "assistant_delta", taskID: context.taskID, message: streamEvent.delta });
 		if (streamEvent.type === "thinking_delta")
-			send({ type: "thinking_delta", taskID: activeTaskID, message: streamEvent.delta });
-		if (streamEvent.type === "thinking_end") send({ type: "thinking_end", taskID: activeTaskID });
+			send({ type: "thinking_delta", taskID: context.taskID, message: streamEvent.delta });
+		if (streamEvent.type === "thinking_end") send({ type: "thinking_end", taskID: context.taskID });
 		if (streamEvent.type === "toolcall_end")
 			send({
 				type: "task_event",
-				taskID: activeTaskID,
+				taskID: context.taskID,
 				event: "tool.requested",
 				message: streamEvent.toolCall.name,
 			});
 	}
 	if (event.type === "tool_execution_start")
-		send({ type: "task_event", taskID: activeTaskID, event: "tool.started", message: event.toolName });
+		send({ type: "task_event", taskID: context.taskID, event: "tool.started", message: event.toolName });
 	if (event.type === "tool_execution_end")
-		send({ type: "task_event", taskID: activeTaskID, event: "tool.completed", message: event.toolName });
+		send({ type: "task_event", taskID: context.taskID, event: "tool.completed", message: event.toolName });
 }
 
-function createAgent(model: Model<Api>) {
+function createAgent(model: Model<Api>, context: RuntimeContext) {
 	const agent = new Agent({
 		initialState: {
 			systemPrompt: systemPrompt(),
 			model,
 			thinkingLevel: selectedThinking(),
-			tools: droidTools(),
+			tools: droidTools(context),
 		},
 		getApiKey: (provider) => resolveApiKey(provider),
 		toolExecution: "sequential",
 	});
-	agent.subscribe((event) => handleAgentEvent(event));
+	agent.subscribe((event) => handleAgentEvent(event, context));
 	return agent;
 }
 
-function latestAssistantStopReason(agent: Agent) {
-	for (let index = agent.state.messages.length - 1; index >= 0; index--) {
-		const message = agent.state.messages[index];
-		if (message?.role === "assistant") return message.stopReason;
-	}
-	return undefined;
-}
-
 async function runPrompt(message: ProtocolMessage) {
-	activeTaskID = message.taskID;
+	const context: RuntimeContext = { taskID: message.taskID, sessionID: message.taskID ?? "default" };
 	const model = selectedModel();
 	if (!model) {
 		send({ type: "error", taskID: message.taskID, message: "Parent model was not found." });
@@ -461,28 +407,9 @@ async function runPrompt(message: ProtocolMessage) {
 		event: "task.planning",
 		message: `Using ${model.provider}/${model.id}.`,
 	});
-	const sessionID = message.taskID ?? "default";
-	const agent = sessions.get(sessionID) ?? createAgent(model);
-	sessions.set(sessionID, agent);
+	const agent = sessions.get(context.sessionID) ?? createAgent(model, context);
+	sessions.set(context.sessionID, agent);
 	await agent.prompt({ role: "user", content: promptContent(message), timestamp: Date.now() });
-
-	for (let i = 0; i < 24 && supervisedRunIDs(sessionID).length > 0; i++) {
-		agent.followUp({
-			role: "user",
-			content: [{ type: "text", text: observePrompt(sessionID) }],
-			timestamp: Date.now(),
-		});
-		await agent.continue();
-		if (supervisedRunIDs(sessionID).length === 0) break;
-		const stopReason = latestAssistantStopReason(agent);
-		if (stopReason && stopReason !== "toolUse") {
-			agent.followUp({
-				role: "user",
-				content: [{ type: "text", text: observePrompt(sessionID) }],
-				timestamp: Date.now(),
-			});
-		}
-	}
 	send({ type: "final_response", taskID: message.taskID, message: "Parent agent turn completed." });
 }
 
@@ -498,10 +425,20 @@ function handleToolResult(message: ProtocolMessage) {
 rl.on("line", (line) => {
 	try {
 		const message = JSON.parse(line) as ProtocolMessage;
-		if (message.type === "user_prompt") void runPrompt(message);
+		if (message.type === "user_prompt") {
+			promptQueue = promptQueue
+				.then(() => runPrompt(message))
+				.catch((error) =>
+					send({
+						type: "error",
+						taskID: message.taskID,
+						message: error instanceof Error ? error.message : String(error),
+					}),
+				);
+		}
 		if (message.type === "tool_result") handleToolResult(message);
 	} catch (error) {
-		send({ type: "error", taskID: activeTaskID, message: error instanceof Error ? error.message : String(error) });
+		send({ type: "error", message: error instanceof Error ? error.message : String(error) });
 	}
 });
 
