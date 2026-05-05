@@ -47,7 +47,9 @@ struct Sidebar: View {
     }
 
     private func toggleExpanded() {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
             expanded.toggle()
         }
         UserDefaults.standard.set(expanded, forKey: "droid.sidebarExpanded")

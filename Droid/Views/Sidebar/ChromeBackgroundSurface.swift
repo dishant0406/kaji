@@ -9,6 +9,7 @@ struct ChromeBackgroundSurface: View {
         TranslucentSurface(
             base: DroidTheme.chrome,
             material: .headerView,
+            blendingMode: .behindWindow,
             tintOpacity: AppearanceTransparencyStyle.chromeTintOpacity(
                 enabled: transparencyEnabled,
                 amount: transparencyAmount

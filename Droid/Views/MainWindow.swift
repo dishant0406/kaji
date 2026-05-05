@@ -6,6 +6,7 @@ struct MainWindow: View {
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
     @Environment(GhosttyService.self) private var ghostty
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragCoordinator = TabDragCoordinator()
     @State private var paneDragCoordinator = PaneDragCoordinator()
     private enum AttachedVCSLayout {
@@ -112,11 +113,11 @@ struct MainWindow: View {
                 .overlay {
                     projectLogoCropperOverlay
                 }
-                .animation(.easeInOut(duration: 0.15), value: showSettings)
-                .animation(.easeInOut(duration: 0.15), value: showCreateThemeModal)
-                .animation(.easeInOut(duration: 0.15), value: createWorktreeProjectID)
-                .animation(.easeInOut(duration: 0.15), value: projectLogoCropRequest?.id)
-                .animation(.easeInOut(duration: 0.2), value: ToastState.shared.message != nil)
+                .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: showSettings)
+                .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: showCreateThemeModal)
+                .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: createWorktreeProjectID)
+                .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: projectLogoCropRequest?.id)
+                .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: ToastState.shared.message != nil)
                 .task(id: activeQuickOpenProjectPath) {
                     guard let path = activeQuickOpenProjectPath else { return }
                     await FileSearchService.warm(projectPath: path)
@@ -494,7 +495,7 @@ struct MainWindow: View {
     private var settingsOverlay: some View {
         if showSettings {
             ZStack {
-                Color.black.opacity(0.28)
+                Color.black.opacity(0.12)
                     .ignoresSafeArea()
                     .onTapGesture {
                         showSettings = false
@@ -504,7 +505,7 @@ struct MainWindow: View {
                     showSettings = false
                 }
                 .padding(24)
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .transition(DroidMotion.modalTransition(reduceMotion: reduceMotion))
             }
         }
     }

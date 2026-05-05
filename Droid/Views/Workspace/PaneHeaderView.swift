@@ -8,6 +8,7 @@ struct PaneHeaderView: View {
     let onDragChanged: (DragGesture.Value) -> Void
     let onDragEnded: (DragGesture.Value) -> Void
     @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
@@ -16,9 +17,9 @@ struct PaneHeaderView: View {
         }
         .frame(height: 28)
         .background(backgroundColor)
-        .animation(.easeOut(duration: 0.12), value: hovered)
-        .animation(.easeOut(duration: 0.12), value: isDragging)
-        .animation(.easeOut(duration: 0.12), value: isFocused)
+        .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: hovered)
+        .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: isDragging)
+        .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: isFocused)
         .onHover { hovered = $0 }
     }
 

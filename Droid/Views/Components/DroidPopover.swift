@@ -90,7 +90,7 @@ private struct DroidPopoverPresenter<PopoverContent: View>: NSViewRepresentable 
             _isPresented = isPresented
             super.init()
             popover.behavior = .transient
-            popover.animates = false
+            popover.animates = true
             popover.delegate = self
         }
 
@@ -156,6 +156,7 @@ private struct DroidPopoverSurface<Content: View>: View {
                 TranslucentSurface(
                     base: DroidTheme.tertiaryBackground,
                     material: .menu,
+                    blendingMode: .behindWindow,
                     tintOpacity: 0.74
                 )
             )
