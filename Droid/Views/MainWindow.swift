@@ -62,13 +62,9 @@ struct MainWindow: View {
     @State private var showCreateThemeModal = false
     @State private var parentAgentSettings = ParentAgentSettingsStore.shared
     @State private var createWorktreeProjectID: UUID?
-    @State private var showSidebarAIUsagePopover = false
-    @State private var isFullScreen = false
-    @State private var sidebarExpanded = UserDefaults.standard.bool(forKey: "droid.sidebarExpanded")
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage("droid.notifications.toastPosition") private var toastPositionRaw = ToastPosition.topCenter.rawValue
-    private let trafficLightWidth: CGFloat = 75
 
     var body: some View {
         configuredMainLayout
@@ -201,14 +197,6 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .dismissSettings)) { _ in
                     showSettings = false
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        sidebarExpanded.toggle()
-                    }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .windowFullScreenDidChange)) { notification in
-                    isFullScreen = notification.userInfo?["isFullScreen"] as? Bool ?? false
-                }
         )
 
         let receives3 = AnyView(
@@ -261,22 +249,15 @@ struct MainWindow: View {
 
     private var mainLayout: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                if !isFullScreen {
-                    Color.clear
-                        .frame(width: topBarLeadingWidth)
-                        .fixedSize(horizontal: true, vertical: false)
-                }
-                topBarContent
-            }
-            .frame(height: 38)
-            .background(WindowDragRepresentable())
-            .background(
-                ChromeBackgroundSurface(
-                    transparencyEnabled: sidebarTransparencyEnabled,
-                    transparencyAmount: interfaceTransparencyAmount
+            topBarContent
+                .frame(height: 38)
+                .background(WindowDragRepresentable())
+                .background(
+                    ChromeBackgroundSurface(
+                        transparencyEnabled: sidebarTransparencyEnabled,
+                        transparencyAmount: interfaceTransparencyAmount
+                    )
                 )
-            )
 
             Rectangle().fill(DroidTheme.border).frame(height: 1)
                 .background(
@@ -289,7 +270,6 @@ struct MainWindow: View {
             HStack(spacing: 0) {
                 HStack(spacing: 0) {
                     Sidebar(
-                        showAIUsagePopover: $showSidebarAIUsagePopover,
                         parentAgentSelected: parentAgentSelected,
                         parentAgentEnabled: parentAgentSettings.isEnabled
                     )
@@ -304,55 +284,81 @@ struct MainWindow: View {
                     )
                 )
 
-                ZStack {
-                    DroidTheme.bg
-                    workspaceContent
-                }
+                VStack(spacing: 0) {
+                    if showsWorkspaceTabBar {
+                        workspaceTabBarContent
+                            .frame(height: 36)
+                            .background(
+                                ChromeBackgroundSurface(
+                                    transparencyEnabled: sidebarTransparencyEnabled,
+                                    transparencyAmount: interfaceTransparencyAmount
+                                )
+                            )
 
-                if vcsPanelVisible, let state = activeVCSState {
-                    HStack(spacing: 0) {
-                        sidePanelResizeHandle { delta in
-                            vcsPanelWidth = max(
-                                AttachedVCSLayout.minWidth,
-                                min(AttachedVCSLayout.maxWidth, vcsPanelWidth - delta)
+                        Rectangle().fill(DroidTheme.border).frame(height: 1)
+                            .background(
+                                ChromeBackgroundSurface(
+                                    transparencyEnabled: sidebarTransparencyEnabled,
+                                    transparencyAmount: interfaceTransparencyAmount
+                                )
                             )
-                        }
-                        VCSTabView(state: state, focused: false, onFocus: {})
-                            .frame(width: vcsPanelWidth)
                     }
-                } else if fileTreePanelVisible, let treeState = activeFileTreeState {
+
                     HStack(spacing: 0) {
-                        sidePanelResizeHandle { delta in
-                            let next = fileTreePanelWidth - Double(delta)
-                            fileTreePanelWidth = max(
-                                Double(FileTreeLayout.minWidth),
-                                min(Double(FileTreeLayout.maxWidth), next)
-                            )
+                        ZStack {
+                            DroidTheme.bg
+                            workspaceContent
                         }
-                        FileTreeView(
-                            state: treeState,
-                            onOpenFile: { filePath in
-                                activateWorkspace()
-                                guard let projectID = appState.activeProjectID else { return }
-                                appState.openFile(filePath, projectID: projectID)
-                            },
-                            onOpenTerminal: { directory in
-                                activateWorkspace()
-                                guard let projectID = appState.activeProjectID else { return }
-                                appState.dispatch(.createTabInDirectory(
-                                    projectID: projectID,
-                                    areaID: nil,
-                                    directory: directory
-                                ))
-                            },
-                            onFileMoved: { oldPath, newPath in
-                                appState.handleFileMoved(from: oldPath, to: newPath)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        if vcsPanelVisible, let state = activeVCSState {
+                            HStack(spacing: 0) {
+                                sidePanelResizeHandle { delta in
+                                    vcsPanelWidth = max(
+                                        AttachedVCSLayout.minWidth,
+                                        min(AttachedVCSLayout.maxWidth, vcsPanelWidth - delta)
+                                    )
+                                }
+                                VCSTabView(state: state, focused: false, onFocus: {})
+                                    .frame(width: vcsPanelWidth)
                             }
-                        )
-                        .id(treeState.rootPath)
-                        .frame(width: CGFloat(fileTreePanelWidth))
+                        } else if fileTreePanelVisible, let treeState = activeFileTreeState {
+                            HStack(spacing: 0) {
+                                sidePanelResizeHandle { delta in
+                                    let next = fileTreePanelWidth - Double(delta)
+                                    fileTreePanelWidth = max(
+                                        Double(FileTreeLayout.minWidth),
+                                        min(Double(FileTreeLayout.maxWidth), next)
+                                    )
+                                }
+                                FileTreeView(
+                                    state: treeState,
+                                    onOpenFile: { filePath in
+                                        activateWorkspace()
+                                        guard let projectID = appState.activeProjectID else { return }
+                                        appState.openFile(filePath, projectID: projectID)
+                                    },
+                                    onOpenTerminal: { directory in
+                                        activateWorkspace()
+                                        guard let projectID = appState.activeProjectID else { return }
+                                        appState.dispatch(.createTabInDirectory(
+                                            projectID: projectID,
+                                            areaID: nil,
+                                            directory: directory
+                                        ))
+                                    },
+                                    onFileMoved: { oldPath, newPath in
+                                        appState.handleFileMoved(from: oldPath, to: newPath)
+                                    }
+                                )
+                                .id(treeState.rootPath)
+                                .frame(width: CGFloat(fileTreePanelWidth))
+                            }
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -516,46 +522,42 @@ struct MainWindow: View {
         }
     }
 
-    @ViewBuilder
     private var topBarContent: some View {
-        if appState.isParentAgentHomePresented {
-            WindowDragRepresentable(alwaysEnabled: true)
-                .overlay {
-                    HStack {
-                        Text("Droid")
-                            .droidFont(size: 13, weight: .semibold)
-                            .foregroundStyle(DroidTheme.fgMuted)
-                            .padding(.leading, 14)
-                        Spacer(minLength: 0)
+        WindowDragRepresentable(alwaysEnabled: true)
+            .overlay {
+                HStack(spacing: 8) {
+                    ResourceMonitorTopBarButton()
+                    TopBarSearchButton(
+                        title: topBarSearchTitle,
+                        shortcut: KeyBindingStore.shared.combo(for: .quickOpen).displayString,
+                        enabled: activeProjectWithWorkspace != nil
+                    ) {
+                        NotificationCenter.default.post(name: .quickOpen, object: nil)
                     }
+                    AIUsageTopBarButton()
                 }
-                .overlay(alignment: .trailing) {
-                    HStack(spacing: 0) {
-                        if let version = UpdateService.shared.availableUpdateVersion {
-                            UpdateBadge(version: version) {
-                                UpdateService.shared.checkForUpdates()
-                            }
-                            .padding(.trailing, 4)
-                        }
-                        IconButton(symbol: "gearshape", size: 12, accessibilityLabel: "Settings") {
-                            NotificationCenter.default.post(name: .toggleSettings, object: nil)
-                        }
-                        .help("Settings (⌘,)")
-                    }
+            }
+            .overlay(alignment: .trailing) {
+                topBarActions
                     .padding(.trailing, 8)
-                }
-        } else if let project = activeProject,
-                  let workspace = appState.workspace(for: project.id),
-                  let activeWorkspaceTab = workspace.activeTab,
-                  let areaID = activeWorkspaceTab.activeArea?.id
+            }
+    }
+
+    @ViewBuilder
+    private var workspaceTabBarContent: some View {
+        if let project = activeProject,
+           let workspace = appState.workspace(for: project.id),
+           let activeWorkspaceTab = workspace.activeTab,
+           let areaID = activeWorkspaceTab.activeArea?.id
         {
             PaneTabStrip(
                 areaID: areaID,
                 tabs: PaneTabStrip.workspaceSnapshots(from: workspace.tabs),
                 activeTabID: workspace.activeTabID,
                 isFocused: true,
-                isWindowTitleBar: true,
-                showVCSButton: true,
+                isWindowTitleBar: false,
+                showVCSButton: false,
+                showSettingsButton: false,
                 projectID: project.id,
                 onSelectTab: { tabID in
                     activateWorkspace()
@@ -616,47 +618,31 @@ struct MainWindow: View {
                     appState.saveWorkspaces()
                 }
             )
-        } else {
-            WindowDragRepresentable(alwaysEnabled: true)
-                .overlay {
-                    HStack {
-                        if let project = activeProject {
-                            Text(project.name)
-                                .droidFont(size: 13, weight: .semibold)
-                                .foregroundStyle(DroidTheme.fgMuted)
-                                .padding(.leading, 14)
-                        }
-                        Spacer(minLength: 0)
-                    }
+        }
+    }
+
+    private var topBarActions: some View {
+        HStack(spacing: 0) {
+            if let version = UpdateService.shared.availableUpdateVersion {
+                UpdateBadge(version: version) {
+                    UpdateService.shared.checkForUpdates()
                 }
-                .overlay(alignment: .trailing) {
-                    HStack(spacing: 0) {
-                        if let version = UpdateService.shared.availableUpdateVersion {
-                            UpdateBadge(version: version) {
-                                UpdateService.shared.checkForUpdates()
-                            }
-                            .padding(.trailing, 4)
-                        }
-                        if let project = activeProject, activeProjectWithWorkspace != nil {
-                            IconButton(symbol: "doc.text", size: 12, accessibilityLabel: "Quick Open") {
-                                NotificationCenter.default.post(name: .quickOpen, object: nil)
-                            }
-                            .help("Quick Open (\(KeyBindingStore.shared.combo(for: .quickOpen).displayString))")
-                            FileDiffIconButton {
-                                openVCS(for: project)
-                            }
-                            FileTreeIconButton {
-                                NotificationCenter.default.post(name: .toggleFileTree, object: nil)
-                            }
-                            .help("File Tree (\(KeyBindingStore.shared.combo(for: .toggleFileTree).displayString))")
-                        }
-                        IconButton(symbol: "gearshape", size: 12, accessibilityLabel: "Settings") {
-                            NotificationCenter.default.post(name: .toggleSettings, object: nil)
-                        }
-                        .help("Settings (⌘,)")
-                    }
-                    .padding(.trailing, 8)
+                .padding(.trailing, 4)
+            }
+            if let project = activeProject, activeProjectWithWorkspace != nil {
+                FileDiffIconButton {
+                    openVCS(for: project)
                 }
+                .help("Source Control (\(KeyBindingStore.shared.combo(for: .openVCSTab).displayString))")
+                FileTreeIconButton {
+                    NotificationCenter.default.post(name: .toggleFileTree, object: nil)
+                }
+                .help("File Tree (\(KeyBindingStore.shared.combo(for: .toggleFileTree).displayString))")
+            }
+            IconButton(symbol: "gearshape", size: 12, accessibilityLabel: "Settings") {
+                NotificationCenter.default.post(name: .toggleSettings, object: nil)
+            }
+            .help("Settings (⌘,)")
         }
     }
 
@@ -703,11 +689,6 @@ struct MainWindow: View {
         }
     }
 
-    private var topBarLeadingWidth: CGFloat {
-        let sidebarWidth = SidebarLayout.resolvedWidth(expanded: sidebarExpanded) + 1
-        return max(trafficLightWidth, sidebarWidth)
-    }
-
     private var activeWorktreeKey: WorktreeKey? {
         guard let projectID = appState.activeProjectID,
               let worktreeID = appState.activeWorktreeID[projectID]
@@ -745,6 +726,19 @@ struct MainWindow: View {
               appState.workspaceRoot(for: project.id) != nil
         else { return nil }
         return project
+    }
+
+    private var showsWorkspaceTabBar: Bool {
+        guard !appState.isParentAgentHomePresented,
+              let project = activeProject,
+              let workspace = appState.workspace(for: project.id)
+        else { return false }
+        return workspace.activeTab?.activeArea != nil
+    }
+
+    private var topBarSearchTitle: String {
+        guard let project = activeProject else { return "Search Droid" }
+        return "Search \(project.name) - local..."
     }
 
     private func resolvedActiveWorktree(for project: Project) -> Worktree? {

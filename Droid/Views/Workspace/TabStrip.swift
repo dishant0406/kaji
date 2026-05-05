@@ -16,6 +16,7 @@ struct PaneTabStrip: View {
     let isFocused: Bool
     var isWindowTitleBar: Bool = false
     var showVCSButton = true
+    var showSettingsButton = true
     let projectID: UUID
     let onSelectTab: (UUID) -> Void
     let onCreateTab: () -> Void
@@ -71,33 +72,37 @@ struct PaneTabStrip: View {
             .frame(maxWidth: .infinity)
             .frame(height: 36)
 
-            HStack(spacing: 0) {
-                if isWindowTitleBar, let version = UpdateService.shared.availableUpdateVersion {
-                    UpdateBadge(version: version) {
-                        UpdateService.shared.checkForUpdates()
+            if showsTrailingActions {
+                HStack(spacing: 0) {
+                    if isWindowTitleBar, let version = UpdateService.shared.availableUpdateVersion {
+                        UpdateBadge(version: version) {
+                            UpdateService.shared.checkForUpdates()
+                        }
+                        .padding(.trailing, 4)
                     }
-                    .padding(.trailing, 4)
-                }
-                if showVCSButton {
-                    IconButton(symbol: "magnifyingglass", size: 12, accessibilityLabel: "Quick Open") {
-                        NotificationCenter.default.post(name: .quickOpen, object: nil)
+                    if showVCSButton {
+                        IconButton(symbol: "magnifyingglass", size: 12, accessibilityLabel: "Quick Open") {
+                            NotificationCenter.default.post(name: .quickOpen, object: nil)
+                        }
+                        .help(shortcutTooltip("Quick Open", for: .quickOpen))
+                        FileDiffIconButton(action: onCreateVCSTab)
+                            .help(shortcutTooltip("Source Control", for: .openVCSTab))
+                        FileTreeIconButton {
+                            NotificationCenter.default.post(name: .toggleFileTree, object: nil)
+                        }
+                        .help(shortcutTooltip("File Tree", for: .toggleFileTree))
                     }
-                    .help(shortcutTooltip("Quick Open", for: .quickOpen))
-                    FileDiffIconButton(action: onCreateVCSTab)
-                        .help(shortcutTooltip("Source Control", for: .openVCSTab))
-                    FileTreeIconButton {
-                        NotificationCenter.default.post(name: .toggleFileTree, object: nil)
+                    if showSettingsButton {
+                        IconButton(symbol: "gearshape", accessibilityLabel: "Settings") {
+                            NotificationCenter.default.post(name: .toggleSettings, object: nil)
+                        }
+                        .help("Settings (⌘,)")
                     }
-                    .help(shortcutTooltip("File Tree", for: .toggleFileTree))
                 }
-                IconButton(symbol: "gearshape", accessibilityLabel: "Settings") {
-                    NotificationCenter.default.post(name: .toggleSettings, object: nil)
-                }
-                .help("Settings (⌘,)")
+                .padding(.trailing, 8)
+                .fixedSize(horizontal: true, vertical: false)
+                .background(WindowDragRepresentable(alwaysEnabled: isWindowTitleBar))
             }
-            .padding(.trailing, 8)
-            .fixedSize(horizontal: true, vertical: false)
-            .background(WindowDragRepresentable(alwaysEnabled: isWindowTitleBar))
         }
         .frame(height: 36)
         .background {
@@ -178,6 +183,10 @@ struct PaneTabStrip: View {
 
     private var trailingTabButtonWidth: CGFloat {
         addButtonWidth
+    }
+
+    private var showsTrailingActions: Bool {
+        showVCSButton || showSettingsButton || (isWindowTitleBar && UpdateService.shared.availableUpdateVersion != nil)
     }
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {

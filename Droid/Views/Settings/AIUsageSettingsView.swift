@@ -17,7 +17,7 @@ struct AIUsageSettingsView: View {
             SettingsContainer {
                 SettingsSection(
                     "Usage Board",
-                    footer: "Enable the AI usage board to show provider quotas and session tracking in the sidebar.",
+                    footer: "Enable the AI usage board to show provider quotas and session tracking in the top bar.",
                     showsDivider: usageEnabled
                 ) {
                     SettingsToggleRow(label: "Enabled", isOn: $usageEnabled)
