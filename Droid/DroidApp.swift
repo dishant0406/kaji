@@ -221,7 +221,7 @@ struct WindowConfigurator: NSViewRepresentable {
     }
 
     private static func applyWindowBackground(_ window: NSWindow, sidebarTransparencyEnabled: Bool) {
-        if sidebarTransparencyEnabled {
+        if sidebarTransparencyEnabled, !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
             window.isOpaque = false
             window.backgroundColor = .clear
             return

@@ -32,8 +32,8 @@ struct DropZoneHighlight: View {
                     .frame(width: targetRect.width, height: targetRect.height)
                     .offset(x: targetRect.minX, y: targetRect.minY)
             }
-            .animation(.easeOut(duration: 0.14), value: zone)
-            .animation(.easeOut(duration: 0.14), value: showsTabStripTarget)
+            .animation(DroidMotion.fast, value: zone)
+            .animation(DroidMotion.fast, value: showsTabStripTarget)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)

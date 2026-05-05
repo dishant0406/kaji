@@ -1,34 +1,9 @@
 import SwiftUI
 
-private enum SettingsPane: String, CaseIterable, Identifiable {
-    case general = "General"
-    case appearance = "Appearance"
-    case cli = "Coding Agents"
-    case agents = "Agents"
-    case editor = "Editor"
-    case shortcuts = "Shortcuts"
-    case notifications = "Notifications"
-    case aiUsage = "AI Usage"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .general: "gearshape"
-        case .appearance: "paintbrush"
-        case .cli: "terminal"
-        case .agents: "rectangle.stack"
-        case .editor: "pencil.line"
-        case .shortcuts: "keyboard"
-        case .notifications: "bell"
-        case .aiUsage: "chart.bar"
-        }
-    }
-}
-
 struct SettingsView: View {
     var onClose: (() -> Void)?
     @State private var selection = SettingsPane.general
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,10 +22,9 @@ struct SettingsView: View {
         .frame(width: 860, height: 560)
         .background(
             TranslucentSurface(
-                base: DroidTheme.tertiaryBackground,
-                material: .hudWindow,
-                tintOpacity: 0.66,
-                gradientOpacity: 0.08
+                base: DroidTheme.bg,
+                material: .underWindowBackground,
+                tintOpacity: 0.24
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: DroidShape.modalRadius))
@@ -91,7 +65,7 @@ struct SettingsView: View {
                     icon: pane.icon,
                     isSelected: selection == pane
                 ) {
-                    selection = pane
+                    select(pane)
                 }
             }
             Spacer(minLength: 0)
@@ -99,7 +73,11 @@ struct SettingsView: View {
         .padding(10)
         .frame(width: 190, alignment: .topLeading)
         .background(
-            DroidTheme.secondaryBackground.opacity(0.42)
+            TranslucentSurface(
+                base: DroidTheme.secondaryBackground,
+                material: .sidebar,
+                tintOpacity: 0.18
+            )
         )
     }
 
@@ -124,52 +102,22 @@ struct SettingsView: View {
                 AIUsageSettingsView()
             }
         }
+        .id(selection)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .transition(DroidMotion.paneTransition(reduceMotion: reduceMotion))
+        .animation(DroidMotion.preferred(DroidMotion.panel, reduceMotion: reduceMotion), value: selection)
         .background(
-            DroidTheme.bg.opacity(0.34)
+            TranslucentSurface(
+                base: DroidTheme.bg,
+                material: .underWindowBackground,
+                tintOpacity: 0.28
+            )
         )
     }
-}
 
-private struct SettingsSidebarButton: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                DroidIcon(systemName: icon, size: 12)
-                    .frame(width: 14)
-                Text(title)
-                    .droidFont(size: 12, weight: .medium)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(isSelected ? DroidTheme.fg : (hovered ? DroidTheme.fg : DroidTheme.fgMuted))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(rowBackground, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                    .stroke(rowBorder, lineWidth: 1)
-            )
+    private func select(_ pane: SettingsPane) {
+        withAnimation(DroidMotion.preferred(DroidMotion.panel, reduceMotion: reduceMotion)) {
+            selection = pane
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-    }
-
-    private var rowBackground: Color {
-        if isSelected { return DroidTheme.tertiaryBackground }
-        if hovered { return DroidTheme.hover }
-        return .clear
-    }
-
-    private var rowBorder: Color {
-        if isSelected { return DroidTheme.borderStrong }
-        if hovered { return DroidTheme.border.opacity(0.7) }
-        return .clear
     }
 }

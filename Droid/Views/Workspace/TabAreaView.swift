@@ -22,6 +22,7 @@ struct TabAreaView: View {
     @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
     @Environment(AppState.self) private var appState
     @Environment(\.workspaceOccluded) private var workspaceOccluded
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -103,8 +104,8 @@ struct TabAreaView: View {
                         paneDragCoordinator.hoveredAreaID == area.id &&
                         paneDragCoordinator.hoveredZone != nil ? 1 : 0
                 )
-                .animation(.easeOut(duration: 0.12), value: paneDragCoordinator.hoveredAreaID)
-                .animation(.easeOut(duration: 0.12), value: paneDragCoordinator.hoveredZone)
+                .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: paneDragCoordinator.hoveredAreaID)
+                .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: paneDragCoordinator.hoveredZone)
             }
         }
         .background {

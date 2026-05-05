@@ -16,14 +16,14 @@ enum AppearanceTransparencyStyle {
     }
 
     static func sidebarTintOpacity(enabled: Bool, amount: Double) -> Double {
-        enabled ? 0.62 - (0.22 * clampedAmount(amount)) : 1
+        enabled ? 0.46 - (0.22 * clampedAmount(amount)) : 1
     }
 
     static func sidebarGradientOpacity(enabled: Bool, amount: Double) -> Double {
-        enabled ? 0.08 + (0.18 * clampedAmount(amount)) : 0
+        enabled ? 0.04 + (0.08 * clampedAmount(amount)) : 0
     }
 
     static func chromeTintOpacity(enabled: Bool, amount: Double) -> Double {
-        enabled ? 0.68 - (0.28 * clampedAmount(amount)) : 1
+        enabled ? 0.54 - (0.22 * clampedAmount(amount)) : 1
     }
 }

@@ -8,6 +8,7 @@ struct SidebarBackgroundSurface: View {
         TranslucentSurface(
             base: DroidTheme.secondaryBackground,
             material: .sidebar,
+            blendingMode: .behindWindow,
             tintOpacity: AppearanceTransparencyStyle.sidebarTintOpacity(
                 enabled: transparencyEnabled,
                 amount: transparencyAmount
