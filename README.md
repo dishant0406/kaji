@@ -21,7 +21,7 @@
 
 ## Screenshot
 
-<img width="1800" alt="Droid screenshot" src="docs/images/droid-window.png" />
+<img width="1800" alt="Droid screenshot" src="docs/images/droid-ss.png" />
 
 ## What Is Droid?
 
