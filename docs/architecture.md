@@ -1,6 +1,6 @@
 # Architecture
 
-Droid is a macOS-only SwiftUI app. It embeds upstream libghostty through `GhosttyKit.xcframework` and keeps all app behavior inside the `Droid/` executable target.
+Droid is a macOS-only SwiftUI app. It embeds a Droid-tuned libghostty fork through `GhosttyKit.xcframework` and keeps all app behavior inside the `Droid/` executable target.
 
 ## Repo Shape
 
@@ -8,7 +8,7 @@ Droid is a macOS-only SwiftUI app. It embeds upstream libghostty through `Ghostt
 Droid/                       App target
 DroidHookClient/             Native provider hook helper
 GhosttyKit/                  C module exposing ghostty.h
-GhosttyKit.xcframework/      Built libghostty artifact from ghostty-org/ghostty
+GhosttyKit.xcframework/      Built libghostty artifact from dishant0406/ghostty
 Vendor/pi-mono/              Vendored Pi runtime used by Droid's Parent Agent
 Tests/DroidTests/            Swift Testing suite
 docs/                        Project docs
@@ -79,6 +79,6 @@ The source repo may also contain `.droid/worktree.json` files inside user projec
 
 ## Ghostty Integration
 
-`scripts/setup.sh` builds `GhosttyKit.xcframework` from the official `ghostty-org/ghostty` repository, then syncs Ghostty's `shell-integration` and compiled `terminfo` runtime resources into `Droid/Resources/ghostty/` so packaged app builds do not depend on a separate Ghostty.app install for terminal capabilities.
+`scripts/setup.sh` builds `GhosttyKit.xcframework` from `dishant0406/ghostty` at `droid-performance-spike`, then syncs Ghostty's `shell-integration` and compiled `terminfo` runtime resources into `Droid/Resources/ghostty/` so packaged app builds do not depend on a separate Ghostty.app install for terminal capabilities.
 
-The app only uses the upstream public Ghostty embedding API exposed through `GhosttyKit/ghostty.h`.
+The app only uses Ghostty's public embedding API exposed through `GhosttyKit/ghostty.h`.

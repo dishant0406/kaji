@@ -25,7 +25,7 @@ You are welcome to use AI to help you write code, but the text you post on GitHu
 ```bash
 git clone https://github.com/droid-app/droid.git
 cd droid
-scripts/setup.sh          # builds GhosttyKit.xcframework from ghostty-org/ghostty
+scripts/setup.sh          # builds GhosttyKit.xcframework from dishant0406/ghostty
 swift build               # verify everything compiles
 ```
 

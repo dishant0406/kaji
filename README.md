@@ -29,7 +29,7 @@ Droid is a local operations layer for AI coding work.
 
 Instead of managing a pile of terminal windows, Droid keeps projects, worktrees, panes, agent runs, notifications, changed files, diffs, and verification state inside one native macOS app.
 
-It is built with SwiftUI and embeds upstream [libghostty](https://github.com/ghostty-org/ghostty) through `GhosttyKit` for native terminal rendering.
+It is built with SwiftUI and embeds a Droid-tuned [libghostty](https://github.com/dishant0406/ghostty) fork through `GhosttyKit` for native terminal rendering.
 
 ## Core Features
 
@@ -153,7 +153,7 @@ Download the latest release from the [releases page](https://github.com/dishant0
 ## Local Development
 
 ```bash
-scripts/setup.sh          # Build GhosttyKit.xcframework from ghostty-org/ghostty
+scripts/setup.sh          # Build GhosttyKit.xcframework from dishant0406/ghostty
 swift build               # Debug build
 swift run Droid           # Run from SwiftPM
 ./start.sh                # Open the preview lab and launch a real Droid.app bundle
@@ -170,7 +170,7 @@ scripts/checks.sh --fix   # Format, lint, and build
 Droid/                       SwiftUI macOS app target
 DroidHookClient/             Native provider hook helper
 GhosttyKit/                  C module exposing ghostty.h
-GhosttyKit.xcframework/      Built libghostty artifact from ghostty-org/ghostty
+GhosttyKit.xcframework/      Built libghostty artifact from dishant0406/ghostty
 Vendor/pi-mono/              Vendored Pi runtime used by Droid's Parent Agent
 Tests/DroidTests/            Swift Testing suite
 docs/                        Architecture, release, and integration docs

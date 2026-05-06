@@ -3,8 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-GHOSTTY_REPO="${GHOSTTY_REPO:-ghostty-org/ghostty}"
-GHOSTTY_REF="${GHOSTTY_REF:-main}"
+GHOSTTY_REPO="${GHOSTTY_REPO:-dishant0406/ghostty}"
+GHOSTTY_REF="${GHOSTTY_REF:-droid-performance-spike}"
 GHOSTTY_URL="https://github.com/${GHOSTTY_REPO}.git"
 XCFRAMEWORK_DIR="$PROJECT_ROOT/GhosttyKit.xcframework"
 HEADER_PATH="$PROJECT_ROOT/GhosttyKit/ghostty.h"
