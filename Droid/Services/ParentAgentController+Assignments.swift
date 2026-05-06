@@ -5,6 +5,7 @@ extension ParentAgentController {
     func assignmentContext(_ assignment: ParentAgentAssignment) -> ParentAgentAssignmentContext {
         let run = assignment.runID.flatMap(resolveChildRun)
         let feed = assignment.runID.map { ChildAgentFeedStore.shared.recentText(runID: $0, limit: 5) } ?? []
+        let terminalOutput = assignment.runID.flatMap { ChildAgentFeedStore.shared.terminalOutput(runID: $0) }
         return ParentAgentAssignmentContext(
             id: assignment.id.uuidString,
             title: assignment.title,
@@ -20,6 +21,7 @@ extension ParentAgentController {
             lastEvent: feed.last ?? assignment.lastEvent ?? run?.events.last?.text,
             recentEvents: Array((assignment.recentEvents + feed + (run?.events.suffix(3).map(\.text) ?? [])).suffix(8)),
             finalSummary: assignment.finalSummary ?? assignment.runID.flatMap { ChildAgentFeedStore.shared.finalAnswer(runID: $0) },
+            terminalOutput: terminalOutput,
             changedFiles: run?.changedFiles.map(changedFileContext) ?? assignment.changedFiles,
             verification: run.flatMap { verificationContext(for: $0.id) } ?? assignment.verification,
             attention: assignment.attention,

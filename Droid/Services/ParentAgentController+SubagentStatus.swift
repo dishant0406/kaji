@@ -9,10 +9,12 @@ extension ParentAgentController {
         }
         reconcileAssignments(taskID: taskID)
         if let assignment = resolveAssignment(message, taskID: taskID) {
+            captureAssignmentTerminalSnapshot(assignment)
             let updated = store.assignment(taskID: taskID, assignmentID: assignment.id) ?? assignment
             sendAssignmentResult(toolID: toolID, assignment: updated)
             return
         }
+        captureAssignmentTerminalSnapshots(store.assignments(taskID: taskID))
         process.send(ParentAgentEnvelope(
             type: "tool_result",
             id: toolID,
@@ -42,6 +44,7 @@ extension ParentAgentController {
         while Date() < deadline {
             reconcileAssignments(taskID: taskID)
             let assignments = selectedAssignments(message, taskID: taskID)
+            captureAssignmentTerminalSnapshots(assignments)
             if let attentionAssignment = assignments.first(where: { detectAssignmentAttention(taskID: taskID, assignment: $0) != nil }) {
                 let updated = store.assignment(taskID: taskID, assignmentID: attentionAssignment.id) ?? attentionAssignment
                 process.send(ParentAgentEnvelope(
@@ -66,6 +69,7 @@ extension ParentAgentController {
             try? await Task.sleep(for: .seconds(2))
         }
         let assignments = selectedAssignments(message, taskID: taskID)
+        captureAssignmentTerminalSnapshots(assignments)
         process.send(ParentAgentEnvelope(
             type: "tool_result",
             id: toolID,
@@ -82,8 +86,11 @@ extension ParentAgentController {
 
     func finalizeAssignmentResult(taskID: UUID, assignmentID: UUID) async {
         guard let assignment = store.assignment(taskID: taskID, assignmentID: assignmentID) else { return }
+        captureAssignmentTerminalSnapshot(assignment)
         let run = assignment.runID.flatMap(resolveChildRun)
-        let finalSummary = assignment.finalSummary ?? assignment.runID.flatMap { ChildAgentFeedStore.shared.finalAnswer(runID: $0) }
+        let finalSummary = assignment.finalSummary
+            ?? assignment.runID.flatMap { ChildAgentFeedStore.shared.finalAnswer(runID: $0) }
+            ?? assignment.runID.flatMap { ChildAgentFeedStore.shared.terminalOutput(runID: $0) }
         let changedFiles = await assignmentChangedFiles(assignment: assignment, run: run)
         let status = ParentAgentAssignmentCompletionEvaluator.status(
             assignmentStatus: assignment.status,

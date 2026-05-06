@@ -75,7 +75,8 @@ extension ParentAgentController {
                 status: "missing",
                 title: "Missing child run",
                 lastEvent: "No matching child run is available.",
-                recentEvents: ["No matching child run is available."]
+                recentEvents: ["No matching child run is available."],
+                terminalOutput: nil
             )
         }
     }
