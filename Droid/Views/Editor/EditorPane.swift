@@ -130,30 +130,7 @@ struct EditorPane: View {
             if shouldDelayMarkdownPreview {
                 markdownPreviewLoadingView
             } else {
-                MarkdownWebView(
-                    html: renderedMarkdownHTML,
-                    content: renderedMarkdownContent,
-                    filePath: state.filePath,
-                    palette: markdownPalette,
-                    syncScrollRequest: $state.markdownPreviewScrollRequest,
-                    syncScrollRequestVersion: state.markdownPreviewScrollRequestVersion,
-                    scrollSyncEnabled: usesMarkdownAnchorSync,
-                    onScrollReport: { report in
-                        state.markdownPreviewMaxScrollTop = report.maxScrollTop
-                        state.markdownPreviewViewportHeight = report.clientHeight
-                        let map = state.currentMarkdownSyncMap()
-                        let output = state.markdownSyncCoordinator.previewDidScroll(scrollTop: report.scrollTop, map: map)
-                        state.applyMarkdownSyncOutput(output)
-                    },
-                    onLayoutChanged: {
-                        let map = state.currentMarkdownSyncMap()
-                        let output = state.markdownSyncCoordinator.reissueAfterRelayout(map: map)
-                        state.applyMarkdownSyncOutput(output)
-                    },
-                    onAnchorGeometryChanged: { geometries in
-                        state.markdownPreviewGeometries = geometries
-                    }
-                )
+                NativeMarkdownView(content: renderedMarkdownContent, filePath: state.filePath)
             }
         }
         .background(DroidTheme.bg)
@@ -162,22 +139,6 @@ struct EditorPane: View {
     private var renderedMarkdownContent: String {
         _ = state.previewRefreshVersion
         return state.backingStore?.fullText() ?? ""
-    }
-
-    private var renderedMarkdownHTML: String {
-        MarkdownRenderer.html(filePath: state.filePath, typography: typography)
-    }
-
-    private var markdownPalette: MarkdownRenderer.Palette {
-        MarkdownRenderer.Palette(
-            background: ghostty.backgroundColor,
-            foreground: ghostty.foregroundColor,
-            accent: ghostty.accentColor
-        )
-    }
-
-    private var usesMarkdownAnchorSync: Bool {
-        state.markdownViewMode == .split && state.markdownScrollSyncEnabled && !shouldDelayMarkdownPreview
     }
 
     private var shouldDelayMarkdownPreview: Bool {

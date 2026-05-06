@@ -28,8 +28,8 @@ struct CodexAgentModule: CodingAgentModule, AIUsageProvider {
         defaultModel: "gpt-5.5",
         modelListCommand: nil,
         stopEscapeCount: 1,
-        globalInstructionFiles: [".codex/AGENTS.md", ".agents/AGENTS.md"],
-        projectInstructionFiles: ["AGENTS.md"],
+        globalInstructionFiles: [".codex/AGENTS.md", ".codex/AGENTS.override.md", ".agents/AGENTS.md"],
+        projectInstructionFiles: ["AGENTS.md", "AGENTS.override.md"],
         homeSkillDirectories: [".codex/skills"],
         projectSkillDirectories: [".agents/skills"]
     )

@@ -1,4 +1,3 @@
-import AppKit
 import Testing
 
 @testable import Droid
@@ -63,48 +62,5 @@ struct MermaidCodeBlockNormalizerTests {
         #expect(output.contains("let text = \"[A\\nB]\""))
         #expect(output.contains("A[Hello<br/>World] --> B"))
         #expect(output.contains("B --> C\\nD"))
-    }
-
-    @Test("MarkdownRenderer shell loads Mermaid.js renderer asset")
-    @MainActor
-    func markdownRendererShellLoadsRendererAsset() {
-        let html = MarkdownRenderer.html(filePath: nil)
-
-        #expect(html.contains(".mermaid"))
-        #expect(html.contains("droid-asset://markdown/markdown-renderer.js"))
-    }
-
-    @Test("MarkdownRenderer shell exposes anchor block class and image base host hook")
-    @MainActor
-    func markdownRendererShellExposesAnchorAndImageHooks() {
-        let html = MarkdownRenderer.html(filePath: nil)
-
-        #expect(html.contains(".droid-anchor-block"))
-        #expect(html.contains("__droidImageBaseHost"))
-    }
-
-    @Test("MarkdownRenderer themeApplyScript emits Mermaid theme variables")
-    @MainActor
-    func themeApplyScriptEmitsMermaidThemeVariables() {
-        let script = MarkdownRenderer.themeApplyScript(
-            palette: MarkdownRenderer.Palette(
-                background: NSColor.black,
-                foreground: NSColor.white,
-                accent: NSColor.systemBlue
-            )
-        )
-
-        #expect(script.contains("__droidMermaidThemeVariables"))
-        #expect(script.contains("__droidMermaidBaseTheme = \"dark\""))
-        #expect(script.contains("__droidMermaidUseThemeVariables = true"))
-    }
-
-    @Test("MarkdownRenderer shell stays stable across palettes")
-    @MainActor
-    func shellStableAcrossPalettes() {
-        let firstShell = MarkdownRenderer.html(filePath: "/tmp/readme.md")
-        let secondShell = MarkdownRenderer.html(filePath: "/tmp/readme.md")
-
-        #expect(firstShell == secondShell)
     }
 }

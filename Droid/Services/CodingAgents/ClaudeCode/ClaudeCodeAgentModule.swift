@@ -29,7 +29,7 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         modelListCommand: nil,
         stopEscapeCount: 1,
         globalInstructionFiles: [".claude/CLAUDE.md", ".claude/AGENTS.md"],
-        projectInstructionFiles: ["CLAUDE.md", "AGENTS.md"],
+        projectInstructionFiles: ["CLAUDE.md", "CLAUDE.local.md", "AGENTS.md"],
         homeSkillDirectories: [".claude/skills"],
         projectSkillDirectories: [".claude/skills", ".agents/skills"]
     )

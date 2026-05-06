@@ -21,6 +21,11 @@ struct MainWindow: View {
         static let maxWidth: CGFloat = 600
     }
 
+    private enum AgentInstructionsLayout {
+        static let minWidth: CGFloat = 360
+        static let widthRatio: CGFloat = 0.5
+    }
+
     private enum CloseConfirmationKind {
         case lastTab
         case unsavedEditor
@@ -61,6 +66,9 @@ struct MainWindow: View {
     @State private var fileTreePanelVisible = false
     @AppStorage("droid.fileTreeWidth") private var fileTreePanelWidth: Double = .init(FileTreeLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
+    @State private var agentInstructionPanelVisible = false
+    @State private var agentInstructionState = AgentInstructionPanelState()
+    @State private var cliLauncherSettings = CLILauncherSettings.shared
     @State private var showQuickOpen = false
     @State private var showAsk = false
     @State private var showAgentCommandCenter = false
@@ -322,56 +330,15 @@ struct MainWindow: View {
                             )
                     }
 
-                    HStack(spacing: 0) {
-                        ZStack {
-                            DroidTheme.bg
-                            workspaceContent
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    GeometryReader { contentGeometry in
+                        HStack(spacing: 0) {
+                            ZStack {
+                                DroidTheme.bg
+                                workspaceContent
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                        if vcsPanelVisible, let state = activeVCSState {
-                            HStack(spacing: 0) {
-                                sidePanelResizeHandle { delta in
-                                    vcsPanelWidth = max(
-                                        AttachedVCSLayout.minWidth,
-                                        min(AttachedVCSLayout.maxWidth, vcsPanelWidth - delta)
-                                    )
-                                }
-                                VCSTabView(state: state, focused: false, onFocus: {})
-                                    .frame(width: vcsPanelWidth)
-                            }
-                        } else if fileTreePanelVisible, let treeState = activeFileTreeState {
-                            HStack(spacing: 0) {
-                                sidePanelResizeHandle { delta in
-                                    let next = fileTreePanelWidth - Double(delta)
-                                    fileTreePanelWidth = max(
-                                        Double(FileTreeLayout.minWidth),
-                                        min(Double(FileTreeLayout.maxWidth), next)
-                                    )
-                                }
-                                FileTreeView(
-                                    state: treeState,
-                                    onOpenFile: { filePath in
-                                        activateWorkspace()
-                                        guard let projectID = appState.activeProjectID else { return }
-                                        appState.openFile(filePath, projectID: projectID)
-                                    },
-                                    onOpenTerminal: { directory in
-                                        activateWorkspace()
-                                        guard let projectID = appState.activeProjectID else { return }
-                                        appState.dispatch(.createTabInDirectory(
-                                            projectID: projectID,
-                                            areaID: nil,
-                                            directory: directory
-                                        ))
-                                    },
-                                    onFileMoved: { oldPath, newPath in
-                                        appState.handleFileMoved(from: oldPath, to: newPath)
-                                    }
-                                )
-                                .id(treeState.rootPath)
-                                .frame(width: CGFloat(fileTreePanelWidth))
-                            }
+                            activeSidePanel(contentWidth: contentGeometry.size.width)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -408,6 +375,62 @@ struct MainWindow: View {
                 .allowsHitTesting(key == activeKey)
                 .zIndex(key == activeKey ? 1 : 0)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func activeSidePanel(contentWidth: CGFloat) -> some View {
+        if vcsPanelVisible, let state = activeVCSState {
+            HStack(spacing: 0) {
+                sidePanelResizeHandle { delta in
+                    vcsPanelWidth = max(
+                        AttachedVCSLayout.minWidth,
+                        min(AttachedVCSLayout.maxWidth, vcsPanelWidth - delta)
+                    )
+                }
+                VCSTabView(state: state, focused: false, onFocus: {})
+                    .frame(width: vcsPanelWidth)
+            }
+        } else if fileTreePanelVisible, let treeState = activeFileTreeState {
+            fileTreeSidePanel(treeState: treeState)
+        } else if agentInstructionPanelVisible, let project = activeProject {
+            HStack(spacing: 0) {
+                Rectangle().fill(DroidTheme.border).frame(width: 1)
+                AgentInstructionsPanel(
+                    state: agentInstructionState,
+                    projectPath: activeWorktreePath(for: project),
+                    enabledLaunchers: cliLauncherSettings.enabledLaunchers,
+                    onClose: { agentInstructionPanelVisible = false }
+                )
+                .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
+            }
+        }
+    }
+
+    private func fileTreeSidePanel(treeState: FileTreeState) -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                let next = fileTreePanelWidth - Double(delta)
+                fileTreePanelWidth = max(Double(FileTreeLayout.minWidth), min(Double(FileTreeLayout.maxWidth), next))
+            }
+            FileTreeView(
+                state: treeState,
+                onOpenFile: { filePath in
+                    activateWorkspace()
+                    guard let projectID = appState.activeProjectID else { return }
+                    appState.openFile(filePath, projectID: projectID)
+                },
+                onOpenTerminal: { directory in
+                    activateWorkspace()
+                    guard let projectID = appState.activeProjectID else { return }
+                    appState.dispatch(.createTabInDirectory(projectID: projectID, areaID: nil, directory: directory))
+                },
+                onFileMoved: { oldPath, newPath in
+                    appState.handleFileMoved(from: oldPath, to: newPath)
+                }
+            )
+            .id(treeState.rootPath)
+            .frame(width: CGFloat(fileTreePanelWidth))
         }
     }
 
@@ -669,11 +692,15 @@ struct MainWindow: View {
                 }
                 .padding(.trailing, 4)
             }
-            if let project = activeProject, activeProjectWithWorkspace != nil {
+            if let project = activeProject {
                 FileDiffIconButton {
                     openVCS(for: project)
                 }
                 .help("Source Control (\(KeyBindingStore.shared.combo(for: .openVCSTab).displayString))")
+                AgentInstructionsButton(selected: agentInstructionPanelVisible) {
+                    toggleAgentInstructionPanel()
+                }
+                .help("Agent Instructions")
                 FileTreeIconButton {
                     NotificationCenter.default.post(name: .toggleFileTree, object: nil)
                 }
@@ -893,6 +920,7 @@ struct MainWindow: View {
         vcsPanelVisible = isShowing
         if isShowing {
             fileTreePanelVisible = false
+            agentInstructionPanelVisible = false
         }
     }
 
@@ -908,6 +936,26 @@ struct MainWindow: View {
         fileTreePanelVisible = isShowing
         if isShowing {
             vcsPanelVisible = false
+            agentInstructionPanelVisible = false
+        }
+    }
+
+    private func toggleAgentInstructionPanel() {
+        guard let project = activeProject else {
+            agentInstructionPanelVisible = false
+            return
+        }
+
+        activateWorkspace()
+        agentInstructionState.refresh(
+            projectPath: activeWorktreePath(for: project),
+            enabledLaunchers: cliLauncherSettings.enabledLaunchers
+        )
+        let isShowing = !agentInstructionPanelVisible
+        agentInstructionPanelVisible = isShowing
+        if isShowing {
+            vcsPanelVisible = false
+            fileTreePanelVisible = false
         }
     }
 
@@ -939,6 +987,7 @@ struct MainWindow: View {
         vcsPanelVisible = isShowing
         if isShowing {
             fileTreePanelVisible = false
+            agentInstructionPanelVisible = false
         }
     }
 
