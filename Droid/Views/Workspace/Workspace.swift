@@ -64,10 +64,6 @@ struct TerminalArea: View {
                         appState.dispatch(result.action(projectID: project.id))
                     }
                 )
-
-                if isActiveProject {
-                    CLILauncherFooter(projectID: project.id)
-                }
             }
             .environment(\.activeWorktreeKey, worktreeKey)
             .onPreferenceChange(AreaFramePreferenceKey.self) { frames in

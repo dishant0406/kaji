@@ -99,6 +99,12 @@ struct DroidCommands: Commands {
                 performShortcutAction(.findInTerminal)
             }
             .shortcut(for: .findInTerminal, store: keyBindings)
+
+            Button("Toggle Footer Terminal") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.toggleFooterTerminal)
+            }
+            .shortcut(for: .toggleFooterTerminal, store: keyBindings)
         }
 
         CommandGroup(replacing: .newItem) {

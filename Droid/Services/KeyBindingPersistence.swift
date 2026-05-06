@@ -48,6 +48,11 @@ final class FileKeyBindingPersistence: KeyBindingPersisting {
             {
                 return defaultBinding
             }
+            if defaultBinding.action == .newTab,
+               savedByAction[defaultBinding.action]?.combo == KeyCombo(key: "t", command: true)
+            {
+                return defaultBinding
+            }
             return savedByAction[defaultBinding.action] ?? defaultBinding
         }
     }

@@ -48,6 +48,7 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case saveFile
     case toggleSidebar
     case toggleFileTree
+    case toggleFooterTerminal
     case toggleAIUsage
     case navigateBack
     case navigateForward

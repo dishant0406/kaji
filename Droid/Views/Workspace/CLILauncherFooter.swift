@@ -2,6 +2,8 @@ import SwiftUI
 
 struct CLILauncherFooter: View {
     let projectID: UUID
+    var terminalExpanded = false
+    var onToggleTerminal: (() -> Void)?
     @Environment(AppState.self) private var appState
     @State private var settings = CLILauncherSettings.shared
     @State private var showsShortcuts = false
@@ -42,6 +44,17 @@ struct CLILauncherFooter: View {
                     appState.splitFocusedArea(direction: .vertical, projectID: projectID)
                 }
                 .help(shortcutTooltip("Split Down", for: .splitDown))
+
+                if let onToggleTerminal {
+                    IconButton(
+                        symbol: terminalExpanded ? "chevron.down" : "chevron.up",
+                        selected: terminalExpanded,
+                        accessibilityLabel: terminalExpanded ? "Hide Footer Terminal" : "Show Footer Terminal"
+                    ) {
+                        onToggleTerminal()
+                    }
+                    .help(terminalExpanded ? "Hide Footer Terminal" : "Show Footer Terminal")
+                }
             }
         }
         .padding(.horizontal, 10)

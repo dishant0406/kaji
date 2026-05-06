@@ -102,6 +102,20 @@ struct KeyBindingTests {
         #expect(binding.combo == KeyCombo(key: "g", command: true, shift: true))
     }
 
+    @Test("New Tab defaults to Command-N")
+    func newTabDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .newTab })
+
+        #expect(binding.combo == KeyCombo(key: "n", command: true))
+    }
+
+    @Test("Footer Terminal defaults to Command-T")
+    func footerTerminalDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .toggleFooterTerminal })
+
+        #expect(binding.combo == KeyCombo(key: "t", command: true))
+    }
+
     @Test("KeyBinding Codable round-trip")
     func codableRoundTrip() throws {
         let binding = KeyBinding(

@@ -10,6 +10,7 @@ extension Notification.Name {
     static let findInTerminal = Notification.Name("DroidFindInTerminal")
     static let toggleAttachedVCS = Notification.Name("DroidToggleAttachedVCS")
     static let toggleFileTree = Notification.Name("DroidToggleFileTree")
+    static let toggleFooterTerminal = Notification.Name("DroidToggleFooterTerminal")
     static let quickOpen = Notification.Name("DroidQuickOpen")
     static let ask = Notification.Name("DroidAsk")
     static let showParentAgentHome = Notification.Name("DroidShowParentAgentHome")

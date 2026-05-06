@@ -69,6 +69,9 @@ struct MainWindow: View {
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
     @State private var cliLauncherSettings = CLILauncherSettings.shared
+    @State private var footerTerminalState: TerminalPaneState?
+    @State private var footerTerminalVisible = false
+    @State private var footerTerminalCleanupTask: Task<Void, Never>?
     @State private var showQuickOpen = false
     @State private var showAsk = false
     @State private var showAgentCommandCenter = false
@@ -81,6 +84,7 @@ struct MainWindow: View {
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage("droid.notifications.toastPosition") private var toastPositionRaw = ToastPosition.topCenter.rawValue
+    @AppStorage(GeneralSettingsKeys.footerTerminalEnabled) private var footerTerminalEnabled = true
 
     var body: some View {
         configuredMainLayout
@@ -233,6 +237,10 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFileTree)) { _ in
                     toggleFileTreePanel()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleFooterTerminal)) { _ in
+                    guard footerTerminalEnabled else { return }
+                    toggleFooterTerminal()
+                }
         )
 
         let changes1 = AnyView(
@@ -269,6 +277,14 @@ struct MainWindow: View {
                 .onChange(of: appState.pendingSaveErrorMessage != nil) { _, isPresented in
                     guard isPresented, let message = appState.pendingSaveErrorMessage else { return }
                     presentSaveErrorAlert(message: message)
+                }
+                .onChange(of: appState.activeProjectID) {
+                    scheduleFooterTerminalCleanupIfIdle()
+                }
+                .onChange(of: footerTerminalEnabled) { _, enabled in
+                    if !enabled {
+                        collapseFooterTerminal()
+                    }
                 }
         )
     }
@@ -342,6 +358,9 @@ struct MainWindow: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .overlay(alignment: .bottom) {
+                    footerTerminalOverlay
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -713,6 +732,25 @@ struct MainWindow: View {
         }
     }
 
+    @ViewBuilder
+    private var footerTerminalOverlay: some View {
+        if let project = activeProject {
+            FooterTerminalOverlay(
+                projectID: project.id,
+                terminalState: footerTerminalState,
+                worktreeKey: activeWorktreeKey,
+                expanded: footerTerminalVisible,
+                onToggle: footerTerminalToggleAction,
+                onProcessExit: footerTerminalProcessExited
+            )
+        }
+    }
+
+    private var footerTerminalToggleAction: (() -> Void)? {
+        guard footerTerminalEnabled else { return nil }
+        return { toggleFooterTerminal() }
+    }
+
     private var worktreeSwitcherItems: [WorktreeSwitcherItem] {
         projectStore.projects.flatMap { project in
             worktreeStore.list(for: project.id).map { worktree in
@@ -991,6 +1029,51 @@ struct MainWindow: View {
         }
     }
 
+    private func toggleFooterTerminal() {
+        guard footerTerminalEnabled else { return }
+        if footerTerminalVisible {
+            collapseFooterTerminal()
+            return
+        }
+        footerTerminalCleanupTask?.cancel()
+        guard let project = activeProject else { return }
+        if footerTerminalState == nil {
+            footerTerminalState = TerminalPaneState(projectPath: activeWorktreePath(for: project), title: "Footer Terminal")
+        }
+        footerTerminalVisible = true
+    }
+
+    private func collapseFooterTerminal() {
+        footerTerminalVisible = false
+        scheduleFooterTerminalCleanupIfIdle()
+    }
+
+    private func scheduleFooterTerminalCleanupIfIdle() {
+        footerTerminalCleanupTask?.cancel()
+        guard let state = footerTerminalState,
+              !TerminalViewRegistry.shared.needsConfirmQuit(for: state.id)
+        else { return }
+        footerTerminalCleanupTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(360))
+            guard !Task.isCancelled else { return }
+            cleanupIdleFooterTerminal()
+        }
+    }
+
+    private func cleanupIdleFooterTerminal() {
+        guard let state = footerTerminalState,
+              !footerTerminalVisible,
+              !TerminalViewRegistry.shared.needsConfirmQuit(for: state.id)
+        else { return }
+        TerminalViewRegistry.shared.removeView(for: state.id)
+        footerTerminalState = nil
+    }
+
+    private func footerTerminalProcessExited() {
+        footerTerminalVisible = false
+        scheduleFooterTerminalCleanupIfIdle()
+    }
+
     private func requestCreateWorktree(projectID: UUID) {
         activateWorkspace()
         showQuickOpen = false
@@ -1155,6 +1238,7 @@ private extension ShortcutAction {
              .toggleSidebar,
              .toggleThemePicker,
              .toggleAIUsage,
+             .toggleFooterTerminal,
              .navigateBack,
              .navigateForward,
              .openProject,
