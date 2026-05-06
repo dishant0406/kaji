@@ -66,6 +66,9 @@ jobs:
             --pattern "GhosttyKit.xcframework.zip" \
             --clobber
           unzip -q GhosttyKit.xcframework.zip
+          test -f .ghostty-source
+          grep -qx 'repo=dishant0406/ghostty' .ghostty-source
+          grep -qx 'ref=droid-performance-spike' .ghostty-source
 
       - name: Resolve Swift packages
         run: swift package resolve
