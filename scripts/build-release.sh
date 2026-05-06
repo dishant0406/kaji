@@ -84,6 +84,7 @@ strip -Sx "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
 
 if [[ -d "$SPM_BUILD_DIR/Droid_Droid.bundle" ]]; then
     cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Contents/Resources/Droid_Droid.bundle"
+    cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Droid_Droid.bundle"
 fi
 
 cp "$PROJECT_ROOT/Droid/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
