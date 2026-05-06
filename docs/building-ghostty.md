@@ -1,6 +1,6 @@
 # GhosttyKit
 
-Droid embeds libghostty through `GhosttyKit.xcframework/`. The repo now builds that xcframework directly from the official upstream source at [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty).
+Droid embeds libghostty through `GhosttyKit.xcframework/`. The repo builds that xcframework from the Droid-tuned Ghostty fork at [dishant0406/ghostty](https://github.com/dishant0406/ghostty), branch `droid-performance-spike`.
 
 ## Requirements
 
@@ -17,17 +17,17 @@ scripts/setup.sh
 
 The setup script:
 
-1. Clones `ghostty-org/ghostty` at `main` by default
+1. Clones `dishant0406/ghostty` at `droid-performance-spike` by default
 2. Builds `macos/GhosttyKit.xcframework` with Zig
 3. Copies the xcframework into this repo
 4. Syncs `include/ghostty.h` into `GhosttyKit/ghostty.h`
 
-## Pinning Upstream
+## Pinning Ghostty
 
-If you want to build against a specific upstream tag or branch, set `GHOSTTY_REF`:
+If you want to build against a specific tag or branch, set `GHOSTTY_REF`:
 
 ```bash
-GHOSTTY_REF=v1.3.0 scripts/setup.sh
+GHOSTTY_REF=droid-performance-spike scripts/setup.sh
 ```
 
 You can also override the repo slug entirely:
@@ -38,7 +38,7 @@ GHOSTTY_REPO=ghostty-org/ghostty GHOSTTY_REF=main scripts/setup.sh
 
 ## Build Command
 
-`scripts/setup.sh` uses the upstream xcframework build path exposed by Ghostty's macOS build:
+`scripts/setup.sh` uses the xcframework build path exposed by Ghostty's macOS build:
 
 ```bash
 zig build \

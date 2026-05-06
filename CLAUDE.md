@@ -4,7 +4,7 @@
 ## Build & Run
 
 ```bash
-scripts/setup.sh         # First-time setup (builds GhosttyKit.xcframework from upstream Ghostty)
+scripts/setup.sh         # First-time setup (builds GhosttyKit.xcframework from Droid's Ghostty fork)
 swift build              # Debug build
 swift build -c release   # Release build
 swift run Droid            # Run the app
@@ -27,7 +27,7 @@ Run `scripts/checks.sh --fix` after every task.
 
 ## Architecture
 
-- Droid is a macOS terminal multiplexer built with SwiftUI that uses [libghostty](https://github.com/ghostty-org/ghostty) for terminal emulation and rendering via Metal.
+- Droid is a macOS terminal multiplexer built with SwiftUI that uses [libghostty](https://github.com/dishant0406/ghostty) for terminal emulation and rendering via Metal.
 - The architecture of the app is documented at `./docs/architecture.md` and must always be up to date.
 
 ### Core Components
@@ -46,7 +46,7 @@ Run `scripts/checks.sh --fix` after every task.
 
 Key libghostty types: `ghostty_app_t` (app), `ghostty_surface_t` (terminal surface), `ghostty_config_t` (configuration). Surfaces are created when terminal views move to a window and destroyed on removal.
 
-The xcframework is built from the official [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty) source. See [docs/building-ghostty.md](docs/building-ghostty.md) for details.
+The xcframework is built from [dishant0406/ghostty](https://github.com/dishant0406/ghostty) at `droid-performance-spike`. See [docs/building-ghostty.md](docs/building-ghostty.md) for details.
 
 ## Data Persistence
 
