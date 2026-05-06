@@ -66,7 +66,7 @@ if ! command -v zig >/dev/null 2>&1 || [[ "$(zig version)" != "$REQUIRED_ZIG_VER
     ZIG_URL="https://ziglang.org/download/${REQUIRED_ZIG_VERSION}/${ZIG_ARCHIVE}"
 
     echo "==> Using temporary Zig $REQUIRED_ZIG_VERSION"
-    curl -fsSL "$ZIG_URL" -o "$ZIG_DIR/$ZIG_ARCHIVE"
+    curl --fail --location --show-error --retry 5 --retry-delay 5 --retry-all-errors "$ZIG_URL" -o "$ZIG_DIR/$ZIG_ARCHIVE"
     tar -xf "$ZIG_DIR/$ZIG_ARCHIVE" -C "$ZIG_DIR"
     ZIG_BIN="$ZIG_DIR/zig-${ZIG_ARCH}-macos-${REQUIRED_ZIG_VERSION}/zig"
 fi
