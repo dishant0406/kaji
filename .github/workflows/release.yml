@@ -8,17 +8,19 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 env:
   APP_NAME: Droid
+  ARCH: arm64
   REPOSITORY_SLUG: ${{ github.repository }}
-  REPOSITORY_OWNER: ${{ github.repository_owner }}
+  TAP_REPOSITORY: dishant0406/homebrew-droid
 
 jobs:
-  validate:
-    runs-on: macos-26
-    outputs:
-      version: ${{ steps.validate.outputs.version }}
-      build_number: ${{ steps.validate.outputs.build_number }}
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,219 +34,138 @@ jobs:
             echo "Error: Version must be in X.Y.Z format"
             exit 1
           fi
-          BUILD_NUMBER=$(git rev-list --count HEAD)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Version app bundle metadata
+        id: version
+        run: |
+          VERSION="${{ steps.validate.outputs.version }}"
+          BUILD_NUMBER=$(( $(git rev-list --count HEAD) + 1 ))
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Droid/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" Droid/Info.plist
+          if ! git diff --quiet -- Droid/Info.plist; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add Droid/Info.plist
+            git commit -m "Release $VERSION"
+            git push
+          fi
+          BUILD_NUMBER=$(git rev-list --count HEAD)
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
 
-  build:
-    needs: validate
-    runs-on: macos-26
-    strategy:
-      matrix:
-        arch: [arm64, x86_64]
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 
       - name: Setup GhosttyKit
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
           chmod +x scripts/setup.sh
           scripts/setup.sh
 
-      - name: Resolve Sparkle dependency
+      - name: Resolve Swift packages
         run: swift package resolve
 
       - name: Install create-dmg
         run: npm install --global create-dmg
 
-      - name: Import signing certificate
-        env:
-          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE }}
-          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      - name: Build unsigned DMG
         run: |
-          echo "$CERTIFICATE_P12" | base64 --decode > certificate.p12
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security import certificate.p12 \
-            -k build.keychain \
-            -P "$CERTIFICATE_PASSWORD" \
-            -T /usr/bin/codesign
-          security set-key-partition-list \
-            -S apple-tool:,apple:,codesign: \
-            -s -k "$KEYCHAIN_PASSWORD" build.keychain
-          rm certificate.p12
-
-      - name: Resolve signing identity
-        id: identity
-        run: |
-          IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/')
-          if [[ -z "$IDENTITY" ]]; then
-            echo "Error: No Developer ID Application certificate found"
-            exit 1
-          fi
-          echo "name=$IDENTITY" >> "$GITHUB_OUTPUT"
-
-      - name: Derive Sparkle public key
-        id: sparkle
-        env:
-          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-        run: |
-          SPARKLE_PUBLIC_KEY=$(swift scripts/derive-sparkle-public-key.swift "$SPARKLE_PRIVATE_KEY")
-          echo "public_key=$SPARKLE_PUBLIC_KEY" >> "$GITHUB_OUTPUT"
-
-      - name: Build and package
-        run: |
-          chmod +x scripts/build-release.sh scripts/create-icns.sh
+          chmod +x scripts/build-parent-agent.sh scripts/build-release.sh scripts/create-icns.sh
           scripts/build-release.sh \
-            --arch "${{ matrix.arch }}" \
-            --version "${{ needs.validate.outputs.version }}" \
-            --sign-identity "${{ steps.identity.outputs.name }}" \
-            --sparkle-public-key "${{ steps.sparkle.outputs.public_key }}" \
-            --sparkle-feed-url "https://github.com/${{ github.repository }}/releases/latest/download/appcast-${{ matrix.arch }}.xml"
+            --arch "$ARCH" \
+            --version "${{ steps.validate.outputs.version }}"
 
-      - name: Notarize DMG
+      - name: Verify and checksum DMG
+        id: dmg
+        run: |
+          VERSION="${{ steps.validate.outputs.version }}"
+          DMG_PATH="build/${APP_NAME}-${VERSION}-${ARCH}.dmg"
+          hdiutil verify "$DMG_PATH" >/dev/null
+          SHA256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
+          echo "path=$DMG_PATH" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          xcrun notarytool store-credentials "notary-profile" \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID"
-          xcrun notarytool submit \
-            "build/Droid-${{ needs.validate.outputs.version }}-${{ matrix.arch }}.dmg" \
-            --keychain-profile "notary-profile" \
-            --wait
-          xcrun stapler staple \
-            "build/Droid-${{ needs.validate.outputs.version }}-${{ matrix.arch }}.dmg"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dmg-${{ matrix.arch }}
-          path: build/Droid-${{ needs.validate.outputs.version }}-${{ matrix.arch }}.dmg
-
-  release:
-    needs: [validate, build]
-    runs-on: macos-26
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve Sparkle dependency
-        run: swift package resolve
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Generate Sparkle appcasts
-        env:
-          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-        run: |
-          chmod +x scripts/generate-appcast.sh
-          scripts/generate-appcast.sh \
-            "artifacts/dmg-arm64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-arm64.dmg" \
-            "v${{ needs.validate.outputs.version }}" \
-            "${{ needs.validate.outputs.build_number }}" \
-            appcast-arm64.xml
-          scripts/generate-appcast.sh \
-            "artifacts/dmg-x86_64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-x86_64.dmg" \
-            "v${{ needs.validate.outputs.version }}" \
-            "${{ needs.validate.outputs.build_number }}" \
-            appcast-x86_64.xml
-          cp appcast-arm64.xml appcast.xml
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ needs.validate.outputs.version }}" \
-            --repo "${{ github.repository }}" \
-            --title "${{ env.APP_NAME }} v${{ needs.validate.outputs.version }}" \
-            --draft \
-            --generate-notes \
-            artifacts/dmg-arm64/*.dmg \
-            artifacts/dmg-x86_64/*.dmg \
-            appcast-arm64.xml \
-            appcast-x86_64.xml \
-            appcast.xml
-
-  update-homebrew-tap:
-    needs: [validate, release]
-    runs-on: macos-26
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Compute SHA256 checksums
-        id: sha256
-        run: |
-          ARM64_SHA=$(shasum -a 256 artifacts/dmg-arm64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-arm64.dmg | awk '{print $1}')
-          X86_64_SHA=$(shasum -a 256 artifacts/dmg-x86_64/${{ env.APP_NAME }}-${{ needs.validate.outputs.version }}-x86_64.dmg | awk '{print $1}')
-          echo "arm64=$ARM64_SHA" >> "$GITHUB_OUTPUT"
-          echo "x86_64=$X86_64_SHA" >> "$GITHUB_OUTPUT"
-
-      - name: Update Homebrew tap
-        env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ needs.validate.outputs.version }}
-          SHA256_ARM64: ${{ steps.sha256.outputs.arm64 }}
-          SHA256_X86_64: ${{ steps.sha256.outputs.x86_64 }}
-          HOMEBREW_TAP_REPOSITORY: ${{ vars.HOMEBREW_TAP_REPOSITORY }}
-        run: |
-          TAP_REPOSITORY="${HOMEBREW_TAP_REPOSITORY:-${REPOSITORY_OWNER}/homebrew-droid}"
-          if ! gh repo view "$TAP_REPOSITORY" >/dev/null 2>&1; then
-            gh repo create "$TAP_REPOSITORY" --public --description "Homebrew tap for ${APP_NAME}" --disable-issues
+          VERSION="${{ steps.validate.outputs.version }}"
+          TAG="v$VERSION"
+          NOTES=$(cat <<'EOF'
+          - Adds native agent instruction viewing.
+          - Adds configurable footer terminal.
+          - Fixes parent agent subagent output capture.
+          EOF
+          )
+          if gh release view "$TAG" --repo "$REPOSITORY_SLUG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${{ steps.dmg.outputs.path }}" --repo "$REPOSITORY_SLUG" --clobber
+          else
+            gh release create "$TAG" \
+              "${{ steps.dmg.outputs.path }}" \
+              --repo "$REPOSITORY_SLUG" \
+              --target "$(git rev-parse HEAD)" \
+              --title "${APP_NAME} $VERSION" \
+              --notes "$NOTES"
           fi
+
+      - name: Update Homebrew cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GH_PAT || github.token }}
+        run: |
+          VERSION="${{ steps.validate.outputs.version }}"
+          SHA256="${{ steps.dmg.outputs.sha256 }}"
           git clone "https://x-access-token:${GH_TOKEN}@github.com/${TAP_REPOSITORY}.git" tap
           mkdir -p tap/Casks
-          cat > tap/Casks/droid.rb <<EOF
-          cask "droid" do
-            version "${VERSION}"
+          cat > tap/Casks/droidkit.rb <<EOF
+          cask "droidkit" do
+            version "$VERSION"
+            sha256 "$SHA256"
 
-            on_arm do
-              sha256 "${SHA256_ARM64}"
-              url "https://github.com/${REPOSITORY_SLUG}/releases/download/v#{version}/${APP_NAME}-#{version}-arm64.dmg"
-            end
-
-            on_intel do
-              sha256 "${SHA256_X86_64}"
-              url "https://github.com/${REPOSITORY_SLUG}/releases/download/v#{version}/${APP_NAME}-#{version}-x86_64.dmg"
-            end
-
+            url "https://github.com/${REPOSITORY_SLUG}/releases/download/v#{version}/${APP_NAME}-#{version}-${ARCH}.dmg"
             name "${APP_NAME}"
-            desc "Terminal multiplexer for macOS"
+            desc "macOS terminal multiplexer for AI coding agents"
             homepage "https://github.com/${REPOSITORY_SLUG}"
 
-            livecheck do
-              url :url
-              strategy :github_latest
-            end
+            depends_on macos: ">= :sonoma"
 
             app "${APP_NAME}.app"
 
-            zap trash: [
-              "~/Library/Application Support/Droid",
-              "~/Library/Preferences/app.droid.Droid.plist",
-              "~/Library/Saved Application State/app.droid.Droid.savedState",
-            ]
+            postflight do
+              system_command "/usr/bin/xattr",
+                             args: ["-dr", "com.apple.quarantine", "#{appdir}/${APP_NAME}.app"],
+                             sudo: false
+            end
+
+            caveats <<~EOS
+              ${APP_NAME} is currently distributed as an unsigned developer preview.
+
+              This cask removes the macOS quarantine attribute after install so ${APP_NAME} can launch.
+              Managed or corporate Macs may still block unsigned apps.
+            EOS
           end
           EOF
+          cat > tap/README.md <<EOF
+          # homebrew-droid
+          Homebrew tap for ${APP_NAME}
+
+          ## Install
+
+          \`\`\`bash
+          brew tap dishant0406/droid
+          brew install --cask droidkit
+          \`\`\`
+
+          ## Launch
+
+          \`\`\`bash
+          open /Applications/${APP_NAME}.app
+          \`\`\`
+          EOF
           cd tap
+          ruby -c Casks/droidkit.rb
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/droid.rb
-          git commit -m "Update Droid to v${VERSION}"
-          git push
+          git add README.md Casks/droidkit.rb
+          if ! git diff --cached --quiet; then
+            git commit -m "Update DroidKit to $VERSION"
+            git push
+          fi
