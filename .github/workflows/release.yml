@@ -52,6 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
           chmod +x scripts/setup.sh
           scripts/setup.sh
 
