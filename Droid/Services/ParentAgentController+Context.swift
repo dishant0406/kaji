@@ -108,6 +108,7 @@ extension ParentAgentController {
     func childContext(for run: AgentRun, stableID: UUID) -> ParentAgentChildRunContext {
         let feed = ChildAgentFeedStore.shared.recentText(runID: run.id)
         let finalAnswer = ChildAgentFeedStore.shared.finalAnswer(runID: run.id)
+        let terminalOutput = ChildAgentFeedStore.shared.terminalOutput(runID: run.id)
         return ParentAgentChildRunContext(
             id: stableID.uuidString,
             provider: AgentMissionControlSnapshotBuilder.providerName(for: run.providerID),
@@ -115,7 +116,8 @@ extension ParentAgentController {
             status: run.status.rawValue,
             title: run.title,
             lastEvent: finalAnswer ?? feed.last ?? run.events.last?.text,
-            recentEvents: Array((feed + run.events.suffix(5).map(\.text)).suffix(8))
+            recentEvents: Array((feed + run.events.suffix(5).map(\.text)).suffix(8)),
+            terminalOutput: terminalOutput
         )
     }
 

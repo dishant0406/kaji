@@ -81,7 +81,8 @@ extension ParentAgentController {
             status: trackedRun?.run.status.rawValue ?? "starting",
             title: title,
             lastEvent: "Started in \(worktree.name)",
-            recentEvents: ["Started in \(worktree.name)"]
+            recentEvents: ["Started in \(worktree.name)"],
+            terminalOutput: nil
         )
         if let taskID = uuid(from: message.taskID) {
             store.appendChildRun(taskID: taskID, runID: stableRunID, title: provider.title, detail: "Started in \(project.name)")

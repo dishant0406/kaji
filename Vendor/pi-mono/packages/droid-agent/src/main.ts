@@ -127,7 +127,8 @@ function systemPrompt() {
 		"When a follow-up should continue an existing child run, choose the continue option from droid_choose_agent and use droid_subagent action=send instead of spawning.",
 		"When you spawn child agents, supervise them explicitly: observe, reason, sleep briefly if still running, then observe again.",
 		"Use droid_subagent action=wait and action=result instead of manual polling loops.",
-		"Do not claim a child agent is done until droid_subagent action=result reports a completed assignment with a meaningful final summary or changed files.",
+		"Use droid_subagent terminalOutput when finalSummary is absent or you need to inspect what is visible in the child terminal.",
+		"Do not claim a child agent is done until droid_subagent action=result reports a completed assignment with a meaningful final summary, terminal output, or changed files.",
 		"Be concise and honest about what has or has not been executed.",
 	].join("\n");
 }
@@ -249,7 +250,7 @@ function droidTools(context: RuntimeContext): AgentTool[] {
 		),
 		tool(
 			"droid_subagent",
-			"Manage Droid subagent assignments. Use spawn for new work, replace for incomplete/stale work, send for continuing an assignment, status/result/wait for supervision, and stop to interrupt.",
+			"Manage Droid subagent assignments. Use spawn for new work, replace for incomplete/stale work, send for continuing an assignment, status/result/wait for supervision, and stop to interrupt. Status/result/wait include terminalOutput when Droid can read the child terminal screen.",
 			Type.Object({
 				action: Type.String(),
 				assignmentID: Type.Optional(Type.String()),

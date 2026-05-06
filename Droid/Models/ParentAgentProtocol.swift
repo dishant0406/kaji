@@ -109,6 +109,7 @@ struct ParentAgentAssignmentContext: Codable, Hashable {
     let lastEvent: String?
     let recentEvents: [String]
     let finalSummary: String?
+    let terminalOutput: String?
     let changedFiles: [ParentAgentChangedFileContext]
     let verification: ParentAgentVerificationContext?
     let attention: ParentAgentAttention?
@@ -124,6 +125,7 @@ struct ParentAgentChildRunContext: Codable, Hashable {
     let title: String
     let lastEvent: String?
     let recentEvents: [String]?
+    let terminalOutput: String?
 }
 
 struct ParentAgentChangedFileContext: Codable, Hashable {

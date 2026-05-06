@@ -25,12 +25,14 @@ struct ChildAgentFeed: Identifiable, Codable, Hashable {
     let id: UUID
     var entries: [ChildAgentFeedEntry]
     var finalAnswer: String?
+    var terminalOutput: String?
     var updatedAt: Date
 
     init(id: UUID) {
         self.id = id
         self.entries = []
         self.finalAnswer = nil
+        self.terminalOutput = nil
         self.updatedAt = Date()
     }
 }
