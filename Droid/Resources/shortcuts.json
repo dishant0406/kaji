@@ -10,7 +10,7 @@
     "App"
   ],
   "shortcuts": [
-    { "action": "newTab", "displayName": "New Tab", "category": "Tabs", "scope": "mainWindow", "defaultCombo": { "key": "t", "command": true } },
+    { "action": "newTab", "displayName": "New Tab", "category": "Tabs", "scope": "mainWindow", "defaultCombo": { "key": "n", "command": true } },
     { "action": "closeTab", "displayName": "Close Tab", "category": "Tabs", "scope": "mainWindow", "defaultCombo": { "key": "w", "command": true } },
     { "action": "renameTab", "displayName": "Rename Tab", "category": "Tabs", "scope": "mainWindow", "defaultCombo": { "key": "t", "command": true, "shift": true } },
     { "action": "pinUnpinTab", "displayName": "Pin/Unpin Tab", "category": "Tabs", "scope": "mainWindow", "defaultCombo": { "key": "p", "command": true, "shift": true } },
@@ -57,6 +57,7 @@
     { "action": "switchWorktree", "displayName": "Switch Worktree", "category": "Project Navigation", "scope": "mainWindow", "defaultCombo": { "key": "o", "command": true, "shift": true } },
     { "action": "toggleSidebar", "displayName": "Toggle Sidebar", "category": "App", "scope": "mainWindow", "defaultCombo": { "key": "b", "command": true } },
     { "action": "toggleFileTree", "displayName": "Toggle File Tree", "category": "App", "scope": "mainWindow", "defaultCombo": { "key": "e", "command": true } },
+    { "action": "toggleFooterTerminal", "displayName": "Toggle Footer Terminal", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "t", "command": true } },
     { "action": "toggleAIUsage", "displayName": "Toggle AI Usage", "category": "App", "scope": "mainWindow", "defaultCombo": { "key": "l", "command": true } }
   ],
   "commandK": [

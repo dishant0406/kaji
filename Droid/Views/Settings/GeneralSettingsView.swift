@@ -2,6 +2,7 @@ import SwiftUI
 
 enum GeneralSettingsKeys {
     static let autoExpandWorktreesOnProjectSwitch = "droid.general.autoExpandWorktreesOnProjectSwitch"
+    static let footerTerminalEnabled = "droid.general.footerTerminalEnabled"
 }
 
 struct GeneralSettingsView: View {
@@ -11,6 +12,8 @@ struct GeneralSettingsView: View {
     private var confirmRunningProcess = true
     @AppStorage(ProjectLifecyclePreferences.keepOpenWhenNoTabsKey)
     private var keepProjectsOpenWhenNoTabs = false
+    @AppStorage(GeneralSettingsKeys.footerTerminalEnabled)
+    private var footerTerminalEnabled = true
 
     var body: some View {
         SettingsContainer {
@@ -35,10 +38,21 @@ struct GeneralSettingsView: View {
                 )
             }
 
-            SettingsSection("Tabs", showsDivider: false) {
+            SettingsSection("Tabs") {
                 SettingsToggleRow(
                     label: "Confirm before closing a tab with a running process",
                     isOn: $confirmRunningProcess
+                )
+            }
+
+            SettingsSection(
+                "Footer Terminal",
+                footer: "Shows the footer terminal chevron and enables the toggle shortcut.",
+                showsDivider: false
+            ) {
+                SettingsToggleRow(
+                    label: "Show footer terminal toggle",
+                    isOn: $footerTerminalEnabled
                 )
             }
         }
