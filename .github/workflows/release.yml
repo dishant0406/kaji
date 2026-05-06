@@ -16,6 +16,7 @@ env:
   ARCH: arm64
   REPOSITORY_SLUG: ${{ github.repository }}
   TAP_REPOSITORY: dishant0406/homebrew-droid
+  TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GH_PAT }}
 
 jobs:
   release:
@@ -113,8 +114,9 @@ jobs:
           fi
 
       - name: Update Homebrew cask
+        if: env.TAP_TOKEN != ''
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GH_PAT || github.token }}
+          GH_TOKEN: ${{ env.TAP_TOKEN }}
         run: |
           VERSION="${{ steps.validate.outputs.version }}"
           SHA256="${{ steps.dmg.outputs.sha256 }}"
@@ -174,3 +176,8 @@ jobs:
             git commit -m "Update DroidKit to $VERSION"
             git push
           fi
+
+      - name: Skip Homebrew cask update
+        if: env.TAP_TOKEN == ''
+        run: |
+          echo "Skipping Homebrew cask update because HOMEBREW_TAP_TOKEN or GH_PAT is not configured."
