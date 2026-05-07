@@ -274,22 +274,12 @@ struct WindowConfigurator: NSViewRepresentable {
         }
     }
 
-    static let trafficLightY: CGFloat = 3.5
-
     static func repositionTrafficLights(in window: NSWindow) {
-        let y: CGFloat
-        if #available(macOS 26.0, *) {
-            // On macOS 26, center traffic lights vertically in the 32px title bar
-            let buttonHeight: CGFloat = 14
-            y = (32 - buttonHeight) / 2
-        } else {
-            y = trafficLightY
-        }
+        let isTahoe = if #available(macOS 26.0, *) { true } else { false }
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
             guard let btn = window.standardWindowButton(button) else { continue }
-            var frame = btn.frame
-            frame.origin.y = y
-            btn.frame = frame
+            btn.frame = WindowTrafficLightLayout.frame(for: button, currentFrame: btn.frame, isTahoe: isTahoe)
+            btn.alphaValue = isTahoe ? 0.86 : 1
         }
     }
 

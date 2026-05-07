@@ -48,11 +48,11 @@ struct AIUsageTopBarButton: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(showPopover || hovered ? DroidTheme.surface : DroidTheme.secondaryBackground)
+            .background(showPopover || hovered ? DroidTheme.surface : .clear)
             .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
             .overlay {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                    .strokeBorder(DroidTheme.border.opacity(showPopover || hovered ? 1 : 0.65), lineWidth: 1)
+                    .strokeBorder(DroidTheme.border.opacity(showPopover || hovered ? 1 : 0), lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
