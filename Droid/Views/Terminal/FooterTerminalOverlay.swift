@@ -13,12 +13,10 @@ struct FooterTerminalOverlay: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let terminalState {
+            if let terminalState, expanded {
                 terminalPanel(state: terminalState)
-                    .offset(y: expanded ? 0 : terminalHeight)
-                    .allowsHitTesting(expanded)
                     .frame(height: terminalHeight)
-                    .clipped()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             CLILauncherFooter(
                 projectID: projectID,

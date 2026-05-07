@@ -90,6 +90,8 @@ struct SettingsView: View {
                 AppearanceSettingsView()
             case .cli:
                 CLILauncherSettingsView()
+            case .extensions:
+                ExtensionsSettingsView()
             case .agents:
                 AgentSettingsView()
             case .editor:

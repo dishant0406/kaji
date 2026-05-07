@@ -7,7 +7,11 @@ import Testing
 struct CodexOutboundNotificationCoordinatorTests {
     @Test
     func richerCodexMessageCancelsPendingGenericDelivery() async {
-        let coordinator = CodexOutboundNotificationCoordinator(delay: .milliseconds(25))
+        let coordinator = CodexOutboundNotificationCoordinator(delay: .seconds(1)) { _ in
+            while !Task.isCancelled {
+                await Task.yield()
+            }
+        }
         let recorder = DeliveryRecorder()
 
         coordinator.deliver(
@@ -21,14 +25,14 @@ struct CodexOutboundNotificationCoordinatorTests {
         ) { await recorder.record($0) }
 
         _ = await recorder.waitForBodies(count: 1)
-        try? await Task.sleep(for: .milliseconds(60))
+        await Task.yield()
 
         #expect(await recorder.bodies() == ["Hello."])
     }
 
     @Test
     func genericCodexMessageDeliversWhenNoRicherUpdateArrives() async {
-        let coordinator = CodexOutboundNotificationCoordinator(delay: .milliseconds(25))
+        let coordinator = CodexOutboundNotificationCoordinator(delay: .milliseconds(25)) { _ in }
         let recorder = DeliveryRecorder()
 
         coordinator.deliver(
@@ -36,7 +40,7 @@ struct CodexOutboundNotificationCoordinatorTests {
             event: event(body: "Turn completed (codex-tui)")
         ) { await recorder.record($0) }
 
-        #expect(await recorder.waitForBodies(count: 1) == ["Turn completed (codex-tui)"])
+        #expect(await recorder.waitForBodies(count: 1, timeout: .seconds(3)) == ["Turn completed (codex-tui)"])
     }
 
     private func notification(body: String) -> DroidNotification {

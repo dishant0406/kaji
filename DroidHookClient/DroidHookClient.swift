@@ -13,9 +13,9 @@ struct DroidHookClient {
         case "ask-complete":
             askComplete(args)
         case "claude-hook":
-            claudeHook(event: args.first ?? "", input: stdin())
+            ClaudeHookHandler.handle(event: args.first ?? "", input: stdin())
         case "codex-activity":
-            codexActivity(args, input: stdin())
+            CodexHookHandler.handle(args: args, input: stdin())
         default:
             return
         }
@@ -41,82 +41,6 @@ struct DroidHookClient {
             title: args[1],
             body: HookTextSanitizer.clean(args[2], limit: 200)
         )
-    }
-
-    private static func claudeHook(event: String, input: String) {
-        switch event {
-        case "userpromptsubmit":
-            HookEventEmitter.emitActivity(provider: "claude", state: "start")
-            let keys = ["prompt", "message", "text", "content"]
-            HookEventEmitter.emitTranscript(provider: "claude", kind: "user", text: extractedText(input, keys: keys, limit: 500))
-        case "permissionrequest":
-            let detail = extractedText(input, keys: ["tool_name", "tool", "command", "path", "reason", "message"], limit: 200)
-            HookEventEmitter.emit(
-                type: "claude_attention",
-                paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
-                title: "permission",
-                body: detail.isEmpty ? "Needs permission" : detail
-            )
-            emitClaudeNotification(body: detail.isEmpty ? "Needs permission" : "Needs permission: \(detail)")
-        case "notification":
-            HookEventEmitter.emit(
-                type: "claude_attention",
-                paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
-                title: "question",
-                body: "Needs attention"
-            )
-            emitClaudeNotification(body: "Needs attention")
-        case "stop":
-            HookEventEmitter.emitActivity(provider: "claude", state: "stop")
-            let body = extractedText(input, keys: ["last_assistant_message", "message", "text", "content"], limit: 200)
-            let resolvedBody = body.isEmpty ? "Session completed" : body
-            HookEventEmitter.emitTranscript(provider: "claude", kind: "assistant", text: resolvedBody)
-            emitClaudeNotification(body: resolvedBody)
-        default:
-            return
-        }
-    }
-
-    private static func codexActivity(_ args: [String], input: String) {
-        guard args.count >= 2 else { return }
-        let provider = args[0]
-        let state = args[1]
-        guard !provider.isEmpty, ["start", "stop", "attention"].contains(state) else { return }
-        if provider == "codex",
-           let object = HookJSONExtractor.object(from: input),
-           HookJSONExtractor.hasTruthyKey(object, keys: ["agent_id", "agent_type"])
-        {
-            return
-        }
-        if state == "attention" {
-            let detail = extractedText(input, keys: ["tool_name", "tool", "command", "path", "reason", "message"], limit: 500)
-            HookEventEmitter.emit(
-                type: "\(provider)_attention",
-                paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
-                title: "permission",
-                body: detail.isEmpty ? "PermissionRequest" : detail
-            )
-            return
-        }
-        HookEventEmitter.emitActivity(provider: provider, state: state)
-        guard provider == "codex", !input.isEmpty else { return }
-        let text = extractedText(input, keys: ["prompt", "user_prompt", "last_assistant_message", "message", "text"], limit: 500)
-        guard !text.isEmpty else { return }
-        HookEventEmitter.emitTranscript(provider: provider, kind: state == "start" ? "user" : "update", text: text)
-    }
-
-    private static func emitClaudeNotification(body: String) {
-        HookEventEmitter.emit(
-            type: "claude_hook",
-            paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
-            title: "Claude Code",
-            body: body
-        )
-    }
-
-    private static func extractedText(_ input: String, keys: [String], limit: Int) -> String {
-        guard let object = HookJSONExtractor.object(from: input) else { return "" }
-        return HookTextSanitizer.clean(HookJSONExtractor.firstText(in: object, keys: keys), limit: limit)
     }
 
     private static func stdin() -> String {

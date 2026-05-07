@@ -9,6 +9,7 @@ final class TerminalTab: Identifiable {
         case editor
         case diffViewer
         case parentAgent
+        case codeGraph
     }
 
     enum Content {
@@ -17,6 +18,7 @@ final class TerminalTab: Identifiable {
         case editor(EditorTabState)
         case diffViewer(DiffViewerTabState)
         case parentAgent(ParentAgentTabState)
+        case codeGraph(DroidCodeGraphTabState)
 
         var kind: Kind {
             switch self {
@@ -25,6 +27,7 @@ final class TerminalTab: Identifiable {
             case .editor: .editor
             case .diffViewer: .diffViewer
             case .parentAgent: .parentAgent
+            case .codeGraph: .codeGraph
             }
         }
 
@@ -48,6 +51,11 @@ final class TerminalTab: Identifiable {
             return state
         }
 
+        var codeGraphState: DroidCodeGraphTabState? {
+            guard case let .codeGraph(state) = self else { return nil }
+            return state
+        }
+
         var projectPath: String {
             switch self {
             case let .terminal(pane): pane.projectPath
@@ -55,6 +63,7 @@ final class TerminalTab: Identifiable {
             case let .editor(state): state.projectPath
             case let .diffViewer(state): state.projectPath
             case let .parentAgent(state): state.projectPath
+            case let .codeGraph(state): state.projectPath
             }
         }
     }
@@ -82,6 +91,8 @@ final class TerminalTab: Identifiable {
             return state.displayTitle
         case .parentAgent:
             return "Droid"
+        case .codeGraph:
+            return "Code Graph"
         }
     }
 
@@ -105,6 +116,10 @@ final class TerminalTab: Identifiable {
         content = .parentAgent(parentAgentState)
     }
 
+    init(codeGraphState: DroidCodeGraphTabState) {
+        content = .codeGraph(codeGraphState)
+    }
+
     init(restoring snapshot: TerminalTabSnapshot) {
         customTitle = snapshot.customTitle
         colorID = snapshot.colorID
@@ -124,6 +139,8 @@ final class TerminalTab: Identifiable {
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         case .parentAgent:
             content = .parentAgent(ParentAgentTabState(projectPath: snapshot.projectPath))
+        case .codeGraph:
+            content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         }
     }
 

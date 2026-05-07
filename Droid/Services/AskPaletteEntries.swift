@@ -105,8 +105,7 @@ enum AskPaletteEntries {
         if let slashState = slashState(for: context.fieldText) {
             return slashEntries(
                 state: slashState,
-                projects: context.projects,
-                worktrees: context.worktrees
+                context: context
             )
         }
 
@@ -127,20 +126,23 @@ enum AskPaletteEntries {
         }
 
         if trimmedPrompt.isEmpty {
-            return AskSlashCommand.allCases.map { command in
+            let commands: [AskPaletteEntry] = AskSlashCommand.allCases.map { command in
                 .init(
                     action: .command(command),
                     title: command.title,
-                    detail: currentValue(
-                        for: command,
-                        projectName: context.projectName,
-                        worktreeName: context.worktreeName,
-                        provider: context.provider,
-                        sessionMode: context.sessionMode
-                    ),
+                    detail: currentValue(for: command, context: context),
                     annotation: command.trigger
                 )
             }
+            let sleepEntry = sleepPreventionEntry(
+                isEnabled: context.sleepPreventionIsEnabled,
+                systemSleepAssertionStatus: context.systemSleepAssertionStatus
+            )
+            let batteryLidCloseEntry = batteryLidCloseSleepEntry(
+                isEnabled: context.batteryLidCloseSleepIsEnabled,
+                status: context.batteryLidCloseSleepStatus
+            )
+            return commands + [sleepEntry, batteryLidCloseEntry]
         }
 
         return [submitEntry(context: context, parsed: parsed)]
@@ -148,8 +150,7 @@ enum AskPaletteEntries {
 
     private static func slashEntries(
         state: AskSlashState,
-        projects: [Project],
-        worktrees: [Worktree]
+        context: AskPaletteContext
     ) -> [AskPaletteEntry] {
         guard let command = state.command, state.token == command.rawValue else {
             return AskSlashCommand.matches(state.token).map {
@@ -159,13 +160,25 @@ enum AskPaletteEntries {
 
         switch command {
         case .project:
-            return filteredProjects(projects, query: state.filter)
+            return filteredProjects(context.projects, query: state.filter)
         case .worktree:
-            return filteredWorktrees(worktrees, query: state.filter)
+            return filteredWorktrees(context.worktrees, query: state.filter)
         case .provider:
             return filteredProviders(query: state.filter)
         case .session:
             return filteredSessionModes(query: state.filter)
+        case .sleep:
+            let entry = sleepPreventionEntry(
+                isEnabled: context.sleepPreventionIsEnabled,
+                systemSleepAssertionStatus: context.systemSleepAssertionStatus
+            )
+            return [entry]
+        case .lid:
+            let entry = batteryLidCloseSleepEntry(
+                isEnabled: context.batteryLidCloseSleepIsEnabled,
+                status: context.batteryLidCloseSleepStatus
+            )
+            return [entry]
         }
     }
 
@@ -305,21 +318,52 @@ enum AskPaletteEntries {
 
     private static func currentValue(
         for command: AskSlashCommand,
-        projectName: String,
-        worktreeName: String,
-        provider: AskProvider,
-        sessionMode: AskSessionMode
+        context: AskPaletteContext
     ) -> String {
         switch command {
         case .project:
-            projectName
+            context.projectName
         case .worktree:
-            worktreeName
+            context.worktreeName
         case .provider:
-            provider.title
+            context.provider.title
         case .session:
-            sessionMode.title
+            context.sessionMode.title
+        case .sleep:
+            context.sleepPreventionIsEnabled ? "On" : "Off"
+        case .lid:
+            context.batteryLidCloseSleepIsEnabled ? "On" : "Off"
         }
+    }
+
+    private static func sleepPreventionEntry(
+        isEnabled: Bool,
+        systemSleepAssertionStatus: SystemSleepAssertionStatus = .inactive
+    ) -> AskPaletteEntry {
+        .init(
+            action: .toggleSleepPrevention,
+            title: SleepPreventionDisplayText.title(isEnabled: isEnabled),
+            detail: SleepPreventionDisplayText.detail(
+                isEnabled: isEnabled,
+                systemSleepAssertionStatus: systemSleepAssertionStatus
+            ),
+            annotation: isEnabled ? "On" : "Off"
+        )
+    }
+
+    private static func batteryLidCloseSleepEntry(
+        isEnabled: Bool,
+        status: SystemSleepAssertionStatus = .inactive
+    ) -> AskPaletteEntry {
+        .init(
+            action: .toggleBatteryLidCloseSleepPrevention,
+            title: SleepPreventionDisplayText.batteryLidCloseTitle(isEnabled: isEnabled),
+            detail: SleepPreventionDisplayText.batteryLidCloseDetail(
+                isEnabled: isEnabled,
+                status: status
+            ),
+            annotation: isEnabled ? "On" : "Off"
+        )
     }
 
     private static func routeSummary(

@@ -82,7 +82,8 @@ enum AgentInstructionDiscovery {
             at: URL(fileURLWithPath: projectPath),
             includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey],
             options: [.skipsHiddenFiles]
-        ) else { return [] }
+        )
+        else { return [] }
 
         var paths: [String] = []
         for case let url as URL in enumerator {

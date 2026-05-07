@@ -21,7 +21,11 @@ extension AskOverlay {
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
-            worktreeName: selectedWorktreeName
+            worktreeName: selectedWorktreeName,
+            sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
+            systemSleepAssertionStatus: SleepPreventionController.shared.systemSleepAssertionStatus,
+            batteryLidCloseSleepIsEnabled: SleepPreventionController.shared.isBatteryLidCloseEnabled,
+            batteryLidCloseSleepStatus: SleepPreventionController.shared.batteryLidCloseSleepStatus
         ))
     }
 

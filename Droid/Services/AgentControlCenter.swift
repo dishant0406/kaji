@@ -1,5 +1,10 @@
 import Foundation
 
+private struct AgentRunLaunchContext {
+    let projectID: UUID
+    let worktreePath: String
+}
+
 @MainActor
 final class AgentControlCenter {
     private let appState: AppState
@@ -162,7 +167,10 @@ final class AgentControlCenter {
             return record(.unavailable("Run worktree is unavailable."), kind: .restart, runID: runID)
         }
         let command = AskCommandDispatcher.commandWithCompletionNotification(
-            AskCommandDispatcher.startupCommand(for: provider, prompt: ""),
+            AskCommandDispatcher.startupCommand(
+                for: provider,
+                prompt: ""
+            ),
             provider: provider
         )
         guard !command.isEmpty else {
@@ -180,7 +188,11 @@ final class AgentControlCenter {
             return record(.unavailable("Run worktree is unavailable."), kind: .resume, runID: runID)
         }
         let command = AskCommandDispatcher.commandWithCompletionNotification(
-            AskCommandDispatcher.resumeCommand(for: provider, sessionID: sessionID, prompt: ""),
+            AskCommandDispatcher.resumeCommand(
+                for: provider,
+                sessionID: sessionID,
+                prompt: ""
+            ),
             provider: provider
         )
         guard !command.isEmpty else {
@@ -212,9 +224,16 @@ final class AgentControlCenter {
             return record(.unavailable("Run worktree is unavailable."), kind: .reply, runID: runID)
         }
         let providerCommand = if let sessionID = run.sessionID {
-            AskCommandDispatcher.resumeCommand(for: provider, sessionID: sessionID, prompt: prompt)
+            AskCommandDispatcher.resumeCommand(
+                for: provider,
+                sessionID: sessionID,
+                prompt: prompt
+            )
         } else {
-            AskCommandDispatcher.startupCommand(for: provider, prompt: prompt)
+            AskCommandDispatcher.startupCommand(
+                for: provider,
+                prompt: prompt
+            )
         }
         let command = AskCommandDispatcher.commandWithCompletionNotification(providerCommand, provider: provider)
         guard !command.isEmpty else {
@@ -274,7 +293,7 @@ final class AgentControlCenter {
         return result
     }
 
-    private func activateContext(for runID: UUID) -> (projectID: UUID, worktreePath: String)? {
+    private func activateContext(for runID: UUID) -> AgentRunLaunchContext? {
         guard let run = runStore.run(id: runID),
               let projectID = run.projectID,
               let worktreePath = run.worktreePath,
@@ -282,7 +301,7 @@ final class AgentControlCenter {
               let worktree = worktree(for: run, projectID: projectID, worktreePath: worktreePath)
         else { return nil }
         appState.selectProject(project, worktree: worktree)
-        return (projectID, worktree.path)
+        return AgentRunLaunchContext(projectID: projectID, worktreePath: worktree.path)
     }
 
     private func worktree(for run: AgentRun, projectID: UUID, worktreePath: String) -> Worktree? {

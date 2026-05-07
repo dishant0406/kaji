@@ -20,6 +20,13 @@ final class AppState {
         let isStaged: Bool
     }
 
+    struct CodeGraphTabRequest {
+        let projectID: UUID
+        let worktreeID: UUID
+        let worktreePath: String
+        let graphURL: URL
+    }
+
     enum Action {
         case selectProject(projectID: UUID, worktreeID: UUID, worktreePath: String)
         case selectWorktree(projectID: UUID, worktreeID: UUID, worktreePath: String)
@@ -37,6 +44,7 @@ final class AppState {
         case createCommandSplit(projectID: UUID, title: String, command: String)
         case createVCSTab(projectID: UUID, areaID: UUID?)
         case createParentAgentTab(projectID: UUID, areaID: UUID?)
+        case createCodeGraphTab(CodeGraphTabRequest)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
         case createExternalEditorTab(projectID: UUID, areaID: UUID?, filePath: String, command: String)
         case createDiffViewerTab(projectID: UUID, areaID: UUID?, request: DiffViewerRequest)
@@ -248,6 +256,15 @@ final class AppState {
             return
         }
         dispatch(.createParentAgentTab(projectID: projectID, areaID: nil))
+    }
+
+    func openCodeGraphTab(projectID: UUID, worktreeID: UUID, worktreePath: String, graphURL: URL) {
+        dispatch(.createCodeGraphTab(CodeGraphTabRequest(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: worktreePath,
+            graphURL: graphURL
+        )))
     }
 
     func createCommandTab(projectID: UUID, title: String, command: String) {

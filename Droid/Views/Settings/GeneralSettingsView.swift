@@ -6,6 +6,8 @@ enum GeneralSettingsKeys {
 }
 
 struct GeneralSettingsView: View {
+    @State private var sleepPrevention = SleepPreventionController.shared
+
     @AppStorage(GeneralSettingsKeys.autoExpandWorktreesOnProjectSwitch)
     private var autoExpandWorktrees = false
     @AppStorage(TabCloseConfirmationPreferences.confirmRunningProcessKey)
@@ -47,12 +49,34 @@ struct GeneralSettingsView: View {
 
             SettingsSection(
                 "Footer Terminal",
-                footer: "Shows the footer terminal chevron and enables the toggle shortcut.",
-                showsDivider: false
+                footer: "Shows the footer terminal chevron and enables the toggle shortcut."
             ) {
                 SettingsToggleRow(
                     label: "Show footer terminal toggle",
                     isOn: $footerTerminalEnabled
+                )
+            }
+
+            SettingsSection(
+                "Power",
+                footer: "The battery lid-close override uses administrator permission and changes a system-wide pmset setting.",
+                showsDivider: false
+            ) {
+                SettingsDetailToggleRow(
+                    label: "Prevent system sleep",
+                    detail: sleepPrevention.detail,
+                    isOn: Binding(
+                        get: { sleepPrevention.isEnabled },
+                        set: { sleepPrevention.setEnabled($0) }
+                    )
+                )
+                SettingsDetailToggleRow(
+                    label: "Prevent battery lid-close sleep",
+                    detail: sleepPrevention.batteryLidCloseDetail,
+                    isOn: Binding(
+                        get: { sleepPrevention.isBatteryLidCloseEnabled },
+                        set: { sleepPrevention.setBatteryLidCloseEnabled($0) }
+                    )
                 )
             }
         }

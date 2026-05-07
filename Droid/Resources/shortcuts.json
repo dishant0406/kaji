@@ -81,6 +81,7 @@
     { "token": "/project", "detail": "Project picker" },
     { "token": "/worktree", "detail": "Worktree picker" },
     { "token": "/provider", "detail": "Provider picker" },
-    { "token": "/session", "detail": "Session mode picker" }
+    { "token": "/session", "detail": "Session mode picker" },
+    { "token": "/sleep", "detail": "Toggle sleep prevention" }
   ]
 }

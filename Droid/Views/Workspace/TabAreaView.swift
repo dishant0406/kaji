@@ -184,6 +184,8 @@ private struct TabContentView: View {
             DiffViewerPane(state: diffState, focused: focused, onFocus: onFocus)
         case .parentAgent:
             ParentAgentTabContent()
+        case let .codeGraph(state):
+            DroidCodeGraphPane(state: state)
         }
     }
 }

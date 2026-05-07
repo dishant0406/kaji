@@ -113,6 +113,12 @@ enum WorkspaceReducer {
         case let .createParentAgentTab(projectID, areaID):
             TabReducer.createParentAgentTab(projectID: projectID, areaID: areaID, state: &state)
 
+        case let .createCodeGraphTab(request):
+            TabReducer.createCodeGraphTab(
+                request,
+                state: &state
+            )
+
         case let .createEditorTab(projectID, areaID, filePath):
             TabReducer.createEditorTab(projectID: projectID, areaID: areaID, filePath: filePath, state: &state)
 

@@ -102,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProviderEventReceiver.shared.start()
         CodexSessionMonitor.shared.start()
         SystemWakeCoordinator.shared.start()
+        _ = SleepPreventionController.shared
         _ = CLILauncherSettings.shared
         AIProviderRegistry.shared.installAll()
         _ = AIUsageSettingsStore.isUsageEnabled()
@@ -165,9 +166,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
+    @MainActor
     func applicationWillTerminate(_ notification: Notification) {
         onTerminate?()
         NotificationStore.shared.saveToDisk()
+        SleepPreventionController.shared.stop()
         SystemWakeCoordinator.shared.stop()
         CodexSessionMonitor.shared.stop()
         ProviderEventReceiver.shared.stop()

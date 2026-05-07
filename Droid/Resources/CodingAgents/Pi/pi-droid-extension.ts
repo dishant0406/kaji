@@ -34,7 +34,7 @@ export default function (pi: ExtensionAPI) {
     return ["bash", "write", "edit", "multi_edit", "apply_patch", "mcp"].some((name) => tool.includes(name))
   }
 
-  pi.on("before_agent_start", async () => {
+  pi.on("before_agent_start", async (event: any) => {
     start()
   })
 

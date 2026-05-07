@@ -15,6 +15,8 @@ struct ExpandedProjectRow: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var activityStore = AIActivityStore.shared
     @State private var notificationStore = NotificationStore.shared
+    @State private var codeGraphStore = DroidCodeGraphStore.shared
+    @State private var codeGraphRuntime = DroidCodeGraphRuntime.shared
 
     @AppStorage(GeneralSettingsKeys.autoExpandWorktreesOnProjectSwitch)
     private var autoExpandWorktrees = false
@@ -44,6 +46,15 @@ struct ExpandedProjectRow: View {
         worktrees.first { $0.id == activeWorktreeID }
     }
 
+    private var codeGraphWorktree: Worktree {
+        activeWorktree ?? worktrees.first(where: \.isPrimary) ?? Worktree(
+            id: project.id,
+            name: "primary",
+            path: project.path,
+            isPrimary: true
+        )
+    }
+
     private var displayLetter: String {
         String(project.name.prefix(1)).uppercased()
     }
@@ -54,6 +65,14 @@ struct ExpandedProjectRow: View {
 
     private var hasRunningAgent: Bool {
         activityStore.hasActiveAgent(projectID: project.id)
+    }
+
+    private var hasCodeGraph: Bool {
+        codeGraphRuntime.hasGraph(projectID: project.id, worktreeID: codeGraphWorktree.id)
+    }
+
+    private var isCodeGraphRunning: Bool {
+        codeGraphRuntime.isRunning(projectID: project.id, worktreeID: codeGraphWorktree.id)
     }
 
     var body: some View {
@@ -170,6 +189,10 @@ struct ExpandedProjectRow: View {
                 isGitRepo: isGitRepo,
                 canSwitchWorktree: false,
                 isRefreshingWorktrees: isRefreshingWorktrees,
+                isCodeGraphInstalled: codeGraphStore.isInstalled,
+                isCodeGraphEnabled: codeGraphStore.state.isEnabled,
+                hasCodeGraph: hasCodeGraph,
+                isCodeGraphRunning: isCodeGraphRunning,
                 onSetLogo: {
                     showProjectMenu = false
                     pickLogoImage()
@@ -200,6 +223,26 @@ struct ExpandedProjectRow: View {
                 },
                 onSwitchWorktree: {
                     showProjectMenu = false
+                },
+                onInstallCodeGraph: {
+                    showProjectMenu = false
+                    Task { @MainActor in await DroidCodeGraphInstaller().install(store: codeGraphStore) }
+                },
+                onEnableCodeGraph: {
+                    showProjectMenu = false
+                    codeGraphStore.setEnabled(true)
+                },
+                onBuildCodeGraph: {
+                    showProjectMenu = false
+                    buildCodeGraph(mode: "build")
+                },
+                onUpdateCodeGraph: {
+                    showProjectMenu = false
+                    buildCodeGraph(mode: "update")
+                },
+                onViewCodeGraph: {
+                    showProjectMenu = false
+                    viewCodeGraph()
                 },
                 onRemoveProject: {
                     showProjectMenu = false
@@ -441,6 +484,27 @@ struct ExpandedProjectRow: View {
             appState: appState,
             worktreeStore: worktreeStore,
             isRefreshing: $isRefreshingWorktrees
+        )
+    }
+
+    private func buildCodeGraph(mode: String) {
+        let worktree = codeGraphWorktree
+        Task { @MainActor in
+            await codeGraphRuntime.build(DroidCodeGraphRunRequest(
+                projectID: project.id,
+                worktreeID: worktree.id,
+                projectPath: worktree.path,
+                mode: mode
+            ))
+        }
+    }
+
+    private func viewCodeGraph() {
+        appState.openCodeGraphTab(
+            projectID: project.id,
+            worktreeID: codeGraphWorktree.id,
+            worktreePath: codeGraphWorktree.path,
+            graphURL: codeGraphRuntime.droidGraphURL(projectID: project.id, worktreeID: codeGraphWorktree.id)
         )
     }
 }

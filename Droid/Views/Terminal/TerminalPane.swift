@@ -159,6 +159,8 @@ struct TerminalBridge: NSViewRepresentable {
         if let hookClientPath = DroidNotificationHooks.hookClientPath {
             vars.append((key: "DROID_HOOK_CLIENT_PATH", value: hookClientPath))
         }
+        vars.append(contentsOf: DroidCodeGraphInstructions.environment(projectID: key.projectID, worktreeID: key.worktreeID))
+        vars.append(contentsOf: CodingAgentShimEnvironment.variables(projectID: key.projectID, worktreeID: key.worktreeID))
         return vars
     }
 

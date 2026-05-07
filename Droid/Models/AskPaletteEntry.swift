@@ -19,6 +19,8 @@ enum AskPaletteAction: Hashable {
     case runScript(DroidKitScript)
     case openScriptForm(DroidKitScript?)
     case deleteScript(DroidKitScript)
+    case toggleSleepPrevention
+    case toggleBatteryLidCloseSleepPrevention
     case launchProvider(AskProvider)
     case submit
 }
@@ -67,6 +69,10 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "script-form:\(script?.id.uuidString ?? "new")"
         case let .deleteScript(script):
             "delete-script:\(script.id.uuidString)"
+        case .toggleSleepPrevention:
+            "toggle-sleep-prevention"
+        case .toggleBatteryLidCloseSleepPrevention:
+            "toggle-battery-lid-close-sleep-prevention"
         case let .launchProvider(provider):
             "launch:\(provider.rawValue)"
         case .submit:

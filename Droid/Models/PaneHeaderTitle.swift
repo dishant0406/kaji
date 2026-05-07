@@ -19,6 +19,8 @@ enum PaneHeaderTitle {
             return state.displayTitle
         case .parentAgent:
             return "Droid"
+        case .codeGraph:
+            return "Code Graph"
         }
     }
 
