@@ -24,7 +24,7 @@ final class DroidCodeGraphStore {
     }
 
     var isInstalled: Bool {
-        state.phase == .installed && FileManager.default.isExecutableFile(atPath: DroidCodeGraphDirectory.python.path)
+        state.phase == .installed && FileManager.default.isExecutableFile(atPath: pythonURL.path)
     }
 
     var isReady: Bool {
@@ -54,7 +54,7 @@ final class DroidCodeGraphStore {
 
     func refreshFromDisk() {
         guard state.phase == .installed else { return }
-        if !FileManager.default.isExecutableFile(atPath: DroidCodeGraphDirectory.python.path) {
+        if !FileManager.default.isExecutableFile(atPath: pythonURL.path) {
             state.phase = .notInstalled
             state.isEnabled = false
             state.message = "Runtime is missing"
@@ -64,11 +64,53 @@ final class DroidCodeGraphStore {
 
     private func save() {
         do {
-            try DroidCodeGraphDirectory.createBaseDirectories()
+            try FileManager.default.createDirectory(
+                at: rootDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
             try store.save(state)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: DroidCodeGraphDirectory.stateFile.path)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: store.fileURL.path)
         } catch {
             droidCodeGraphStoreLogger.error("Failed to save DroidCodeGraph state: \(error.localizedDescription)")
         }
+    }
+
+    var rootDirectory: URL {
+        store.fileURL.deletingLastPathComponent()
+    }
+
+    func graphOutputDirectory(projectID: UUID, worktreeID: UUID) -> URL {
+        rootDirectory
+            .appendingPathComponent("projects", isDirectory: true)
+            .appendingPathComponent(projectID.uuidString, isDirectory: true)
+            .appendingPathComponent(worktreeID.uuidString, isDirectory: true)
+            .appendingPathComponent("graphify-out", isDirectory: true)
+    }
+
+    func droidGraphURL(projectID: UUID, worktreeID: UUID) -> URL {
+        graphOutputDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("droid-graph.json")
+    }
+
+    func reportURL(projectID: UUID, worktreeID: UUID) -> URL {
+        graphOutputDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("GRAPH_REPORT.md")
+    }
+
+    func instructionFile(projectID: UUID, worktreeID: UUID) -> URL {
+        rootDirectory
+            .appendingPathComponent("projects", isDirectory: true)
+            .appendingPathComponent(projectID.uuidString, isDirectory: true)
+            .appendingPathComponent(worktreeID.uuidString, isDirectory: true)
+            .appendingPathComponent("instructions", isDirectory: true)
+            .appendingPathComponent("AGENTS.md")
+    }
+
+    private var pythonURL: URL {
+        rootDirectory
+            .appendingPathComponent(".venv", isDirectory: true)
+            .appendingPathComponent("bin")
+            .appendingPathComponent("python")
     }
 }

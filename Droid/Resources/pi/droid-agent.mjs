@@ -7774,9 +7774,9 @@ var init_models_generated = __esm({
         "big-pickle": {
           id: "big-pickle",
           name: "Big Pickle",
-          api: "anthropic-messages",
+          api: "openai-completions",
           provider: "opencode",
-          baseUrl: "https://opencode.ai/zen",
+          baseUrl: "https://opencode.ai/zen/v1",
           reasoning: true,
           input: ["text"],
           cost: {
@@ -8042,9 +8042,9 @@ var init_models_generated = __esm({
           thinkingLevelMap: { "off": null },
           input: ["text", "image"],
           cost: {
-            input: 0,
-            output: 0,
-            cacheRead: 0,
+            input: 0.05,
+            output: 0.4,
+            cacheRead: 5e-3,
             cacheWrite: 0
           },
           contextWindow: 4e5,
@@ -8530,54 +8530,20 @@ var init_models_generated = __esm({
         },
         "kimi-k2.6": {
           id: "kimi-k2.6",
-          name: "Kimi K2.6 (3x limits)",
+          name: "Kimi K2.6",
           api: "openai-completions",
           provider: "opencode-go",
           baseUrl: "https://opencode.ai/zen/go/v1",
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 0.32,
-            output: 1.34,
-            cacheRead: 0.054,
+            input: 0.95,
+            output: 4,
+            cacheRead: 0.16,
             cacheWrite: 0
           },
           contextWindow: 262144,
           maxTokens: 65536
-        },
-        "mimo-v2-omni": {
-          id: "mimo-v2-omni",
-          name: "MiMo V2 Omni",
-          api: "openai-completions",
-          provider: "opencode-go",
-          baseUrl: "https://opencode.ai/zen/go/v1",
-          reasoning: true,
-          input: ["text", "image"],
-          cost: {
-            input: 0.4,
-            output: 2,
-            cacheRead: 0.08,
-            cacheWrite: 0
-          },
-          contextWindow: 262144,
-          maxTokens: 128e3
-        },
-        "mimo-v2-pro": {
-          id: "mimo-v2-pro",
-          name: "MiMo V2 Pro",
-          api: "openai-completions",
-          provider: "opencode-go",
-          baseUrl: "https://opencode.ai/zen/go/v1",
-          reasoning: true,
-          input: ["text"],
-          cost: {
-            input: 1,
-            output: 3,
-            cacheRead: 0.2,
-            cacheWrite: 0
-          },
-          contextWindow: 1048576,
-          maxTokens: 128e3
         },
         "mimo-v2.5": {
           id: "mimo-v2.5",
@@ -8718,23 +8684,6 @@ var init_models_generated = __esm({
           },
           contextWindow: 131072,
           maxTokens: 131072
-        },
-        "allenai/olmo-3.1-32b-instruct": {
-          id: "allenai/olmo-3.1-32b-instruct",
-          name: "AllenAI: Olmo 3.1 32B Instruct",
-          api: "openai-completions",
-          provider: "openrouter",
-          baseUrl: "https://openrouter.ai/api/v1",
-          reasoning: false,
-          input: ["text"],
-          cost: {
-            input: 0.19999999999999998,
-            output: 0.6,
-            cacheRead: 0,
-            cacheWrite: 0
-          },
-          contextWindow: 65536,
-          maxTokens: 16384
         },
         "amazon/nova-2-lite-v1": {
           id: "amazon/nova-2-lite-v1",
@@ -9146,6 +9095,23 @@ var init_models_generated = __esm({
           },
           contextWindow: 2e6,
           maxTokens: 3e4
+        },
+        "baidu/cobuddy:free": {
+          id: "baidu/cobuddy:free",
+          name: "Baidu Qianfan: CoBuddy (free)",
+          api: "openai-completions",
+          provider: "openrouter",
+          baseUrl: "https://openrouter.ai/api/v1",
+          reasoning: true,
+          input: ["text"],
+          cost: {
+            input: 0,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0
+          },
+          contextWindow: 131072,
+          maxTokens: 65536
         },
         "baidu/ernie-4.5-21b-a3b": {
           id: "baidu/ernie-4.5-21b-a3b",
@@ -9814,18 +9780,18 @@ var init_models_generated = __esm({
           contextWindow: 128e3,
           maxTokens: 5e4
         },
-        "inclusionai/ling-2.6-1t:free": {
-          id: "inclusionai/ling-2.6-1t:free",
-          name: "inclusionAI: Ling-2.6-1T (free)",
+        "inclusionai/ling-2.6-1t": {
+          id: "inclusionai/ling-2.6-1t",
+          name: "inclusionAI: Ling-2.6-1T",
           api: "openai-completions",
           provider: "openrouter",
           baseUrl: "https://openrouter.ai/api/v1",
           reasoning: false,
           input: ["text"],
           cost: {
-            input: 0,
-            output: 0,
-            cacheRead: 0,
+            input: 0.3,
+            output: 2.5,
+            cacheRead: 0.06,
             cacheWrite: 0
           },
           contextWindow: 262144,
@@ -9864,23 +9830,6 @@ var init_models_generated = __esm({
           },
           contextWindow: 256e3,
           maxTokens: 8e4
-        },
-        "meta-llama/llama-3-8b-instruct": {
-          id: "meta-llama/llama-3-8b-instruct",
-          name: "Meta: Llama 3 8B Instruct",
-          api: "openai-completions",
-          provider: "openrouter",
-          baseUrl: "https://openrouter.ai/api/v1",
-          reasoning: false,
-          input: ["text"],
-          cost: {
-            input: 0.03,
-            output: 0.04,
-            cacheRead: 0,
-            cacheWrite: 0
-          },
-          contextWindow: 8192,
-          maxTokens: 16384
         },
         "meta-llama/llama-3.1-70b-instruct": {
           id: "meta-llama/llama-3.1-70b-instruct",
@@ -10520,13 +10469,13 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 0.74,
-            output: 3.49,
-            cacheRead: 0.14,
+            input: 0.75,
+            output: 3.5,
+            cacheRead: 0.15,
             cacheWrite: 0
           },
-          contextWindow: 262142,
-          maxTokens: 262142
+          contextWindow: 262144,
+          maxTokens: 16384
         },
         "nex-agi/deepseek-v3.1-nex-n1": {
           id: "nex-agi/deepseek-v3.1-nex-n1",
@@ -12147,7 +12096,7 @@ var init_models_generated = __esm({
           reasoning: false,
           input: ["text"],
           cost: {
-            input: 0.12,
+            input: 0.11,
             output: 0.7999999999999999,
             cacheRead: 0.07,
             cacheWrite: 0
@@ -12436,13 +12385,13 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 0.15,
+            input: 0.14,
             output: 1,
             cacheRead: 0.049999999999999996,
             cacheWrite: 0
           },
           contextWindow: 262144,
-          maxTokens: 262144
+          maxTokens: 81920
         },
         "qwen/qwen3.5-397b-a17b": {
           id: "qwen/qwen3.5-397b-a17b",
@@ -12470,13 +12419,13 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 0.09999999999999999,
+            input: 0.04,
             output: 0.15,
             cacheRead: 0,
             cacheWrite: 0
           },
           contextWindow: 262144,
-          maxTokens: 4096
+          maxTokens: 81920
         },
         "qwen/qwen3.5-flash-02-23": {
           id: "qwen/qwen3.5-flash-02-23",
@@ -13207,7 +13156,7 @@ var init_models_generated = __esm({
             cacheWrite: 0
           },
           contextWindow: 202752,
-          maxTokens: 16384
+          maxTokens: 4096
         },
         "z-ai/glm-5-turbo": {
           id: "z-ai/glm-5-turbo",
@@ -13354,13 +13303,13 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 0.74,
-            output: 3.49,
-            cacheRead: 0.14,
+            input: 0.75,
+            output: 3.5,
+            cacheRead: 0.15,
             cacheWrite: 0
           },
-          contextWindow: 262142,
-          maxTokens: 262142
+          contextWindow: 262144,
+          maxTokens: 16384
         },
         "~openai/gpt-latest": {
           id: "~openai/gpt-latest",
@@ -15750,8 +15699,8 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 2,
-            output: 6,
+            input: 1.25,
+            output: 2.5,
             cacheRead: 0.19999999999999998,
             cacheWrite: 0
           },
@@ -15767,8 +15716,8 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 2,
-            output: 6,
+            input: 1.25,
+            output: 2.5,
             cacheRead: 0.19999999999999998,
             cacheWrite: 0
           },
@@ -15784,8 +15733,8 @@ var init_models_generated = __esm({
           reasoning: false,
           input: ["text", "image"],
           cost: {
-            input: 2,
-            output: 6,
+            input: 1.25,
+            output: 2.5,
             cacheRead: 0.19999999999999998,
             cacheWrite: 0
           },
@@ -15801,8 +15750,8 @@ var init_models_generated = __esm({
           reasoning: false,
           input: ["text", "image"],
           cost: {
-            input: 2,
-            output: 6,
+            input: 1.25,
+            output: 2.5,
             cacheRead: 0.19999999999999998,
             cacheWrite: 0
           },
@@ -15818,8 +15767,8 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 2,
-            output: 6,
+            input: 1.25,
+            output: 2.5,
             cacheRead: 0.19999999999999998,
             cacheWrite: 0
           },
@@ -15835,8 +15784,8 @@ var init_models_generated = __esm({
           reasoning: true,
           input: ["text", "image"],
           cost: {
-            input: 2,
-            output: 6,
+            input: 1.25,
+            output: 2.5,
             cacheRead: 0.19999999999999998,
             cacheWrite: 0
           },
@@ -16609,8 +16558,8 @@ var init_models_generated = __esm({
             cacheRead: 0.01,
             cacheWrite: 0
           },
-          contextWindow: 256e3,
-          maxTokens: 64e3
+          contextWindow: 262144,
+          maxTokens: 65536
         },
         "mimo-v2-omni": {
           id: "mimo-v2-omni",
@@ -16626,8 +16575,8 @@ var init_models_generated = __esm({
             cacheRead: 0.08,
             cacheWrite: 0
           },
-          contextWindow: 256e3,
-          maxTokens: 128e3
+          contextWindow: 262144,
+          maxTokens: 131072
         },
         "mimo-v2-pro": {
           id: "mimo-v2-pro",
@@ -16643,8 +16592,8 @@ var init_models_generated = __esm({
             cacheRead: 0.2,
             cacheWrite: 0
           },
-          contextWindow: 1e6,
-          maxTokens: 128e3
+          contextWindow: 1048576,
+          maxTokens: 131072
         },
         "mimo-v2.5": {
           id: "mimo-v2.5",
@@ -16843,8 +16792,8 @@ var init_event_stream = __esm({
         this.queue = [];
         this.waiting = [];
         this.done = false;
-        this.finalResultPromise = new Promise((resolve) => {
-          this.resolveFinalResult = resolve;
+        this.finalResultPromise = new Promise((resolve2) => {
+          this.resolveFinalResult = resolve2;
         });
       }
       push(event) {
@@ -16877,7 +16826,7 @@ var init_event_stream = __esm({
           } else if (this.done) {
             return;
           } else {
-            const result = await new Promise((resolve) => this.waiting.push(resolve));
+            const result = await new Promise((resolve2) => this.waiting.push(resolve2));
             if (result.done) return;
             yield result.value;
           }
@@ -17923,12 +17872,12 @@ function isRetryableError(status, errorText) {
   return /rate.?limit|overloaded|service.?unavailable|upstream.?connect|connection.?refused/i.test(errorText);
 }
 function sleep(ms, signal) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     if (signal?.aborted) {
       reject(new Error("Request was aborted"));
       return;
     }
-    const timeout = setTimeout(resolve, ms);
+    const timeout = setTimeout(resolve2, ms);
     signal?.addEventListener("abort", () => {
       clearTimeout(timeout);
       reject(new Error("Request was aborted"));
@@ -18160,7 +18109,7 @@ async function connectWebSocket(url2, headers, signal) {
   }
   const wsHeaders = headersToRecord(headers);
   delete wsHeaders["OpenAI-Beta"];
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     let settled = false;
     let socket;
     try {
@@ -18173,7 +18122,7 @@ async function connectWebSocket(url2, headers, signal) {
       if (settled) return;
       settled = true;
       cleanup();
-      resolve(socket);
+      resolve2(socket);
     };
     const onError = (event) => {
       const error51 = extractWebSocketError(event);
@@ -18325,9 +18274,9 @@ async function* parseWebSocket(socket, signal) {
   let sawCompletion = false;
   const wake = () => {
     if (!pending) return;
-    const resolve = pending;
+    const resolve2 = pending;
     pending = null;
-    resolve();
+    resolve2();
   };
   const onMessage = (event) => {
     void (async () => {
@@ -18383,8 +18332,8 @@ async function* parseWebSocket(socket, signal) {
         continue;
       }
       if (done) break;
-      await new Promise((resolve) => {
-        pending = resolve;
+      await new Promise((resolve2) => {
+        pending = resolve2;
       });
     }
     if (failed) {
@@ -18988,7 +18937,7 @@ var init_values = __esm({
 var sleep2;
 var init_sleep = __esm({
   "Vendor/pi-mono/node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs"() {
-    sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    sleep2 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
   }
 });
 
@@ -19766,8 +19715,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve) => {
-          resolve(null);
+        super((resolve2) => {
+          resolve2(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -21680,12 +21629,12 @@ var init_BetaMessageStream = __esm({
           }
           return this._emit("error", new AnthropicError(String(error51)));
         });
-        __classPrivateFieldSet(this, _BetaMessageStream_connectedPromise, new Promise((resolve, reject) => {
-          __classPrivateFieldSet(this, _BetaMessageStream_resolveConnectedPromise, resolve, "f");
+        __classPrivateFieldSet(this, _BetaMessageStream_connectedPromise, new Promise((resolve2, reject) => {
+          __classPrivateFieldSet(this, _BetaMessageStream_resolveConnectedPromise, resolve2, "f");
           __classPrivateFieldSet(this, _BetaMessageStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _BetaMessageStream_endPromise, new Promise((resolve, reject) => {
-          __classPrivateFieldSet(this, _BetaMessageStream_resolveEndPromise, resolve, "f");
+        __classPrivateFieldSet(this, _BetaMessageStream_endPromise, new Promise((resolve2, reject) => {
+          __classPrivateFieldSet(this, _BetaMessageStream_resolveEndPromise, resolve2, "f");
           __classPrivateFieldSet(this, _BetaMessageStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _BetaMessageStream_connectedPromise, "f").catch(() => {
@@ -21855,11 +21804,11 @@ var init_BetaMessageStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve);
+          this.once(event, resolve2);
         });
       }
       async done() {
@@ -22202,7 +22151,7 @@ var init_BetaMessageStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve2, reject) => readQueue.push({ resolve: resolve2, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
             }
             const chunk = pushQueue.shift();
             return { value: chunk, done: false };
@@ -22273,13 +22222,13 @@ Wrap your summary in <summary></summary> tags.`;
 
 // Vendor/pi-mono/node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs
 function promiseWithResolvers() {
-  let resolve;
+  let resolve2;
   let reject;
   const promise2 = new Promise((res, rej) => {
-    resolve = res;
+    resolve2 = res;
     reject = rej;
   });
-  return { promise: promise2, resolve, reject };
+  return { promise: promise2, resolve: resolve2, reject };
 }
 async function generateToolResponse(params, lastMessage = params.messages.at(-1), requestOptions) {
   if (!lastMessage || lastMessage.role !== "assistant" || !lastMessage.content || typeof lastMessage.content === "string") {
@@ -24107,12 +24056,12 @@ var init_MessageStream = __esm({
           }
           return this._emit("error", new AnthropicError(String(error51)));
         });
-        __classPrivateFieldSet(this, _MessageStream_connectedPromise, new Promise((resolve, reject) => {
-          __classPrivateFieldSet(this, _MessageStream_resolveConnectedPromise, resolve, "f");
+        __classPrivateFieldSet(this, _MessageStream_connectedPromise, new Promise((resolve2, reject) => {
+          __classPrivateFieldSet(this, _MessageStream_resolveConnectedPromise, resolve2, "f");
           __classPrivateFieldSet(this, _MessageStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _MessageStream_endPromise, new Promise((resolve, reject) => {
-          __classPrivateFieldSet(this, _MessageStream_resolveEndPromise, resolve, "f");
+        __classPrivateFieldSet(this, _MessageStream_endPromise, new Promise((resolve2, reject) => {
+          __classPrivateFieldSet(this, _MessageStream_resolveEndPromise, resolve2, "f");
           __classPrivateFieldSet(this, _MessageStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _MessageStream_connectedPromise, "f").catch(() => {
@@ -24282,11 +24231,11 @@ var init_MessageStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve);
+          this.once(event, resolve2);
         });
       }
       async done() {
@@ -24604,7 +24553,7 @@ var init_MessageStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve2, reject) => readQueue.push({ resolve: resolve2, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
             }
             const chunk = pushQueue.shift();
             return { value: chunk, done: false };
@@ -26671,7 +26620,7 @@ var init_values2 = __esm({
 var sleep3;
 var init_sleep2 = __esm({
   "Vendor/pi-mono/node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep3 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    sleep3 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
   }
 });
 
@@ -27832,8 +27781,8 @@ var init_api_promise2 = __esm({
     init_parse2();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse2) {
-        super((resolve) => {
-          resolve(null);
+        super((resolve2) => {
+          resolve2(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -28455,12 +28404,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet2(this, _EventStream_connectedPromise, new Promise((resolve, reject) => {
-          __classPrivateFieldSet2(this, _EventStream_resolveConnectedPromise, resolve, "f");
+        __classPrivateFieldSet2(this, _EventStream_connectedPromise, new Promise((resolve2, reject) => {
+          __classPrivateFieldSet2(this, _EventStream_resolveConnectedPromise, resolve2, "f");
           __classPrivateFieldSet2(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet2(this, _EventStream_endPromise, new Promise((resolve, reject) => {
-          __classPrivateFieldSet2(this, _EventStream_resolveEndPromise, resolve, "f");
+        __classPrivateFieldSet2(this, _EventStream_endPromise, new Promise((resolve2, reject) => {
+          __classPrivateFieldSet2(this, _EventStream_resolveEndPromise, resolve2, "f");
           __classPrivateFieldSet2(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet2(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -28544,11 +28493,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           __classPrivateFieldSet2(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve);
+          this.once(event, resolve2);
         });
       }
       async done() {
@@ -29605,7 +29554,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve2, reject) => readQueue.push({ resolve: resolve2, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
             }
             const chunk = pushQueue.shift();
             return { value: chunk, done: false };
@@ -30538,7 +30487,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve2, reject) => readQueue.push({ resolve: resolve2, reject })).then((chunk2) => chunk2 ? { value: chunk2, done: false } : { value: void 0, done: true });
             }
             const chunk = pushQueue.shift();
             return { value: chunk, done: false };
@@ -32763,7 +32712,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve2, reject) => readQueue.push({ resolve: resolve2, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -34864,7 +34813,7 @@ var require_p_retry = __commonJS({
       return error51;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve2, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -34874,7 +34823,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve(await input(attemptNumber));
+          resolve2(await input(attemptNumber));
         } catch (error51) {
           if (!(error51 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error51}". You should only throw errors.`));
@@ -35410,8 +35359,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config2);
       err.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config2.retryBackoff ? config2.retryBackoff(err, delay2) : new Promise((resolve) => {
-        setTimeout(resolve, delay2);
+      const backoff = config2.retryBackoff ? config2.retryBackoff(err, delay2) : new Promise((resolve2) => {
+        setTimeout(resolve2, delay2);
       });
       if (config2.onRetryAttempt) {
         await config2.onRetryAttempt(err);
@@ -36314,8 +36263,8 @@ var require_helpers = __commonJS({
     function req(url2, opts = {}) {
       const href = typeof url2 === "string" ? url2 : url2.href;
       const req2 = (href.startsWith("https:") ? https2 : http3).request(url2, opts);
-      const promise2 = new Promise((resolve, reject) => {
-        req2.once("response", resolve).once("error", reject).end();
+      const promise2 = new Promise((resolve2, reject) => {
+        req2.once("response", resolve2).once("error", reject).end();
       });
       req2.then = promise2.then.bind(promise2);
       return req2;
@@ -36492,7 +36441,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve2, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read() {
@@ -36558,7 +36507,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve({
+          resolve2({
             connect: {
               statusCode,
               statusText,
@@ -36800,7 +36749,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve) => resolve(value));
+        return newPromise((resolve2) => resolve2(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -36970,8 +36919,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve, reject) => {
-          reader._closedPromise_resolve = resolve;
+        reader._closedPromise = newPromise((resolve2, reject) => {
+          reader._closedPromise_resolve = resolve2;
           reader._closedPromise_reject = reject;
         });
       }
@@ -37145,8 +37094,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise2 = newPromise((resolve, reject) => {
-            resolvePromise = resolve;
+          const promise2 = newPromise((resolve2, reject) => {
+            resolvePromise = resolve2;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -37251,8 +37200,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise2 = newPromise((resolve, reject) => {
-            resolvePromise = resolve;
+          const promise2 = newPromise((resolve2, reject) => {
+            resolvePromise = resolve2;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -38271,8 +38220,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise2 = newPromise((resolve, reject) => {
-            resolvePromise = resolve;
+          const promise2 = newPromise((resolve2, reject) => {
+            resolvePromise = resolve2;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -38584,10 +38533,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise2 = newPromise((resolve, reject) => {
+        const promise2 = newPromise((resolve2, reject) => {
           stream2._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve,
+            _resolve: resolve2,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -38604,9 +38553,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state2 === "closed" || state2 === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state2} state) is not in the writable state and cannot be closed`));
         }
-        const promise2 = newPromise((resolve, reject) => {
+        const promise2 = newPromise((resolve2, reject) => {
           const closeRequest = {
-            _resolve: resolve,
+            _resolve: resolve2,
             _reject: reject
           };
           stream2._closeRequest = closeRequest;
@@ -38619,9 +38568,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise2;
       }
       function WritableStreamAddWriteRequest(stream2) {
-        const promise2 = newPromise((resolve, reject) => {
+        const promise2 = newPromise((resolve2, reject) => {
           const writeRequest = {
-            _resolve: resolve,
+            _resolve: resolve2,
             _reject: reject
           };
           stream2._writeRequests.push(writeRequest);
@@ -39237,8 +39186,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve, reject) => {
-          writer._closedPromise_resolve = resolve;
+        writer._closedPromise = newPromise((resolve2, reject) => {
+          writer._closedPromise_resolve = resolve2;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -39274,8 +39223,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve, reject) => {
-          writer._readyPromise_resolve = resolve;
+        writer._readyPromise = newPromise((resolve2, reject) => {
+          writer._readyPromise_resolve = resolve2;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -39362,7 +39311,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve, reject) => {
+        return newPromise((resolve2, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -39507,7 +39456,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error51);
             } else {
-              resolve(void 0);
+              resolve2(void 0);
             }
             return null;
           }
@@ -39788,8 +39737,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve) => {
-          resolveCancelPromise = resolve;
+        const cancelPromise = newPromise((resolve2) => {
+          resolveCancelPromise = resolve2;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -39880,8 +39829,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve) => {
-          resolveCancelPromise = resolve;
+        const cancelPromise = newPromise((resolve2) => {
+          resolveCancelPromise = resolve2;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -40661,8 +40610,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve) => {
-            startPromise_resolve = resolve;
+          const startPromise = newPromise((resolve2) => {
+            startPromise_resolve = resolve2;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -40755,8 +40704,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream2._backpressureChangePromise !== void 0) {
           stream2._backpressureChangePromise_resolve();
         }
-        stream2._backpressureChangePromise = newPromise((resolve) => {
-          stream2._backpressureChangePromise_resolve = resolve;
+        stream2._backpressureChangePromise = newPromise((resolve2) => {
+          stream2._backpressureChangePromise_resolve = resolve2;
         });
         stream2._backpressure = backpressure;
       }
@@ -40924,8 +40873,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream2._readable;
-        controller._finishPromise = newPromise((resolve, reject) => {
-          controller._finishPromise_resolve = resolve;
+        controller._finishPromise = newPromise((resolve2, reject) => {
+          controller._finishPromise_resolve = resolve2;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -40951,8 +40900,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream2._readable;
-        controller._finishPromise = newPromise((resolve, reject) => {
-          controller._finishPromise_resolve = resolve;
+        controller._finishPromise = newPromise((resolve2, reject) => {
+          controller._finishPromise_resolve = resolve2;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -40982,8 +40931,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream2._writable;
-        controller._finishPromise = newPromise((resolve, reject) => {
-          controller._finishPromise_resolve = resolve;
+        controller._finishPromise = newPromise((resolve2, reject) => {
+          controller._finishPromise_resolve = resolve2;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -42934,7 +42883,7 @@ import zlib from "node:zlib";
 import Stream4, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url2, options_) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     const request = new Request2(url2, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -42943,7 +42892,7 @@ async function fetch2(url2, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve(response2);
+      resolve2(response2);
       return;
     }
     const send2 = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -43065,7 +43014,7 @@ async function fetch2(url2, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve(fetch2(new Request2(locationURL, requestOptions)));
+            resolve2(fetch2(new Request2(locationURL, requestOptions)));
             finalize2();
             return;
           }
@@ -43098,7 +43047,7 @@ async function fetch2(url2, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve(response);
+        resolve2(response);
         return;
       }
       const zlibOptions = {
@@ -43112,7 +43061,7 @@ async function fetch2(url2, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve(response);
+        resolve2(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -43136,12 +43085,12 @@ async function fetch2(url2, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve(response);
+          resolve2(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve(response);
+            resolve2(response);
           }
         });
         return;
@@ -43153,11 +43102,11 @@ async function fetch2(url2, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve(response);
+        resolve2(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve(response);
+      resolve2(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -48772,7 +48721,7 @@ var require_getCredentials = __commonJS({
     var fs3 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
-    var readFile = fs3.readFile ? (0, util_1.promisify)(fs3.readFile) : async () => {
+    var readFile2 = fs3.readFile ? (0, util_1.promisify)(fs3.readFile) : async () => {
       throw new errorWithCode_1.ErrorWithCode("use key rather than keyFile.", "MISSING_CREDENTIALS");
     };
     var ExtensionFiles;
@@ -48794,7 +48743,7 @@ var require_getCredentials = __commonJS({
        * @returns A promise that resolves with the credentials.
        */
       async getCredentials() {
-        const key = await readFile(this.keyFilePath, "utf8");
+        const key = await readFile2(this.keyFilePath, "utf8");
         let body;
         try {
           body = JSON.parse(key);
@@ -48820,7 +48769,7 @@ var require_getCredentials = __commonJS({
        * @returns A promise that resolves with the private key.
        */
       async getCredentials() {
-        const privateKey = await readFile(this.keyFilePath, "utf8");
+        const privateKey = await readFile2(this.keyFilePath, "utf8");
         return { privateKey };
       }
     };
@@ -49227,7 +49176,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -49236,7 +49185,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve();
+              resolve2();
             } catch (err) {
               reject(err);
             }
@@ -49475,7 +49424,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -49484,7 +49433,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve();
+              resolve2();
             } catch (e2) {
               reject(e2);
             }
@@ -49617,7 +49566,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -49626,7 +49575,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve();
+              return resolve2();
             } catch (err) {
               return reject(err);
             }
@@ -50450,7 +50399,7 @@ var require_filesubjecttokensupplier = __commonJS({
     exports.FileSubjectTokenSupplier = void 0;
     var util_1 = __require("util");
     var fs3 = __require("fs");
-    var readFile = (0, util_1.promisify)(fs3.readFile ?? (() => {
+    var readFile2 = (0, util_1.promisify)(fs3.readFile ?? (() => {
     }));
     var realpath = (0, util_1.promisify)(fs3.realpath ?? (() => {
     }));
@@ -50490,7 +50439,7 @@ var require_filesubjecttokensupplier = __commonJS({
           throw err;
         }
         let subjectToken;
-        const rawText = await readFile(parsedFilePath, { encoding: "utf8" });
+        const rawText = await readFile2(parsedFilePath, { encoding: "utf8" });
         if (this.formatType === "text") {
           subjectToken = rawText;
         } else if (this.formatType === "json" && this.subjectTokenFieldName) {
@@ -51459,7 +51408,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -51481,7 +51430,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve(response);
+                return resolve2(response);
               } catch (error51) {
                 if (error51 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error51);
@@ -52384,7 +52333,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -52394,7 +52343,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve(r2);
+                return resolve2(r2);
               } catch (err) {
                 if (!this.keyFilename)
                   throw err;
@@ -52404,7 +52353,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve(client);
+                return resolve2(client);
               }
             } catch (err) {
               return reject(err);
@@ -52440,17 +52389,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve) => {
+        return new Promise((resolve2) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err, stdout) => {
             if (!err && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve(projectId);
+                resolve2(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve(null);
+            resolve2(null);
           });
         });
       }
@@ -60036,14 +59985,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve, reject) {
-        v = o[n](v), settle(resolve, reject, v.done, v.value);
+      return new Promise(function(resolve2, reject) {
+        v = o[n](v), settle(resolve2, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve, reject, d, v) {
+  function settle(resolve2, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve({ value: v2, done: d });
+      resolve2({ value: v2, done: d });
     }, reject);
   }
 }
@@ -70405,8 +70354,8 @@ var init_node = __esm({
         const url2 = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve) => {
-          onopenResolve = resolve;
+        const onopenPromise = new Promise((resolve2) => {
+          onopenResolve = resolve2;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -70612,8 +70561,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve) => {
-          onopenResolve = resolve;
+        const onopenPromise = new Promise((resolve2) => {
+          onopenResolve = resolve2;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -72922,7 +72871,7 @@ var init_node = __esm({
         return void 0;
       }
     };
-    sleep$1 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    sleep$1 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
     FallbackEncoder3 = ({ headers, body }) => {
       return {
         bodyHeaders: {
@@ -73431,8 +73380,8 @@ ${underline}`);
     };
     APIPromise3 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse3) {
-        super((resolve) => {
-          resolve(null);
+        super((resolve2) => {
+          resolve2(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -91316,7 +91265,7 @@ var init_is_plain_object = __esm({
 });
 
 // Vendor/pi-mono/node_modules/@mistralai/mistralai/esm/lib/encodings.js
-function formEncoder(sep) {
+function formEncoder(sep2) {
   return (key, value, options) => {
     let out = "";
     const pairs = options?.explode ? explode(key, value) : [[key, value]];
@@ -91327,7 +91276,7 @@ function formEncoder(sep) {
       return options?.charEncoding === "percent" ? encodeURIComponent(v) : v;
     };
     const encodeValue = (v) => encodeString(serializeValue(v));
-    const encodedSep = encodeString(sep);
+    const encodedSep = encodeString(sep2);
     pairs.forEach(([pk, pv]) => {
       let tmp = "";
       let encValue = null;
@@ -91713,7 +91662,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve) => setTimeout(resolve, delay2));
+  return new Promise((resolve2) => setTimeout(resolve2, delay2));
 }
 var defaultBackoff, PermanentError, TemporaryError, codeRangeRE2;
 var init_retries = __esm({
@@ -132273,10 +132222,12 @@ var init_openai_responses = __esm({
 });
 
 // Vendor/pi-mono/packages/droid-agent/src/main.ts
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import readline from "node:readline";
+import { promisify as promisify2 } from "node:util";
 
 // Vendor/pi-mono/node_modules/typebox/build/system/memory/memory.mjs
 var memory_exports = {};
@@ -142918,8 +142869,8 @@ var Agent = class {
     const abortController = new AbortController();
     let resolvePromise = () => {
     };
-    const promise2 = new Promise((resolve) => {
-      resolvePromise = resolve;
+    const promise2 = new Promise((resolve2) => {
+      resolvePromise = resolve2;
     });
     this.activeRun = { promise: promise2, resolve: resolvePromise, abortController };
     this._state.isStreaming = true;
@@ -143193,7 +143144,7 @@ function formatErrorDetails(error51) {
 }
 async function startCallbackServer(expectedState) {
   const { createServer } = await getNodeApis();
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     let settleWait;
     const waitForCodePromise = new Promise((resolveWait) => {
       let settled = false;
@@ -143241,7 +143192,7 @@ async function startCallbackServer(expectedState) {
       reject(err);
     });
     server.listen(CALLBACK_PORT, CALLBACK_HOST, () => {
-      resolve({
+      resolve2({
         server,
         redirectUri: REDIRECT_URI,
         cancelWait: () => {
@@ -143522,12 +143473,12 @@ async function startDeviceFlow(domain2) {
   };
 }
 function abortableSleep(ms, signal) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     if (signal?.aborted) {
       reject(new Error("Login cancelled"));
       return;
     }
-    const timeout = setTimeout(resolve, ms);
+    const timeout = setTimeout(resolve2, ms);
     signal?.addEventListener(
       "abort",
       () => {
@@ -143839,12 +143790,12 @@ function startLocalOAuthServer(state2) {
     throw new Error("OpenAI Codex OAuth is only available in Node.js environments");
   }
   let settleWait;
-  const waitForCodePromise = new Promise((resolve) => {
+  const waitForCodePromise = new Promise((resolve2) => {
     let settled = false;
     settleWait = (value) => {
       if (settled) return;
       settled = true;
-      resolve(value);
+      resolve2(value);
     };
   });
   const server = _http.createServer((req, res) => {
@@ -143879,9 +143830,9 @@ function startLocalOAuthServer(state2) {
       res.end(oauthErrorHtml("Internal error while processing OAuth callback."));
     }
   });
-  return new Promise((resolve) => {
+  return new Promise((resolve2) => {
     server.listen(1455, CALLBACK_HOST2, () => {
-      resolve({
+      resolve2({
         close: () => server.close(),
         cancelWait: () => {
           settleWait?.(null);
@@ -143895,7 +143846,7 @@ function startLocalOAuthServer(state2) {
         ") Falling back to manual paste."
       );
       settleWait?.(null);
-      resolve({
+      resolve2({
         close: () => {
           try {
             server.close();
@@ -144066,6 +144017,7 @@ async function getOAuthApiKey(providerId, credentials) {
 var rl = readline.createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
 var pendingTools = /* @__PURE__ */ new Map();
 var sessions = /* @__PURE__ */ new Map();
+var execFileAsync = promisify2(execFile);
 var promptQueue = Promise.resolve();
 function send(message) {
   process.stdout.write(`${JSON.stringify(message)}
@@ -144115,6 +144067,7 @@ async function resolveApiKey2(provider) {
   return void 0;
 }
 function systemPrompt() {
+  if (agentMode() === "droidcodegraph") return graphSystemPrompt();
   return [
     "You are Droid's parent agent.",
     "You control Droid by calling Droid tools, not by inventing shell commands.",
@@ -144137,6 +144090,23 @@ function systemPrompt() {
     "Do not claim a child agent is done until droid_subagent action=result reports a completed assignment with a meaningful final summary, terminal output, or changed files.",
     "Be concise and honest about what has or has not been executed."
   ].join("\n");
+}
+function graphSystemPrompt() {
+  return [
+    "You are Droid's CodeGraph agent.",
+    "You have scoped filesystem and shell tools for one Droid project. Use those tools directly.",
+    "Do not choose or spawn Codex, Claude Code, OpenCode, Pi, or any other coding-agent CLI.",
+    "Do not call Droid orchestration tools; they are intentionally unavailable in this mode.",
+    "Read the Graphify skill file path from the user prompt when it exists and follow it as a plain instruction document.",
+    "Do not rely on /graphify being installed as a slash command.",
+    "Run all temporary Graphify work inside the Droid work directory from the user prompt.",
+    "Keep the target project untouched. Do not create or edit AGENTS.md, CLAUDE.md, graphify-out, or hook files inside the target project.",
+    "After Graphify outputs are ready, run the Droid finalizer command exactly as provided.",
+    "Be concise and report what completed or failed."
+  ].join("\n");
+}
+function agentMode() {
+  return process.env.DROID_PARENT_AGENT_MODE ?? "parent";
 }
 function droidProtocolToolName(name) {
   if (name === "droid_list_projects") return "droid.list_projects";
@@ -144199,7 +144169,7 @@ ${summary}` : prompt }
 }
 function callDroidTool(name, args, context) {
   const id = createID("tool");
-  const promise2 = new Promise((resolve, reject) => pendingTools.set(id, { resolve, reject }));
+  const promise2 = new Promise((resolve2, reject) => pendingTools.set(id, { resolve: resolve2, reject }));
   send({ type: "tool_call", id, taskID: context.taskID, name: droidProtocolToolName(name), arguments: args });
   return promise2;
 }
@@ -144215,6 +144185,158 @@ function tool(name, description, parameters, context) {
       return { content: [{ type: "text", text: stringifyResult(result) }], details: result };
     }
   };
+}
+function localTool(name, description, parameters, execute) {
+  return {
+    name,
+    label: name,
+    description,
+    parameters,
+    execute: async (_toolCallId, params, signal) => {
+      if (signal?.aborted) throw new Error("Tool call aborted");
+      const result = await execute(params, signal);
+      return { content: [{ type: "text", text: stringifyResult(result) }], details: result };
+    }
+  };
+}
+function envRoots(name) {
+  const value = process.env[name];
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map((item) => String(item)).filter(Boolean).map((item) => resolve(item));
+  } catch {
+    return value.split(":").map((item) => item.trim()).filter(Boolean).map((item) => resolve(item));
+  }
+  return [];
+}
+function readRoots() {
+  return envRoots("DROID_GRAPH_READ_ROOTS");
+}
+function writeRoots() {
+  return envRoots("DROID_GRAPH_WRITE_ROOTS");
+}
+function shellRoots() {
+  return envRoots("DROID_GRAPH_SHELL_ROOTS");
+}
+function normalizePath(path4) {
+  if (typeof path4 !== "string" || !path4.trim()) throw new Error("path is required");
+  return resolve(path4);
+}
+function isWithin(path4, roots) {
+  const normalized = resolve(path4);
+  return roots.some((root) => normalized === root || normalized.startsWith(`${root}${sep}`));
+}
+function requireWithin(path4, roots, label) {
+  if (roots.length === 0 || !isWithin(path4, roots)) throw new Error(`${path4} is outside allowed ${label} roots`);
+  return path4;
+}
+function existingPath(path4) {
+  try {
+    return realpathSync(path4);
+  } catch {
+    return path4;
+  }
+}
+function truncate(text, maxBytes) {
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return { text, truncated: false };
+  const buffer = Buffer.from(text, "utf8").subarray(0, maxBytes);
+  return { text: buffer.toString("utf8"), truncated: true };
+}
+function graphTools() {
+  return [
+    localTool(
+      "graph_list_files",
+      "List files below an allowed read root. Use this to inspect project structure without printing huge trees.",
+      typebox_exports.Object({
+        path: typebox_exports.String(),
+        limit: typebox_exports.Optional(typebox_exports.String()),
+        maxDepth: typebox_exports.Optional(typebox_exports.String())
+      }),
+      (params) => listFiles(params)
+    ),
+    localTool(
+      "graph_read_file",
+      "Read a UTF-8 text file from an allowed read root.",
+      typebox_exports.Object({
+        path: typebox_exports.String(),
+        maxBytes: typebox_exports.Optional(typebox_exports.String())
+      }),
+      (params) => readFile(params)
+    ),
+    localTool(
+      "graph_write_file",
+      "Write a UTF-8 text file inside an allowed write root.",
+      typebox_exports.Object({
+        path: typebox_exports.String(),
+        content: typebox_exports.String()
+      }),
+      (params) => writeFile2(params)
+    ),
+    localTool(
+      "graph_shell",
+      "Run a shell command in an allowed shell root. Use for Graphify Python/CLI and the finalizer.",
+      typebox_exports.Object({
+        command: typebox_exports.String(),
+        cwd: typebox_exports.String(),
+        timeoutSeconds: typebox_exports.Optional(typebox_exports.String()),
+        maxBytes: typebox_exports.Optional(typebox_exports.String())
+      }),
+      (params, signal) => runShell(params, signal)
+    )
+  ];
+}
+function listFiles(params) {
+  const root = requireWithin(existingPath(normalizePath(params.path)), readRoots(), "read");
+  const limit2 = Math.max(1, Math.min(Number(params.limit ?? 400), 2e3));
+  const maxDepth = Math.max(0, Math.min(Number(params.maxDepth ?? 4), 12));
+  const files = [];
+  const walk = (dir, depth) => {
+    if (files.length >= limit2 || depth > maxDepth) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (files.length >= limit2) return;
+      if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".droid") continue;
+      const full = join(dir, entry.name);
+      const relative = full.slice(root.length + 1);
+      files.push(entry.isDirectory() ? `${relative}/` : relative);
+      if (entry.isDirectory()) walk(full, depth + 1);
+    }
+  };
+  walk(root, 0);
+  return { root, files, truncated: files.length >= limit2 };
+}
+function readFile(params) {
+  const path4 = requireWithin(existingPath(normalizePath(params.path)), readRoots(), "read");
+  const maxBytes = Math.max(1, Math.min(Number(params.maxBytes ?? 12e4), 5e5));
+  const { text, truncated } = truncate(readFileSync(path4, "utf8"), maxBytes);
+  return { path: path4, text, truncated };
+}
+function writeFile2(params) {
+  const path4 = requireWithin(normalizePath(params.path), writeRoots(), "write");
+  const content = typeof params.content === "string" ? params.content : "";
+  mkdirSync(dirname(path4), { recursive: true });
+  writeFileSync(path4, content, "utf8");
+  return { path: path4, bytes: Buffer.byteLength(content, "utf8") };
+}
+async function runShell(params, signal) {
+  const command = typeof params.command === "string" ? params.command : "";
+  if (!command.trim()) throw new Error("command is required");
+  const cwd = requireWithin(existingPath(normalizePath(params.cwd)), shellRoots(), "shell");
+  const timeout = Math.max(1e3, Math.min(Number(params.timeoutSeconds ?? 600) * 1e3, 36e5));
+  const maxBytes = Math.max(1e3, Math.min(Number(params.maxBytes ?? 24e3), 2e5));
+  const result = await execFileAsync("/bin/zsh", ["-lc", command], {
+    cwd,
+    timeout,
+    signal,
+    maxBuffer: Math.max(maxBytes * 2, 1024 * 1024),
+    env: process.env
+  }).then(
+    (value) => ({ stdout: value.stdout, stderr: value.stderr, exitCode: 0 }),
+    (error51) => ({ stdout: error51.stdout ?? "", stderr: error51.stderr ?? error51.message, exitCode: error51.code ?? 1 })
+  );
+  const stdout = truncate(String(result.stdout), maxBytes);
+  const stderr = truncate(String(result.stderr), maxBytes);
+  return { cwd, exitCode: result.exitCode, stdout: stdout.text, stderr: stderr.text, truncated: stdout.truncated || stderr.truncated };
 }
 function droidTools(context) {
   return [
@@ -144374,7 +144496,7 @@ function createAgent(model, context) {
       systemPrompt: systemPrompt(),
       model,
       thinkingLevel: selectedThinking(),
-      tools: droidTools(context)
+      tools: agentMode() === "droidcodegraph" ? graphTools() : droidTools(context)
     },
     getApiKey: (provider) => resolveApiKey2(provider),
     toolExecution: "sequential"

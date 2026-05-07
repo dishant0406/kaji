@@ -26,6 +26,12 @@ struct MainWindow: View {
         static let widthRatio: CGFloat = 0.5
     }
 
+    private enum CodeGraphAgentLayout {
+        static let minWidth: CGFloat = 360
+        static let defaultWidth: CGFloat = 460
+        static let maxWidth: CGFloat = 760
+    }
+
     private enum CloseConfirmationKind {
         case lastTab
         case unsavedEditor
@@ -65,9 +71,11 @@ struct MainWindow: View {
     @State private var vcsStates: [WorktreeKey: VCSTabState] = [:]
     @State private var fileTreePanelVisible = false
     @AppStorage("droid.fileTreeWidth") private var fileTreePanelWidth: Double = .init(FileTreeLayout.defaultWidth)
+    @AppStorage("droid.codeGraphAgentPanelWidth") private var codeGraphAgentPanelWidth: Double = .init(CodeGraphAgentLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
+    @State private var codeGraphAgentCoordinator = DroidCodeGraphAgentCoordinator.shared
     @State private var cliLauncherSettings = CLILauncherSettings.shared
     @State private var footerTerminalStore = FooterTerminalStateStore()
     @State private var footerTerminalCleanupTasks: [UUID: Task<Void, Never>] = [:]
@@ -394,7 +402,9 @@ struct MainWindow: View {
 
     @ViewBuilder
     private func activeSidePanel(contentWidth: CGFloat) -> some View {
-        if vcsPanelVisible, let state = activeVCSState {
+        if let session = activeCodeGraphAgentSession {
+            codeGraphAgentSidePanel(session: session)
+        } else if vcsPanelVisible, let state = activeVCSState {
             HStack(spacing: 0) {
                 sidePanelResizeHandle { delta in
                     vcsPanelWidth = max(
@@ -418,6 +428,29 @@ struct MainWindow: View {
                 )
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
+        }
+    }
+
+    private func codeGraphAgentSidePanel(session: DroidCodeGraphAgentSession) -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                let next = codeGraphAgentPanelWidth - Double(delta)
+                codeGraphAgentPanelWidth = max(
+                    Double(CodeGraphAgentLayout.minWidth),
+                    min(Double(CodeGraphAgentLayout.maxWidth), next)
+                )
+            }
+            DroidCodeGraphAgentPanel(
+                session: session,
+                onHide: {
+                    guard let key = activeWorktreeKey else { return }
+                    codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
+                },
+                onClose: {
+                    codeGraphAgentCoordinator.close(session)
+                }
+            )
+            .frame(width: CGFloat(codeGraphAgentPanelWidth))
         }
     }
 
@@ -800,6 +833,12 @@ struct MainWindow: View {
     private var activeProject: Project? {
         guard let pid = appState.activeProjectID else { return nil }
         return projectStore.projects.first { $0.id == pid }
+    }
+
+    private var activeCodeGraphAgentSession: DroidCodeGraphAgentSession? {
+        guard let key = activeWorktreeKey else { return nil }
+        guard codeGraphAgentCoordinator.isVisible(projectID: key.projectID, worktreeID: key.worktreeID) else { return nil }
+        return codeGraphAgentCoordinator.session(projectID: key.projectID, worktreeID: key.worktreeID)
     }
 
     private var parentAgentSelected: Bool {

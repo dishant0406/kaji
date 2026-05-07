@@ -2,8 +2,14 @@ import SwiftUI
 
 struct ParentAgentTimelineView: View {
     let task: ParentAgentTask
+    let showsUserMessages: Bool
     @State private var expandedToolGroupIDs: Set<UUID> = []
     @State private var expandedThinkingIDs: Set<UUID> = []
+
+    init(task: ParentAgentTask, showsUserMessages: Bool = true) {
+        self.task = task
+        self.showsUserMessages = showsUserMessages
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -66,6 +72,9 @@ struct ParentAgentTimelineView: View {
         }
 
         for item in task.timeline where item.kind != .final {
+            if item.kind == .user, !showsUserMessages {
+                continue
+            }
             if item.kind == .event, item.title == "Question", task.pendingQuestionToolID != nil {
                 continue
             }

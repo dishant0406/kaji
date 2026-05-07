@@ -10,6 +10,7 @@ struct ProjectContextMenu: View {
     let isCodeGraphEnabled: Bool
     let hasCodeGraph: Bool
     let isCodeGraphRunning: Bool
+    let hasCodeGraphAgentSession: Bool
     let onSetLogo: () -> Void
     let onRemoveLogo: () -> Void
     let onSetIconColor: () -> Void
@@ -23,6 +24,7 @@ struct ProjectContextMenu: View {
     let onBuildCodeGraph: () -> Void
     let onUpdateCodeGraph: () -> Void
     let onViewCodeGraph: () -> Void
+    let onShowCodeGraphAgent: () -> Void
     let onRemoveProject: () -> Void
 
     var body: some View {
@@ -73,6 +75,9 @@ struct ProjectContextMenu: View {
                         action: onUpdateCodeGraph
                     )
                     ProjectContextMenuButton(title: "View Code Graph", icon: "eye", action: onViewCodeGraph)
+                }
+                if hasCodeGraphAgentSession {
+                    ProjectContextMenuButton(title: "Show Graph Agent", icon: "sparkles", action: onShowCodeGraphAgent)
                 }
             }
 

@@ -31,13 +31,17 @@ enum CodingAgentShimEnvironment {
             shimDirectory: shimDirectory
         ))
 
+        guard DroidCodeGraphStore.shared.isReady else { return values }
+        values.append((key: "DROID_CODE_GRAPH_ROOT_DIR", value: DroidCodeGraphDirectory.root.path))
+        values.append((
+            key: "DROID_CODE_GRAPH_PROJECT_DIR",
+            value: DroidCodeGraphDirectory.projectDirectory(projectID: projectID, worktreeID: worktreeID).path
+        ))
         guard let instructions = DroidCodeGraphInstructions.ensureFile(projectID: projectID, worktreeID: worktreeID) else {
             return values
         }
-        values.append((key: "DROID_CODE_GRAPH_PROJECT_DIR", value: DroidCodeGraphDirectory.projectDirectory(
-            projectID: projectID,
-            worktreeID: worktreeID
-        ).path))
+        values.append(contentsOf: DroidCodeGraphInstructions.environment(projectID: projectID, worktreeID: worktreeID))
+        _ = DroidCodeGraphInstructions.ensureCodexBridge(projectID: projectID, worktreeID: worktreeID)
         _ = DroidCodeGraphInstructions.ensureClaudeBridge(projectID: projectID, worktreeID: worktreeID)
         if let config = DroidCodeGraphInstructions.ensureOpenCodeConfig(
             projectID: projectID,

@@ -8,6 +8,7 @@ final class ParentAgentProcess {
     private var configurationSignature: String?
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
+    var environmentOverrides: [String: String] = [:]
     var onMessage: ((ParentAgentEnvelope) -> Void)?
     var onError: ((String) -> Void)?
 
@@ -34,7 +35,8 @@ final class ParentAgentProcess {
     }
 
     private func startIfNeeded() throws {
-        let environment = ParentAgentSettingsStore.shared.launchEnvironment()
+        var environment = ParentAgentSettingsStore.shared.launchEnvironment()
+        environment.merge(environmentOverrides) { _, new in new }
         let signature = Self.configurationSignature(for: environment)
         if process?.isRunning == true, configurationSignature == signature { return }
         if process?.isRunning == true {
@@ -76,6 +78,10 @@ final class ParentAgentProcess {
             environment["DROID_PARENT_PROVIDER"] ?? "",
             environment["DROID_PARENT_MODEL"] ?? "",
             environment["DROID_PARENT_THINKING"] ?? "",
+            environment["DROID_PARENT_AGENT_MODE"] ?? "",
+            environment["DROID_GRAPH_READ_ROOTS"] ?? "",
+            environment["DROID_GRAPH_WRITE_ROOTS"] ?? "",
+            environment["DROID_GRAPH_SHELL_ROOTS"] ?? "",
         ].joined(separator: "\u{1f}")
     }
 

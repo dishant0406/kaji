@@ -82,6 +82,11 @@ enum DroidCodeGraphDirectory {
             .appendingPathComponent("AGENTS.md")
     }
 
+    static func codexBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
+        projectDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("AGENTS.md")
+    }
+
     static func claudeBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
         projectDirectory(projectID: projectID, worktreeID: worktreeID)
             .appendingPathComponent("CLAUDE.md")

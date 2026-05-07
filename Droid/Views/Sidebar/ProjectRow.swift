@@ -12,11 +12,13 @@ struct ProjectRow: View {
     let onSetIconColor: (String?) -> Void
 
     @Environment(AppState.self) private var appState
+    @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var activityStore = AIActivityStore.shared
     @State private var notificationStore = NotificationStore.shared
     @State private var codeGraphStore = DroidCodeGraphStore.shared
     @State private var codeGraphRuntime = DroidCodeGraphRuntime.shared
+    @State private var codeGraphAgentCoordinator = DroidCodeGraphAgentCoordinator.shared
 
     @State private var hovered = false
     @State private var isRenaming = false
@@ -64,6 +66,10 @@ struct ProjectRow: View {
         codeGraphRuntime.isRunning(projectID: project.id, worktreeID: activeWorktree.id)
     }
 
+    private var hasCodeGraphAgentSession: Bool {
+        codeGraphAgentCoordinator.hasSession(projectID: project.id, worktreeID: activeWorktree.id)
+    }
+
     var body: some View {
         projectIcon
             .help(project.name)
@@ -104,6 +110,7 @@ struct ProjectRow: View {
                     isCodeGraphEnabled: codeGraphStore.state.isEnabled,
                     hasCodeGraph: hasCodeGraph,
                     isCodeGraphRunning: isCodeGraphRunning,
+                    hasCodeGraphAgentSession: hasCodeGraphAgentSession,
                     onSetLogo: {
                         showProjectMenu = false
                         pickLogoImage()
@@ -155,6 +162,10 @@ struct ProjectRow: View {
                     onViewCodeGraph: {
                         showProjectMenu = false
                         viewCodeGraph()
+                    },
+                    onShowCodeGraphAgent: {
+                        showProjectMenu = false
+                        showCodeGraphAgent()
                     },
                     onRemoveProject: {
                         showProjectMenu = false
@@ -350,7 +361,7 @@ struct ProjectRow: View {
                 worktreeID: worktree.id,
                 projectPath: worktree.path,
                 mode: mode
-            ))
+            ), appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         }
     }
 
@@ -361,6 +372,10 @@ struct ProjectRow: View {
             worktreePath: activeWorktree.path,
             graphURL: codeGraphRuntime.droidGraphURL(projectID: project.id, worktreeID: activeWorktree.id)
         )
+    }
+
+    private func showCodeGraphAgent() {
+        codeGraphAgentCoordinator.show(projectID: project.id, worktreeID: activeWorktree.id)
     }
 }
 
