@@ -9,8 +9,17 @@ enum CodingAgentShimEnvironment {
         worktreeID: UUID,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
+        store: DroidCodeGraphStore = .shared,
         fileManager: FileManager = .default
     ) -> [(key: String, value: String)] {
+        guard store.isReady,
+              let instructions = DroidCodeGraphInstructions.ensureFile(
+                  projectID: projectID,
+                  worktreeID: worktreeID,
+                  store: store,
+                  fileManager: fileManager
+              )
+        else { return [] }
         guard let shimDirectory = CodingAgentShimInstaller.install(homeDirectory: homeDirectory, fileManager: fileManager) else {
             return []
         }
@@ -31,22 +40,35 @@ enum CodingAgentShimEnvironment {
             shimDirectory: shimDirectory
         ))
 
-        guard DroidCodeGraphStore.shared.isReady else { return values }
-        values.append((key: "DROID_CODE_GRAPH_ROOT_DIR", value: DroidCodeGraphDirectory.root.path))
+        values.append((key: "DROID_CODE_GRAPH_ROOT_DIR", value: store.rootDirectory.path))
         values.append((
             key: "DROID_CODE_GRAPH_PROJECT_DIR",
-            value: DroidCodeGraphDirectory.projectDirectory(projectID: projectID, worktreeID: worktreeID).path
+            value: store.projectDirectory(projectID: projectID, worktreeID: worktreeID).path
         ))
-        guard let instructions = DroidCodeGraphInstructions.ensureFile(projectID: projectID, worktreeID: worktreeID) else {
-            return values
-        }
-        values.append(contentsOf: DroidCodeGraphInstructions.environment(projectID: projectID, worktreeID: worktreeID))
-        _ = DroidCodeGraphInstructions.ensureCodexBridge(projectID: projectID, worktreeID: worktreeID)
-        _ = DroidCodeGraphInstructions.ensureClaudeBridge(projectID: projectID, worktreeID: worktreeID)
+        values.append(contentsOf: DroidCodeGraphInstructions.environment(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            store: store,
+            fileManager: fileManager
+        ))
+        _ = DroidCodeGraphInstructions.ensureCodexBridge(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            store: store,
+            fileManager: fileManager
+        )
+        _ = DroidCodeGraphInstructions.ensureClaudeBridge(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            store: store,
+            fileManager: fileManager
+        )
         if let config = DroidCodeGraphInstructions.ensureOpenCodeConfig(
             projectID: projectID,
             worktreeID: worktreeID,
-            instructionFile: instructions
+            instructionFile: instructions,
+            store: store,
+            fileManager: fileManager
         ) {
             values.append((key: "DROID_CODE_GRAPH_OPENCODE_CONFIG", value: config.path))
         }

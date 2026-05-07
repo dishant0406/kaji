@@ -2,6 +2,8 @@ import SwiftUI
 
 struct CLILauncherFooter: View {
     let projectID: UUID
+    let worktreeKey: WorktreeKey?
+    let worktreePath: String?
     var terminalExpanded = false
     var onToggleTerminal: (() -> Void)?
     @Environment(AppState.self) private var appState
@@ -27,6 +29,12 @@ struct CLILauncherFooter: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 4) {
+                DroidCodeGraphFooterControl(
+                    projectID: projectID,
+                    worktreeKey: worktreeKey,
+                    worktreePath: worktreePath
+                )
+
                 IconButton(symbol: "keyboard", selected: showsShortcuts, accessibilityLabel: "Shortcuts") {
                     showsShortcuts.toggle()
                 }

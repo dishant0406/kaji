@@ -81,11 +81,15 @@ final class DroidCodeGraphStore {
     }
 
     func graphOutputDirectory(projectID: UUID, worktreeID: UUID) -> URL {
+        projectDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("graphify-out", isDirectory: true)
+    }
+
+    func projectDirectory(projectID: UUID, worktreeID: UUID) -> URL {
         rootDirectory
             .appendingPathComponent("projects", isDirectory: true)
             .appendingPathComponent(projectID.uuidString, isDirectory: true)
             .appendingPathComponent(worktreeID.uuidString, isDirectory: true)
-            .appendingPathComponent("graphify-out", isDirectory: true)
     }
 
     func droidGraphURL(projectID: UUID, worktreeID: UUID) -> URL {
@@ -99,12 +103,24 @@ final class DroidCodeGraphStore {
     }
 
     func instructionFile(projectID: UUID, worktreeID: UUID) -> URL {
-        rootDirectory
-            .appendingPathComponent("projects", isDirectory: true)
-            .appendingPathComponent(projectID.uuidString, isDirectory: true)
-            .appendingPathComponent(worktreeID.uuidString, isDirectory: true)
+        projectDirectory(projectID: projectID, worktreeID: worktreeID)
             .appendingPathComponent("instructions", isDirectory: true)
             .appendingPathComponent("AGENTS.md")
+    }
+
+    func codexBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
+        projectDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("AGENTS.md")
+    }
+
+    func claudeBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
+        projectDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("CLAUDE.md")
+    }
+
+    func openCodeConfigFile(projectID: UUID, worktreeID: UUID) -> URL {
+        projectDirectory(projectID: projectID, worktreeID: worktreeID)
+            .appendingPathComponent("opencode.json")
     }
 
     private var pythonURL: URL {

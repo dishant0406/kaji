@@ -4,6 +4,7 @@ struct FooterTerminalOverlay: View {
     let projectID: UUID
     let terminalState: TerminalPaneState?
     let worktreeKey: WorktreeKey?
+    let worktreePath: String?
     let expanded: Bool
     let onToggle: (() -> Void)?
     let onProcessExit: () -> Void
@@ -20,6 +21,8 @@ struct FooterTerminalOverlay: View {
             }
             CLILauncherFooter(
                 projectID: projectID,
+                worktreeKey: worktreeKey,
+                worktreePath: worktreePath,
                 terminalExpanded: expanded,
                 onToggleTerminal: onToggle
             )

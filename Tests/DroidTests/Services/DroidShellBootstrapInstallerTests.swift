@@ -5,6 +5,32 @@ import Testing
 
 struct DroidShellBootstrapInstallerTests {
     @Test
+    func sourcesUserZshThenRestoresShimPath() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let home = root.appendingPathComponent("home", isDirectory: true)
+        let userZdotdir = root.appendingPathComponent("user-zsh", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: userZdotdir, withIntermediateDirectories: true)
+        try Data("export PATH=/real/bin:$PATH\n".utf8).write(to: userZdotdir.appendingPathComponent(".zshrc"))
+
+        let values = Dictionary(uniqueKeysWithValues: DroidShellBootstrapInstaller.install(
+            homeDirectory: home.path,
+            userZdotdir: userZdotdir.path,
+            fileManager: fileManager
+        ).map { ($0.key, $0.value) })
+        let zshrc = try String(
+            contentsOf: URL(fileURLWithPath: values["ZDOTDIR"] ?? "").appendingPathComponent(".zshrc"),
+            encoding: .utf8
+        )
+
+        #expect(values["DROID_USER_ZDOTDIR"] == userZdotdir.path)
+        #expect(zshrc.contains(". \"$_droid_user_zdotdir/.zshrc\""))
+        #expect(zshrc.contains("PATH=\"$DROID_AGENT_SHIM_DIR:$PATH\""))
+    }
+
+    @Test
     func agentFunctionsOverrideUserPathChanges() throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
