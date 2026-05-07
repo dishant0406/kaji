@@ -768,6 +768,7 @@ struct MainWindow: View {
                 projectID: project.id,
                 terminalState: footerTerminalStore.state(for: project.id),
                 worktreeKey: activeWorktreeKey,
+                worktreePath: activeWorktreePath(for: project),
                 expanded: isVisible,
                 onToggle: footerTerminalToggleAction,
                 onProcessExit: { footerTerminalProcessExited(projectID: project.id) }

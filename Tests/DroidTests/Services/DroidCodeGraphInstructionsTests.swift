@@ -43,6 +43,7 @@ struct DroidCodeGraphInstructionsTests {
         let claudeBridge = try #require(DroidCodeGraphInstructions.ensureClaudeBridge(
             projectID: projectID,
             worktreeID: worktreeID,
+            store: store,
             fileManager: fileManager
         ))
         let claudeText = try String(contentsOf: claudeBridge, encoding: .utf8)
@@ -51,6 +52,7 @@ struct DroidCodeGraphInstructionsTests {
         let codexBridge = try #require(DroidCodeGraphInstructions.ensureCodexBridge(
             projectID: projectID,
             worktreeID: worktreeID,
+            store: store,
             fileManager: fileManager
         ))
         let codexText = try String(contentsOf: codexBridge, encoding: .utf8)
@@ -60,6 +62,7 @@ struct DroidCodeGraphInstructionsTests {
             projectID: projectID,
             worktreeID: worktreeID,
             instructionFile: file,
+            store: store,
             fileManager: fileManager
         ))
         let openCodeText = try String(contentsOf: openCodeConfig, encoding: .utf8)

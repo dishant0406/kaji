@@ -42,6 +42,12 @@ struct CodingAgentShimScript {
 
         cwd = Path(os.environ.get("DROID_CODE_GRAPH_CWD", ".")).resolve()
         root = Path(os.environ.get("DROID_CODE_GRAPH_ROOT_DIR") or Path.home() / ".droid" / "extensions" / "droidcodegraph")
+        try:
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+        except Exception:
+            raise SystemExit
+        if not state.get("isEnabled") or state.get("phase") != "installed":
+            raise SystemExit
         best = None
         for graph in root.glob("projects/*/*/graphify-out/droid-graph.json"):
             try:

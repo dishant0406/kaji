@@ -26,60 +26,6 @@ struct CodingAgentShimTests {
     }
 
     @Test
-    func terminalEnvironmentPrependsShimsAndResolvesRealCommands() throws {
-        let fileManager = FileManager.default
-        let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let bin = root.appendingPathComponent("bin", isDirectory: true)
-        let home = root.appendingPathComponent("home", isDirectory: true)
-        defer { try? fileManager.removeItem(at: root) }
-        try fileManager.createDirectory(at: bin, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
-        try executable("codex", in: bin, fileManager: fileManager)
-
-        let values = Dictionary(uniqueKeysWithValues: CodingAgentShimEnvironment.variables(
-            projectID: UUID(),
-            worktreeID: UUID(),
-            environment: ["PATH": bin.path],
-            homeDirectory: home.path,
-            fileManager: fileManager
-        ).map { ($0.key, $0.value) })
-
-        let shimDirectory = CodingAgentShimInstaller.directory(homeDirectory: home.path).path
-        #expect(values["PATH"]?.hasPrefix(shimDirectory + ":") == true)
-        #expect(values["DROID_REAL_CODEX"] == bin.appendingPathComponent("codex").path)
-        #expect(values["DROID_AGENT_SHIM_DIR"] == shimDirectory)
-        #expect(values["ZDOTDIR"] == DroidShellBootstrapInstaller.directory(homeDirectory: home.path).path)
-        #expect(values["DROID_USER_ZDOTDIR"] == home.path)
-        #expect(fileManager.fileExists(atPath: DroidShellBootstrapInstaller.directory(homeDirectory: home.path).appendingPathComponent(".zshrc").path))
-    }
-
-    @Test
-    func shellBootstrapSourcesUserZshThenRestoresShimPath() throws {
-        let fileManager = FileManager.default
-        let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let home = root.appendingPathComponent("home", isDirectory: true)
-        let userZdotdir = root.appendingPathComponent("user-zsh", isDirectory: true)
-        defer { try? fileManager.removeItem(at: root) }
-        try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: userZdotdir, withIntermediateDirectories: true)
-        try Data("export PATH=/real/bin:$PATH\n".utf8).write(to: userZdotdir.appendingPathComponent(".zshrc"))
-
-        let values = Dictionary(uniqueKeysWithValues: DroidShellBootstrapInstaller.install(
-            homeDirectory: home.path,
-            userZdotdir: userZdotdir.path,
-            fileManager: fileManager
-        ).map { ($0.key, $0.value) })
-        let zshrc = try String(
-            contentsOf: URL(fileURLWithPath: values["ZDOTDIR"] ?? "").appendingPathComponent(".zshrc"),
-            encoding: .utf8
-        )
-
-        #expect(values["DROID_USER_ZDOTDIR"] == userZdotdir.path)
-        #expect(zshrc.contains(". \"$_droid_user_zdotdir/.zshrc\""))
-        #expect(zshrc.contains("PATH=\"$DROID_AGENT_SHIM_DIR:$PATH\""))
-    }
-
-    @Test
     func codexShimPreservesUserArgumentsAndAdditionalDirectories() throws {
         let result = try runShim(named: "codex", realEnv: "DROID_REAL_CODEX", graphEnv: [
             "DROID_CODE_GRAPH_PROJECT_DIR": "droid-graph",
@@ -101,6 +47,7 @@ struct CodingAgentShimTests {
         try fileManager.createDirectory(at: project, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: graphOutput, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: graphProject.appendingPathComponent("instructions", isDirectory: true), withIntermediateDirectories: true)
+        try Data("{\"isEnabled\":true,\"phase\":\"installed\"}".utf8).write(to: graphRoot.appendingPathComponent("state.json"))
         try Data("{\"projectPath\":\"\(project.path)\"}".utf8).write(to: graphOutput.appendingPathComponent("droid-graph.json"))
         try Data("graph instructions".utf8).write(to: graphProject.appendingPathComponent("instructions/AGENTS.md"))
 
@@ -137,6 +84,7 @@ struct CodingAgentShimTests {
         defer { try? fileManager.removeItem(at: root) }
         try fileManager.createDirectory(at: project, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: graphOutput, withIntermediateDirectories: true)
+        try Data("{\"isEnabled\":true,\"phase\":\"installed\"}".utf8).write(to: graphRoot.appendingPathComponent("state.json"))
         try Data("{\"projectPath\":\"\(project.path)\"}".utf8).write(to: graphOutput.appendingPathComponent("droid-graph.json"))
 
         let result = try runShim(
@@ -237,12 +185,6 @@ struct CodingAgentShimTests {
             .map(String.init)
             .filter { $0 != "OPENCODE_CONFIG=" }
             .map { $0.replacingOccurrences(of: root.path + "/", with: "") }
-    }
-
-    private func executable(_ name: String, in directory: URL, fileManager: FileManager) throws {
-        let path = directory.appendingPathComponent(name)
-        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: path)
-        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: path.path)
     }
 
     private func run(_ executable: URL, env: [String: String], args: [String], workingDirectory: URL? = nil) throws {

@@ -55,14 +55,24 @@ enum DroidCodeGraphInstructions {
         ]
     }
 
-    static func ensureClaudeBridge(projectID: UUID, worktreeID: UUID, fileManager: FileManager = .default) -> URL? {
-        let destination = DroidCodeGraphDirectory.claudeBridgeFile(projectID: projectID, worktreeID: worktreeID)
+    static func ensureClaudeBridge(
+        projectID: UUID,
+        worktreeID: UUID,
+        store: DroidCodeGraphStore = .shared,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        let destination = store.claudeBridgeFile(projectID: projectID, worktreeID: worktreeID)
         let content = ["# Droid Project Instructions", "", "@instructions/AGENTS.md"].joined(separator: "\n")
         return writeLaunchFile(destination, content: content, fileManager: fileManager)
     }
 
-    static func ensureCodexBridge(projectID: UUID, worktreeID: UUID, fileManager: FileManager = .default) -> URL? {
-        let destination = DroidCodeGraphDirectory.codexBridgeFile(projectID: projectID, worktreeID: worktreeID)
+    static func ensureCodexBridge(
+        projectID: UUID,
+        worktreeID: UUID,
+        store: DroidCodeGraphStore = .shared,
+        fileManager: FileManager = .default
+    ) -> URL? {
+        let destination = store.codexBridgeFile(projectID: projectID, worktreeID: worktreeID)
         let content = [
             "# Droid Project Instructions",
             "",
@@ -75,9 +85,10 @@ enum DroidCodeGraphInstructions {
         projectID: UUID,
         worktreeID: UUID,
         instructionFile: URL,
+        store: DroidCodeGraphStore = .shared,
         fileManager: FileManager = .default
     ) -> URL? {
-        let destination = DroidCodeGraphDirectory.openCodeConfigFile(projectID: projectID, worktreeID: worktreeID)
+        let destination = store.openCodeConfigFile(projectID: projectID, worktreeID: worktreeID)
         let payload: [String: Any] = [
             "$schema": "https://opencode.ai/config.json",
             "instructions": [instructionFile.path],
