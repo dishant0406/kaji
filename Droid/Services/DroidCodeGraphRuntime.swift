@@ -11,11 +11,10 @@ final class DroidCodeGraphRuntime {
     var runningKeys: Set<String> = []
     var lastStatus: [String: DroidCodeGraphStatus] = [:]
     var lastError: [String: String] = [:]
+    @ObservationIgnored private let finalizer: DroidCodeGraphFinalizer
 
-    private let runner: any DroidCodeGraphProcessRunning
-
-    init(runner: any DroidCodeGraphProcessRunning = DroidCodeGraphProcessRunner()) {
-        self.runner = runner
+    init(finalizer: DroidCodeGraphFinalizer = DroidCodeGraphFinalizer()) {
+        self.finalizer = finalizer
     }
 
     func isRunning(projectID: UUID, worktreeID: UUID) -> Bool {
@@ -36,11 +35,26 @@ final class DroidCodeGraphRuntime {
             .appendingPathComponent("GRAPH_REPORT.md")
     }
 
-    func build(_ request: DroidCodeGraphRunRequest) async {
-        await run(request)
+    func build(
+        _ request: DroidCodeGraphRunRequest,
+        appState: AppState,
+        projectStore: ProjectStore,
+        worktreeStore: WorktreeStore
+    ) async {
+        await run(
+            request,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
     }
 
-    private func run(_ request: DroidCodeGraphRunRequest) async {
+    private func run(
+        _ request: DroidCodeGraphRunRequest,
+        appState: AppState,
+        projectStore: ProjectStore,
+        worktreeStore: WorktreeStore
+    ) async {
         let runKey = key(projectID: request.projectID, worktreeID: request.worktreeID)
         guard !runningKeys.contains(runKey) else { return }
         runningKeys.insert(runKey)
@@ -48,13 +62,15 @@ final class DroidCodeGraphRuntime {
         defer { runningKeys.remove(runKey) }
 
         do {
+            try validateParentAgent()
+            try validateGraphifySkill()
             try DroidCodeGraphDirectory.createBaseDirectories()
-            try FileManager.default.createDirectory(
-                at: DroidCodeGraphDirectory.graphOutputDirectory(projectID: request.projectID, worktreeID: request.worktreeID),
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
+            let status = try await executeWithParentAgent(
+                request,
+                appState: appState,
+                projectStore: projectStore,
+                worktreeStore: worktreeStore
             )
-            let status = try await execute(request)
             lastStatus[runKey] = status
         } catch {
             lastError[runKey] = error.localizedDescription
@@ -62,40 +78,112 @@ final class DroidCodeGraphRuntime {
         }
     }
 
-    private func execute(_ request: DroidCodeGraphRunRequest) async throws -> DroidCodeGraphStatus {
-        let out = DroidCodeGraphDirectory.graphOutputDirectory(
-            projectID: request.projectID,
-            worktreeID: request.worktreeID
-        )
-        let snapshot = await DroidCodeGraphGitSnapshot.capture(projectPath: request.projectPath)
-        let result = try await runner.run(
-            executable: DroidCodeGraphDirectory.python.path,
-            arguments: [
-                DroidCodeGraphDirectory.adapterScript.path,
-                request.mode,
-                "--project",
-                request.projectPath,
-                "--out",
-                out.path,
-            ],
-            workingDirectory: request.projectPath,
-            environment: [
-                "PYTHONPATH": DroidCodeGraphDirectory.graphify.path,
-                "GRAPHIFY_VIZ_NODE_LIMIT": "0",
-            ]
-        )
-        guard result.status == 0 else {
-            let detail = result.stderr.isEmpty ? result.stdout : result.stderr
-            throw DroidCodeGraphInstallerError.commandFailed("droidcodegraph \(request.mode)", result.status, detail)
+    private func validateParentAgent() throws {
+        let settings = ParentAgentSettingsStore.shared
+        guard settings.readiness.isReady else {
+            NotificationCenter.default.post(name: .openParentAgentSettings, object: nil)
+            throw DroidCodeGraphInstallerError.commandFailed("Droid parent agent", 1, settings.readiness.detail)
         }
-        let data = try Data(contentsOf: out.appendingPathComponent("status.json"))
-        _ = try DroidCodeGraphVersionArchive.record(
-            projectID: request.projectID,
-            worktreeID: request.worktreeID,
-            outputDirectory: out,
-            snapshot: snapshot
+        guard settings.authStatus.configured else {
+            NotificationCenter.default.post(name: .openParentAgentSettings, object: nil)
+            throw DroidCodeGraphInstallerError.commandFailed("Droid parent agent", 1, settings.authStatus.label)
+        }
+    }
+
+    private func validateGraphifySkill() throws {
+        guard FileManager.default.fileExists(atPath: DroidCodeGraphAgentPrompt.skillURL.path) else {
+            throw DroidCodeGraphInstallerError.commandFailed(
+                "DroidCodeGraph skill",
+                1,
+                "Graphify skill file is missing. Reinstall DroidCodeGraph from Extensions."
+            )
+        }
+    }
+
+    private func executeWithParentAgent(
+        _ request: DroidCodeGraphRunRequest,
+        appState: AppState,
+        projectStore: ProjectStore,
+        worktreeStore: WorktreeStore
+    ) async throws -> DroidCodeGraphStatus {
+        let output = DroidCodeGraphDirectory.graphOutputDirectory(projectID: request.projectID, worktreeID: request.worktreeID)
+        let work = output.appendingPathComponent("agent-work", isDirectory: true)
+        let buildID = UUID().uuidString
+        let snapshot = await DroidCodeGraphGitSnapshot.capture(projectPath: request.projectPath)
+        try prepare(output: output, work: work, request: request, buildID: buildID)
+        let session = try DroidCodeGraphAgentCoordinator.shared.start(
+            request: request,
+            prompt: DroidCodeGraphAgentPrompt.make(request: request, output: output, work: work, buildID: buildID),
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
         )
-        return try JSONDecoder().decode(DroidCodeGraphStatus.self, from: data)
+        let status = try await waitForFinalStatus(output: output, work: work, request: request, buildID: buildID, session: session)
+        if status.ok {
+            _ = try DroidCodeGraphVersionArchive.record(
+                projectID: request.projectID,
+                worktreeID: request.worktreeID,
+                outputDirectory: output,
+                snapshot: snapshot
+            )
+        }
+        return status
+    }
+
+    private func prepare(output: URL, work: URL, request: DroidCodeGraphRunRequest, buildID: String) throws {
+        try FileManager.default.createDirectory(
+            at: output,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try? FileManager.default.removeItem(at: work)
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try writeStatus(output: output, request: request, buildID: buildID)
+    }
+
+    private func writeStatus(output: URL, request: DroidCodeGraphRunRequest, buildID: String) throws {
+        let payload: [String: Any] = [
+            "ok": false,
+            "mode": request.mode,
+            "nodes": 0,
+            "edges": 0,
+            "communities": 0,
+            "graphPath": output.appendingPathComponent("graph.json").path,
+            "droidGraphPath": output.appendingPathComponent("droid-graph.json").path,
+            "reportPath": output.appendingPathComponent("GRAPH_REPORT.md").path,
+            "buildID": buildID,
+            "state": "running",
+            "message": "Parent Agent launched Graphify build",
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: output.appendingPathComponent("status.json"), options: .atomic)
+    }
+
+    private func waitForFinalStatus(
+        output: URL,
+        work: URL,
+        request: DroidCodeGraphRunRequest,
+        buildID: String,
+        session: DroidCodeGraphAgentSession
+    ) async throws -> DroidCodeGraphStatus {
+        let deadline = Date().addingTimeInterval(14400)
+        while Date() < deadline {
+            if let status = finalizer.readFinalStatus(output: output, buildID: buildID) {
+                return status
+            }
+            if let status = try await finalizer.finalizeIfReady(request: request, output: output, work: work, buildID: buildID) {
+                return status
+            }
+            if session.status.isTerminal {
+                throw DroidCodeGraphInstallerError.commandFailed(
+                    "DroidCodeGraph agent build",
+                    1,
+                    "Graph agent finished before producing importable Graphify output."
+                )
+            }
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+        throw DroidCodeGraphInstallerError.commandFailed("DroidCodeGraph agent build", 124, "Timed out waiting for Graphify finalizer.")
     }
 
     private func key(projectID: UUID, worktreeID: UUID) -> String {

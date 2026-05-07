@@ -31,6 +31,8 @@ struct DroidCodeGraphStatus: Codable, Equatable {
     let graphPath: String
     let droidGraphPath: String
     let reportPath: String
+    let buildID: String?
+    let state: String?
     let message: String?
 }
 

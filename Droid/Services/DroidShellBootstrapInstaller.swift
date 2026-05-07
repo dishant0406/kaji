@@ -56,9 +56,15 @@ enum DroidShellBootstrapInstaller {
             *) PATH="$DROID_AGENT_SHIM_DIR:$PATH" ;;
           esac
           export PATH
+          for _droid_agent in codex claude claude-code opencode pi; do
+            if [ -x "$DROID_AGENT_SHIM_DIR/$_droid_agent" ]; then
+              eval "$_droid_agent() { \\"$DROID_AGENT_SHIM_DIR/$_droid_agent\\" \\"\\$@\\"; }"
+            fi
+          done
+          hash -r 2>/dev/null || true
           unset _droid_path
         fi
-        unset _droid_proxy_zdotdir _droid_user_zdotdir
+        unset _droid_agent _droid_proxy_zdotdir _droid_user_zdotdir
         """
     }
 }

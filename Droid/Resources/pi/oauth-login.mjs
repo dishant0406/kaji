@@ -8038,9 +8038,9 @@ var MODELS = {
     "big-pickle": {
       id: "big-pickle",
       name: "Big Pickle",
-      api: "anthropic-messages",
+      api: "openai-completions",
       provider: "opencode",
-      baseUrl: "https://opencode.ai/zen",
+      baseUrl: "https://opencode.ai/zen/v1",
       reasoning: true,
       input: ["text"],
       cost: {
@@ -8306,9 +8306,9 @@ var MODELS = {
       thinkingLevelMap: { "off": null },
       input: ["text", "image"],
       cost: {
-        input: 0,
-        output: 0,
-        cacheRead: 0,
+        input: 0.05,
+        output: 0.4,
+        cacheRead: 5e-3,
         cacheWrite: 0
       },
       contextWindow: 4e5,
@@ -8794,54 +8794,20 @@ var MODELS = {
     },
     "kimi-k2.6": {
       id: "kimi-k2.6",
-      name: "Kimi K2.6 (3x limits)",
+      name: "Kimi K2.6",
       api: "openai-completions",
       provider: "opencode-go",
       baseUrl: "https://opencode.ai/zen/go/v1",
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 0.32,
-        output: 1.34,
-        cacheRead: 0.054,
+        input: 0.95,
+        output: 4,
+        cacheRead: 0.16,
         cacheWrite: 0
       },
       contextWindow: 262144,
       maxTokens: 65536
-    },
-    "mimo-v2-omni": {
-      id: "mimo-v2-omni",
-      name: "MiMo V2 Omni",
-      api: "openai-completions",
-      provider: "opencode-go",
-      baseUrl: "https://opencode.ai/zen/go/v1",
-      reasoning: true,
-      input: ["text", "image"],
-      cost: {
-        input: 0.4,
-        output: 2,
-        cacheRead: 0.08,
-        cacheWrite: 0
-      },
-      contextWindow: 262144,
-      maxTokens: 128e3
-    },
-    "mimo-v2-pro": {
-      id: "mimo-v2-pro",
-      name: "MiMo V2 Pro",
-      api: "openai-completions",
-      provider: "opencode-go",
-      baseUrl: "https://opencode.ai/zen/go/v1",
-      reasoning: true,
-      input: ["text"],
-      cost: {
-        input: 1,
-        output: 3,
-        cacheRead: 0.2,
-        cacheWrite: 0
-      },
-      contextWindow: 1048576,
-      maxTokens: 128e3
     },
     "mimo-v2.5": {
       id: "mimo-v2.5",
@@ -8982,23 +8948,6 @@ var MODELS = {
       },
       contextWindow: 131072,
       maxTokens: 131072
-    },
-    "allenai/olmo-3.1-32b-instruct": {
-      id: "allenai/olmo-3.1-32b-instruct",
-      name: "AllenAI: Olmo 3.1 32B Instruct",
-      api: "openai-completions",
-      provider: "openrouter",
-      baseUrl: "https://openrouter.ai/api/v1",
-      reasoning: false,
-      input: ["text"],
-      cost: {
-        input: 0.19999999999999998,
-        output: 0.6,
-        cacheRead: 0,
-        cacheWrite: 0
-      },
-      contextWindow: 65536,
-      maxTokens: 16384
     },
     "amazon/nova-2-lite-v1": {
       id: "amazon/nova-2-lite-v1",
@@ -9410,6 +9359,23 @@ var MODELS = {
       },
       contextWindow: 2e6,
       maxTokens: 3e4
+    },
+    "baidu/cobuddy:free": {
+      id: "baidu/cobuddy:free",
+      name: "Baidu Qianfan: CoBuddy (free)",
+      api: "openai-completions",
+      provider: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      reasoning: true,
+      input: ["text"],
+      cost: {
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0
+      },
+      contextWindow: 131072,
+      maxTokens: 65536
     },
     "baidu/ernie-4.5-21b-a3b": {
       id: "baidu/ernie-4.5-21b-a3b",
@@ -10078,18 +10044,18 @@ var MODELS = {
       contextWindow: 128e3,
       maxTokens: 5e4
     },
-    "inclusionai/ling-2.6-1t:free": {
-      id: "inclusionai/ling-2.6-1t:free",
-      name: "inclusionAI: Ling-2.6-1T (free)",
+    "inclusionai/ling-2.6-1t": {
+      id: "inclusionai/ling-2.6-1t",
+      name: "inclusionAI: Ling-2.6-1T",
       api: "openai-completions",
       provider: "openrouter",
       baseUrl: "https://openrouter.ai/api/v1",
       reasoning: false,
       input: ["text"],
       cost: {
-        input: 0,
-        output: 0,
-        cacheRead: 0,
+        input: 0.3,
+        output: 2.5,
+        cacheRead: 0.06,
         cacheWrite: 0
       },
       contextWindow: 262144,
@@ -10128,23 +10094,6 @@ var MODELS = {
       },
       contextWindow: 256e3,
       maxTokens: 8e4
-    },
-    "meta-llama/llama-3-8b-instruct": {
-      id: "meta-llama/llama-3-8b-instruct",
-      name: "Meta: Llama 3 8B Instruct",
-      api: "openai-completions",
-      provider: "openrouter",
-      baseUrl: "https://openrouter.ai/api/v1",
-      reasoning: false,
-      input: ["text"],
-      cost: {
-        input: 0.03,
-        output: 0.04,
-        cacheRead: 0,
-        cacheWrite: 0
-      },
-      contextWindow: 8192,
-      maxTokens: 16384
     },
     "meta-llama/llama-3.1-70b-instruct": {
       id: "meta-llama/llama-3.1-70b-instruct",
@@ -10784,13 +10733,13 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 0.74,
-        output: 3.49,
-        cacheRead: 0.14,
+        input: 0.75,
+        output: 3.5,
+        cacheRead: 0.15,
         cacheWrite: 0
       },
-      contextWindow: 262142,
-      maxTokens: 262142
+      contextWindow: 262144,
+      maxTokens: 16384
     },
     "nex-agi/deepseek-v3.1-nex-n1": {
       id: "nex-agi/deepseek-v3.1-nex-n1",
@@ -12411,7 +12360,7 @@ var MODELS = {
       reasoning: false,
       input: ["text"],
       cost: {
-        input: 0.12,
+        input: 0.11,
         output: 0.7999999999999999,
         cacheRead: 0.07,
         cacheWrite: 0
@@ -12700,13 +12649,13 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 0.15,
+        input: 0.14,
         output: 1,
         cacheRead: 0.049999999999999996,
         cacheWrite: 0
       },
       contextWindow: 262144,
-      maxTokens: 262144
+      maxTokens: 81920
     },
     "qwen/qwen3.5-397b-a17b": {
       id: "qwen/qwen3.5-397b-a17b",
@@ -12734,13 +12683,13 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 0.09999999999999999,
+        input: 0.04,
         output: 0.15,
         cacheRead: 0,
         cacheWrite: 0
       },
       contextWindow: 262144,
-      maxTokens: 4096
+      maxTokens: 81920
     },
     "qwen/qwen3.5-flash-02-23": {
       id: "qwen/qwen3.5-flash-02-23",
@@ -13471,7 +13420,7 @@ var MODELS = {
         cacheWrite: 0
       },
       contextWindow: 202752,
-      maxTokens: 16384
+      maxTokens: 4096
     },
     "z-ai/glm-5-turbo": {
       id: "z-ai/glm-5-turbo",
@@ -13618,13 +13567,13 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 0.74,
-        output: 3.49,
-        cacheRead: 0.14,
+        input: 0.75,
+        output: 3.5,
+        cacheRead: 0.15,
         cacheWrite: 0
       },
-      contextWindow: 262142,
-      maxTokens: 262142
+      contextWindow: 262144,
+      maxTokens: 16384
     },
     "~openai/gpt-latest": {
       id: "~openai/gpt-latest",
@@ -16014,8 +15963,8 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 2,
-        output: 6,
+        input: 1.25,
+        output: 2.5,
         cacheRead: 0.19999999999999998,
         cacheWrite: 0
       },
@@ -16031,8 +15980,8 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 2,
-        output: 6,
+        input: 1.25,
+        output: 2.5,
         cacheRead: 0.19999999999999998,
         cacheWrite: 0
       },
@@ -16048,8 +15997,8 @@ var MODELS = {
       reasoning: false,
       input: ["text", "image"],
       cost: {
-        input: 2,
-        output: 6,
+        input: 1.25,
+        output: 2.5,
         cacheRead: 0.19999999999999998,
         cacheWrite: 0
       },
@@ -16065,8 +16014,8 @@ var MODELS = {
       reasoning: false,
       input: ["text", "image"],
       cost: {
-        input: 2,
-        output: 6,
+        input: 1.25,
+        output: 2.5,
         cacheRead: 0.19999999999999998,
         cacheWrite: 0
       },
@@ -16082,8 +16031,8 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 2,
-        output: 6,
+        input: 1.25,
+        output: 2.5,
         cacheRead: 0.19999999999999998,
         cacheWrite: 0
       },
@@ -16099,8 +16048,8 @@ var MODELS = {
       reasoning: true,
       input: ["text", "image"],
       cost: {
-        input: 2,
-        output: 6,
+        input: 1.25,
+        output: 2.5,
         cacheRead: 0.19999999999999998,
         cacheWrite: 0
       },
@@ -16873,8 +16822,8 @@ var MODELS = {
         cacheRead: 0.01,
         cacheWrite: 0
       },
-      contextWindow: 256e3,
-      maxTokens: 64e3
+      contextWindow: 262144,
+      maxTokens: 65536
     },
     "mimo-v2-omni": {
       id: "mimo-v2-omni",
@@ -16890,8 +16839,8 @@ var MODELS = {
         cacheRead: 0.08,
         cacheWrite: 0
       },
-      contextWindow: 256e3,
-      maxTokens: 128e3
+      contextWindow: 262144,
+      maxTokens: 131072
     },
     "mimo-v2-pro": {
       id: "mimo-v2-pro",
@@ -16907,8 +16856,8 @@ var MODELS = {
         cacheRead: 0.2,
         cacheWrite: 0
       },
-      contextWindow: 1e6,
-      maxTokens: 128e3
+      contextWindow: 1048576,
+      maxTokens: 131072
     },
     "mimo-v2.5": {
       id: "mimo-v2.5",

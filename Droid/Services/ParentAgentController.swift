@@ -5,14 +5,15 @@ final class ParentAgentController {
     static let shared = ParentAgentController()
 
     let process = ParentAgentProcess()
-    let store = ParentAgentTaskStore.shared
+    let store: ParentAgentTaskStore
     weak var appState: AppState?
     weak var projectStore: ProjectStore?
     weak var worktreeStore: WorktreeStore?
     var childRunLocators: [UUID: ParentAgentChildRunLocator] = [:]
     var mutationTail: Task<Void, Never>?
 
-    private init() {
+    init(store: ParentAgentTaskStore = .shared) {
+        self.store = store
         process.onMessage = { [weak self] message in
             self?.handle(message)
         }

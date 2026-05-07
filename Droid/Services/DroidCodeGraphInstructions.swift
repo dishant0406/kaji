@@ -9,9 +9,9 @@ enum DroidCodeGraphInstructions {
         fileManager: FileManager = .default
     ) -> URL? {
         guard store.isReady else { return nil }
-        let graphURL = DroidCodeGraphRuntime.shared.droidGraphURL(projectID: projectID, worktreeID: worktreeID)
+        let graphURL = store.droidGraphURL(projectID: projectID, worktreeID: worktreeID)
         guard fileManager.fileExists(atPath: graphURL.path) else { return nil }
-        let destination = DroidCodeGraphDirectory.instructionFile(projectID: projectID, worktreeID: worktreeID)
+        let destination = store.instructionFile(projectID: projectID, worktreeID: worktreeID)
         do {
             try fileManager.createDirectory(
                 at: destination.deletingLastPathComponent(),
@@ -19,7 +19,7 @@ enum DroidCodeGraphInstructions {
                 attributes: [.posixPermissions: 0o700]
             )
             if !fileManager.fileExists(atPath: destination.path) {
-                let content = defaultText(projectID: projectID, worktreeID: worktreeID)
+                let content = defaultText(projectID: projectID, worktreeID: worktreeID, store: store)
                 try Data(content.utf8).write(to: destination, options: .atomic)
             }
             try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
@@ -29,17 +29,28 @@ enum DroidCodeGraphInstructions {
         }
     }
 
-    static func environment(projectID: UUID, worktreeID: UUID) -> [(key: String, value: String)] {
-        guard let file = ensureFile(projectID: projectID, worktreeID: worktreeID) else { return [] }
+    static func environment(
+        projectID: UUID,
+        worktreeID: UUID,
+        store: DroidCodeGraphStore = .shared,
+        fileManager: FileManager = .default
+    ) -> [(key: String, value: String)] {
+        guard let file = ensureFile(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            store: store,
+            fileManager: fileManager
+        )
+        else { return [] }
         return [
             (key: "DROID_CODE_GRAPH_INSTRUCTIONS", value: file.path),
             (
                 key: "DROID_CODE_GRAPH_REPORT",
-                value: DroidCodeGraphRuntime.shared.reportURL(projectID: projectID, worktreeID: worktreeID).path
+                value: store.reportURL(projectID: projectID, worktreeID: worktreeID).path
             ),
             (
                 key: "DROID_CODE_GRAPH_JSON",
-                value: DroidCodeGraphRuntime.shared.droidGraphURL(projectID: projectID, worktreeID: worktreeID).path
+                value: store.droidGraphURL(projectID: projectID, worktreeID: worktreeID).path
             ),
         ]
     }
@@ -47,6 +58,16 @@ enum DroidCodeGraphInstructions {
     static func ensureClaudeBridge(projectID: UUID, worktreeID: UUID, fileManager: FileManager = .default) -> URL? {
         let destination = DroidCodeGraphDirectory.claudeBridgeFile(projectID: projectID, worktreeID: worktreeID)
         let content = ["# Droid Project Instructions", "", "@instructions/AGENTS.md"].joined(separator: "\n")
+        return writeLaunchFile(destination, content: content, fileManager: fileManager)
+    }
+
+    static func ensureCodexBridge(projectID: UUID, worktreeID: UUID, fileManager: FileManager = .default) -> URL? {
+        let destination = DroidCodeGraphDirectory.codexBridgeFile(projectID: projectID, worktreeID: worktreeID)
+        let content = [
+            "# Droid Project Instructions",
+            "",
+            "Read instructions/AGENTS.md before answering architecture, dependency, or codebase navigation questions.",
+        ].joined(separator: "\n")
         return writeLaunchFile(destination, content: content, fileManager: fileManager)
     }
 
@@ -67,9 +88,9 @@ enum DroidCodeGraphInstructions {
         return writeLaunchFile(destination, content: content, fileManager: fileManager)
     }
 
-    private static func defaultText(projectID: UUID, worktreeID: UUID) -> String {
-        let graphURL = DroidCodeGraphRuntime.shared.droidGraphURL(projectID: projectID, worktreeID: worktreeID)
-        let reportURL = DroidCodeGraphRuntime.shared.reportURL(projectID: projectID, worktreeID: worktreeID)
+    private static func defaultText(projectID: UUID, worktreeID: UUID, store: DroidCodeGraphStore) -> String {
+        let graphURL = store.droidGraphURL(projectID: projectID, worktreeID: worktreeID)
+        let reportURL = store.reportURL(projectID: projectID, worktreeID: worktreeID)
         return [
             "# Droid Project Instructions",
             "",

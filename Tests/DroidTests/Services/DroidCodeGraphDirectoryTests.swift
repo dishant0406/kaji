@@ -9,10 +9,12 @@ struct DroidCodeGraphDirectoryTests {
     func extensionRootUsesEnvironmentOverride() {
         let override = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        DroidCodeGraphEnvironmentTestLock.lock()
         setenv("DROID_EXTENSIONS_DIR", override.path, 1)
         defer {
             unsetenv("DROID_EXTENSIONS_DIR")
             try? FileManager.default.removeItem(at: override)
+            DroidCodeGraphEnvironmentTestLock.unlock()
         }
 
         #expect(DroidCodeGraphDirectory.root.path == override.appendingPathComponent("droidcodegraph").path)

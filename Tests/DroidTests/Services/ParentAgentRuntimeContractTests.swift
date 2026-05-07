@@ -39,6 +39,17 @@ struct ParentAgentRuntimeContractTests {
         #expect(!text.contains("activeTaskID"))
     }
 
+    @Test("runtime exposes scoped graph-agent tools")
+    func runtimeExposesGraphAgentTools() throws {
+        for text in [try bundledRuntimeText(), try sourceRuntimeText()] {
+            #expect(text.contains("DROID_PARENT_AGENT_MODE"))
+            #expect(text.contains("graph_read_file"))
+            #expect(text.contains("graph_write_file"))
+            #expect(text.contains("graph_shell"))
+            #expect(text.contains("Do not choose or spawn Codex"))
+        }
+    }
+
     private func bundledRuntimeText() throws -> String {
         let url = try #require(ParentAgentRuntimeLocator.bundledScriptURL())
         return try String(contentsOf: url, encoding: .utf8)

@@ -9,10 +9,12 @@ struct DroidCodeGraphVersionArchiveTests {
     func archivesGraphFilesAndAnnotatesMetadata() throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        DroidCodeGraphEnvironmentTestLock.lock()
         setenv("DROID_EXTENSIONS_DIR", root.path, 1)
         defer {
             unsetenv("DROID_EXTENSIONS_DIR")
             try? fileManager.removeItem(at: root)
+            DroidCodeGraphEnvironmentTestLock.unlock()
         }
 
         let projectID = UUID()

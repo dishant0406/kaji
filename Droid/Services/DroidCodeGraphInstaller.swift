@@ -113,10 +113,19 @@ struct DroidCodeGraphInstaller {
     }
 
     private func copyAdapter() throws {
+        try Self.installBundledAdapter()
+    }
+
+    static func installBundledAdapter() throws {
         guard let source = Self.bundledAdapterURL else {
             throw DroidCodeGraphInstallerError.missingBundledAdapter
         }
         let destination = DroidCodeGraphDirectory.adapterScript
+        try FileManager.default.createDirectory(
+            at: DroidCodeGraphDirectory.adapter,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }
