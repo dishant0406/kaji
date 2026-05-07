@@ -79,6 +79,7 @@ final class ParentAgentProcess {
             environment["DROID_PARENT_MODEL"] ?? "",
             environment["DROID_PARENT_THINKING"] ?? "",
             environment["DROID_PARENT_AGENT_MODE"] ?? "",
+            environment["GRAPHIFY_OUT"] ?? "",
             environment["DROID_GRAPH_READ_ROOTS"] ?? "",
             environment["DROID_GRAPH_WRITE_ROOTS"] ?? "",
             environment["DROID_GRAPH_SHELL_ROOTS"] ?? "",

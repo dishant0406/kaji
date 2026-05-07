@@ -146,6 +146,8 @@ function graphSystemPrompt() {
 		"Read the Graphify skill file path from the user prompt when it exists and follow it as a plain instruction document.",
 		"Do not rely on /graphify being installed as a slash command.",
 		"Run all temporary Graphify work inside the Droid work directory from the user prompt.",
+		"When invoking Graphify's CLI or Python module, pass --out with the Droid work directory and keep GRAPHIFY_OUT on that work directory's graphify-out path.",
+		"Never invoke Graphify with its default output path because that writes graphify-out into the target project.",
 		"Keep the target project untouched. Do not create or edit AGENTS.md, CLAUDE.md, graphify-out, or hook files inside the target project.",
 		"After Graphify outputs are ready, run the Droid finalizer command exactly as provided.",
 		"Be concise and report what completed or failed.",
@@ -395,10 +397,26 @@ function writeFile(params: Record<string, unknown>) {
 	return { path, bytes: Buffer.byteLength(content, "utf8") };
 }
 
+function blockedGraphifyCommand(command: string) {
+	if (agentMode() !== "droidcodegraph") return undefined;
+	if (/\s--out(?:\s|=)/.test(` ${command} `)) return undefined;
+	const invokesGraphify =
+		/(^|[;&|]\s*)graphify(?=$|[\s;&|])/.test(command) ||
+		/(^|[\s;&|])-m\s+graphify(?=$|[\s;&|])/.test(command);
+	if (!invokesGraphify) return undefined;
+	const work = process.env.DROID_GRAPH_WORK_DIR ?? "the Droid work directory";
+	return [
+		"DroidCodeGraph blocked Graphify's default output path.",
+		`Run it with --out ${work} and GRAPHIFY_OUT=${work}/graphify-out.`,
+	].join(" ");
+}
+
 async function runShell(params: Record<string, unknown>, signal?: AbortSignal) {
 	const command = typeof params.command === "string" ? params.command : "";
 	if (!command.trim()) throw new Error("command is required");
 	const cwd = requireWithin(existingPath(normalizePath(params.cwd)), shellRoots(), "shell");
+	const blocked = blockedGraphifyCommand(command);
+	if (blocked) return { cwd, exitCode: 2, stdout: "", stderr: blocked, truncated: false };
 	const timeout = Math.max(1000, Math.min(Number(params.timeoutSeconds ?? 600) * 1000, 3600000));
 	const maxBytes = Math.max(1000, Math.min(Number(params.maxBytes ?? 24000), 200000));
 	const result = await execFileAsync("/bin/zsh", ["-lc", command], {

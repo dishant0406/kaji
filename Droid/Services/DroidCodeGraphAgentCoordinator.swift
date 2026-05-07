@@ -129,8 +129,12 @@ final class DroidCodeGraphAgentCoordinator {
     private func graphAgentEnvironment(request: DroidCodeGraphRunRequest, directory: URL) throws -> [String: String] {
         let work = DroidCodeGraphDirectory.graphOutputDirectory(projectID: request.projectID, worktreeID: request.worktreeID)
             .appendingPathComponent("agent-work", isDirectory: true)
+        let graphifyOutput = work.appendingPathComponent("graphify-out", isDirectory: true)
         return try [
             "DROID_PARENT_AGENT_MODE": "droidcodegraph",
+            "GRAPHIFY_OUT": graphifyOutput.path,
+            "DROID_GRAPH_PROJECT_PATH": request.projectPath,
+            "DROID_GRAPH_WORK_DIR": work.path,
             "DROID_GRAPH_READ_ROOTS": json([
                 request.projectPath,
                 directory.path,
