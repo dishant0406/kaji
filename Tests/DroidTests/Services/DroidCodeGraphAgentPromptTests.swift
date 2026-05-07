@@ -25,5 +25,9 @@ struct DroidCodeGraphAgentPromptTests {
         #expect(prompt.contains("Do not report that no Droid finalizer command was provided"))
         #expect(prompt.contains("buildID build-1"))
         #expect(prompt.contains("Keep project files untouched"))
+        #expect(prompt.contains("--out /tmp/droid graph/out/agent-work"))
+        #expect(prompt.contains("GRAPHIFY_OUT=/tmp/droid graph/out/agent-work/graphify-out"))
+        #expect(prompt.contains("Never run Graphify with its default output path"))
+        #expect(prompt.contains("/tmp/My App/graphify-out"))
     }
 }
