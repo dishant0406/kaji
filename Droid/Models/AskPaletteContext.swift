@@ -16,6 +16,10 @@ struct AskPaletteContext {
     let directoryOptions: [AskDirectoryOption]
     let projectName: String
     let worktreeName: String
+    let sleepPreventionIsEnabled: Bool
+    let systemSleepAssertionStatus: SystemSleepAssertionStatus
+    let batteryLidCloseSleepIsEnabled: Bool
+    let batteryLidCloseSleepStatus: SystemSleepAssertionStatus
 
     init(
         fieldText: String,
@@ -32,7 +36,11 @@ struct AskPaletteContext {
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
         projectName: String,
-        worktreeName: String
+        worktreeName: String,
+        sleepPreventionIsEnabled: Bool = false,
+        systemSleepAssertionStatus: SystemSleepAssertionStatus = .inactive,
+        batteryLidCloseSleepIsEnabled: Bool = false,
+        batteryLidCloseSleepStatus: SystemSleepAssertionStatus = .inactive
     ) {
         self.fieldText = fieldText
         self.prompt = prompt
@@ -49,5 +57,9 @@ struct AskPaletteContext {
         self.directoryOptions = directoryOptions
         self.projectName = projectName
         self.worktreeName = worktreeName
+        self.sleepPreventionIsEnabled = sleepPreventionIsEnabled
+        self.systemSleepAssertionStatus = systemSleepAssertionStatus
+        self.batteryLidCloseSleepIsEnabled = batteryLidCloseSleepIsEnabled
+        self.batteryLidCloseSleepStatus = batteryLidCloseSleepStatus
     }
 }

@@ -6,7 +6,7 @@ struct AgentInstructionMarkdownPreview: View {
     var body: some View {
         if let document {
             NativeMarkdownView(content: document.content, filePath: document.path)
-            .background(DroidTheme.bg)
+                .background(DroidTheme.bg)
         } else {
             VStack(spacing: 8) {
                 DroidIcon(systemName: "doc.text", size: 22)

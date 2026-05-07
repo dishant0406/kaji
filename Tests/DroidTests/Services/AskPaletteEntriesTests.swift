@@ -58,7 +58,55 @@ struct AskPaletteEntriesTests {
 
         #expect(entries.map(\.title).contains("Project"))
         #expect(entries.map(\.title).contains("Provider"))
+        #expect(entries.map(\.title).contains("Prevent Sleep"))
+        #expect(entries.map(\.title).contains("Battery Lid Sleep"))
         #expect(entries.first(where: { $0.title == "Project" })?.annotation == "/project")
+    }
+
+    @Test
+    @MainActor
+    func sleepSlashCommandShowsToggleEntry() {
+        let entries = AskPaletteEntries.build(
+            .init(
+                fieldText: "/sleep",
+                prompt: "",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                historyOptions: [],
+                skillOptions: [],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
+        )
+
+        #expect(entries.count == 1)
+        #expect(entries.first?.action == .toggleSleepPrevention)
+    }
+
+    @Test
+    @MainActor
+    func lidSlashCommandShowsBatteryLidCloseToggleEntry() {
+        let entries = AskPaletteEntries.build(
+            .init(
+                fieldText: "/lid",
+                prompt: "",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                historyOptions: [],
+                skillOptions: [],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
+        )
+
+        #expect(entries.count == 1)
+        #expect(entries.first?.action == .toggleBatteryLidCloseSleepPrevention)
     }
 
     @Test

@@ -115,6 +115,10 @@ private struct AskPaletteRow: View {
              .openScriptForm,
              .deleteScript:
             "chevron.left.forwardslash.chevron.right"
+        case .toggleSleepPrevention:
+            "moon.zzz"
+        case .toggleBatteryLidCloseSleepPrevention:
+            "laptopcomputer"
         case .launchProvider:
             "play"
         case .submit:

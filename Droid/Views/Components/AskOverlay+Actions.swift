@@ -209,6 +209,12 @@ extension AskOverlay {
         case let .deleteScript(script):
             scriptStore.delete(script)
             highlightedIndex = entries.isEmpty ? nil : 0
+        case .toggleSleepPrevention:
+            SleepPreventionController.shared.toggle()
+            onDismiss()
+        case .toggleBatteryLidCloseSleepPrevention:
+            SleepPreventionController.shared.toggleBatteryLidClose()
+            onDismiss()
         case .launchProvider:
             submit()
         case .submit:
@@ -413,7 +419,9 @@ extension AskOverlay {
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
-            worktreeName: selectedWorktreeName
+            worktreeName: selectedWorktreeName,
+            sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
+            systemSleepAssertionStatus: SleepPreventionController.shared.systemSleepAssertionStatus
         ))
 
         guard let highlightedIndex, highlightedIndex < localEntries.count,
@@ -458,6 +466,8 @@ extension AskOverlay {
              .runScript,
              .openScriptForm,
              .deleteScript,
+             .toggleSleepPrevention,
+             .toggleBatteryLidCloseSleepPrevention,
              .mention,
              .directory,
              .attach,

@@ -14,7 +14,12 @@ enum AskCommandDispatcher {
         )
 
         if let history = request.history {
-            await sendToHistory(history, prompt: prompt, project: request.project, provider: request.provider, appState: appState)
+            await sendToHistory(
+                history,
+                prompt: prompt,
+                request: request,
+                appState: appState
+            )
             return
         }
 
@@ -27,9 +32,19 @@ enum AskCommandDispatcher {
                 await sendToExistingSession(match, prompt: prompt, appState: appState)
                 return
             }
-            await sendToNewSession(prompt: prompt, project: request.project, provider: request.provider, appState: appState)
+            await sendToNewSession(
+                prompt: prompt,
+                project: request.project,
+                provider: request.provider,
+                appState: appState
+            )
         case .newTerminal:
-            await sendToNewSession(prompt: prompt, project: request.project, provider: request.provider, appState: appState)
+            await sendToNewSession(
+                prompt: prompt,
+                project: request.project,
+                provider: request.provider,
+                appState: appState
+            )
         }
     }
 
@@ -51,16 +66,19 @@ enum AskCommandDispatcher {
     private static func sendToHistory(
         _ history: AskHistoryOption,
         prompt: String,
-        project: Project,
-        provider: AskProvider,
+        request: AskDispatchRequest,
         appState: AppState
     ) async {
         let command = commandWithCompletionNotification(
-            resumeCommand(for: provider, history: history, prompt: prompt),
-            provider: provider
+            resumeCommand(
+                for: request.provider,
+                sessionID: history.sessionID,
+                prompt: prompt
+            ),
+            provider: request.provider
         )
         guard !command.isEmpty else { return }
-        appState.createStartupCommandTab(projectID: project.id, title: provider.title, command: command)
+        appState.createStartupCommandTab(projectID: request.project.id, title: request.provider.title, command: command)
     }
 
     private static func sendToNewSession(
@@ -78,7 +96,10 @@ enum AskCommandDispatcher {
             return
         }
 
-        let command = commandWithCompletionNotification(startupCommand(for: provider, prompt: prompt), provider: provider)
+        let command = commandWithCompletionNotification(
+            startupCommand(for: provider, prompt: prompt),
+            provider: provider
+        )
         guard !command.isEmpty else { return }
         appState.createStartupCommandTab(projectID: project.id, title: provider.title, command: command)
     }
@@ -102,10 +123,10 @@ enum AskCommandDispatcher {
             let saved = CLILauncherSettings.shared.command(for: launcherID)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if !saved.isEmpty {
-                return CLILauncherCommandResolver.resolve(saved)
+                return saved
             }
         }
-        return CLILauncherCommandResolver.resolve(provider.definition?.defaultCommand ?? provider.rawValue)
+        return provider.definition?.defaultCommand ?? provider.rawValue
     }
 
     static func startupCommand(for provider: AskProvider, prompt: String, model: String? = nil) -> String {

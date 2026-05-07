@@ -38,12 +38,12 @@ enum DroidNotificationHooks {
         return candidate.path
     }
 
-    static func scriptPath(named name: String, extension ext: String) -> String? {
-        if let bundled = findBundledScript(name, extension: ext) {
+    static func scriptPath(named name: String, extension ext: String, subdirectory: String? = nil) -> String? {
+        if let bundled = findBundledScript(name, extension: ext, subdirectory: subdirectory) {
             return bundled
         }
 
-        let devPath = findDevScriptPath(name + "." + ext)
+        let devPath = findDevScriptPath(name + "." + ext, subdirectory: subdirectory)
         if let devPath, FileManager.default.fileExists(atPath: devPath) {
             return devPath
         }
@@ -51,8 +51,10 @@ enum DroidNotificationHooks {
         return nil
     }
 
-    private static func findBundledScript(_ name: String, extension ext: String) -> String? {
-        guard let url = Bundle.appResources.url(forResource: name, withExtension: ext) else {
+    private static func findBundledScript(_ name: String, extension ext: String, subdirectory: String?) -> String? {
+        guard let url = Bundle.appResources.url(forResource: name, withExtension: ext, subdirectory: subdirectory) ??
+            Bundle.appResources.url(forResource: name, withExtension: ext)
+        else {
             return nil
         }
 
@@ -71,15 +73,16 @@ enum DroidNotificationHooks {
         return path
     }
 
-    private static func findDevScriptPath(_ fileName: String) -> String? {
+    private static func findDevScriptPath(_ fileName: String, subdirectory: String?) -> String? {
         guard let execURL = Bundle.main.executableURL else { return nil }
         var dir = execURL.deletingLastPathComponent()
         for _ in 0 ..< 10 {
-            let candidate = dir.appendingPathComponent("scripts/\(fileName)")
-            if FileManager.default.fileExists(atPath: candidate.path) {
-                if !FileManager.default.isExecutableFile(atPath: candidate.path) {
-                    try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: candidate.path)
-                }
+            let candidates = [
+                subdirectory.map { dir.appendingPathComponent("\($0)/\(fileName)") },
+                dir.appendingPathComponent("scripts/\(fileName)"),
+            ].compactMap(\.self)
+            for candidate in candidates where FileManager.default.fileExists(atPath: candidate.path) {
+                makeExecutable(candidate.path)
                 return candidate.path
             }
             let parent = dir.deletingLastPathComponent()
@@ -87,5 +90,10 @@ enum DroidNotificationHooks {
             dir = parent
         }
         return nil
+    }
+
+    private static func makeExecutable(_ path: String) {
+        guard !FileManager.default.isExecutableFile(atPath: path) else { return }
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
     }
 }

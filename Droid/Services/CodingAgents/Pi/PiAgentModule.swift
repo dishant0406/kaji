@@ -75,7 +75,11 @@ struct PiAgentModule: CodingAgentModule {
     }
 
     private static func findExtensionSource(near hookClientPath: String) -> String? {
-        if let bundled = DroidNotificationHooks.scriptPath(named: "pi-droid-extension", extension: "ts") { return bundled }
+        if let bundled = DroidNotificationHooks.scriptPath(
+            named: "pi-droid-extension",
+            extension: "ts",
+            subdirectory: "CodingAgents/Pi"
+        ) { return bundled }
         let candidate = ((hookClientPath as NSString).deletingLastPathComponent as NSString).appendingPathComponent("pi-droid-extension.ts")
         return FileManager.default.fileExists(atPath: candidate) ? candidate : nil
     }

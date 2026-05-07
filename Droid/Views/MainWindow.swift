@@ -69,9 +69,8 @@ struct MainWindow: View {
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
     @State private var cliLauncherSettings = CLILauncherSettings.shared
-    @State private var footerTerminalState: TerminalPaneState?
-    @State private var footerTerminalVisible = false
-    @State private var footerTerminalCleanupTask: Task<Void, Never>?
+    @State private var footerTerminalStore = FooterTerminalStateStore()
+    @State private var footerTerminalCleanupTasks: [UUID: Task<Void, Never>] = [:]
     @State private var showQuickOpen = false
     @State private var showAsk = false
     @State private var showAgentCommandCenter = false
@@ -278,12 +277,9 @@ struct MainWindow: View {
                     guard isPresented, let message = appState.pendingSaveErrorMessage else { return }
                     presentSaveErrorAlert(message: message)
                 }
-                .onChange(of: appState.activeProjectID) {
-                    scheduleFooterTerminalCleanupIfIdle()
-                }
                 .onChange(of: footerTerminalEnabled) { _, enabled in
                     if !enabled {
-                        collapseFooterTerminal()
+                        collapseAllFooterTerminals()
                     }
                 }
         )
@@ -358,8 +354,7 @@ struct MainWindow: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .overlay(alignment: .bottom) {
+
                     footerTerminalOverlay
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -735,13 +730,14 @@ struct MainWindow: View {
     @ViewBuilder
     private var footerTerminalOverlay: some View {
         if let project = activeProject {
+            let isVisible = footerTerminalStore.isVisible(for: project.id)
             FooterTerminalOverlay(
                 projectID: project.id,
-                terminalState: footerTerminalState,
+                terminalState: footerTerminalStore.state(for: project.id),
                 worktreeKey: activeWorktreeKey,
-                expanded: footerTerminalVisible,
+                expanded: isVisible,
                 onToggle: footerTerminalToggleAction,
-                onProcessExit: footerTerminalProcessExited
+                onProcessExit: { footerTerminalProcessExited(projectID: project.id) }
             )
         }
     }
@@ -1031,47 +1027,54 @@ struct MainWindow: View {
 
     private func toggleFooterTerminal() {
         guard footerTerminalEnabled else { return }
-        if footerTerminalVisible {
-            collapseFooterTerminal()
+        guard let project = activeProject else { return }
+        if footerTerminalStore.isVisible(for: project.id) {
+            collapseFooterTerminal(projectID: project.id)
             return
         }
-        footerTerminalCleanupTask?.cancel()
-        guard let project = activeProject else { return }
-        if footerTerminalState == nil {
-            footerTerminalState = TerminalPaneState(projectPath: activeWorktreePath(for: project), title: "Footer Terminal")
+        footerTerminalCleanupTasks[project.id]?.cancel()
+        footerTerminalCleanupTasks[project.id] = nil
+        _ = footerTerminalStore.show(projectID: project.id, projectPath: activeWorktreePath(for: project))
+    }
+
+    private func collapseFooterTerminal(projectID: UUID) {
+        footerTerminalStore.collapse(projectID: projectID)
+        scheduleFooterTerminalCleanupIfIdle(projectID: projectID)
+    }
+
+    private func collapseAllFooterTerminals() {
+        let projectIDs = Array(footerTerminalCleanupTasks.keys) + projectStore.projects.map(\.id)
+        footerTerminalStore.collapseAll()
+        for projectID in Set(projectIDs) {
+            scheduleFooterTerminalCleanupIfIdle(projectID: projectID)
         }
-        footerTerminalVisible = true
     }
 
-    private func collapseFooterTerminal() {
-        footerTerminalVisible = false
-        scheduleFooterTerminalCleanupIfIdle()
-    }
-
-    private func scheduleFooterTerminalCleanupIfIdle() {
-        footerTerminalCleanupTask?.cancel()
-        guard let state = footerTerminalState,
+    private func scheduleFooterTerminalCleanupIfIdle(projectID: UUID) {
+        footerTerminalCleanupTasks[projectID]?.cancel()
+        guard let state = footerTerminalStore.state(for: projectID),
               !TerminalViewRegistry.shared.needsConfirmQuit(for: state.id)
         else { return }
-        footerTerminalCleanupTask = Task { @MainActor in
+        footerTerminalCleanupTasks[projectID] = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(360))
             guard !Task.isCancelled else { return }
-            cleanupIdleFooterTerminal()
+            cleanupIdleFooterTerminal(projectID: projectID)
         }
     }
 
-    private func cleanupIdleFooterTerminal() {
-        guard let state = footerTerminalState,
-              !footerTerminalVisible,
+    private func cleanupIdleFooterTerminal(projectID: UUID) {
+        guard let state = footerTerminalStore.state(for: projectID),
+              !footerTerminalStore.isVisible(for: projectID),
               !TerminalViewRegistry.shared.needsConfirmQuit(for: state.id)
         else { return }
         TerminalViewRegistry.shared.removeView(for: state.id)
-        footerTerminalState = nil
+        _ = footerTerminalStore.remove(projectID: projectID)
+        footerTerminalCleanupTasks[projectID] = nil
     }
 
-    private func footerTerminalProcessExited() {
-        footerTerminalVisible = false
-        scheduleFooterTerminalCleanupIfIdle()
+    private func footerTerminalProcessExited(projectID: UUID) {
+        footerTerminalStore.collapse(projectID: projectID)
+        scheduleFooterTerminalCleanupIfIdle(projectID: projectID)
     }
 
     private func requestCreateWorktree(projectID: UUID) {

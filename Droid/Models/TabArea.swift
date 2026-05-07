@@ -36,7 +36,7 @@ final class TabArea: Identifiable {
     }
 
     func snapshot() -> TabAreaSnapshot {
-        let persistedTabs = tabs.filter { $0.kind != .diffViewer }
+        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .codeGraph }
         let activeIndex = persistedTabs.firstIndex(where: { $0.id == activeTabID })
         return TabAreaSnapshot(
             id: id,
@@ -65,6 +65,15 @@ final class TabArea: Identifiable {
 
     func createVCSTab() {
         insertTab(TerminalTab(vcsState: VCSTabState(projectPath: projectPath)))
+    }
+
+    func createCodeGraphTab(projectID: UUID, worktreeID: UUID, graphURL: URL) {
+        insertTab(TerminalTab(codeGraphState: DroidCodeGraphTabState(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            projectPath: projectPath,
+            graphURL: graphURL
+        )))
     }
 
     func createCommandTab(title: String, command: String) {

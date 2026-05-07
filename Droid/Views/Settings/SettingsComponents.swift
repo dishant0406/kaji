@@ -17,10 +17,13 @@ struct SettingsContainer<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(spacing: 0) {
-            content
-            Spacer(minLength: 0)
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(spacing: 0) {
+                content
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 

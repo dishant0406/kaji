@@ -14,7 +14,7 @@ struct OpenCodeAgentModule: CodingAgentModule {
         installCommand: .init(executable: "/bin/zsh", arguments: ["-lc", "curl -fsSL https://opencode.ai/install | bash"]),
         configDirectories: [".config/opencode", ".opencode"],
         dataDirectories: [".local/share/opencode"],
-        hookStrategy: .bundledPlugin(scriptName: "opencode-droid-plugin.js"),
+        hookStrategy: .bundledPlugin(scriptName: "CodingAgents/OpenCode/opencode-droid-plugin.js"),
         historyStrategy: .sqlite(".local/share/opencode/opencode.db"),
         modelStrategy: .command(.init(executableName: "opencode", arguments: ["models"])),
         usageStrategy: .none,
@@ -86,7 +86,11 @@ struct OpenCodeAgentModule: CodingAgentModule {
     }
 
     private static func findPluginSource(near hookClientPath: String) -> String? {
-        if let bundled = DroidNotificationHooks.scriptPath(named: "opencode-droid-plugin", extension: "js") { return bundled }
+        if let bundled = DroidNotificationHooks.scriptPath(
+            named: "opencode-droid-plugin",
+            extension: "js",
+            subdirectory: "CodingAgents/OpenCode"
+        ) { return bundled }
         let candidate = ((hookClientPath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(pluginScriptName)
         return FileManager.default.fileExists(atPath: candidate) ? candidate : nil
     }
