@@ -27,7 +27,7 @@ struct DroidHookClient {
             type: args[0],
             paneID: args[1].isEmpty ? nil : args[1],
             title: args[2],
-            body: args.count > 3 ? HookTextSanitizer.clean(args[3], limit: 500) : ""
+            body: args.count > 3 ? HookTextSanitizer.clean(args[3], limit: args[0].hasSuffix("_session") ? 2000 : 500) : ""
         )
     }
 

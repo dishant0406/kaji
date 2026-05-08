@@ -6,7 +6,10 @@ extension AskOverlay {
     }
 
     var entries: [AskPaletteEntry] {
-        AskPaletteEntries.build(.init(
+        if isBookmarkFolderPickerVisible {
+            return bookmarkFolderEntries
+        }
+        return AskPaletteEntries.build(.init(
             fieldText: fieldText,
             prompt: prompt,
             projects: projectStore.projects,
@@ -14,10 +17,15 @@ extension AskOverlay {
             provider: provider,
             sessionMode: sessionMode,
             sessions: filteredSessions,
+            bookmarkCandidates: bookmarkCandidates,
+            selectedBookmarkIDs: selectedBookmarkIDs,
+            bookmarkLookupIsLoading: isBookmarkLookupLoading,
             historyOptions: historyOptions,
             skillOptions: skillOptions,
             taskRecipes: taskRecipeStore.recipes(for: projectID),
             scripts: scriptStore.visibleScripts(projectID: projectID),
+            bookmarks: bookmarkStore.bookmarks,
+            bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
@@ -30,6 +38,9 @@ extension AskOverlay {
     }
 
     var emptyLabel: String {
+        if isBookmarkFolderPickerVisible {
+            return "Type a folder name"
+        }
         if activeAnnotation?.key == .history, provider == .terminal {
             return "History is unavailable for Terminal"
         }
@@ -39,13 +50,63 @@ extension AskOverlay {
         if activeAnnotation?.key == .history, isHistoryLoading {
             return "Loading history"
         }
+        if activeAnnotation?.key == .bookmark {
+            return "No matching bookmarks"
+        }
+        if activeAnnotation?.key == .bookmarkFolder {
+            return "No matching bookmark folders"
+        }
         if activeAnnotation != nil {
             return "No matching options"
         }
         if AskMentionParser.activeMention(in: fieldText) != nil {
             return "No matching files or folders"
         }
+        if isBookmarkSlashMode {
+            return isBookmarkLookupLoading ? "Looking for agent sessions" : "No bookmarkable agent sessions"
+        }
         return isSlashMode ? "No matching commands" : "No matching sessions"
+    }
+
+    var bookmarkCandidates: [AgentSessionBookmarkCandidate] {
+        guard isBookmarkSlashMode else { return [] }
+        let live = AgentSessionBookmarkCatalog.candidates(appState: appState, worktreeStore: worktreeStore)
+        let liveIDs = Set(live.map(\.id))
+        return live + fallbackBookmarkCandidates.filter { !liveIDs.contains($0.id) }
+    }
+
+    var bookmarkFolderEntries: [AskPaletteEntry] {
+        let query = fieldText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let folders = bookmarkStore.folderNames.filter { folder in
+            query.isEmpty || folder.localizedCaseInsensitiveContains(query)
+        }.map { folder in
+            AskPaletteEntry(
+                action: .bookmarkFolder(folder),
+                title: folder,
+                detail: "Save selected sessions here",
+                annotation: "Enter"
+            )
+        }
+        guard !query.isEmpty,
+              !bookmarkStore.folderNames.contains(where: {
+                  $0.compare(query, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+              })
+        else { return folders }
+        let createEntry = AskPaletteEntry(
+            action: .createBookmarkFolder(query),
+            title: "Create \"\(query)\"",
+            detail: "Create folder and save selected sessions",
+            annotation: "Shift Enter"
+        )
+        return [createEntry] + folders
+    }
+
+    var slashState: AskSlashState? {
+        AskPaletteEntries.slashState(for: fieldText)
+    }
+
+    var isBookmarkSlashMode: Bool {
+        slashState?.command == .bookmark
     }
 
     var isSlashMode: Bool {
@@ -119,7 +180,13 @@ extension AskOverlay {
             return "Enter inserts file or folder. Type @ to attach context. Esc closes."
         }
         if isSlashMode {
+            if isBookmarkSlashMode {
+                return "Enter selects sessions. Shift Enter chooses a bookmark folder. Esc closes."
+            }
             return "Enter applies. Shift Enter adds project for /add-project. Esc closes."
+        }
+        if isBookmarkFolderPickerVisible {
+            return "Enter chooses an existing folder. Shift Enter creates/uses the typed folder. Esc closes."
         }
         if provider == .terminal {
             return "Enter sends. Type / or :p: :wt: :t: :m: to retarget inline. Esc closes."
@@ -157,7 +224,36 @@ extension AskOverlay {
         refreshHistoryOptions(parsed: parsed)
         refreshMentionOptions()
         refreshDirectoryOptions()
+        guard !isBookmarkFolderPickerVisible else {
+            highlightedIndex = entries.isEmpty ? nil : 0
+            return
+        }
+        if !isBookmarkSlashMode {
+            selectedBookmarkIDs = []
+            fallbackBookmarkCandidates = []
+            isBookmarkLookupLoading = false
+            fallbackBookmarkTask?.cancel()
+            fallbackBookmarkTask = nil
+            pendingBookmarkCandidates = []
+        } else {
+            refreshFallbackBookmarkCandidates()
+        }
         highlightedIndex = entries.isEmpty ? nil : 0
+    }
+
+    func refreshFallbackBookmarkCandidates() {
+        fallbackBookmarkTask?.cancel()
+        isBookmarkLookupLoading = true
+        fallbackBookmarkTask = Task { @MainActor in
+            let candidates = await AgentSessionBookmarkCatalog.fallbackCandidates(
+                appState: appState,
+                worktreeStore: worktreeStore
+            )
+            guard !Task.isCancelled else { return }
+            fallbackBookmarkCandidates = candidates
+            isBookmarkLookupLoading = false
+            highlightedIndex = entries.isEmpty ? nil : min(highlightedIndex ?? 0, entries.count - 1)
+        }
     }
 
     func refreshMentionOptions() {

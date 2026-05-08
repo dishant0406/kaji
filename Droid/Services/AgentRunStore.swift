@@ -206,6 +206,23 @@ final class AgentRunStore {
             ?? runs.first { $0.providerID == providerID && $0.paneID == paneID }
     }
 
+    func setSessionMetadata(_ metadata: CodingAgentSessionMetadata) {
+        guard let index = runs.firstIndex(where: { run in
+            run.providerID == metadata.providerID && run.paneID == metadata.paneID && isOpen(run.status)
+        }) ?? runs.firstIndex(where: { run in
+            run.providerID == metadata.providerID && run.paneID == metadata.paneID
+        })
+        else { return }
+        runs[index].sessionID = metadata.sessionID
+        runs[index].transcriptPath = metadata.transcriptPath
+        runs[index].sessionUpdatedAt = metadata.updatedAt
+        if let title = metadata.title, !title.isEmpty {
+            runs[index].title = title
+        }
+        runs[index].lastEventAt = metadata.updatedAt
+        persist()
+    }
+
     func startVerification(runID: UUID, command: String) {
         updateRun(id: runID) { run in
             run.verification = AgentVerification(status: .running, command: command, output: nil, updatedAt: Date())

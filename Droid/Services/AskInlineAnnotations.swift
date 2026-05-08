@@ -126,7 +126,9 @@ enum AskInlineAnnotations {
              .execute,
              .executeAdd,
              .executeEdit,
-             .executeDelete:
+             .executeDelete,
+             .bookmark,
+             .bookmarkFolder:
             false
         case .project,
              .worktree:

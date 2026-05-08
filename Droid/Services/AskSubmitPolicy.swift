@@ -30,7 +30,9 @@ enum AskSubmitPolicy {
              .execute,
              .executeAdd,
              .executeEdit,
-             .executeDelete:
+             .executeDelete,
+             .bookmark,
+             .bookmarkFolder:
             false
         case .provider,
              .mode,

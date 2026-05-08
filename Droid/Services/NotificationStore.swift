@@ -196,6 +196,9 @@ final class NotificationStore {
 
     private func deliverNotification(_ notification: DroidNotification) {
         let event = normalizedEvent(for: notification)
+        if suppressesUserDelivery(for: notification, event: event) {
+            return
+        }
         if Self.defaults.bool(forKey: "droid.notifications.toastEnabled", fallback: true) {
             ToastState.shared.show(
                 NotificationDisplayTextResolver.title(
@@ -207,6 +210,13 @@ final class NotificationStore {
         }
         playSound(for: event)
         deliverOutbound(notification, event: event)
+    }
+
+    private func suppressesUserDelivery(for notification: DroidNotification, event: NotificationOutboundEvent) -> Bool {
+        guard event.kind == .completed,
+              case let .aiProvider(providerID) = notification.source
+        else { return false }
+        return ["codex", "opencode"].contains(providerID)
     }
 
     private func normalizedEvent(for notification: DroidNotification) -> NotificationOutboundEvent {

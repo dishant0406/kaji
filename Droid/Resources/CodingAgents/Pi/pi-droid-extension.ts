@@ -20,6 +20,22 @@ export default function (pi: ExtensionAPI) {
   const notifyCompletion = (body: string) => send("pi", "Pi", body)
   const notifyPermission = (body: string) => send("pi_permission_notice", "Pi", body)
 
+  const sendSession = (ctx: any, source: string) => {
+    const manager = ctx?.sessionManager
+    const sessionID = manager?.getSessionId?.()
+    if (!sessionID) return
+    const body = JSON.stringify({
+      sessionID: sanitize(sessionID),
+      transcriptPath: sanitize(manager?.getSessionFile?.()),
+      cwd: sanitize(manager?.getCwd?.() || process.env.DROID_WORKTREE_PATH),
+      source: sanitize(source),
+      projectID: process.env.DROID_PROJECT_ID,
+      worktreeID: process.env.DROID_WORKTREE_ID,
+      worktreePath: process.env.DROID_WORKTREE_PATH || "",
+    })
+    send("pi_session", "session", body)
+  }
+
   const summarize = (event: any) => {
     const tool = sanitize(event?.toolName || event?.name || "tool")
     const input = event?.input || event?.args || {}
@@ -34,7 +50,12 @@ export default function (pi: ExtensionAPI) {
     return ["bash", "write", "edit", "multi_edit", "apply_patch", "mcp"].some((name) => tool.includes(name))
   }
 
-  pi.on("before_agent_start", async (event: any) => {
+  pi.on("session_start", async (event: any, ctx: any) => {
+    sendSession(ctx, event?.reason || "session_start")
+  })
+
+  pi.on("before_agent_start", async (event: any, ctx: any) => {
+    sendSession(ctx, "before_agent_start")
     start()
   })
 

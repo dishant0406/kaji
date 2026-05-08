@@ -8,6 +8,7 @@ final class TerminalPaneState: Identifiable {
     var title: String
     let startupCommand: String?
     let injectedCommand: String?
+    let agentSessionSeed: CodingAgentSessionSeed?
     let externalEditorFilePath: String?
     let searchState = TerminalSearchState()
     @ObservationIgnored private var titleDebounceTask: Task<Void, Never>?
@@ -17,12 +18,14 @@ final class TerminalPaneState: Identifiable {
         title: String = "Terminal",
         startupCommand: String? = nil,
         injectedCommand: String? = nil,
+        agentSessionSeed: CodingAgentSessionSeed? = nil,
         externalEditorFilePath: String? = nil
     ) {
         self.projectPath = projectPath
         self.title = title
         self.startupCommand = startupCommand
         self.injectedCommand = injectedCommand
+        self.agentSessionSeed = agentSessionSeed
         self.externalEditorFilePath = externalEditorFilePath
     }
 

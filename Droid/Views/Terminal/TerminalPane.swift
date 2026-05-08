@@ -78,6 +78,7 @@ struct TerminalBridge: NSViewRepresentable {
             view.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
         }
         view.setInjectedCommand(state.injectedCommand)
+        registerInitialAgentSessionIfNeeded()
         view.isFocused = focused
         view.overlayActive = overlayActive
         view.setSurfaceVisible(visible)
@@ -105,6 +106,7 @@ struct TerminalBridge: NSViewRepresentable {
             nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
         }
         nsView.setInjectedCommand(state.injectedCommand)
+        registerInitialAgentSessionIfNeeded()
         nsView.overlayActive = overlayActive
         nsView.onFocus = onFocus
         nsView.onProcessExit = onProcessExit
@@ -162,6 +164,22 @@ struct TerminalBridge: NSViewRepresentable {
         vars.append(contentsOf: DroidCodeGraphInstructions.environment(projectID: key.projectID, worktreeID: key.worktreeID))
         vars.append(contentsOf: CodingAgentShimEnvironment.variables(projectID: key.projectID, worktreeID: key.worktreeID))
         return vars
+    }
+
+    private func registerInitialAgentSessionIfNeeded() {
+        guard let seed = state.agentSessionSeed,
+              !seed.sessionID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+        CodingAgentSessionMetadataStore.shared.update(CodingAgentSessionMetadata(
+            providerID: seed.providerID,
+            paneID: state.id,
+            sessionID: seed.sessionID,
+            transcriptPath: seed.transcriptPath,
+            title: seed.title,
+            cwd: seed.cwd ?? state.projectPath,
+            source: "droid-launch",
+            updatedAt: Date()
+        ))
     }
 
     private func configureSearchCallbacks(_ view: GhosttyTerminalNSView) {

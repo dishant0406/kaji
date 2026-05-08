@@ -28,6 +28,10 @@ extension AskOverlay {
     }
 
     func handleSubmit(_ latestFieldText: String) {
+        if isBookmarkFolderPickerVisible {
+            confirmHighlight()
+            return
+        }
         if isTaskFormVisible {
             saveTaskForm()
             return
@@ -81,6 +85,7 @@ extension AskOverlay {
             return
         }
         if isSlashMode {
+            if handleBookmarkSubmit() { return }
             confirmHighlight()
             return
         }
@@ -103,8 +108,13 @@ extension AskOverlay {
     }
 
     func handleShiftSubmit(_ latestFieldText: String) {
+        if isBookmarkFolderPickerVisible {
+            savePendingBookmarks(folderName: latestFieldText)
+            return
+        }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
         guard parsed.activeAnnotation?.key == .projectAdd else {
+            if handleBookmarkShiftSubmit() { return }
             handleSubmit(latestFieldText)
             return
         }
@@ -137,7 +147,9 @@ extension AskOverlay {
              .mode,
              .history,
              .skill,
-             .task:
+             .task,
+             .bookmark,
+             .bookmarkFolder:
             return false
         }
         return true
@@ -182,6 +194,24 @@ extension AskOverlay {
             applyAnnotationSelection(value: mode.annotationValue)
         case let .session(session):
             sessionID = session.id
+        case let .bookmarkSession(candidate, selected):
+            if selected {
+                selectedBookmarkIDs.remove(candidate.id)
+            } else {
+                selectedBookmarkIDs.insert(candidate.id)
+            }
+        case .saveSelectedBookmarks:
+            beginBookmarkFolderSelection(selectedBookmarkCandidates())
+        case .bookmarkLookupLoading:
+            return
+        case let .bookmarkFolder(folder):
+            savePendingBookmarks(folderName: folder)
+        case let .createBookmarkFolder(folder):
+            savePendingBookmarks(folderName: folder)
+        case let .savedBookmark(bookmark):
+            resumeBookmark(bookmark)
+        case let .bookmarkFolderFilter(folder):
+            applyAnnotationSelection(value: folder)
         case let .history(history):
             applyAnnotationSelection(value: history.sessionID)
         case let .skill(skill):
@@ -220,6 +250,83 @@ extension AskOverlay {
         case .submit:
             submit()
         }
+    }
+
+    func handleSpace() -> Bool {
+        guard isBookmarkSlashMode,
+              let highlightedIndex,
+              highlightedIndex < entries.count,
+              case let .bookmarkSession(candidate, selected) = entries[highlightedIndex].action
+        else { return false }
+        if selected {
+            selectedBookmarkIDs.remove(candidate.id)
+        } else {
+            selectedBookmarkIDs.insert(candidate.id)
+        }
+        return true
+    }
+
+    func handleBookmarkSubmit() -> Bool {
+        guard isBookmarkSlashMode else { return false }
+        guard !bookmarkCandidates.isEmpty else { return true }
+        confirmHighlight()
+        return true
+    }
+
+    func handleBookmarkShiftSubmit() -> Bool {
+        guard isBookmarkSlashMode else { return false }
+        let selected = selectedBookmarkCandidates()
+        let candidates = selected.isEmpty ? bookmarkCandidates : selected
+        guard !candidates.isEmpty else { return true }
+        beginBookmarkFolderSelection(candidates)
+        return true
+    }
+
+    func selectedBookmarkCandidates() -> [AgentSessionBookmarkCandidate] {
+        bookmarkCandidates.filter { selectedBookmarkIDs.contains($0.id) }
+    }
+
+    func beginBookmarkFolderSelection(_ candidates: [AgentSessionBookmarkCandidate]) {
+        guard !candidates.isEmpty else { return }
+        pendingBookmarkCandidates = candidates
+        isBookmarkFolderPickerVisible = true
+        fieldText = ""
+        highlightedIndex = entries.isEmpty ? nil : 0
+    }
+
+    func savePendingBookmarks(folderName: String) {
+        guard !pendingBookmarkCandidates.isEmpty else { return }
+        bookmarkStore.save(pendingBookmarkCandidates, folderName: folderName)
+        onDismiss()
+    }
+
+    func resumeBookmark(_ bookmark: AgentSessionBookmark) {
+        guard let project = projectStore.projects.first(where: { $0.id == bookmark.projectID }) else { return }
+        let worktrees = worktreeStore.worktrees[bookmark.projectID] ?? []
+        guard let worktree = worktrees.first(where: { $0.id == bookmark.worktreeID })
+            ?? worktrees.first(where: { $0.path == bookmark.worktreePath })
+            ?? worktreeStore.primary(for: bookmark.projectID)
+        else { return }
+        let provider = AskProvider(agentID: bookmark.providerID)
+        let command = AskCommandDispatcher.commandWithCompletionNotification(
+            AskCommandDispatcher.resumeCommand(for: provider, sessionID: bookmark.sessionID, prompt: ""),
+            provider: provider
+        )
+        guard !command.isEmpty else { return }
+        appState.selectProject(project, worktree: worktree)
+        appState.createStartupCommandTab(
+            projectID: project.id,
+            title: provider.title,
+            command: command,
+            seed: CodingAgentSessionSeed(
+                providerID: provider.rawValue,
+                sessionID: bookmark.sessionID,
+                title: bookmark.title,
+                transcriptPath: nil,
+                cwd: bookmark.worktreePath
+            )
+        )
+        onDismiss()
     }
 
     func exitSlashMode() {
@@ -412,10 +519,15 @@ extension AskOverlay {
             provider: provider,
             sessionMode: sessionMode,
             sessions: filteredSessions,
+            bookmarkCandidates: bookmarkCandidates,
+            selectedBookmarkIDs: selectedBookmarkIDs,
+            bookmarkLookupIsLoading: isBookmarkLookupLoading,
             historyOptions: historyOptions,
             skillOptions: skillOptions,
             taskRecipes: taskRecipeStore.recipes(for: projectID),
             scripts: scriptStore.visibleScripts(projectID: projectID),
+            bookmarks: bookmarkStore.bookmarks,
+            bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             projectName: selectedProject?.name ?? "No project",
@@ -459,10 +571,18 @@ extension AskOverlay {
             active.key == .skill ? skill.name : nil
         case let .taskRecipe(recipe):
             active.key == .task ? recipe.prompt : nil
+        case let .bookmarkFolderFilter(folder):
+            active.key == .bookmarkFolder ? folder : nil
         case .command,
              .openTaskForm,
              .editTaskRecipe,
              .deleteTaskRecipe,
+             .bookmarkSession,
+             .bookmarkLookupLoading,
+             .saveSelectedBookmarks,
+             .bookmarkFolder,
+             .createBookmarkFolder,
+             .savedBookmark,
              .runScript,
              .openScriptForm,
              .deleteScript,
@@ -539,7 +659,9 @@ extension AskOverlay {
              .execute,
              .executeAdd,
              .executeEdit,
-             .executeDelete:
+             .executeDelete,
+             .bookmark,
+             .bookmarkFolder:
             return nil
         }
     }
@@ -664,7 +786,9 @@ extension AskOverlay {
              .execute,
              .executeAdd,
              .executeEdit,
-             .executeDelete:
+             .executeDelete,
+             .bookmark,
+             .bookmarkFolder:
             return false
         case .provider,
              .mode,

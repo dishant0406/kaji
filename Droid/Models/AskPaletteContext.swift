@@ -8,10 +8,15 @@ struct AskPaletteContext {
     let provider: AskProvider
     let sessionMode: AskSessionMode
     let sessions: [AskSessionOption]
+    let bookmarkCandidates: [AgentSessionBookmarkCandidate]
+    let selectedBookmarkIDs: Set<UUID>
+    let bookmarkLookupIsLoading: Bool
     let historyOptions: [AskHistoryOption]
     let skillOptions: [AskSkillOption]
     let taskRecipes: [AskTaskRecipe]
     let scripts: [DroidKitScript]
+    let bookmarks: [AgentSessionBookmark]
+    let bookmarkFolders: [String]
     let mentionOptions: [AskMentionOption]
     let directoryOptions: [AskDirectoryOption]
     let projectName: String
@@ -29,10 +34,15 @@ struct AskPaletteContext {
         provider: AskProvider,
         sessionMode: AskSessionMode,
         sessions: [AskSessionOption],
+        bookmarkCandidates: [AgentSessionBookmarkCandidate] = [],
+        selectedBookmarkIDs: Set<UUID> = [],
+        bookmarkLookupIsLoading: Bool = false,
         historyOptions: [AskHistoryOption],
         skillOptions: [AskSkillOption],
         taskRecipes: [AskTaskRecipe] = AskTaskRecipe.builtIns,
         scripts: [DroidKitScript] = [],
+        bookmarks: [AgentSessionBookmark] = [],
+        bookmarkFolders: [String] = [],
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
         projectName: String,
@@ -49,10 +59,15 @@ struct AskPaletteContext {
         self.provider = provider
         self.sessionMode = sessionMode
         self.sessions = sessions
+        self.bookmarkCandidates = bookmarkCandidates
+        self.selectedBookmarkIDs = selectedBookmarkIDs
+        self.bookmarkLookupIsLoading = bookmarkLookupIsLoading
         self.historyOptions = historyOptions
         self.skillOptions = skillOptions
         self.taskRecipes = taskRecipes
         self.scripts = scripts
+        self.bookmarks = bookmarks
+        self.bookmarkFolders = bookmarkFolders
         self.mentionOptions = mentionOptions
         self.directoryOptions = directoryOptions
         self.projectName = projectName

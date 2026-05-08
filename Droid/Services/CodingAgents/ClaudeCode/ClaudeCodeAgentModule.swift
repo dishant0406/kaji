@@ -51,6 +51,7 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         let commands = [
             "Notification": hookCommand(hookClientPath: hookClientPath, event: "notification"),
             "PermissionRequest": hookCommand(hookClientPath: hookClientPath, event: "permissionrequest"),
+            "SessionStart": hookCommand(hookClientPath: hookClientPath, event: "sessionstart"),
             "Stop": hookCommand(hookClientPath: hookClientPath, event: "stop"),
             "UserPromptSubmit": hookCommand(hookClientPath: hookClientPath, event: "userpromptsubmit"),
         ]
@@ -74,7 +75,7 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         guard FileManager.default.fileExists(atPath: Self.settingsPath) else { return }
         var settings = try Self.readSettings()
         guard var hooks = settings["hooks"] as? [String: Any] else { return }
-        for key in ["Notification", "PermissionRequest", "Stop", "UserPromptSubmit"] {
+        for key in ["Notification", "PermissionRequest", "SessionStart", "Stop", "UserPromptSubmit"] {
             guard var entries = hooks[key] as? [[String: Any]] else { continue }
             entries.removeAll { Self.isDroidHookEntry($0) }
             hooks[key] = entries.isEmpty ? nil : entries

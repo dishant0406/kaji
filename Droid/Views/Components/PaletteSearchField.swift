@@ -8,6 +8,7 @@ struct PaletteSearchField: NSViewRepresentable {
     let onSubmit: () -> Void
     var onSubmitText: ((String) -> Void)?
     var onShiftSubmitText: ((String) -> Void)?
+    var onSpace: (() -> Bool)?
     let onEscape: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
@@ -30,6 +31,7 @@ struct PaletteSearchField: NSViewRepresentable {
         field.cell?.sendsActionOnEndEditing = false
         field.onEscape = onEscape
         field.onPaste = onPaste
+        field.onSpace = onSpace
         field.maximumNumberOfLines = 1
         field.usesSingleLineMode = true
         DispatchQueue.main.async {
@@ -47,6 +49,7 @@ struct PaletteSearchField: NSViewRepresentable {
         if let field = nsView as? PaletteNSTextField {
             field.onEscape = onEscape
             field.onPaste = onPaste
+            field.onSpace = onSpace
         }
     }
 
@@ -104,6 +107,14 @@ struct PaletteSearchField: NSViewRepresentable {
 private final class PaletteNSTextField: NSTextField {
     var onEscape: (() -> Void)?
     var onPaste: (() -> Bool)?
+    var onSpace: (() -> Bool)?
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 49, onSpace?() == true {
+            return
+        }
+        super.keyDown(with: event)
+    }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command), event.keyCode == 9, onPaste?() == true {

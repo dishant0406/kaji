@@ -40,7 +40,7 @@ final class AppState {
         case createTab(projectID: UUID, areaID: UUID?)
         case createTabInDirectory(projectID: UUID, areaID: UUID?, directory: String)
         case createCommandTab(projectID: UUID, areaID: UUID?, title: String, command: String)
-        case createStartupCommandTab(projectID: UUID, areaID: UUID?, title: String, command: String)
+        case createStartupCommandTab(StartupCommandTabRequest)
         case createCommandSplit(projectID: UUID, title: String, command: String)
         case createVCSTab(projectID: UUID, areaID: UUID?)
         case createParentAgentTab(projectID: UUID, areaID: UUID?)
@@ -82,6 +82,14 @@ final class AppState {
         let projectID: UUID
         let areaID: UUID
         let tabID: UUID
+    }
+
+    struct StartupCommandTabRequest {
+        let projectID: UUID
+        let areaID: UUID?
+        let title: String
+        let command: String
+        let seed: CodingAgentSessionSeed?
     }
 
     var workspaces: [WorktreeKey: WorktreeWorkspace] = [:]
@@ -271,8 +279,14 @@ final class AppState {
         dispatch(.createCommandTab(projectID: projectID, areaID: nil, title: title, command: command))
     }
 
-    func createStartupCommandTab(projectID: UUID, title: String, command: String) {
-        dispatch(.createStartupCommandTab(projectID: projectID, areaID: nil, title: title, command: command))
+    func createStartupCommandTab(projectID: UUID, title: String, command: String, seed: CodingAgentSessionSeed? = nil) {
+        dispatch(.createStartupCommandTab(StartupCommandTabRequest(
+            projectID: projectID,
+            areaID: nil,
+            title: title,
+            command: command,
+            seed: seed
+        )))
     }
 
     func createCommandSplit(projectID: UUID, title: String, command: String) {
@@ -377,6 +391,7 @@ final class AppState {
             guard let removed = area.removeTab(tabID) else { return }
             if let paneID = removed.content.pane?.id {
                 AIActivityStore.shared.stop(paneID: paneID)
+                CodingAgentSessionMetadataStore.shared.remove(paneID: paneID)
                 terminalViews.removeView(for: paneID)
             }
             reconcilePendingClosures()
@@ -588,6 +603,7 @@ final class AppState {
 
         for paneID in effects.paneIDsToRemove {
             AIActivityStore.shared.stop(paneID: paneID)
+            CodingAgentSessionMetadataStore.shared.remove(paneID: paneID)
             terminalViews.removeView(for: paneID)
         }
 
