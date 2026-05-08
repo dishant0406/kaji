@@ -78,7 +78,18 @@ enum AskCommandDispatcher {
             provider: request.provider
         )
         guard !command.isEmpty else { return }
-        appState.createStartupCommandTab(projectID: request.project.id, title: request.provider.title, command: command)
+        appState.createStartupCommandTab(
+            projectID: request.project.id,
+            title: request.provider.title,
+            command: command,
+            seed: CodingAgentSessionSeed(
+                providerID: request.provider.rawValue,
+                sessionID: history.sessionID,
+                title: history.title,
+                transcriptPath: nil,
+                cwd: history.projectPath
+            )
+        )
     }
 
     private static func sendToNewSession(

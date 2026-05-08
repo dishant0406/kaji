@@ -12,10 +12,13 @@ enum AskPaletteEntries {
         let provider: AskProvider
         let projects: [Project]
         let worktrees: [Worktree]
+        let annotations: [AskAnnotationKey: String]
         let historyOptions: [AskHistoryOption]
         let skillOptions: [AskSkillOption]
         let taskRecipes: [AskTaskRecipe]
         let scripts: [DroidKitScript]
+        let bookmarks: [AgentSessionBookmark]
+        let bookmarkFolders: [String]
         let directoryOptions: [AskDirectoryOption]
     }
 
@@ -67,6 +70,14 @@ enum AskPaletteEntries {
             return filteredScripts(annotation.scripts, query: annotation.active.value).map {
                 .init(action: .deleteScript($0), title: $0.title, detail: scriptDetail($0), annotation: $0.slug)
             }
+        case .bookmark:
+            return filteredBookmarks(
+                annotation.bookmarks,
+                folder: annotation.annotations[.bookmarkFolder],
+                query: annotation.active.value
+            )
+        case .bookmarkFolder:
+            return filteredBookmarkFolders(annotation.bookmarkFolders, query: annotation.active.value)
         }
     }
 
@@ -94,10 +105,13 @@ enum AskPaletteEntries {
                 provider: context.provider,
                 projects: context.projects,
                 worktrees: context.worktrees,
+                annotations: parsed.annotations,
                 historyOptions: context.historyOptions,
                 skillOptions: context.skillOptions,
                 taskRecipes: context.taskRecipes,
                 scripts: context.scripts,
+                bookmarks: context.bookmarks,
+                bookmarkFolders: context.bookmarkFolders,
                 directoryOptions: context.directoryOptions
             ))
         }
@@ -167,6 +181,12 @@ enum AskPaletteEntries {
             return filteredProviders(query: state.filter)
         case .session:
             return filteredSessionModes(query: state.filter)
+        case .bookmark:
+            return bookmarkEntries(
+                context.bookmarkCandidates,
+                selectedIDs: context.selectedBookmarkIDs,
+                isLoading: context.bookmarkLookupIsLoading
+            )
         case .sleep:
             let entry = sleepPreventionEntry(
                 isEnabled: context.sleepPreventionIsEnabled,
@@ -187,10 +207,79 @@ enum AskPaletteEntries {
         return filtered.map { .init(action: .project($0), title: $0.name, detail: $0.path, annotation: nil) }
     }
 
+    private static func bookmarkEntries(
+        _ candidates: [AgentSessionBookmarkCandidate],
+        selectedIDs: Set<UUID>,
+        isLoading: Bool
+    ) -> [AskPaletteEntry] {
+        let loadingEntry = AskPaletteEntry(
+            action: .bookmarkLookupLoading,
+            title: "Looking for more sessions",
+            detail: "Checking Codex and OpenCode history",
+            annotation: nil
+        )
+        if selectedIDs.isEmpty {
+            let entries: [AskPaletteEntry] = candidates.map { candidate in
+                AskPaletteEntry(
+                    action: .bookmarkSession(candidate, selected: false),
+                    title: candidate.title,
+                    detail: "\(candidate.provider.title) session \(candidate.sessionID)",
+                    annotation: "Enter"
+                )
+            }
+            return isLoading ? entries + [loadingEntry] : entries
+        }
+        let entries = candidates.map { candidate in
+            let selected = selectedIDs.contains(candidate.id)
+            return AskPaletteEntry(
+                action: .bookmarkSession(candidate, selected: selected),
+                title: selected ? "✓ \(candidate.title)" : candidate.title,
+                detail: "\(candidate.provider.title) session \(candidate.sessionID)",
+                annotation: selected ? "Selected" : "Enter"
+            )
+        }
+        let saveEntry = AskPaletteEntry(
+            action: .saveSelectedBookmarks,
+            title: "Save selected bookmarks",
+            detail: "Save \(selectedIDs.count) selected session\(selectedIDs.count == 1 ? "" : "s")",
+            annotation: "Shift Enter"
+        )
+        return entries + (isLoading ? [loadingEntry] : []) + [saveEntry]
+    }
+
     private static func filteredScripts(_ scripts: [DroidKitScript], query: String) -> [DroidKitScript] {
         scripts.filter { script in
             query.isEmpty || script.slug.localizedCaseInsensitiveContains(query) || script.title.localizedCaseInsensitiveContains(query)
         }
+    }
+
+    private static func filteredBookmarks(_ bookmarks: [AgentSessionBookmark], folder: String?, query: String) -> [AskPaletteEntry] {
+        bookmarks
+            .filter { bookmark in
+                let folderMatches = folder == nil || bookmark.folderName.compare(
+                    folder ?? "",
+                    options: [.caseInsensitive, .diacriticInsensitive]
+                ) == .orderedSame
+                let queryMatches = query.isEmpty || bookmark.title.localizedCaseInsensitiveContains(query) || bookmark.sessionID
+                    .localizedCaseInsensitiveContains(query)
+                return folderMatches && queryMatches
+            }
+            .map { bookmark in
+                .init(
+                    action: .savedBookmark(bookmark),
+                    title: bookmark.title,
+                    detail: "\(bookmark.providerTitle) · \(bookmark.folderName) · \(bookmark.sessionID)",
+                    annotation: "Enter"
+                )
+            }
+    }
+
+    private static func filteredBookmarkFolders(_ folders: [String], query: String) -> [AskPaletteEntry] {
+        folders
+            .filter { query.isEmpty || $0.localizedCaseInsensitiveContains(query) }
+            .map { folder in
+                .init(action: .bookmarkFolderFilter(folder), title: folder, detail: "Filter bookmarks by folder", annotation: "Enter")
+            }
     }
 
     private static func scriptDetail(_ script: DroidKitScript) -> String {
@@ -329,6 +418,8 @@ enum AskPaletteEntries {
             context.provider.title
         case .session:
             context.sessionMode.title
+        case .bookmark:
+            context.bookmarkCandidates.isEmpty ? "No agent sessions" : "\(context.bookmarkCandidates.count) available"
         case .sleep:
             context.sleepPreventionIsEnabled ? "On" : "Off"
         case .lid:

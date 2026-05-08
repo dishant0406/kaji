@@ -2,6 +2,7 @@ import Foundation
 
 enum ClaudeHookHandler {
     static func handle(event: String, input: String) {
+        HookEventEmitter.emitSession(provider: "claude", input: input, source: event)
         switch event {
         case "userpromptsubmit":
             HookEventEmitter.emitActivity(provider: "claude", state: "start")

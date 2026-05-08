@@ -31,6 +31,20 @@ export const DroidNotificationPlugin = async ({ client }) => {
         await send("opencode_transcript", kind, cleaned)
       }
 
+      const sendSession = async () => {
+        const sessionID = findSessionID(event)
+        if (!sessionID) return
+        const body = JSON.stringify({
+          sessionID: sanitize(sessionID),
+          source: sanitize(event.type),
+          title: sanitize(event.properties?.title || event.properties?.name),
+          projectID,
+          worktreeID,
+          worktreePath,
+        })
+        await send("opencode_session", "session", body)
+      }
+
       const attentionDetail = () => {
         const properties = event.properties || {}
         return sanitize(
@@ -57,6 +71,8 @@ export const DroidNotificationPlugin = async ({ client }) => {
         if (typeof event.properties?.state === "string") return event.properties.state
         return ""
       }
+
+      await sendSession()
 
       const start = async () => {
         completedAt = 0
@@ -151,7 +167,33 @@ export const DroidNotificationPlugin = async ({ client }) => {
         }
       } catch {}
 
-      await send("opencode", "OpenCode", body)
     },
   }
+}
+
+function findSessionID(value) {
+  const direct = value?.properties?.sessionID || value?.properties?.sessionId || value?.sessionID || value?.sessionId
+  if (direct) return direct
+  if (String(value?.type || "").startsWith("session.")) {
+    const id = value?.properties?.id || value?.id
+    if (id) return id
+  }
+  return findNestedSessionID(value, 0)
+}
+
+function findNestedSessionID(value, depth) {
+  if (!value || depth > 4 || typeof value !== "object") return ""
+  for (const [key, child] of Object.entries(value)) {
+    const lower = key.toLowerCase()
+    if (["sessionid", "session_id"].includes(lower) && child) return child
+    if (lower === "session" && child && typeof child === "object") {
+      const id = child.id || child.sessionID || child.sessionId
+      if (id) return id
+    }
+  }
+  for (const child of Object.values(value)) {
+    const nested = findNestedSessionID(child, depth + 1)
+    if (nested) return nested
+  }
+  return ""
 }

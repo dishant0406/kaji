@@ -37,6 +37,13 @@ struct AskOverlay: View {
     @State var scriptDraft = DroidKitScriptDraft()
     @State var scriptPlan: DroidKitScriptRunPlan?
     @State var pendingRiskyScript: DroidKitScript?
+    @State var bookmarkStore = AgentSessionBookmarkStore.shared
+    @State var selectedBookmarkIDs: Set<UUID> = []
+    @State var fallbackBookmarkCandidates: [AgentSessionBookmarkCandidate] = []
+    @State var fallbackBookmarkTask: Task<Void, Never>?
+    @State var isBookmarkLookupLoading = false
+    @State var pendingBookmarkCandidates: [AgentSessionBookmarkCandidate] = []
+    @State var isBookmarkFolderPickerVisible = false
 
     var body: some View {
         ZStack {
@@ -77,6 +84,7 @@ struct AskOverlay: View {
                             entries: entries,
                             highlightedIndex: highlightedIndex,
                             emptyLabel: emptyLabel,
+                            isLoading: isBookmarkLookupLoading,
                             onSelect: apply
                         )
                     }
@@ -113,6 +121,7 @@ struct AskOverlay: View {
             AskOverlayKeyMonitor(
                 onSubmit: { handleSubmit(fieldText) },
                 onShiftSubmit: { handleShiftSubmit(fieldText) },
+                onSpace: handleSpace,
                 onEscape: onDismiss,
                 onArrowUp: { moveHighlight(-1) },
                 onArrowDown: { moveHighlight(1) },
@@ -147,6 +156,7 @@ struct AskOverlay: View {
                 onSubmit: handleSubmit,
                 onSubmitText: handleSubmit,
                 onShiftSubmitText: handleShiftSubmit,
+                onSpace: handleSpace,
                 onEscape: onDismiss,
                 onArrowUp: { moveHighlight(-1) },
                 onArrowDown: { moveHighlight(1) },

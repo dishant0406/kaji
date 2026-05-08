@@ -47,6 +47,11 @@ enum AIActivitySocketRouter {
             return true
         }
 
+        if payload.type.hasSuffix("_session") {
+            let providerID = String(payload.type.dropLast("_session".count))
+            return handleProviderSession(providerID: providerID, paneID: paneID, body: payload.body)
+        }
+
         guard payload.type.hasSuffix("_activity") else { return false }
         let providerID = String(payload.type.dropLast("_activity".count))
         let context = explicitContext(from: payload.body)
@@ -112,6 +117,45 @@ enum AIActivitySocketRouter {
             appState: appState,
             worktreeStore: routingContext.worktreeStore
         )
+        return true
+    }
+
+    private static func handleProviderSession(providerID: String, paneID: UUID, body: String) -> Bool {
+        guard let event = CodingAgentSessionEventBody.decode(body) else { return true }
+        let now = Date()
+        CodingAgentSessionMetadataStore.shared.update(CodingAgentSessionMetadata(
+            providerID: providerID,
+            paneID: paneID,
+            sessionID: event.sessionID,
+            transcriptPath: event.transcriptPath,
+            title: event.title,
+            cwd: event.cwd ?? event.worktreePath,
+            source: event.source,
+            updatedAt: now
+        ))
+        if AgentRunStore.shared.run(providerID: providerID, paneID: paneID) == nil,
+           let projectID = event.projectID,
+           let worktreeID = event.worktreeID
+        {
+            AgentRunStore.shared.start(
+                providerID: providerID,
+                paneID: paneID,
+                projectID: projectID,
+                worktreeID: worktreeID,
+                worktreePath: event.worktreePath,
+                title: event.title
+            )
+            CodingAgentSessionMetadataStore.shared.update(CodingAgentSessionMetadata(
+                providerID: providerID,
+                paneID: paneID,
+                sessionID: event.sessionID,
+                transcriptPath: event.transcriptPath,
+                title: event.title,
+                cwd: event.cwd ?? event.worktreePath,
+                source: event.source,
+                updatedAt: now
+            ))
+        }
         return true
     }
 

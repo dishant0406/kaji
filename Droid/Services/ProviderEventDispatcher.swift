@@ -14,6 +14,8 @@ enum ProviderEventDispatcher {
             return
         }
 
+        guard !suppressesRoutineCompletionEvent(event) else { return }
+
         let source = AIProviderRegistry.shared.notificationSource(for: event.type)
         guard let appState = NotificationStore.shared.appState else {
             NotificationStore.shared.addDetached(source: source, title: event.title, body: event.body)
@@ -23,6 +25,7 @@ enum ProviderEventDispatcher {
 
         if let paneIDString = event.paneIDString, let paneID = UUID(uuidString: paneIDString) {
             completeProviderRunIfNeeded(source: source, paneID: paneID, title: event.title, body: event.body, appState: appState)
+            guard !suppressesRoutineCompletionNotification(source: source, title: event.title, body: event.body) else { return }
             NotificationStore.shared.add(
                 paneID: paneID,
                 source: source,
@@ -32,6 +35,8 @@ enum ProviderEventDispatcher {
             )
             return
         }
+
+        guard !suppressesRoutineCompletionNotification(source: source, title: event.title, body: event.body) else { return }
 
         guard let projectID = appState.activeProjectID,
               let key = appState.activeWorktreeKey(for: projectID),
@@ -53,6 +58,26 @@ enum ProviderEventDispatcher {
             body: event.body,
             appState: appState
         )
+    }
+
+    private static func suppressesRoutineCompletionNotification(source: DroidNotification.Source, title: String, body: String) -> Bool {
+        guard case let .aiProvider(providerID) = source,
+              ["codex", "opencode"].contains(providerID)
+        else { return false }
+        let text = "\(title) \(body)".lowercased()
+        return !text.contains("needs permission") &&
+            !text.contains("needs attention") &&
+            !text.contains("question") &&
+            !text.contains("error")
+    }
+
+    private static func suppressesRoutineCompletionEvent(_ event: ProviderEvent) -> Bool {
+        guard ["codex", "opencode"].contains(event.type) else { return false }
+        let text = "\(event.title) \(event.body)".lowercased()
+        return !text.contains("needs permission") &&
+            !text.contains("needs attention") &&
+            !text.contains("question") &&
+            !text.contains("error")
     }
 
     private static func completeProviderRunIfNeeded(

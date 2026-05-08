@@ -90,12 +90,9 @@ enum WorkspaceReducer {
                 state: &state
             )
 
-        case let .createStartupCommandTab(projectID, areaID, title, command):
+        case let .createStartupCommandTab(request):
             TabReducer.createStartupCommandTab(
-                projectID: projectID,
-                areaID: areaID,
-                title: title,
-                command: command,
+                request,
                 state: &state
             )
 

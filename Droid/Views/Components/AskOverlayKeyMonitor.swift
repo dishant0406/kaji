@@ -4,6 +4,7 @@ import SwiftUI
 struct AskOverlayKeyMonitor: NSViewRepresentable {
     let onSubmit: () -> Void
     var onShiftSubmit: (() -> Void)?
+    var onSpace: (() -> Bool)?
     let onEscape: () -> Void
     let onArrowUp: () -> Void
     let onArrowDown: () -> Void
@@ -13,6 +14,7 @@ struct AskOverlayKeyMonitor: NSViewRepresentable {
         let view = AskOverlayKeyMonitorView()
         view.onSubmit = onSubmit
         view.onShiftSubmit = onShiftSubmit
+        view.onSpace = onSpace
         view.onEscape = onEscape
         view.onArrowUp = onArrowUp
         view.onArrowDown = onArrowDown
@@ -23,6 +25,7 @@ struct AskOverlayKeyMonitor: NSViewRepresentable {
     func updateNSView(_ nsView: AskOverlayKeyMonitorView, context: Context) {
         nsView.onSubmit = onSubmit
         nsView.onShiftSubmit = onShiftSubmit
+        nsView.onSpace = onSpace
         nsView.onEscape = onEscape
         nsView.onArrowUp = onArrowUp
         nsView.onArrowDown = onArrowDown
@@ -33,6 +36,7 @@ struct AskOverlayKeyMonitor: NSViewRepresentable {
 final class AskOverlayKeyMonitorView: NSView {
     var onSubmit: (() -> Void)?
     var onShiftSubmit: (() -> Void)?
+    var onSpace: (() -> Bool)?
     var onEscape: (() -> Void)?
     var onArrowUp: (() -> Void)?
     var onArrowDown: (() -> Void)?
@@ -66,6 +70,8 @@ final class AskOverlayKeyMonitorView: NSView {
                     self.onSubmit?()
                 }
                 return nil
+            case 49:
+                return self.onSpace?() == true ? nil : event
             case 53:
                 self.onEscape?()
                 return nil

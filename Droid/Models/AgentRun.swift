@@ -152,6 +152,7 @@ struct AgentRun: Identifiable, Codable, Hashable {
     var worktreePath: String?
     var sessionID: String?
     var transcriptPath: String?
+    var sessionUpdatedAt: Date?
     var title: String
     var status: AgentRunStatus
     var sourceConfidence: AgentSourceConfidence

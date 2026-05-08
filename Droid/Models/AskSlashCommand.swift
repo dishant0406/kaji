@@ -5,6 +5,7 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
     case worktree
     case provider
     case session
+    case bookmark
     case sleep
     case lid
 
@@ -24,6 +25,8 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
             "Provider"
         case .session:
             "Session"
+        case .bookmark:
+            "Bookmark Session"
         case .sleep:
             "Prevent Sleep"
         case .lid:
@@ -41,6 +44,8 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
             "Switch between Terminal and enabled coding agents"
         case .session:
             "Pick Best Match, Existing Session, or New Terminal"
+        case .bookmark:
+            "Save visible coding-agent sessions for later"
         case .sleep:
             "Toggle macOS idle sleep prevention"
         case .lid:

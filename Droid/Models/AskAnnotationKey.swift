@@ -17,6 +17,8 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
     case executeAdd = "xa"
     case executeEdit = "xe"
     case executeDelete = "xd"
+    case bookmark = "b"
+    case bookmarkFolder = "bf"
 
     var token: String {
         ":\(rawValue):"
@@ -56,6 +58,10 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
             "Edit Script"
         case .executeDelete:
             "Delete Script"
+        case .bookmark:
+            "Bookmark"
+        case .bookmarkFolder:
+            "Bookmark Folder"
         }
     }
 

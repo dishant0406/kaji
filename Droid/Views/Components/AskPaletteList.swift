@@ -4,6 +4,7 @@ struct AskPaletteList: View {
     let entries: [AskPaletteEntry]
     let highlightedIndex: Int?
     let emptyLabel: String
+    var isLoading = false
     let onSelect: (AskPaletteEntry) -> Void
 
     var body: some View {
@@ -11,6 +12,9 @@ struct AskPaletteList: View {
             if entries.isEmpty {
                 VStack {
                     Spacer()
+                    if isLoading {
+                        DroidSpinner(size: 14)
+                    }
                     Text(emptyLabel)
                         .droidFont(size: 12)
                         .foregroundStyle(DroidTheme.fgDim)
@@ -96,6 +100,20 @@ private struct AskPaletteRow: View {
             "square.stack"
         case .session:
             "terminal"
+        case .bookmarkSession:
+            "bookmark"
+        case .bookmarkLookupLoading:
+            "arrow.triangle.2.circlepath"
+        case .bookmarkFolder:
+            "folder"
+        case .createBookmarkFolder:
+            "folder.badge.plus"
+        case .savedBookmark:
+            "bookmark"
+        case .bookmarkFolderFilter:
+            "folder"
+        case .saveSelectedBookmarks:
+            "checkmark.circle"
         case .history:
             "clock.arrow.circlepath"
         case .skill:

@@ -172,13 +172,6 @@ final class CodexSessionMonitor: @unchecked Sendable {
                    worktreeStore: NotificationStore.shared.worktreeStore
                )
             {
-                NotificationStore.shared.addWithContext(
-                    context: context,
-                    source: .aiProvider("codex"),
-                    title: "Codex",
-                    body: completion.message,
-                    appState: appState
-                )
                 AgentRunStore.shared.complete(
                     providerID: "codex",
                     projectID: context.projectID,
@@ -194,12 +187,6 @@ final class CodexSessionMonitor: @unchecked Sendable {
                 }
                 return
             }
-
-            NotificationStore.shared.addDetached(
-                source: .aiProvider("codex"),
-                title: "Codex",
-                body: completion.message
-            )
         }
     }
 

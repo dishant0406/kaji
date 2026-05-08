@@ -7,6 +7,13 @@ enum AskPaletteAction: Hashable {
     case provider(AskProvider)
     case sessionMode(AskSessionMode)
     case session(AskSessionOption)
+    case bookmarkSession(AgentSessionBookmarkCandidate, selected: Bool)
+    case saveSelectedBookmarks
+    case bookmarkLookupLoading
+    case bookmarkFolder(String)
+    case createBookmarkFolder(String)
+    case savedBookmark(AgentSessionBookmark)
+    case bookmarkFolderFilter(String)
     case history(AskHistoryOption)
     case skill(AskSkillOption)
     case taskRecipe(AskTaskRecipe)
@@ -45,6 +52,20 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "session-mode:\(mode.rawValue)"
         case let .session(session):
             "session:\(session.id.uuidString)"
+        case let .bookmarkSession(candidate, selected):
+            "bookmark:\(candidate.id.uuidString):\(selected)"
+        case .saveSelectedBookmarks:
+            "save-selected-bookmarks"
+        case .bookmarkLookupLoading:
+            "bookmark-lookup-loading"
+        case let .bookmarkFolder(folder):
+            "bookmark-folder:\(folder)"
+        case let .createBookmarkFolder(folder):
+            "create-bookmark-folder:\(folder)"
+        case let .savedBookmark(bookmark):
+            "saved-bookmark:\(bookmark.id.uuidString)"
+        case let .bookmarkFolderFilter(folder):
+            "bookmark-folder-filter:\(folder)"
         case let .history(history):
             "history:\(history.provider.rawValue):\(history.sessionID)"
         case let .skill(skill):
