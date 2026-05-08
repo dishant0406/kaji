@@ -50,6 +50,12 @@ enum CodexAgentHistory {
 
     private static func userText(from object: [String: Any]) -> String? {
         guard let payload = object["payload"] as? [String: Any], payload["role"] as? String == "user" else { return nil }
-        return CodingAgentHistoryTools.messageText(from: payload["content"])
+        guard let text = CodingAgentHistoryTools.messageText(from: payload["content"]), !isInjectedUserText(text) else { return nil }
+        return text
+    }
+
+    private static func isInjectedUserText(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasPrefix("# AGENTS.md instructions for ") || trimmed.hasPrefix("<environment_context>")
     }
 }

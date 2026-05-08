@@ -5,12 +5,14 @@ enum OpenCodeAgentHistory {
         let id: String
         let directory: String
         let title: String
+        let prompt: String?
         let timeUpdated: TimeInterval
 
         private enum CodingKeys: String, CodingKey {
             case id
             case directory
             case title
+            case prompt
             case timeUpdated = "time_updated"
         }
     }
@@ -49,15 +51,36 @@ enum OpenCodeAgentHistory {
             .appendingPathComponent(".local/share/opencode/opencode.db")
             .path
         guard fileManager.fileExists(atPath: databasePath) else { return [] }
-        let sql = "select id, directory, title, time_updated from session where time_archived is null order by time_updated desc"
-        guard let data = runSQLite(databasePath: databasePath, sql: sql),
+        let sql = """
+        select
+          s.id,
+          s.directory,
+          s.title,
+          s.time_updated,
+          (
+            select json_extract(p.data, '$.text')
+            from message m
+            join part p on p.message_id = m.id
+            where m.session_id = s.id
+              and json_extract(m.data, '$.role') = 'user'
+              and json_extract(p.data, '$.type') = 'text'
+              and coalesce(json_extract(p.data, '$.text'), '') <> ''
+            order by p.time_created
+            limit 1
+          ) as prompt
+        from session s
+        where s.time_archived is null
+        order by s.time_updated desc
+        """
+        let fallbackSQL = "select id, directory, title, time_updated from session where time_archived is null order by time_updated desc"
+        guard let data = runSQLite(databasePath: databasePath, sql: sql) ?? runSQLite(databasePath: databasePath, sql: fallbackSQL),
               let rows = try? JSONDecoder().decode([DatabaseRow].self, from: data)
         else { return [] }
         return rows.map { row in
             AskHistoryOption(
                 provider: .opencode,
                 sessionID: row.id,
-                title: CodingAgentHistoryTools.normalizedTitle(row.title, fallback: "OpenCode session"),
+                title: databaseTitle(row),
                 detail: CodingAgentHistoryTools.detail(provider: .opencode, path: row.directory),
                 projectPath: row.directory,
                 updatedAt: Date(timeIntervalSince1970: row.timeUpdated / 1000)
@@ -94,6 +117,13 @@ enum OpenCodeAgentHistory {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         return process.terminationStatus == 0 ? data : nil
+    }
+
+    private static func databaseTitle(_ row: DatabaseRow) -> String {
+        if row.title.hasPrefix("New session - ") {
+            return CodingAgentHistoryTools.normalizedTitle(row.prompt, fallback: row.title)
+        }
+        return CodingAgentHistoryTools.normalizedTitle(row.title, fallback: "OpenCode session")
     }
 
     private static func merged(_ options: [AskHistoryOption]) -> [AskHistoryOption] {
