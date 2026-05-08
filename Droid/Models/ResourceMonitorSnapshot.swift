@@ -41,6 +41,16 @@ struct ResourceMonitorTerminalSnapshot: Identifiable, Equatable {
     var id: UUID { paneID }
 }
 
+struct ResourceMonitorAppSnapshot: Identifiable, Equatable {
+    let id: Int32
+    let title: String
+    let pid: Int32
+    let processName: String
+    let cpuPercent: Double?
+    let memoryBytes: UInt64?
+    let threadCount: Int?
+}
+
 struct ResourceMonitorProjectSnapshot: Identifiable, Equatable {
     let id: UUID
     let name: String
