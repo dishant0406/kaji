@@ -79,7 +79,12 @@ private final class Fixture {
         process.currentDirectoryURL = project
         process.environment = ProcessInfo.processInfo.environment.merging([
             "DROID_REAL_CODEX": real.path,
+            "DROID_CODE_GRAPH_INSTRUCTIONS": "",
+            "DROID_CODE_GRAPH_PROJECT_DIR": "",
             "DROID_CODE_GRAPH_ROOT_DIR": "extensions/droidcodegraph",
+            "DROID_CODE_GRAPH_REPORT": "",
+            "DROID_CODE_GRAPH_JSON": "",
+            "DROID_CODE_GRAPH_OPENCODE_CONFIG": "",
             "CAPTURE": output.path,
         ]) { _, new in new }
         try process.run()

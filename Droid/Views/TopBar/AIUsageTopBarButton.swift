@@ -44,18 +44,18 @@ struct AIUsageTopBarButton: View {
                 icon
                 Text(usageText)
                     .droidFont(size: 12, weight: .semibold, design: .monospaced)
-                    .foregroundStyle(showPopover || hovered ? DroidTheme.fg : DroidTheme.fgMuted)
+                    .foregroundStyle(active ? DroidTheme.fg : DroidTheme.fgMuted)
             }
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(showPopover || hovered ? DroidTheme.surface : .clear)
+            .background(active ? DroidTheme.surface : .clear)
             .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
             .overlay {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                    .strokeBorder(DroidTheme.border.opacity(showPopover || hovered ? 1 : 0), lineWidth: 1)
+                    .strokeBorder(DroidTheme.border.opacity(borderOpacity), lineWidth: 1)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.borderless)
         .onHover { hovered = $0 }
         .help("AI Usage (\(KeyBindingStore.shared.combo(for: .toggleAIUsage).displayString))")
         .accessibilityLabel("AI Usage")
@@ -79,11 +79,11 @@ struct AIUsageTopBarButton: View {
             ProviderIconView(
                 iconName: display.iconName,
                 size: 14,
-                style: .monochrome(showPopover || hovered ? DroidTheme.fg : DroidTheme.fgMuted)
+                style: .monochrome(active ? DroidTheme.fg : DroidTheme.fgMuted)
             )
         } else {
             DroidIcon(systemName: "sparkles", size: 13)
-                .foregroundStyle(showPopover || hovered ? DroidTheme.fg : DroidTheme.fgMuted)
+                .foregroundStyle(active ? DroidTheme.fg : DroidTheme.fgMuted)
         }
     }
 
@@ -112,5 +112,18 @@ struct AIUsageTopBarButton: View {
     private var usageText: String {
         guard let previewDisplay else { return "--" }
         return "\(max(0, min(100, previewDisplay.percent)))%"
+    }
+
+    private var active: Bool {
+        showPopover || hovered
+    }
+
+    private var borderOpacity: Double {
+        ChromeIconButtonStylePolicy.borderOpacity(active: active, isTahoe: isTahoe)
+    }
+
+    private var isTahoe: Bool {
+        if #available(macOS 26.0, *) { return true }
+        return false
     }
 }

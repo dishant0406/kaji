@@ -8,41 +8,39 @@ struct ResourceMonitorTopBarButton: View {
     @State private var hovered = false
 
     var body: some View {
-        Group {
-            if hasActiveTerminals || showPopover {
-                Button {
-                    showPopover.toggle()
-                    service.refresh(appState: appState, projectStore: projectStore)
-                } label: {
-                    HStack(spacing: 8) {
-                        DroidIcon(systemName: "memorychip", size: 13)
-                            .foregroundStyle(showPopover || hovered ? DroidTheme.fg : DroidTheme.fgMuted)
-                        Text(memoryText)
-                            .droidFont(size: 12, weight: .semibold, design: .monospaced)
-                            .foregroundStyle(showPopover || hovered ? DroidTheme.fg : DroidTheme.fgMuted)
-                    }
-                    .padding(.horizontal, 10)
-                    .frame(height: 28)
-                    .background(showPopover || hovered ? DroidTheme.surface : .clear)
-                    .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DroidShape.tileRadius)
-                            .strokeBorder(DroidTheme.border.opacity(showPopover || hovered ? 1 : 0), lineWidth: 1)
-                    }
-                }
-                .buttonStyle(.plain)
-                .onHover { hovered = $0 }
-                .help("Resource Monitor")
-                .accessibilityLabel("Resource Monitor")
-                .droidPopover(isPresented: $showPopover, preferredEdge: .bottom) {
-                    ResourceMonitorPanel(
-                        projects: service.projects,
-                        isRefreshing: service.isRefreshing,
-                        onRefresh: { service.refresh(appState: appState, projectStore: projectStore) },
-                        onDismiss: { showPopover = false }
-                    )
+        Button {
+            showPopover.toggle()
+            service.refresh(appState: appState, projectStore: projectStore)
+        } label: {
+            HStack(spacing: 8) {
+                DroidIcon(systemName: "memorychip", size: 13)
+                    .foregroundStyle(active ? DroidTheme.fg : DroidTheme.fgMuted)
+                if hasActiveTerminals {
+                    Text(memoryText)
+                        .droidFont(size: 12, weight: .semibold, design: .monospaced)
+                        .foregroundStyle(active ? DroidTheme.fg : DroidTheme.fgMuted)
                 }
             }
+            .padding(.horizontal, hasActiveTerminals ? 10 : 7)
+            .frame(height: 28)
+            .background(active ? DroidTheme.surface : .clear)
+            .clipShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: DroidShape.tileRadius)
+                    .strokeBorder(DroidTheme.border.opacity(borderOpacity), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.borderless)
+        .onHover { hovered = $0 }
+        .help("Resource Monitor")
+        .accessibilityLabel("Resource Monitor")
+        .droidPopover(isPresented: $showPopover, preferredEdge: .bottom) {
+            ResourceMonitorPanel(
+                projects: service.projects,
+                isRefreshing: service.isRefreshing,
+                onRefresh: { service.refresh(appState: appState, projectStore: projectStore) },
+                onDismiss: { showPopover = false }
+            )
         }
         .task {
             service.start(appState: appState, projectStore: projectStore)
@@ -57,5 +55,18 @@ struct ResourceMonitorTopBarButton: View {
         let total = service.projects.reduce(UInt64(0)) { $0 + $1.memoryBytes }
         guard total > 0 else { return "--" }
         return ByteCountFormatter.string(fromByteCount: Int64(total), countStyle: .memory)
+    }
+
+    private var active: Bool {
+        showPopover || hovered
+    }
+
+    private var borderOpacity: Double {
+        ChromeIconButtonStylePolicy.borderOpacity(active: active, isTahoe: isTahoe)
+    }
+
+    private var isTahoe: Bool {
+        if #available(macOS 26.0, *) { return true }
+        return false
     }
 }

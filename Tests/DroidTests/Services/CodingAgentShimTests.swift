@@ -175,6 +175,12 @@ struct CodingAgentShimTests {
         let env = graphEnv.reduce(into: [
             realEnv: real.path,
             "CAPTURE": output.path,
+            "DROID_CODE_GRAPH_INSTRUCTIONS": "",
+            "DROID_CODE_GRAPH_PROJECT_DIR": "",
+            "DROID_CODE_GRAPH_ROOT_DIR": root.appendingPathComponent("inactive-droidcodegraph").path,
+            "DROID_CODE_GRAPH_REPORT": "",
+            "DROID_CODE_GRAPH_JSON": "",
+            "DROID_CODE_GRAPH_OPENCODE_CONFIG": "",
         ]) { result, pair in
             result[pair.key] = root.appendingPathComponent(pair.value).path
         }
