@@ -11,6 +11,7 @@ final class ResourceMonitorService {
     }
 
     private(set) var projects: [ResourceMonitorProjectSnapshot] = []
+    private(set) var appSnapshot: ResourceMonitorAppSnapshot?
     private(set) var isRefreshing = false
     private(set) var lastRefreshDate: Date?
 
@@ -56,6 +57,7 @@ final class ResourceMonitorService {
         let readings = descriptors.map { buildReading(for: $0, now: now) }
         let activeProcessGroupIDs = Set(readings.compactMap(\.processGroupID))
 
+        appSnapshot = buildAppSnapshot(now: now)
         projects = ResourceMonitorAggregator.buildProjects(from: readings, orderedProjects: projectStore.projects)
         pruneBaselines(using: activeProcessGroupIDs)
         lastRefreshDate = now
@@ -98,7 +100,31 @@ final class ResourceMonitorService {
         )
     }
 
+    private func buildAppSnapshot(now: Date) -> ResourceMonitorAppSnapshot? {
+        guard let sample = ProcessResourceSampler.sampleCurrentProcess() else { return nil }
+        let cpuPercent: Double? = if let baseline = baselines[sample.pid] {
+            ResourceMonitorCPUPercentResolver.resolve(
+                currentCPUTimeNanos: sample.cpuTimeNanos,
+                baselineCPUTimeNanos: baseline.cpuTimeNanos,
+                elapsed: now.timeIntervalSince(baseline.timestamp)
+            )
+        } else {
+            nil
+        }
+        baselines[sample.pid] = RefreshBaseline(cpuTimeNanos: sample.cpuTimeNanos, timestamp: now)
+        return ResourceMonitorAppSnapshot(
+            id: sample.pid,
+            title: "Droid",
+            pid: sample.pid,
+            processName: sample.processName,
+            cpuPercent: cpuPercent,
+            memoryBytes: max(sample.footprintBytes, sample.residentBytes),
+            threadCount: sample.threadCount
+        )
+    }
+
     private func pruneBaselines(using activeProcessGroupIDs: Set<Int32>) {
-        baselines = baselines.filter { activeProcessGroupIDs.contains($0.key) }
+        let currentPID = getpid()
+        baselines = baselines.filter { activeProcessGroupIDs.contains($0.key) || $0.key == currentPID }
     }
 }

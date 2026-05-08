@@ -14,6 +14,10 @@ struct ResourceMonitorPanel: View {
         VStack(alignment: .leading, spacing: 10) {
             header
 
+            if let appSnapshot = service.appSnapshot {
+                ResourceMonitorAppRow(app: appSnapshot)
+            }
+
             if projects.isEmpty {
                 Text("No active terminals.")
                     .droidFont(size: 12)
@@ -87,5 +91,40 @@ struct ResourceMonitorPanel: View {
             projectID: terminal.projectID
         )
         service.refresh(appState: appState, projectStore: projectStore)
+    }
+}
+
+private struct ResourceMonitorAppRow: View {
+    let app: ResourceMonitorAppSnapshot
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.title)
+                    .droidFont(size: 12, weight: .semibold)
+                    .foregroundStyle(DroidTheme.fg)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .droidFont(size: 10, design: .monospaced)
+                    .foregroundStyle(DroidTheme.fgDim)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            ResourceMetricBadge(text: ResourceMonitorFormatting.cpu(app.cpuPercent))
+            ResourceMetricBadge(text: ResourceMonitorFormatting.memory(app.memoryBytes))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(DroidTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: DroidShape.tileRadius)
+                .strokeBorder(DroidTheme.border.opacity(0.8), lineWidth: 1)
+        )
+    }
+
+    private var subtitle: String {
+        [app.processName, "pid \(app.pid)", app.threadCount.map { "\($0)t" }]
+            .compactMap(\.self)
+            .joined(separator: "  ")
     }
 }
