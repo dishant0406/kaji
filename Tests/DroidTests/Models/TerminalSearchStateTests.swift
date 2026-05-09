@@ -30,8 +30,6 @@ struct TerminalSearchStateTests {
         state.needle = "hel"
         state.pushNeedle()
 
-        try await Task.sleep(for: .milliseconds(40))
-
         state.needle = "hello"
         state.pushNeedle()
 

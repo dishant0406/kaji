@@ -29,7 +29,7 @@ struct CodingAgentShimEnvironmentTests {
     }
 
     @Test
-    func skipsShimsWhenCodeGraphDisabled() throws {
+    func skipsCodeGraphVarsWhenCodeGraphDisabled() throws {
         let fixture = try Fixture()
         defer { fixture.cleanup() }
         try fixture.makeInstalledGraph()
@@ -44,11 +44,13 @@ struct CodingAgentShimEnvironmentTests {
             fileManager: fixture.fileManager
         )
 
-        #expect(values.isEmpty)
+        let keys = Set(values.map(\.key))
+        #expect(keys.contains("DROID_AGENT_SHIM_DIR"))
+        #expect(!keys.contains("DROID_CODE_GRAPH_INSTRUCTIONS"))
     }
 
     @Test
-    func skipsShimsWhenProjectGraphIsMissing() throws {
+    func skipsCodeGraphVarsWhenProjectGraphIsMissing() throws {
         let fixture = try Fixture()
         defer { fixture.cleanup() }
         try fixture.makeInstalledRuntime()
@@ -62,8 +64,32 @@ struct CodingAgentShimEnvironmentTests {
             fileManager: fixture.fileManager
         )
 
-        #expect(values.isEmpty)
+        let keys = Set(values.map(\.key))
+        #expect(keys.contains("DROID_AGENT_SHIM_DIR"))
+        #expect(!keys.contains("DROID_CODE_GRAPH_INSTRUCTIONS"))
     }
+    @Test
+    func addsBrowserEnvironmentForWorktreePath() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+        try fixture.makeInstalledRuntime()
+
+        let values = Dictionary(uniqueKeysWithValues: CodingAgentShimEnvironment.variables(
+            projectID: fixture.projectID,
+            worktreeID: fixture.worktreeID,
+            worktreePath: fixture.root.appendingPathComponent("project").path,
+            browserCommandOverride: fixture.bin.appendingPathComponent("droid-browser-mcp").path,
+            environment: ["PATH": fixture.bin.path],
+            homeDirectory: fixture.home.path,
+            store: fixture.store,
+            fileManager: fixture.fileManager
+        ).map { ($0.key, $0.value) })
+
+        #expect(values["DROID_BROWSER_SESSION_ID"] != nil)
+        #expect(values["DROID_BROWSER_ENDPOINT"]?.hasPrefix("http://127.0.0.1:") == true)
+        #expect(values["DROID_BROWSER_MCP_COMMAND"]?.hasSuffix("droid-browser-mcp") == true)
+    }
+
 }
 
 @MainActor

@@ -24,6 +24,13 @@
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>A process running in Droid's terminal would like to use AppleScript.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
@@ -47,7 +54,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>A process running in Droid's terminal would like to access your photo library.</string>
 	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
+	<string>DroidCEFApplication</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>A process running in Droid's terminal would like to access your reminders.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

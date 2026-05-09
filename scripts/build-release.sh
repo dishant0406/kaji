@@ -59,11 +59,14 @@ TRIPLE="${ARCH}-apple-macosx14.0"
 BUILD_NUMBER=$(git -C "$PROJECT_ROOT" rev-list --count HEAD)
 APP_BUNDLE="$BUILD_DIR/Droid.app"
 DMG_NAME="Droid-${VERSION}-${ARCH}.dmg"
+CEF_ROOT="$PROJECT_ROOT/.dev-support/cef-runtime/cef_binary"
+CEF_BUILD="$PROJECT_ROOT/.dev-support/cef-runtime/build/tests/cefsimple/Release"
 
 rm -rf "$APP_BUNDLE"
 
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
+"$SCRIPT_DIR/install-cef-runtime.sh"
 "$SCRIPT_DIR/build-parent-agent.sh"
 swift build -c release --triple "$TRIPLE"
 swift build -c release --triple "$TRIPLE" --target DroidHookClient
@@ -77,6 +80,7 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$SPM_BUILD_DIR/Droid" "$APP_BUNDLE/Contents/MacOS/Droid"
 cp "$SPM_BUILD_DIR/DroidHookClient" "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Droid"
+install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BUNDLE/Contents/MacOS/Droid" 2>/dev/null || true
 
 echo "==> Stripping local and debug symbols"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/Droid"
@@ -86,6 +90,15 @@ if [[ -d "$SPM_BUILD_DIR/Droid_Droid.bundle" ]]; then
     cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Contents/Resources/Droid_Droid.bundle"
     cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Droid_Droid.bundle"
 fi
+
+mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+if [[ -d "$CEF_ROOT/Release/Chromium Embedded Framework.framework" ]]; then
+    cp -R "$CEF_ROOT/Release/Chromium Embedded Framework.framework" "$APP_BUNDLE/Contents/Frameworks/Chromium Embedded Framework.framework"
+fi
+for helper in "$CEF_BUILD"/cefsimple\ Helper*.app; do
+    [[ -d "$helper" ]] || continue
+    cp -R "$helper" "$APP_BUNDLE/Contents/Frameworks/$(basename "$helper")"
+done
 
 cp "$PROJECT_ROOT/Droid/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"

@@ -35,6 +35,11 @@ struct CLILauncherFooter: View {
                     worktreePath: worktreePath
                 )
 
+                IconButton(symbol: "globe", accessibilityLabel: "Browser") {
+                    NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
+                }
+                .help("Browser")
+
                 IconButton(symbol: "keyboard", selected: showsShortcuts, accessibilityLabel: "Shortcuts") {
                     showsShortcuts.toggle()
                 }

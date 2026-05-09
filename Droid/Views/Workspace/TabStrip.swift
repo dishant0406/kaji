@@ -517,6 +517,7 @@ private struct TabCell: View {
         case .diffViewer: label += ", Diff Viewer"
         case .parentAgent: label += ", Droid Agent"
         case .codeGraph: label += ", Code Graph"
+        case .browser: label += ", Browser"
         }
         if tab.isPinned { label += ", Pinned" }
         if hasUnread { label += ", Unread" }
@@ -537,6 +538,8 @@ private struct TabCell: View {
             DroidIcon(systemName: "sparkles", size: 12)
         } else if tab.kind == .codeGraph {
             DroidIcon(systemName: "point.3.connected.trianglepath.dotted", size: 12)
+        } else if tab.kind == .browser {
+            DroidIcon(systemName: "globe", size: 12)
         } else {
             DroidIcon(systemName: "terminal", size: 12)
         }

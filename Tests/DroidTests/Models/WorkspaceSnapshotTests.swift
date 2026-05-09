@@ -67,6 +67,33 @@ struct WorkspaceSnapshotTests {
         #expect(decoded.activeTabID == workspaceTab.id)
     }
 
+    @Test("TerminalTabSnapshot Codable round-trip for browser pages")
+    func browserSnapshotRoundTrip() throws {
+        let firstID = UUID()
+        let secondID = UUID()
+        let snapshot = TerminalTabSnapshot(
+            kind: .browser,
+            customTitle: nil,
+            colorID: nil,
+            isPinned: false,
+            projectPath: testPath,
+            paneTitle: "Browser",
+            browserURL: "https://one.example",
+            browserPages: [
+                BrowserPageSnapshot(id: firstID, url: "https://one.example", title: "One"),
+                BrowserPageSnapshot(id: secondID, url: "https://two.example", title: "Two"),
+            ],
+            selectedBrowserPageID: secondID
+        )
+
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(TerminalTabSnapshot.self, from: data)
+
+        #expect(decoded.browserPages?.count == 2)
+        #expect(decoded.browserPages?.last?.url == "https://two.example")
+        #expect(decoded.selectedBrowserPageID == secondID)
+    }
+
     @Test("legacy root snapshot upgrades hidden pane tabs into workspace tabs")
     func legacySnapshotUpgrade() throws {
         let areaID = UUID()

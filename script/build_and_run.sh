@@ -2,12 +2,18 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="${APP_NAME_OVERRIDE:-Droid}"
+RUN_IN_PLACE="${RUN_IN_PLACE:-1}"
+DEFAULT_APP_NAME="Droid"
+DEFAULT_BUNDLE_ID="com.droid.app"
+if [[ "$RUN_IN_PLACE" == "1" ]]; then
+  DEFAULT_APP_NAME="DroidDev"
+  DEFAULT_BUNDLE_ID="com.droid.dev"
+fi
+APP_NAME="${APP_NAME_OVERRIDE:-$DEFAULT_APP_NAME}"
 BUILD_PRODUCT_NAME="${BUILD_PRODUCT_NAME_OVERRIDE:-Droid}"
 APP_EXECUTABLE_NAME="${APP_EXECUTABLE_NAME_OVERRIDE:-$APP_NAME}"
-BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-com.droid.app}"
+BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-$DEFAULT_BUNDLE_ID}"
 MIN_SYSTEM_VERSION="${MIN_SYSTEM_VERSION_OVERRIDE:-14.0}"
-RUN_IN_PLACE="${RUN_IN_PLACE:-0}"
 APP_SUPPORT_DIR_OVERRIDE="${APP_SUPPORT_DIR_OVERRIDE:-}"
 KILL_BEFORE_LAUNCH="${KILL_BEFORE_LAUNCH:-1}"
 
@@ -22,12 +28,27 @@ APP_FRAMEWORKS="$APP_CONTENTS/Frameworks"
 APP_BINARY="$APP_MACOS/$APP_EXECUTABLE_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 PKGINFO="$APP_CONTENTS/PkgInfo"
+CEF_ROOT="$ROOT_DIR/.dev-support/cef-runtime/cef_binary"
+CEF_BUILD="$ROOT_DIR/.dev-support/cef-runtime/build/tests/cefsimple/Release"
 
-if [[ "$KILL_BEFORE_LAUNCH" == "1" ]]; then
-  pkill -x "$APP_EXECUTABLE_NAME" >/dev/null 2>&1 || true
-fi
+stop_existing_app() {
+  if [[ "$KILL_BEFORE_LAUNCH" != "1" ]]; then
+    return
+  fi
+
+  local target_binary
+  if [[ "$RUN_IN_PLACE" == "1" ]]; then
+    target_binary="$APP_BINARY"
+  else
+    target_binary="$INSTALL_APP_BUNDLE/Contents/MacOS/$APP_EXECUTABLE_NAME"
+  fi
+
+  pgrep -f "$target_binary" | xargs kill >/dev/null 2>&1 || true
+}
 
 cd "$ROOT_DIR"
+stop_existing_app
+"$ROOT_DIR/scripts/install-cef-runtime.sh"
 swift build
 swift build --target DroidHookClient
 BUILD_BIN_DIR="$(swift build --show-bin-path)"
@@ -45,10 +66,19 @@ chmod +x "$APP_BINARY"
 cp "$HOOK_CLIENT_BINARY" "$APP_MACOS/DroidHookClient"
 chmod +x "$APP_MACOS/DroidHookClient"
 install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_BINARY" 2>/dev/null || true
+install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BINARY" 2>/dev/null || true
 
 if [[ -d "$RESOURCE_BUNDLE" ]]; then
   cp -R "$RESOURCE_BUNDLE" "$APP_RESOURCES/$RESOURCE_BUNDLE_NAME"
 fi
+
+if [[ -d "$CEF_ROOT/Release/Chromium Embedded Framework.framework" ]]; then
+  cp -R "$CEF_ROOT/Release/Chromium Embedded Framework.framework" "$APP_FRAMEWORKS/Chromium Embedded Framework.framework"
+fi
+for helper in "$CEF_BUILD"/cefsimple\ Helper*.app; do
+  [[ -d "$helper" ]] || continue
+  cp -R "$helper" "$APP_FRAMEWORKS/$(basename "$helper")"
+done
 
 if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
   cp -R "$SPARKLE_FRAMEWORK" "$APP_FRAMEWORKS/Sparkle.framework"
@@ -76,7 +106,7 @@ cp "$ROOT_DIR/Droid/Info.plist" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $MIN_SYSTEM_VERSION" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Set :NSPrincipalClass NSApplication" "$INFO_PLIST"
+/usr/libexec/PlistBuddy -c "Set :NSPrincipalClass DroidCEFApplication" "$INFO_PLIST"
 printf 'APPL????' >"$PKGINFO"
 codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 
@@ -115,7 +145,11 @@ case "$MODE" in
   --verify|verify)
     open_app
     sleep 1
-    pgrep -x "$APP_EXECUTABLE_NAME" >/dev/null
+    if [[ "$RUN_IN_PLACE" == "1" ]]; then
+      pgrep -f "$APP_BINARY" >/dev/null
+    else
+      pgrep -f "$INSTALL_APP_BUNDLE/Contents/MacOS/$APP_EXECUTABLE_NAME" >/dev/null
+    fi
     ;;
   *)
     echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2

@@ -7,19 +7,13 @@ enum CodingAgentShimEnvironment {
     static func variables(
         projectID: UUID,
         worktreeID: UUID,
+        worktreePath: String? = nil,
+        browserCommandOverride: String? = nil,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
         store: DroidCodeGraphStore = .shared,
         fileManager: FileManager = .default
     ) -> [(key: String, value: String)] {
-        guard store.isReady,
-              let instructions = DroidCodeGraphInstructions.ensureFile(
-                  projectID: projectID,
-                  worktreeID: worktreeID,
-                  store: store,
-                  fileManager: fileManager
-              )
-        else { return [] }
         guard let shimDirectory = CodingAgentShimInstaller.install(homeDirectory: homeDirectory, fileManager: fileManager) else {
             return []
         }
@@ -32,13 +26,29 @@ enum CodingAgentShimEnvironment {
             userZdotdir: environment[DroidShellBootstrapInstaller.zdotdirKey],
             fileManager: fileManager
         ))
-
         values.append(contentsOf: realExecutableVariables(
             environment: environment,
             homeDirectory: homeDirectory,
             fileManager: fileManager,
             shimDirectory: shimDirectory
         ))
+
+        let browserCommand = browserCommandOverride ?? DroidBrowserAgentScripts.install(into: shimDirectory, fileManager: fileManager)?.path
+        if let worktreePath {
+            values.append(contentsOf: DroidBrowserAgentService.shared.environment(
+                worktreePath: worktreePath,
+                mcpCommand: browserCommand
+            ))
+        }
+
+        guard store.isReady,
+              let instructions = DroidCodeGraphInstructions.ensureFile(
+                  projectID: projectID,
+                  worktreeID: worktreeID,
+                  store: store,
+                  fileManager: fileManager
+              )
+        else { return values }
 
         values.append((key: "DROID_CODE_GRAPH_ROOT_DIR", value: store.rootDirectory.path))
         values.append((
@@ -67,6 +77,7 @@ enum CodingAgentShimEnvironment {
             projectID: projectID,
             worktreeID: worktreeID,
             instructionFile: instructions,
+            browserCommand: browserCommand,
             store: store,
             fileManager: fileManager
         ) {

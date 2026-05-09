@@ -21,6 +21,8 @@ enum PaneHeaderTitle {
             return "Droid"
         case .codeGraph:
             return "Code Graph"
+        case let .browser(state):
+            return state.title
         }
     }
 

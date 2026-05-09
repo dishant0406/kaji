@@ -10,6 +10,7 @@ struct DroidApp: App {
     private let updateService = UpdateService.shared
 
     init() {
+        SwiftRunBundleLauncher.relaunchIfNeeded()
         let environment = AppEnvironment.live
         let projectStore = ProjectStore(persistence: environment.projectPersistence)
         let worktreeStore = WorktreeStore(

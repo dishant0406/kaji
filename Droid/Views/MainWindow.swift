@@ -32,6 +32,12 @@ struct MainWindow: View {
         static let maxWidth: CGFloat = 760
     }
 
+    private enum BrowserLayout {
+        static let minWidth: CGFloat = 420
+        static let defaultWidth: CGFloat = 560
+        static let maxWidth: CGFloat = 980
+    }
+
     private enum CloseConfirmationKind {
         case lastTab
         case unsavedEditor
@@ -73,6 +79,9 @@ struct MainWindow: View {
     @AppStorage("droid.fileTreeWidth") private var fileTreePanelWidth: Double = .init(FileTreeLayout.defaultWidth)
     @AppStorage("droid.codeGraphAgentPanelWidth") private var codeGraphAgentPanelWidth: Double = .init(CodeGraphAgentLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
+    @State private var browserPanelVisible = false
+    @AppStorage("droid.browserPanelWidth") private var browserPanelWidth: Double = .init(BrowserLayout.defaultWidth)
+    @State private var browserStates: [WorktreeKey: BrowserPaneState] = [:]
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
     @State private var codeGraphAgentCoordinator = DroidCodeGraphAgentCoordinator.shared
@@ -244,6 +253,9 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFileTree)) { _ in
                     toggleFileTreePanel()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleBrowserPanel)) { _ in
+                    toggleBrowserPanel()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFooterTerminal)) { _ in
                     guard footerTerminalEnabled else { return }
                     toggleFooterTerminal()
@@ -255,6 +267,7 @@ struct MainWindow: View {
                 .onChange(of: vcsPruneSignature) {
                     pruneVCSStates()
                     pruneFileTreeStates()
+                    pruneBrowserStates()
                 }
                 .onChange(of: vcsEnsureSignature) {
                     guard let project = activeProject else { return }
@@ -428,6 +441,8 @@ struct MainWindow: View {
                 )
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
+        } else if browserPanelVisible, let state = activeBrowserState {
+            browserSidePanel(state: state)
         }
     }
 
@@ -451,6 +466,21 @@ struct MainWindow: View {
                 }
             )
             .frame(width: CGFloat(codeGraphAgentPanelWidth))
+        }
+    }
+
+    private func browserSidePanel(state: BrowserPaneState) -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                let next = browserPanelWidth - Double(delta)
+                browserPanelWidth = max(
+                    Double(BrowserLayout.minWidth),
+                    min(Double(BrowserLayout.maxWidth), next)
+                )
+            }
+            BrowserPane(state: state, onClosePane: { browserPanelVisible = false })
+                .frame(width: CGFloat(browserPanelWidth))
+                .clipped()
         }
     }
 
@@ -945,6 +975,42 @@ struct MainWindow: View {
             }
     }
 
+    private var activeBrowserState: BrowserPaneState? {
+        guard let project = activeProject,
+              let key = appState.activeWorktreeKey(for: project.id)
+        else { return nil }
+        return browserStates[key]
+    }
+
+    private func ensureBrowserState(for project: Project) {
+        guard let key = appState.activeWorktreeKey(for: project.id) else { return }
+        let path = activeWorktreePath(for: project)
+        if let existing = browserStates[key], existing.projectPath == path { return }
+        browserStates[key] = BrowserPaneState(projectPath: path)
+    }
+
+    private func pruneBrowserStates() {
+        let validKeys = validVCSKeys()
+        browserStates = browserStates.filter { validKeys.contains($0.key) }
+    }
+
+    private func toggleBrowserPanel() {
+        guard let project = activeProject else {
+            browserPanelVisible = false
+            return
+        }
+
+        activateWorkspace()
+        ensureBrowserState(for: project)
+        let isShowing = !browserPanelVisible
+        browserPanelVisible = isShowing
+        if isShowing {
+            vcsPanelVisible = false
+            fileTreePanelVisible = false
+            agentInstructionPanelVisible = false
+        }
+    }
+
     private var activeFileTreeState: FileTreeState? {
         guard let project = activeProject,
               let key = appState.activeWorktreeKey(for: project.id)
@@ -994,6 +1060,7 @@ struct MainWindow: View {
         vcsPanelVisible = isShowing
         if isShowing {
             fileTreePanelVisible = false
+            browserPanelVisible = false
             agentInstructionPanelVisible = false
         }
     }
@@ -1010,6 +1077,7 @@ struct MainWindow: View {
         fileTreePanelVisible = isShowing
         if isShowing {
             vcsPanelVisible = false
+            browserPanelVisible = false
             agentInstructionPanelVisible = false
         }
     }
@@ -1030,6 +1098,7 @@ struct MainWindow: View {
         if isShowing {
             vcsPanelVisible = false
             fileTreePanelVisible = false
+            browserPanelVisible = false
         }
     }
 
@@ -1061,6 +1130,7 @@ struct MainWindow: View {
         vcsPanelVisible = isShowing
         if isShowing {
             fileTreePanelVisible = false
+            browserPanelVisible = false
             agentInstructionPanelVisible = false
         }
     }
