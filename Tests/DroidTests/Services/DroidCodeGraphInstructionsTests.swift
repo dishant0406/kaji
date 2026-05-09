@@ -62,12 +62,15 @@ struct DroidCodeGraphInstructionsTests {
             projectID: projectID,
             worktreeID: worktreeID,
             instructionFile: file,
+            browserCommand: "/tmp/droid-browser-mcp",
             store: store,
             fileManager: fileManager
         ))
         let openCodeText = try String(contentsOf: openCodeConfig, encoding: .utf8)
         #expect(openCodeText.contains("\"instructions\""))
         #expect(openCodeText.contains("AGENTS.md"))
+        #expect(openCodeText.contains("\"droid-browser\""))
+        #expect(openCodeText.contains("droid-browser-mcp"))
         let environment = Dictionary(uniqueKeysWithValues: DroidCodeGraphInstructions.environment(
             projectID: projectID,
             worktreeID: worktreeID,

@@ -116,6 +116,9 @@ enum WorkspaceReducer {
                 state: &state
             )
 
+        case let .createBrowserSplit(projectID):
+            TabReducer.createBrowserSplit(projectID: projectID, state: &state)
+
         case let .createEditorTab(projectID, areaID, filePath):
             TabReducer.createEditorTab(projectID: projectID, areaID: areaID, filePath: filePath, state: &state)
 

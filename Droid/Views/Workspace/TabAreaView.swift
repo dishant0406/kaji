@@ -80,6 +80,7 @@ struct TabAreaView: View {
                         visible: isActive && isActiveProject && !workspaceOccluded,
                         onFocus: onFocus,
                         onProcessExit: { onForceCloseTab(tab.id) },
+                        onClosePane: onCloseArea,
                         onSplitRequest: { direction, position in
                             appState.dispatch(.splitArea(.init(
                                 projectID: projectID,
@@ -163,6 +164,7 @@ private struct TabContentView: View {
     let visible: Bool
     let onFocus: () -> Void
     let onProcessExit: () -> Void
+    let onClosePane: () -> Void
     let onSplitRequest: (SplitDirection, SplitPosition) -> Void
 
     var body: some View {
@@ -186,6 +188,8 @@ private struct TabContentView: View {
             ParentAgentTabContent()
         case let .codeGraph(state):
             DroidCodeGraphPane(state: state)
+        case let .browser(state):
+            BrowserPane(state: state, onClosePane: onClosePane)
         }
     }
 }

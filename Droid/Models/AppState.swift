@@ -45,6 +45,7 @@ final class AppState {
         case createVCSTab(projectID: UUID, areaID: UUID?)
         case createParentAgentTab(projectID: UUID, areaID: UUID?)
         case createCodeGraphTab(CodeGraphTabRequest)
+        case createBrowserSplit(projectID: UUID)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
         case createExternalEditorTab(projectID: UUID, areaID: UUID?, filePath: String, command: String)
         case createDiffViewerTab(projectID: UUID, areaID: UUID?, request: DiffViewerRequest)
@@ -273,6 +274,10 @@ final class AppState {
             worktreePath: worktreePath,
             graphURL: graphURL
         )))
+    }
+
+    func openBrowserPanel(projectID: UUID) {
+        NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
     }
 
     func createCommandTab(projectID: UUID, title: String, command: String) {

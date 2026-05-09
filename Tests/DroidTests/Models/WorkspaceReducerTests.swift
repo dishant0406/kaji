@@ -79,6 +79,27 @@ struct WorkspaceReducerTests {
 
         #expect(state.workspaces[key]?.tabs.count == 1)
         #expect(state.workspaceRoots[key]?.allAreas().count == 2)
+        #expect(state.workspaces[key]?.activeTab?.root.allAreas().count == 2)
+    }
+
+    @Test("createBrowserSplit adds a browser pane to the active workspace tab")
+    func createBrowserSplit() throws {
+        let projectID = UUID()
+        let worktreeID = UUID()
+        var state = makeState(projectID: projectID, worktreeID: worktreeID)
+        let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
+
+        _ = WorkspaceReducer.reduce(
+            action: .createBrowserSplit(projectID: projectID),
+            state: &state
+        )
+
+        let root = try #require(state.workspaceRoots[key])
+        let browserTabs = root.allAreas().flatMap(\.tabs).filter { $0.kind == .browser }
+        #expect(state.workspaces[key]?.tabs.count == 1)
+        #expect(root.allAreas().count == 2)
+        #expect(browserTabs.count == 1)
+        #expect(state.workspaces[key]?.activeTab?.root.allAreas().count == 2)
     }
 
     @Test("splitArea only mutates the active workspace tab")

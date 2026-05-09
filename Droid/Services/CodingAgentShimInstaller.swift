@@ -23,6 +23,7 @@ enum CodingAgentShimInstaller {
                 }
                 try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
             }
+            _ = DroidBrowserAgentScripts.install(into: directory, fileManager: fileManager)
             return directory
         } catch {
             return nil

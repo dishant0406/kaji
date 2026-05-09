@@ -10,6 +10,7 @@ final class TerminalTab: Identifiable {
         case diffViewer
         case parentAgent
         case codeGraph
+        case browser
     }
 
     enum Content {
@@ -19,6 +20,7 @@ final class TerminalTab: Identifiable {
         case diffViewer(DiffViewerTabState)
         case parentAgent(ParentAgentTabState)
         case codeGraph(DroidCodeGraphTabState)
+        case browser(BrowserPaneState)
 
         var kind: Kind {
             switch self {
@@ -28,6 +30,7 @@ final class TerminalTab: Identifiable {
             case .diffViewer: .diffViewer
             case .parentAgent: .parentAgent
             case .codeGraph: .codeGraph
+            case .browser: .browser
             }
         }
 
@@ -56,6 +59,11 @@ final class TerminalTab: Identifiable {
             return state
         }
 
+        var browserState: BrowserPaneState? {
+            guard case let .browser(state) = self else { return nil }
+            return state
+        }
+
         var projectPath: String {
             switch self {
             case let .terminal(pane): pane.projectPath
@@ -64,6 +72,7 @@ final class TerminalTab: Identifiable {
             case let .diffViewer(state): state.projectPath
             case let .parentAgent(state): state.projectPath
             case let .codeGraph(state): state.projectPath
+            case let .browser(state): state.projectPath
             }
         }
     }
@@ -93,6 +102,8 @@ final class TerminalTab: Identifiable {
             return "Droid"
         case .codeGraph:
             return "Code Graph"
+        case let .browser(state):
+            return state.title
         }
     }
 
@@ -120,6 +131,10 @@ final class TerminalTab: Identifiable {
         content = .codeGraph(codeGraphState)
     }
 
+    init(browserState: BrowserPaneState) {
+        content = .browser(browserState)
+    }
+
     init(restoring snapshot: TerminalTabSnapshot) {
         customTitle = snapshot.customTitle
         colorID = snapshot.colorID
@@ -141,6 +156,8 @@ final class TerminalTab: Identifiable {
             content = .parentAgent(ParentAgentTabState(projectPath: snapshot.projectPath))
         case .codeGraph:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
+        case .browser:
+            content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         }
     }
 
@@ -152,7 +169,10 @@ final class TerminalTab: Identifiable {
             isPinned: isPinned,
             projectPath: content.projectPath,
             paneTitle: content.pane?.title,
-            filePath: content.editorState?.filePath
+            filePath: content.editorState?.filePath,
+            browserURL: content.browserState?.url,
+            browserPages: content.browserState?.pageSnapshots,
+            selectedBrowserPageID: content.browserState?.selectedPageID
         )
     }
 }

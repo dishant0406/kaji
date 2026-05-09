@@ -36,7 +36,7 @@ final class TabArea: Identifiable {
     }
 
     func snapshot() -> TabAreaSnapshot {
-        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .codeGraph }
+        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .codeGraph && $0.kind != .browser }
         let activeIndex = persistedTabs.firstIndex(where: { $0.id == activeTabID })
         return TabAreaSnapshot(
             id: id,
@@ -74,6 +74,14 @@ final class TabArea: Identifiable {
             projectPath: projectPath,
             graphURL: graphURL
         )))
+    }
+
+    func createBrowserTab(url: String = "https://www.google.com") {
+        if let existing = tabs.first(where: { $0.kind == .browser }) {
+            selectTab(existing.id)
+            return
+        }
+        insertTab(TerminalTab(browserState: BrowserPaneState(projectPath: projectPath, url: url)))
     }
 
     func createCommandTab(title: String, command: String) {

@@ -109,8 +109,23 @@ struct CodingAgentShimScript {
         resolve_droid_graph
         ensure_droid_bridges
         codex_model_config="model_instructions_file=\\"${DROID_CODE_GRAPH_INSTRUCTIONS:-}\\""
+        codex_browser_config=""
+        codex_browser_env_config='mcp_servers.droid-browser.env_vars=["DROID_BROWSER_ENDPOINT","DROID_BROWSER_SESSION_ID"]'
+        if [ -n "${DROID_BROWSER_MCP_COMMAND:-}" ]; then
+          codex_browser_config="mcp_servers.droid-browser.command=\\"$DROID_BROWSER_MCP_COMMAND\\""
+        fi
+        ensure_claude_browser_mcp() {
+          if [ -z "${DROID_BROWSER_MCP_COMMAND:-}" ]; then
+            return
+          fi
+          json="{\\"type\\":\\"stdio\\",\\"command\\":\\"$DROID_BROWSER_MCP_COMMAND\\","
+          json="$json\\"env\\":{\\"DROID_BROWSER_ENDPOINT\\":\\"${DROID_BROWSER_ENDPOINT:-}\\","
+          json="$json\\"DROID_BROWSER_SESSION_ID\\":\\"${DROID_BROWSER_SESSION_ID:-}\\"}}"
+          "$real" mcp add-json droid-browser "$json" >/dev/null 2>&1 || true
+        }
         case "\(bridge)" in
           claude)
+            ensure_claude_browser_mcp
             if [ -n "$droid_dir" ] && [ -d "$droid_dir" ] && [ -n "$droid_root" ] && [ -d "$droid_root" ]; then
               CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 exec "$real" --add-dir "$droid_dir" --add-dir "$droid_root" "$@"
             fi
@@ -119,6 +134,9 @@ struct CodingAgentShimScript {
             fi
             ;;
           codex)
+            if [ -n "$codex_browser_config" ]; then
+              set -- -c "$codex_browser_config" -c "$codex_browser_env_config" "$@"
+            fi
             if [ -n "${DROID_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$DROID_CODE_GRAPH_INSTRUCTIONS" ]; then
               if [ -n "$droid_dir" ] && [ -d "$droid_dir" ] && [ -n "$droid_root" ] && [ -d "$droid_root" ]; then
                 exec "$real" -c "$codex_model_config" --add-dir "$droid_dir" --add-dir "$droid_root" "$@"
@@ -141,6 +159,11 @@ struct CodingAgentShimScript {
             fi
             ;;
           pi)
+            if [ -n "${DROID_BROWSER_MCP_COMMAND:-}" ]; then
+              pi_browser_prompt="Use the Droid browser MCP tools when you need browser access."
+              pi_browser_prompt="$pi_browser_prompt The stdio MCP command is $DROID_BROWSER_MCP_COMMAND."
+              set -- --append-system-prompt "$pi_browser_prompt" "$@"
+            fi
             if [ -n "${DROID_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$DROID_CODE_GRAPH_INSTRUCTIONS" ]; then
               exec "$real" --append-system-prompt "$DROID_CODE_GRAPH_INSTRUCTIONS" "$@"
             fi
