@@ -7,8 +7,7 @@ enum CodingAgentShimEnvironment {
     static func variables(
         projectID: UUID,
         worktreeID: UUID,
-        worktreePath: String? = nil,
-        browserCommandOverride: String? = nil,
+        worktreePath _: String? = nil,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
         store: DroidCodeGraphStore = .shared,
@@ -32,14 +31,6 @@ enum CodingAgentShimEnvironment {
             fileManager: fileManager,
             shimDirectory: shimDirectory
         ))
-
-        let browserCommand = browserCommandOverride ?? DroidBrowserAgentScripts.install(into: shimDirectory, fileManager: fileManager)?.path
-        if let worktreePath {
-            values.append(contentsOf: DroidBrowserAgentService.shared.environment(
-                worktreePath: worktreePath,
-                mcpCommand: browserCommand
-            ))
-        }
 
         guard store.isReady,
               let instructions = DroidCodeGraphInstructions.ensureFile(
@@ -77,7 +68,6 @@ enum CodingAgentShimEnvironment {
             projectID: projectID,
             worktreeID: worktreeID,
             instructionFile: instructions,
-            browserCommand: browserCommand,
             store: store,
             fileManager: fileManager
         ) {
@@ -130,12 +120,12 @@ enum CodingAgentShimEnvironment {
             .map(String.init)
             .filter { $0 != shimDirectory.path }
             .joined(separator: ":")
-        return AIProviderExecutableLocator.candidatePaths(
+        return AIProviderExecutableLocator.preferredRealPath(
             for: name,
             env: env,
             homeDirectory: homeDirectory,
-            fileManager: fileManager
+            fileManager: fileManager,
+            excluding: shimDirectory
         )
-        .first { !$0.hasPrefix(shimDirectory.path + "/") && fileManager.isExecutableFile(atPath: $0) }
     }
 }

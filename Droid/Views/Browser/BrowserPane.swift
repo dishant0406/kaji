@@ -37,10 +37,8 @@ struct BrowserPane: View {
         .clipped()
         .task {
             pendingURL = state.url
-            registerAgentTarget()
         }
         .onDisappear {
-            DroidBrowserAgentService.shared.unregister(worktreePath: state.projectPath)
             controllers.closeAll()
         }
         .onChange(of: state.url) { _, newValue in
@@ -50,7 +48,6 @@ struct BrowserPane: View {
             pendingURL = state.url
             showsPageText = false
             selectedController?.ensureStarted(url: state.url)
-            registerAgentTarget()
         }
     }
 
@@ -72,7 +69,6 @@ struct BrowserPane: View {
                     let page = state.openPage()
                     pendingURL = page.url
                     controllers.controller(for: page.id).ensureStarted(url: page.url)
-                    registerAgentTarget()
                 }
                 .help("New tab")
             }
@@ -131,15 +127,6 @@ struct BrowserPane: View {
 
     private func navigate() {
         selectedController?.navigate(to: pendingURL)
-        registerAgentTarget()
-    }
-
-    private func registerAgentTarget() {
-        DroidBrowserAgentService.shared.register(
-            worktreePath: state.projectPath,
-            state: state,
-            controller: selectedController
-        )
     }
 
     private func closeBrowserPage(_ pageID: UUID) {
@@ -163,7 +150,6 @@ struct BrowserPane: View {
         let page = state.openPage(url: url.isEmpty ? "about:blank" : url)
         pendingURL = page.url
         controllers.controller(for: page.id).ensureStarted(url: page.url)
-        registerAgentTarget()
     }
 
     private func readPage() async {

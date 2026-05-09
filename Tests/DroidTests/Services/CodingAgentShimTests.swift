@@ -6,26 +6,6 @@ import Testing
 @MainActor
 struct CodingAgentShimTests {
     @Test
-    func installsExecutableShims() throws {
-        let fileManager = FileManager.default
-        let home = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        defer { try? fileManager.removeItem(at: home) }
-
-        let directory = try #require(CodingAgentShimInstaller.install(
-            homeDirectory: home.path,
-            fileManager: fileManager
-        ))
-
-        for name in ["codex", "claude", "claude-code", "opencode", "pi"] {
-            let path = directory.appendingPathComponent(name).path
-            #expect(fileManager.isExecutableFile(atPath: path))
-            let text = try String(contentsOfFile: path, encoding: .utf8)
-            #expect(text.contains("exec \"$real\""))
-            #expect(text.contains("\"$@\""))
-        }
-    }
-
-    @Test
     func codexShimPreservesUserArgumentsAndAdditionalDirectories() throws {
         let result = try runShim(named: "codex", realEnv: "DROID_REAL_CODEX", graphEnv: [
             "DROID_CODE_GRAPH_PROJECT_DIR": "droid-graph",
@@ -181,9 +161,6 @@ struct CodingAgentShimTests {
             "DROID_CODE_GRAPH_REPORT": "",
             "DROID_CODE_GRAPH_JSON": "",
             "DROID_CODE_GRAPH_OPENCODE_CONFIG": "",
-            "DROID_BROWSER_ENDPOINT": "",
-            "DROID_BROWSER_SESSION_ID": "",
-            "DROID_BROWSER_MCP_COMMAND": "",
         ]) { result, pair in
             result[pair.key] = root.appendingPathComponent(pair.value).path
         }

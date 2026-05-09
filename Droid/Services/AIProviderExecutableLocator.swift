@@ -51,7 +51,11 @@ enum AIProviderExecutableLocator {
         fileManager: FileManager,
         extraDirectories: [String] = []
     ) -> [String] {
-        var paths = [String]()
+        var paths = nvmExecutablePaths(
+            for: executableName,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        )
         let pathVariable = env["PATH"]?.split(separator: ":").map(String.init) ?? []
         for directory in pathVariable where !directory.isEmpty {
             paths.append((directory as NSString).appendingPathComponent(executableName))
@@ -73,16 +77,46 @@ enum AIProviderExecutableLocator {
             paths.append((directory as NSString).appendingPathComponent(executableName))
         }
 
+        return dedupe(paths)
+    }
+
+    private static func nvmExecutablePaths(
+        for executableName: String,
+        homeDirectory: String,
+        fileManager: FileManager
+    ) -> [String] {
         let nvmVersionsDirectory = "\(homeDirectory)/.nvm/versions/node"
         if let versionDirectories = try? fileManager.contentsOfDirectory(
             atPath: nvmVersionsDirectory
         ) {
-            for version in versionDirectories {
-                let path = "\(nvmVersionsDirectory)/\(version)/bin/\(executableName)"
-                paths.append(path)
-            }
+            return versionDirectories
+                .sorted { compareNodeVersion($0, $1) == .orderedDescending }
+                .map { "\(nvmVersionsDirectory)/\($0)/bin/\(executableName)" }
         }
+        return []
+    }
 
+    private static func compareNodeVersion(_ lhs: String, _ rhs: String) -> ComparisonResult {
+        let left = versionNumbers(lhs)
+        let right = versionNumbers(rhs)
+        let count = max(left.count, right.count)
+        for index in 0 ..< count {
+            let leftValue = index < left.count ? left[index] : 0
+            let rightValue = index < right.count ? right[index] : 0
+            if leftValue > rightValue { return .orderedDescending }
+            if leftValue < rightValue { return .orderedAscending }
+        }
+        return lhs.compare(rhs)
+    }
+
+    private static func versionNumbers(_ value: String) -> [Int] {
+        value
+            .trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            .split(separator: ".")
+            .map { Int($0.prefix { $0.isNumber }) ?? 0 }
+    }
+
+    private static func dedupe(_ paths: [String]) -> [String] {
         var deduped = [String]()
         var seen = Set<String>()
         for path in paths where seen.insert(path).inserted {
@@ -91,10 +125,28 @@ enum AIProviderExecutableLocator {
         return deduped
     }
 
+    static func preferredRealPath(
+        for executableName: String,
+        env: [String: String],
+        homeDirectory: String,
+        fileManager: FileManager,
+        excluding directory: URL
+    ) -> String? {
+        let shimPath = directory.path + "/"
+        return candidatePaths(
+            for: executableName,
+            env: env,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        ).first {
+            !$0.hasPrefix(shimPath) && fileManager.isExecutableFile(atPath: $0)
+        }
+    }
+
     private static func shellResolvedPath(for executableName: String) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lic", "command -v -- \(shellQuoted(executableName))"]
+        process.arguments = ["-lic", "whence -p -- \(shellQuoted(executableName))"]
 
         let output = Pipe()
         process.standardOutput = output

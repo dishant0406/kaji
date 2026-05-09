@@ -65,4 +65,28 @@ struct AIProviderExecutableLocatorTests {
 
         #expect(path == executable.path)
     }
+    @Test
+    func prefersNewestNvmExecutableOverOlderPathExecutable() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let oldBin = root.appendingPathComponent("old-bin")
+        let latestBin = root
+            .appendingPathComponent(".nvm/versions/node/v22.20.0/bin")
+        try FileManager.default.createDirectory(at: oldBin, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: latestBin, withIntermediateDirectories: true)
+
+        let oldExecutable = oldBin.appendingPathComponent("codex")
+        let latestExecutable = latestBin.appendingPathComponent("codex")
+        try "#!/bin/sh\nexit 0\n".write(to: oldExecutable, atomically: true, encoding: .utf8)
+        try "#!/bin/sh\nexit 0\n".write(to: latestExecutable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: oldExecutable.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: latestExecutable.path)
+
+        let path = AIProviderExecutableLocator.resolvePath(
+            for: "codex",
+            env: ["PATH": oldBin.path],
+            homeDirectory: root.path
+        )
+
+        #expect(path == latestExecutable.path)
+    }
 }
