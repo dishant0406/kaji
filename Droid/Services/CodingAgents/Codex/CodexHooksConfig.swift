@@ -97,6 +97,7 @@ enum CodexHooksConfig {
                 [
                     "type": "command",
                     "command": command,
+                    "timeout": 5,
                 ],
             ],
         ])
@@ -112,7 +113,14 @@ enum CodexHooksConfig {
     }
 
     private static func hookCommand(hookClientPath: String, providerID: String, state: String) -> String {
-        "\(ShellEscaper.escape(hookClientPath)) codex-activity \(providerID) \(state) # \(marker)"
+        let fallbackPath = ShellEscaper.escape(hookClientPath)
+        return [
+            "if [ -n \"${DROID_HOOK_CLIENT_PATH:-}\" ] && [ -x \"$DROID_HOOK_CLIENT_PATH\" ]; then",
+            "\"$DROID_HOOK_CLIENT_PATH\" codex-activity \(providerID) \(state);",
+            "elif [ -x \(fallbackPath) ]; then",
+            "\(fallbackPath) codex-activity \(providerID) \(state);",
+            "fi # \(marker)",
+        ].joined(separator: " ")
     }
 
     private static func normalizedJSON(_ root: [String: Any]) -> String {

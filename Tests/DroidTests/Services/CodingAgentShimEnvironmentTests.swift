@@ -69,25 +69,24 @@ struct CodingAgentShimEnvironmentTests {
         #expect(!keys.contains("DROID_CODE_GRAPH_INSTRUCTIONS"))
     }
     @Test
-    func addsBrowserEnvironmentForWorktreePath() throws {
+    func resolvesLatestNvmExecutableBeforeStalePathVersion() throws {
         let fixture = try Fixture()
         defer { fixture.cleanup() }
         try fixture.makeInstalledRuntime()
+        try fixture.executable("codex")
+        let latest = try fixture.nvmExecutable(name: "codex", version: "v22.20.0")
+        _ = try fixture.nvmExecutable(name: "codex", version: "v22.15.0")
 
         let values = Dictionary(uniqueKeysWithValues: CodingAgentShimEnvironment.variables(
             projectID: fixture.projectID,
             worktreeID: fixture.worktreeID,
-            worktreePath: fixture.root.appendingPathComponent("project").path,
-            browserCommandOverride: fixture.bin.appendingPathComponent("droid-browser-mcp").path,
             environment: ["PATH": fixture.bin.path],
             homeDirectory: fixture.home.path,
             store: fixture.store,
             fileManager: fixture.fileManager
         ).map { ($0.key, $0.value) })
 
-        #expect(values["DROID_BROWSER_SESSION_ID"] != nil)
-        #expect(values["DROID_BROWSER_ENDPOINT"]?.hasPrefix("http://127.0.0.1:") == true)
-        #expect(values["DROID_BROWSER_MCP_COMMAND"]?.hasSuffix("droid-browser-mcp") == true)
+        #expect(values["DROID_REAL_CODEX"] == latest.path)
     }
 
 }
@@ -137,5 +136,17 @@ private final class Fixture {
         let path = bin.appendingPathComponent(name)
         try Data("#!/bin/sh\nexit 0\n".utf8).write(to: path)
         try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: path.path)
+    }
+
+    func nvmExecutable(name: String, version: String) throws -> URL {
+        let path = home
+            .appendingPathComponent(".nvm/versions/node", isDirectory: true)
+            .appendingPathComponent(version, isDirectory: true)
+            .appendingPathComponent("bin", isDirectory: true)
+            .appendingPathComponent(name)
+        try fileManager.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: path)
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: path.path)
+        return path
     }
 }

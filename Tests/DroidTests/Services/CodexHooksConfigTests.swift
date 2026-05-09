@@ -63,9 +63,27 @@ struct CodexHooksConfigTests {
 
         let commands = hookCommands(in: output.hooks)
         #expect(commands.contains("/tmp/custom-start.sh"))
-        #expect(commands.contains("/tmp/DroidHookClient codex-activity codex start # droid-activity-hook"))
-        #expect(commands.contains("/tmp/DroidHookClient codex-activity codex stop # droid-activity-hook"))
-        #expect(commands.contains("/tmp/DroidHookClient codex-activity codex attention # droid-activity-hook"))
+        #expect(commands.contains(where: { $0.contains("DROID_HOOK_CLIENT_PATH") && $0.contains("codex-activity codex start") }))
+        #expect(commands.contains(where: { $0.contains("DROID_HOOK_CLIENT_PATH") && $0.contains("codex-activity codex stop") }))
+        #expect(commands.contains(where: { $0.contains("DROID_HOOK_CLIENT_PATH") && $0.contains("codex-activity codex attention") }))
+        #expect(commands.allSatisfy { $0.contains("droid-activity-hook") || $0 == "/tmp/custom-start.sh" })
+    }
+
+    @Test
+    func installUsesRuntimeHookClientEnvironmentBeforeFallbackPath() {
+        let output = CodexHooksConfig.install(
+            config: "",
+            hooksContent: "",
+            hookClientPath: "/tmp/Droid Hook Client"
+        )
+
+        let commands = hookCommands(in: output.hooks)
+        #expect(commands.contains { command in
+            command.contains("$DROID_HOOK_CLIENT_PATH") &&
+                command.contains("'/tmp/Droid Hook Client'") &&
+                command.contains("codex-activity codex start")
+        })
+        #expect(hookHandlers(in: output.hooks).contains { ($0["timeout"] as? Int) == 5 })
     }
 
     @Test
@@ -113,6 +131,10 @@ struct CodexHooksConfigTests {
     }
 
     private func hookCommands(in json: String) -> [String] {
+        hookHandlers(in: json).compactMap { $0["command"] as? String }
+    }
+
+    private func hookHandlers(in json: String) -> [[String: Any]] {
         guard let data = json.data(using: .utf8),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let hooks = root["hooks"] as? [String: Any]
@@ -124,7 +146,7 @@ struct CodexHooksConfigTests {
             .compactMap { $0 as? [[String: Any]] }
             .flatMap { entries in
                 entries.flatMap { entry in
-                    ((entry["hooks"] as? [[String: Any]]) ?? []).compactMap { $0["command"] as? String }
+                    (entry["hooks"] as? [[String: Any]]) ?? []
                 }
             }
     }

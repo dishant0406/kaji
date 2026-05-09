@@ -151,7 +151,7 @@ final class BrowserWebController {
         guard let helperPath = CEFRuntimeLocator.helperPath(rootPath: rootPath) else { throw BrowserRuntimeError.helperMissing }
         let profilePath = DroidFileStorage.appSupportDirectory()
             .appendingPathComponent("CEFProfiles", isDirectory: true)
-            .appendingPathComponent(DroidBrowserAgentService.sessionID(for: projectPath), isDirectory: true)
+            .appendingPathComponent(BrowserProfileIdentifier.value(for: projectPath), isDirectory: true)
             .path
         try FileManager.default.createDirectory(atPath: profilePath, withIntermediateDirectories: true)
         do {

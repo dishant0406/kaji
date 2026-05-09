@@ -26,11 +26,18 @@ enum CodexHookHandler {
 
     private static func emitAttention(provider: String, input: String) {
         let detail = extractedText(input, keys: ["tool_name", "tool", "command", "path", "reason", "message"], limit: 500)
+        let body = detail.isEmpty ? "Needs permission" : "Needs permission: \(detail)"
         HookEventEmitter.emit(
             type: "\(provider)_attention",
             paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
             title: "permission",
-            body: detail.isEmpty ? "PermissionRequest" : detail
+            body: body
+        )
+        HookEventEmitter.emit(
+            type: provider,
+            paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
+            title: "permission",
+            body: body
         )
     }
 
