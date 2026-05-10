@@ -2,10 +2,30 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLATFORM="macosarm64"
-if [[ "$(uname -m)" == "x86_64" ]]; then
-  PLATFORM="macosx64"
-fi
+ARCH="$(uname -m)"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --arch)
+      ARCH="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+case "$ARCH" in
+  arm64) PLATFORM="macosarm64" ;;
+  x86_64) PLATFORM="macosx64" ;;
+  *)
+    echo "Error: arch must be arm64 or x86_64" >&2
+    exit 1
+    ;;
+esac
+
 RUNTIME_ROOT="$PROJECT_ROOT/.dev-support/cef-runtime"
 DOWNLOAD_ROOT="$PROJECT_ROOT/.dev-support/cef-download"
 CEF_ROOT="$RUNTIME_ROOT/cef_binary"
@@ -47,11 +67,11 @@ if [[ -f "$CEF_LIB" ]]; then
 fi
 
 if [[ ! -f "$BUILD_ROOT/libcef_dll_wrapper/libcef_dll_wrapper.a" || ! -x "$BUILD_ROOT/tests/cefsimple/Release/cefsimple Helper.app/Contents/MacOS/cefsimple Helper" ]]; then
-  cmake -S "$CEF_ROOT" -B "$BUILD_ROOT" -G "Unix Makefiles" -DPROJECT_ARCH="$(uname -m)" -DCMAKE_BUILD_TYPE=Release
+  cmake -S "$CEF_ROOT" -B "$BUILD_ROOT" -G "Unix Makefiles" -DPROJECT_ARCH="$ARCH" -DCMAKE_BUILD_TYPE=Release
   JOBS="$(/usr/sbin/sysctl -n hw.ncpu 2>/dev/null || echo 4)"
   cmake --build "$BUILD_ROOT" --target libcef_dll_wrapper cefsimple -j"$JOBS"
 fi
-SWIFTPM_ROOT="$PROJECT_ROOT/.build/$(uname -m)-apple-macosx"
+SWIFTPM_ROOT="$PROJECT_ROOT/.build/$ARCH-apple-macosx"
 if [[ -d "$CEF_FRAMEWORK" ]]; then
   mkdir -p "$SWIFTPM_ROOT/Frameworks"
   ln -sfn "$CEF_FRAMEWORK" "$SWIFTPM_ROOT/Frameworks/Chromium Embedded Framework.framework"
