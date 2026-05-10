@@ -84,7 +84,7 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$SPM_BUILD_DIR/Droid" "$APP_BUNDLE/Contents/MacOS/Droid"
 cp "$SPM_BUILD_DIR/DroidHookClient" "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
-install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Droid"
+otool -l "$APP_BUNDLE/Contents/MacOS/Droid" | grep -Fq "path @executable_path/../Frameworks" || install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Droid"
 install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BUNDLE/Contents/MacOS/Droid" 2>/dev/null || true
 
 echo "==> Stripping local and debug symbols"
