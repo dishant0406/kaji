@@ -29,6 +29,9 @@ Run `scripts/checks.sh --fix` after every task.
 
 - Droid is a macOS terminal multiplexer built with SwiftUI that uses [libghostty](https://github.com/dishant0406/ghostty) for terminal emulation and rendering via Metal.
 - The architecture of the app is documented at `./docs/architecture.md` and must always be up to date.
+- All the coding agents specific things are always inside `./Droid/Services/CodingAgents/` directory. The main logic of the app should not have any coding agent specific code. No hardcoded checks for coding agents should be present in the main logic of the app. If there are any coding agent specific code, it should be moved to `./Droid/Services/CodingAgents/` directory, under that specific coding agent's folder module.
+- Make everything you make scalable. Such that there can be more coding agents in the future and the code should be able to accommodate that without any issues. For example, if you are adding a new coding agent, you should not have to change any code in the main logic of the app. You should only have to add a new module in `./Droid/Services/CodingAgents/` directory for that specific coding agent and implement the required functionality there.
+- Always use the reusable Droid Components and Services whenever possible. If you need to add a new component or service, make sure to add it in a way that it can be reused in the future for other features or coding agents.
 
 ### Core Components
 
