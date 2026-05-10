@@ -1,6 +1,7 @@
 import Foundation
 
-enum CodexNotificationCoalescer {
+@MainActor
+enum CodingAgentNotificationCoalescer {
     enum MergeResult {
         case none
         case replaced
@@ -8,9 +9,9 @@ enum CodexNotificationCoalescer {
     }
 
     static func merge(_ notification: DroidNotification, into existing: inout [DroidNotification]) -> MergeResult {
-        guard isCodex(notification),
+        guard shouldCoalesce(notification),
               let latest = existing.first,
-              isCodex(latest),
+              latest.source == notification.source,
               notification.timestamp.timeIntervalSince(latest.timestamp) < 15
         else {
             return .none
@@ -31,11 +32,8 @@ enum CodexNotificationCoalescer {
         return .none
     }
 
-    private static func isCodex(_ notification: DroidNotification) -> Bool {
-        if case .aiProvider("codex") = notification.source {
-            return true
-        }
-        return false
+    private static func shouldCoalesce(_ notification: DroidNotification) -> Bool {
+        AIProviderRegistry.shared.notificationPolicy(for: notification.source).coalesceGenericCompletions
     }
 
     private static func isGenericTurnCompleted(_ body: String) -> Bool {

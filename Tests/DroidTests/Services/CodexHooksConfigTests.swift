@@ -91,7 +91,31 @@ struct CodexHooksConfigTests {
     }
 
     @Test
-    func installUsesRuntimeHookClientEnvironmentBeforeFallbackPath() {
+    func installAddsAllCodexLifecycleEvents() {
+        let output = CodexHooksConfig.install(
+            config: "",
+            hooksContent: "",
+            hookClientPath: "/tmp/DroidHookClient"
+        )
+
+        let hooks = hookGroupsByEvent(in: output.hooks)
+
+        #expect(hooks.keys.sorted() == [
+            "PermissionRequest",
+            "PostToolUse",
+            "PreToolUse",
+            "SessionStart",
+            "Stop",
+            "UserPromptSubmit",
+        ])
+        #expect((hooks["SessionStart"]?.first?["matcher"] as? String) == "startup|resume|clear")
+        #expect((hooks["PreToolUse"]?.first?["matcher"] as? String) == "*")
+        #expect((hooks["PostToolUse"]?.first?["matcher"] as? String) == "*")
+        #expect((hooks["PermissionRequest"]?.first?["matcher"] as? String) == "*")
+    }
+
+    @Test
+    func installUsesFallbackHookClientBeforeRuntimeEnvironment() {
         let output = CodexHooksConfig.install(
             config: "",
             hooksContent: "",
@@ -100,9 +124,12 @@ struct CodexHooksConfigTests {
 
         let commands = hookCommands(in: output.hooks)
         #expect(commands.contains { command in
-            command.contains("$DROID_HOOK_CLIENT_PATH") &&
+            let fallbackIndex = command.range(of: "'/tmp/Droid Hook Client'")?.lowerBound ?? command.endIndex
+            let runtimeIndex = command.range(of: "$DROID_HOOK_CLIENT_PATH")?.lowerBound ?? command.endIndex
+            return command.contains("$DROID_HOOK_CLIENT_PATH") &&
                 command.contains("'/tmp/Droid Hook Client'") &&
-                command.contains("codex-activity codex start")
+                command.contains("codex-activity codex start") &&
+                fallbackIndex < runtimeIndex
         })
         #expect(hookHandlers(in: output.hooks).contains { ($0["timeout"] as? Int) == 5 })
     }
@@ -156,19 +183,25 @@ struct CodexHooksConfigTests {
     }
 
     private func hookHandlers(in json: String) -> [[String: Any]] {
+        hookGroupsByEvent(in: json).values.flatMap { entries in
+            entries.flatMap { entry in
+                (entry["hooks"] as? [[String: Any]]) ?? []
+            }
+        }
+    }
+
+    private func hookGroupsByEvent(in json: String) -> [String: [[String: Any]]] {
         guard let data = json.data(using: .utf8),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let hooks = root["hooks"] as? [String: Any]
         else {
-            return []
+            return [:]
         }
 
-        return hooks.values
-            .compactMap { $0 as? [[String: Any]] }
-            .flatMap { entries in
-                entries.flatMap { entry in
-                    (entry["hooks"] as? [[String: Any]]) ?? []
-                }
+        return hooks.reduce(into: [:]) { result, item in
+            if let entries = item.value as? [[String: Any]] {
+                result[item.key] = entries
             }
+        }
     }
 }

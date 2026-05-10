@@ -150,7 +150,7 @@ final class NotificationStore {
             isRead: markRead
         )
         clearActivityIfNeeded(for: notification)
-        switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
+        switch CodingAgentNotificationCoalescer.merge(notification, into: &notifications) {
         case .replaced:
             scheduleSave()
             deliverOutbound(notification, event: normalizedEvent(for: notification))
@@ -175,7 +175,7 @@ final class NotificationStore {
         )
         notification.isRead = decision == .persistReadAndDeliver
         clearActivityIfNeeded(for: notification)
-        switch CodexNotificationCoalescer.merge(notification, into: &notifications) {
+        switch CodingAgentNotificationCoalescer.merge(notification, into: &notifications) {
         case .replaced:
             scheduleSave()
             deliverOutbound(notification, event: normalizedEvent(for: notification))
@@ -214,9 +214,9 @@ final class NotificationStore {
 
     private func suppressesUserDelivery(for notification: DroidNotification, event: NotificationOutboundEvent) -> Bool {
         guard event.kind == .completed,
-              case let .aiProvider(providerID) = notification.source
+              case .aiProvider = notification.source
         else { return false }
-        return ["codex", "opencode"].contains(providerID)
+        return AIProviderRegistry.shared.notificationPolicy(for: notification.source).suppressCompletionUserDelivery
     }
 
     private func normalizedEvent(for notification: DroidNotification) -> NotificationOutboundEvent {
@@ -228,7 +228,7 @@ final class NotificationStore {
     }
 
     private func deliverOutbound(_ notification: DroidNotification, event: NotificationOutboundEvent) {
-        CodexOutboundNotificationCoordinator.shared.deliver(notification: notification, event: event) { event in
+        CodingAgentOutboundNotificationCoordinator.shared.deliver(notification: notification, event: event) { event in
             await NotificationIntegrationStore.shared.deliver(event)
         }
     }

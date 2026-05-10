@@ -51,6 +51,7 @@ enum NotificationEventNormalizer {
             || text.contains("action required")
             || text.contains("input required")
             || text.contains("approval")
+            || text.contains("permission")
         {
             return .attention
         }
