@@ -24,9 +24,24 @@ struct DroidBrowserAgentEnvironmentTests {
             sessionID: "worktree-session",
             homeDirectory: FileManager.default.temporaryDirectory.path,
             fileManager: .default,
-            browserEnabled: false
+            browserEnabled: false,
+            unsafeToolsEnabled: true
         )
 
         #expect(values.isEmpty)
+    }
+
+    @Test
+    func includesUnsafeToolsEnvironmentWhenEnabled() throws {
+        _ = DroidBrowserControlBroker.shared.ensureStarted(sessionID: "unsafe-session")
+        let values = Dictionary(uniqueKeysWithValues: DroidBrowserAgentEnvironment.variables(
+            sessionID: "unsafe-session",
+            homeDirectory: FileManager.default.temporaryDirectory.path,
+            fileManager: .default,
+            browserEnabled: true,
+            unsafeToolsEnabled: true
+        ).map { ($0.key, $0.value) })
+
+        #expect(values["DROID_BROWSER_ALLOW_UNSAFE_TOOLS"] == "1")
     }
 }

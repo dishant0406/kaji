@@ -28,13 +28,14 @@ enum MCPServerLocationFactory {
     ) -> [MCPServerConfigLocation] {
         guard let projectPath, !projectPath.isEmpty else { return [] }
         let url = URL(fileURLWithPath: projectPath).appendingPathComponent(relativePath)
-        return [MCPServerConfigLocation(
+        let location = MCPServerConfigLocation(
             id: "\(agentID):\(url.path)",
             agentID: agentID,
             title: title,
             scope: .project,
             url: url,
             format: format
-        )]
+        )
+        return [location]
     }
 }

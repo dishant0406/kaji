@@ -105,7 +105,11 @@ final class MCPServerConfigStore {
         }
         switch server.transport {
         case .plugin:
-            return MCPServerStatus(title: "Runtime", detail: server.runtimeSummary ?? "Managed by agent plugin or runtime cache.", isHealthy: true)
+            return MCPServerStatus(
+                title: "Runtime",
+                detail: server.runtimeSummary ?? "Managed by agent plugin or runtime cache.",
+                isHealthy: true
+            )
         case .remote:
             guard URL(string: server.url) != nil else {
                 return MCPServerStatus(title: "Invalid URL", detail: "Remote server URL is not valid.", isHealthy: false)

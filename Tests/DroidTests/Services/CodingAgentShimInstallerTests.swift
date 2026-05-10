@@ -25,6 +25,7 @@ struct CodingAgentShimInstallerTests {
             #expect(text.contains("\"$@\""))
         }
         #expect(fileManager.isExecutableFile(atPath: directory.appendingPathComponent("droid-browser-mcp").path))
+        #expect(fileManager.fileExists(atPath: directory.appendingPathComponent("droid-browser/main.js").path))
     }
 
     @Test
@@ -46,6 +47,7 @@ struct CodingAgentShimInstallerTests {
             installBrowserMCP: false
         ))
         #expect(!fileManager.fileExists(atPath: disabled.appendingPathComponent("droid-browser-mcp").path))
+        #expect(!fileManager.fileExists(atPath: disabled.appendingPathComponent("droid-browser").path))
     }
 
 }

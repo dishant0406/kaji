@@ -26,7 +26,14 @@ CEF remote debugging exposes Chromium targets on localhost. Agent-browser, Chrom
 
 ### MCP adapter
 
-The MCP adapter is a stdio process installed as `~/.droid/bin/droid-browser-mcp`. It talks to the broker first and exposes `droid_browser_status`, `droid_browser_current`, `droid_browser_navigate`, `droid_browser_new_tab`, history, reload, and read-page tools. CDP remains the path for later ref-based snapshots, screenshots, and lower-level input.
+The MCP adapter is a stdio process installed as `~/.droid/bin/droid-browser-mcp`. The checked-in entrypoint stays tiny and loads modular support files from `~/.droid/bin/droid-browser/`.
+
+The adapter has two tool layers:
+
+- Droid tools talk to the broker first and expose `droid_browser_status`, `droid_browser_current`, `droid_browser_navigate`, `droid_browser_new_tab`, history, reload, read-page, and screenshot tools.
+- Playwright tools are forwarded to `@playwright/mcp` through `--cdp-endpoint`, so agents get the standard `browser_*` surface for snapshots, screenshots, tabs, hover, click, keyboard, console, network, dialogs, waits, and form operations without Droid reimplementing those tools.
+
+The Playwright MCP process starts lazily on the first `browser_*` tool call. `tools/list` never waits for the browser panel or CDP endpoint, so agent startup stays fast even when the embedded browser is closed. Unsafe Playwright tools are hidden unless `DROID_BROWSER_ALLOW_UNSAFE_TOOLS=1`.
 
 ## Environment contract
 

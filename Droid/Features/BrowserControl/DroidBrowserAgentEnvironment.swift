@@ -6,7 +6,8 @@ enum DroidBrowserAgentEnvironment {
         sessionID: String,
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default,
-        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled
+        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled,
+        unsafeToolsEnabled: Bool = BrowserExtensionPreferences.allowsUnsafeTools
     ) -> [(key: String, value: String)] {
         guard browserEnabled else { return [] }
         guard let state = DroidBrowserControlBroker.shared.ensureStarted(sessionID: sessionID) else { return [] }
@@ -22,6 +23,9 @@ enum DroidBrowserAgentEnvironment {
         if let command = mcpCommand(homeDirectory: homeDirectory, fileManager: fileManager) {
             values.append((key: "DROID_BROWSER_MCP_COMMAND", value: command))
         }
+        if unsafeToolsEnabled {
+            values.append((key: "DROID_BROWSER_ALLOW_UNSAFE_TOOLS", value: "1"))
+        }
         return values
     }
 
@@ -29,13 +33,15 @@ enum DroidBrowserAgentEnvironment {
         sessionID: String,
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default,
-        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled
+        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled,
+        unsafeToolsEnabled: Bool = BrowserExtensionPreferences.allowsUnsafeTools
     ) -> [String: String] {
         Dictionary(uniqueKeysWithValues: variables(
             sessionID: sessionID,
             homeDirectory: homeDirectory,
             fileManager: fileManager,
-            browserEnabled: browserEnabled
+            browserEnabled: browserEnabled,
+            unsafeToolsEnabled: unsafeToolsEnabled
         ).map { ($0.key, $0.value) })
     }
 

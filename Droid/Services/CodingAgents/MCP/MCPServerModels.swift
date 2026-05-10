@@ -103,7 +103,7 @@ enum MCPAgentLoadState: Equatable {
     }
 }
 
-struct MCPServerRuntimeRecord: Equatable, Sendable {
+struct MCPServerRuntimeRecord: Equatable {
     var name: String
     var status: String?
     var authSummary: String?

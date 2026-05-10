@@ -14,8 +14,18 @@ struct DroidBrowserMCPResourceLocatorTests {
             fileManager: fixture.fileManager,
             projectRoot: fixture.root
         )
+        let support = DroidBrowserMCPResourceLocator.supportDirectory(
+            fileManager: fixture.fileManager,
+            projectRoot: fixture.root
+        )
+        let files = DroidBrowserMCPResourceLocator.supportFiles(
+            fileManager: fixture.fileManager,
+            projectRoot: fixture.root
+        )
 
         #expect(path == fixture.script.path)
+        #expect(support == fixture.support)
+        #expect(files.contains(fixture.support.appendingPathComponent("main.js")))
     }
 }
 
@@ -27,9 +37,14 @@ private final class Fixture {
         root.appendingPathComponent("Droid/Resources/CodingAgents/Browser/droid-browser-mcp.js")
     }
 
+    var support: URL {
+        root.appendingPathComponent("Droid/Resources/CodingAgents/Browser/droid-browser", isDirectory: true)
+    }
+
     init() throws {
         root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fileManager.createDirectory(at: script.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: support, withIntermediateDirectories: true)
     }
 
     func cleanup() {
@@ -38,5 +53,6 @@ private final class Fixture {
 
     func writeScript() throws {
         try Data("#!/usr/bin/env node\n".utf8).write(to: script)
+        try Data("module.exports = {}\n".utf8).write(to: support.appendingPathComponent("main.js"))
     }
 }

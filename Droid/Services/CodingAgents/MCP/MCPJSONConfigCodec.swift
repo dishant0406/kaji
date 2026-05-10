@@ -84,7 +84,6 @@ enum MCPJSONConfigCodec {
         }
         return object
     }
-
 }
 
 extension MCPJSONConfigCodec {

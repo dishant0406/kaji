@@ -42,7 +42,14 @@ enum MCPRuntimeListParser {
             guard !clean.isEmpty, !clean.lowercased().contains("error") else { return nil }
             let parts = clean.split(whereSeparator: { $0.isWhitespace }).map(String.init)
             guard let name = parts.first else { return nil }
-            return MCPServerRuntimeRecord(name: name, status: parts.dropFirst().last, authSummary: nil, url: nil, command: nil, toolNames: [])
+            return MCPServerRuntimeRecord(
+                name: name,
+                status: parts.dropFirst().last,
+                authSummary: nil,
+                url: nil,
+                command: nil,
+                toolNames: []
+            )
         }
     }
 
@@ -60,7 +67,14 @@ enum MCPRuntimeListParser {
 }
 
 private enum Regex {
-    static let whitespaceColumns = try! NSRegularExpression(pattern: #"\s{2,}"#)
+    static let whitespaceColumns = makeWhitespaceColumns()
+
+    private static func makeWhitespaceColumns() -> NSRegularExpression {
+        guard let regex = try? NSRegularExpression(pattern: #"\s{2,}"#) else {
+            preconditionFailure("Invalid whitespace column regex")
+        }
+        return regex
+    }
 }
 
 private extension NSRegularExpression {

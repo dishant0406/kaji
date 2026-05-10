@@ -40,7 +40,8 @@ struct ClaudeMCPServerConfigProvider: MCPServerConfigProvider {
             arguments: ["mcp", "list"],
             projectPath: projectPath,
             homeDirectory: homeDirectory
-        ) else { return [] }
+        )
+        else { return [] }
         return MCPRuntimeListParser.parseClaudeList(output)
     }
 
