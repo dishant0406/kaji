@@ -10,6 +10,7 @@ VERSION=""
 SIGN_IDENTITY=""
 SPARKLE_PUBLIC_KEY=""
 SPARKLE_FEED_URL=""
+SMOKE_LAUNCH=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -33,6 +34,10 @@ while [[ $# -gt 0 ]]; do
             SPARKLE_FEED_URL="$2"
             shift 2
             ;;
+        --smoke-launch)
+            SMOKE_LAUNCH=true
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -41,7 +46,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$ARCH" || -z "$VERSION" ]]; then
-    echo "Usage: $0 --arch <arm64|x86_64> --version <X.Y.Z> [--sign-identity <identity>] [--sparkle-public-key <key>] [--sparkle-feed-url <url>]"
+    echo "Usage: $0 --arch <arm64|x86_64> --version <X.Y.Z> [--sign-identity <identity>] [--sparkle-public-key <key>] [--sparkle-feed-url <url>] [--smoke-launch]"
     exit 1
 fi
 
@@ -66,7 +71,7 @@ rm -rf "$APP_BUNDLE"
 
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
-"$SCRIPT_DIR/install-cef-runtime.sh"
+"$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
 "$SCRIPT_DIR/build-parent-agent.sh"
 swift build -c release --triple "$TRIPLE"
 swift build -c release --triple "$TRIPLE" --target DroidHookClient
@@ -160,6 +165,17 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
         --sign "$SIGN_IDENTITY" \
         "$APP_BUNDLE"
 fi
+
+
+echo "==> Validating bundled CEF runtime"
+"$SCRIPT_DIR/validate-cef-bundle.sh" "$APP_BUNDLE" "$ARCH"
+
+SMOKE_ARGS=("$APP_BUNDLE")
+if [[ "$SMOKE_LAUNCH" == true ]]; then
+    SMOKE_ARGS+=(--launch)
+fi
+echo "==> Running release smoke checks"
+"$SCRIPT_DIR/smoke-release-app.sh" "${SMOKE_ARGS[@]}"
 
 echo "==> Creating DMG"
 if ! command -v create-dmg &> /dev/null; then
