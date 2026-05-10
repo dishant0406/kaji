@@ -24,6 +24,7 @@ struct AgentMissionControlRow: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .droidPointer()
             if item.hasChangedFileEvidence {
                 evidenceToggle
                 if expanded {
@@ -93,6 +94,7 @@ struct AgentMissionControlRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .droidPointer()
     }
 
     private var changedFilesToggleTitle: String {

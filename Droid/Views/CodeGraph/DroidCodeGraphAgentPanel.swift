@@ -35,6 +35,7 @@ struct DroidCodeGraphAgentPanel: View {
                     .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
+            .droidPointer()
             .foregroundStyle(DroidTheme.fgMuted)
             .help("Hide graph-agent split")
         }

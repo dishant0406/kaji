@@ -126,6 +126,7 @@ struct AgentMissionControlControlsView: View {
         }
         .buttonStyle(.plain)
         .disabled(!capability.isAvailable)
+        .droidPointer()
     }
 
     private func actionColor(role: AgentMissionControlActionRole, capability: AgentRunCapability) -> Color {

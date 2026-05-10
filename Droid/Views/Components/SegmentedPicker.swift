@@ -22,8 +22,10 @@ struct SegmentedPicker<T: Hashable>: View {
                                 : Color.clear,
                             in: RoundedRectangle(cornerRadius: DroidShape.badgeRadius)
                         )
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .droidPointer()
 
                 if index < options.count - 1, selection != option.value,
                    selection != options[index + 1].value

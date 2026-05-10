@@ -23,6 +23,7 @@ struct SidebarToggleButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .accessibilityLabel(accessibilityLabel)
     }
 }

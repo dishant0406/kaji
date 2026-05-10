@@ -86,6 +86,7 @@ struct ProjectRow: View {
             .onChange(of: isAnyDragging) { _, dragging in
                 if dragging { hovered = false }
             }
+            .droidPointer()
             .onTapGesture {
                 guard !isAnyDragging else { return }
                 onSelect()

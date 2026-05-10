@@ -20,6 +20,7 @@ struct ParentAgentComposer: View {
                     .frame(width: 24, height: 24)
             })
             .buttonStyle(.plain)
+            .droidPointer()
             .foregroundStyle(DroidTheme.fgMuted)
             .disabled(isBusy || !isReady)
             .help("Attach files")
@@ -48,6 +49,7 @@ struct ParentAgentComposer: View {
                 .foregroundStyle(DroidTheme.fgDim)
                 Button("Stop") { onStop() }
                     .buttonStyle(.plain)
+                    .droidPointer()
                     .droidFont(size: 12, weight: .medium)
                     .foregroundStyle(DroidTheme.diffRemoveFg)
             } else {
@@ -60,6 +62,7 @@ struct ParentAgentComposer: View {
                     .background(sendBackground, in: Circle())
             }
             .buttonStyle(.plain)
+            .droidPointer()
             .foregroundStyle(sendForeground)
             .disabled(!canSubmit || isBusy || !isReady)
         }

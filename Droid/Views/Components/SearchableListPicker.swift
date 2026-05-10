@@ -50,6 +50,7 @@ struct SearchableListPicker<Item: Identifiable, RowContent: View>: View {
                                 row(item, index == highlightedIndex)
                                     .contentShape(Rectangle())
                                     .onTapGesture { onSelect(item) }
+                                    .droidPointer()
                                     .id(item.id)
                             }
                         }

@@ -29,9 +29,11 @@ struct ResourceMonitorTopBarButton: View {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .strokeBorder(DroidTheme.border.opacity(borderOpacity), lineWidth: 1)
             }
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .droidPointer()
         .help("Resource Monitor")
         .accessibilityLabel("Resource Monitor")
         .droidPopover(isPresented: $showPopover, preferredEdge: .bottom) {

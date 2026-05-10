@@ -47,9 +47,11 @@ private struct AgentInstructionDocumentTab: View {
                 RoundedRectangle(cornerRadius: 9)
                     .strokeBorder(selected ? DroidTheme.border : .clear, lineWidth: 1)
             }
+            .contentShape(RoundedRectangle(cornerRadius: 9))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .help(document.path)
     }
 

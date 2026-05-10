@@ -63,6 +63,8 @@ struct DroidButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .stroke(borderColor(isPressed: configuration.isPressed), lineWidth: 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .droidPointer()
     }
 
     private func foregroundColor(isPressed: Bool) -> Color {

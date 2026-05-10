@@ -30,10 +30,12 @@ struct TopBarSearchButton: View {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .strokeBorder(DroidTheme.border.opacity(hovered && enabled ? 1 : 0.65), lineWidth: 1)
             }
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
         .onHover { hovered = $0 }
+        .droidPointer()
         .help("Quick Open (\(shortcut))")
         .accessibilityLabel("Quick Open")
     }

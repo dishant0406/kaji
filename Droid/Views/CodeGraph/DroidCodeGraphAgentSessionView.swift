@@ -32,6 +32,7 @@ struct DroidCodeGraphAgentSessionView: View {
                     session.controller.stop()
                 }
                 .buttonStyle(.plain)
+                .droidPointer()
                 .droidFont(size: 12, weight: .medium)
                 .foregroundStyle(DroidTheme.diffRemoveFg)
             }
@@ -42,6 +43,7 @@ struct DroidCodeGraphAgentSessionView: View {
                     .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
+            .droidPointer()
             .foregroundStyle(DroidTheme.fgMuted)
         }
         .padding(.horizontal, 14)
@@ -79,6 +81,7 @@ struct DroidCodeGraphAgentSessionView: View {
                 .onSubmit(sendReply)
             Button("Send", action: sendReply)
                 .buttonStyle(.plain)
+                .droidPointer()
                 .droidFont(size: 12, weight: .semibold)
                 .foregroundStyle(reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? DroidTheme.fgDim : DroidTheme.accent)
         }

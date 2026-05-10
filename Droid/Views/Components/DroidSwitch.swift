@@ -28,6 +28,7 @@ struct DroidSwitch: View {
                 .animation(animation, value: isOn)
         }
         .buttonStyle(.plain)
+        .droidPointer()
         .accessibilityLabel(isOn ? "On" : "Off")
         .accessibilityAddTraits(.isButton)
         .accessibilityRepresentation {
