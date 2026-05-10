@@ -85,14 +85,18 @@ enum DroidCodeGraphInstructions {
         projectID: UUID,
         worktreeID: UUID,
         instructionFile: URL,
+        browserDescriptor: DroidBrowserMCPServerDescriptor? = nil,
         store: DroidCodeGraphStore = .shared,
         fileManager: FileManager = .default
     ) -> URL? {
         let destination = store.openCodeConfigFile(projectID: projectID, worktreeID: worktreeID)
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "$schema": "https://opencode.ai/config.json",
             "instructions": [instructionFile.path],
         ]
+        if let browserDescriptor {
+            payload.merge(OpenCodeBrowserMCPConfig.config(for: browserDescriptor)) { _, new in new }
+        }
         guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]),
               let content = String(data: data, encoding: .utf8)
         else { return nil }

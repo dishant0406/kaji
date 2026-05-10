@@ -441,8 +441,8 @@ struct MainWindow: View {
                 )
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
-        } else if browserPanelVisible, let state = activeBrowserState {
-            browserSidePanel(state: state)
+        } else if browserPanelVisible, let state = activeBrowserState, let key = activeWorktreeKey {
+            browserSidePanel(state: state, sessionID: key.worktreeID.uuidString)
         }
     }
 
@@ -469,7 +469,7 @@ struct MainWindow: View {
         }
     }
 
-    private func browserSidePanel(state: BrowserPaneState) -> some View {
+    private func browserSidePanel(state: BrowserPaneState, sessionID: String) -> some View {
         HStack(spacing: 0) {
             sidePanelResizeHandle { delta in
                 let next = browserPanelWidth - Double(delta)
@@ -478,7 +478,7 @@ struct MainWindow: View {
                     min(Double(BrowserLayout.maxWidth), next)
                 )
             }
-            BrowserPane(state: state, onClosePane: { browserPanelVisible = false })
+            BrowserPane(state: state, sessionID: sessionID, onClosePane: { browserPanelVisible = false })
                 .frame(width: CGFloat(browserPanelWidth))
                 .clipped()
         }

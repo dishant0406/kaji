@@ -20,8 +20,9 @@ struct CodexHooksConfigTests {
         )
 
         #expect(output.config.contains("[features]"))
-        #expect(output.config.contains("codex_hooks = true"))
+        #expect(output.config.contains("hooks = true"))
         #expect(output.config.contains("shell_snapshot = true"))
+        #expect(!output.config.contains("codex_hooks"))
     }
 
     @Test
@@ -33,7 +34,27 @@ struct CodexHooksConfigTests {
         )
 
         #expect(output.config.contains("[features]"))
-        #expect(output.config.contains("codex_hooks = true"))
+        #expect(output.config.contains("hooks = true"))
+        #expect(!output.config.contains("codex_hooks"))
+    }
+
+    @Test
+    func installMigratesDeprecatedCodexHooksFeature() {
+        let input = """
+        [features]
+        codex_hooks = true
+        shell_snapshot = true
+        """
+
+        let output = CodexHooksConfig.install(
+            config: input,
+            hooksContent: "",
+            hookClientPath: "/tmp/DroidHookClient"
+        )
+
+        #expect(output.config.contains("hooks = true"))
+        #expect(output.config.contains("shell_snapshot = true"))
+        #expect(!output.config.contains("codex_hooks"))
     }
 
     @Test

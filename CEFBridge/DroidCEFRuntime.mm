@@ -32,6 +32,10 @@ static BOOL droidCEFLibraryLoaded = NO;
 }
 
 + (BOOL)startWithRootPath:(NSString*)rootPath profilePath:(NSString*)profilePath helperPath:(NSString*)helperPath error:(NSError**)error {
+  return [self startWithRootPath:rootPath profilePath:profilePath helperPath:helperPath remoteDebuggingPort:0 error:error];
+}
+
++ (BOOL)startWithRootPath:(NSString*)rootPath profilePath:(NSString*)profilePath helperPath:(NSString*)helperPath remoteDebuggingPort:(int)remoteDebuggingPort error:(NSError**)error {
   if (droidCEFStarted) {
     return YES;
   }
@@ -56,6 +60,9 @@ static BOOL droidCEFLibraryLoaded = NO;
   CefString(&settings.main_bundle_path).FromString(std::string([mainBundlePath UTF8String]));
   CefString(&settings.resources_dir_path).FromString(std::string([resourcesPath UTF8String]));
   CefString(&settings.locales_dir_path).FromString(std::string([resourcesPath UTF8String]));
+  if (remoteDebuggingPort > 0) {
+    settings.remote_debugging_port = remoteDebuggingPort;
+  }
   CefRefPtr<DroidCEFApp> app(new DroidCEFApp());
   if (!CefInitialize(mainArgs, settings, app.get(), nullptr)) {
     [self assignError:error message:@"CEF initialization failed."];

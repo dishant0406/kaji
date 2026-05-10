@@ -166,6 +166,7 @@ private struct TabContentView: View {
     let onProcessExit: () -> Void
     let onClosePane: () -> Void
     let onSplitRequest: (SplitDirection, SplitPosition) -> Void
+    @Environment(\.activeWorktreeKey) private var worktreeKey
 
     var body: some View {
         switch tab.content {
@@ -189,7 +190,11 @@ private struct TabContentView: View {
         case let .codeGraph(state):
             DroidCodeGraphPane(state: state)
         case let .browser(state):
-            BrowserPane(state: state, onClosePane: onClosePane)
+            BrowserPane(
+                state: state,
+                sessionID: worktreeKey?.worktreeID.uuidString,
+                onClosePane: onClosePane
+            )
         }
     }
 }

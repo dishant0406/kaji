@@ -7,12 +7,25 @@ import Testing
 struct CodingAgentShimTests {
     @Test
     func codexShimPreservesUserArgumentsAndAdditionalDirectories() throws {
-        let result = try runShim(named: "codex", realEnv: "DROID_REAL_CODEX", graphEnv: [
+        let result = try CodingAgentShimTestHarness.runShim(named: "codex", realEnv: "DROID_REAL_CODEX", graphEnv: [
             "DROID_CODE_GRAPH_PROJECT_DIR": "droid-graph",
             "DROID_CODE_GRAPH_ROOT_DIR": "droid-root",
         ], args: ["--add-dir", "user-extra", "hello"])
 
         #expect(result == ["--add-dir", "droid-graph", "--add-dir", "droid-root", "--add-dir", "user-extra", "hello"])
+    }
+
+    @Test
+    func codexShimPrependsBrowserMCPArguments() throws {
+        let result = try CodingAgentShimTestHarness.runShim(named: "codex", realEnv: "DROID_REAL_CODEX", graphEnv: [
+            "DROID_CODEX_BROWSER_MCP_ARGS": "-c 'mcp_servers.droid-browser.command=\"/tmp/droid-browser-mcp\"'",
+        ], args: ["hello"])
+
+        #expect(result == [
+            "-c",
+            "mcp_servers.droid-browser.command=\"/tmp/droid-browser-mcp\"",
+            "hello",
+        ])
     }
 
     @Test
@@ -31,7 +44,7 @@ struct CodingAgentShimTests {
         try Data("{\"projectPath\":\"\(project.path)\"}".utf8).write(to: graphOutput.appendingPathComponent("droid-graph.json"))
         try Data("graph instructions".utf8).write(to: graphProject.appendingPathComponent("instructions/AGENTS.md"))
 
-        let result = try runShim(
+        let result = try CodingAgentShimTestHarness.runShim(
             named: "codex",
             realEnv: "DROID_REAL_CODEX",
             graphEnv: ["DROID_CODE_GRAPH_ROOT_DIR": "extensions/droidcodegraph"],
@@ -67,7 +80,7 @@ struct CodingAgentShimTests {
         try Data("{\"isEnabled\":true,\"phase\":\"installed\"}".utf8).write(to: graphRoot.appendingPathComponent("state.json"))
         try Data("{\"projectPath\":\"\(project.path)\"}".utf8).write(to: graphOutput.appendingPathComponent("droid-graph.json"))
 
-        let result = try runShim(
+        let result = try CodingAgentShimTestHarness.runShim(
             named: "codex",
             realEnv: "DROID_REAL_CODEX",
             graphEnv: ["DROID_CODE_GRAPH_ROOT_DIR": "extensions/droidcodegraph"],
@@ -90,7 +103,7 @@ struct CodingAgentShimTests {
 
     @Test
     func piShimUsesNativeAppendSystemPrompt() throws {
-        let result = try runShim(named: "pi", realEnv: "DROID_REAL_PI", graphEnv: [
+        let result = try CodingAgentShimTestHarness.runShim(named: "pi", realEnv: "DROID_REAL_PI", graphEnv: [
             "DROID_CODE_GRAPH_INSTRUCTIONS": "instructions/AGENTS.md",
         ], args: ["hello"])
 
@@ -98,8 +111,26 @@ struct CodingAgentShimTests {
     }
 
     @Test
+    func piShimPrependsBrowserMCPConfig() throws {
+        let result = try CodingAgentShimTestHarness.runShim(named: "pi", realEnv: "DROID_REAL_PI", graphEnv: [
+            "DROID_PI_BROWSER_MCP_CONFIG": "configs/pi-browser-mcp.json",
+        ], args: ["hello"])
+
+        #expect(result == ["--mcp-config", "configs/pi-browser-mcp.json", "hello"])
+    }
+
+    @Test
+    func claudeShimPrependsBrowserMCPConfig() throws {
+        let result = try CodingAgentShimTestHarness.runShim(named: "claude", realEnv: "DROID_REAL_CLAUDE", graphEnv: [
+            "DROID_CLAUDE_BROWSER_MCP_CONFIG": "configs/claude-browser-mcp.json",
+        ], args: ["hello"])
+
+        #expect(result == ["--mcp-config", "configs/claude-browser-mcp.json", "hello"])
+    }
+
+    @Test
     func claudeShimUsesNativeAdditionalDirectory() throws {
-        let result = try runShim(named: "claude", realEnv: "DROID_REAL_CLAUDE", graphEnv: [
+        let result = try CodingAgentShimTestHarness.runShim(named: "claude", realEnv: "DROID_REAL_CLAUDE", graphEnv: [
             "DROID_CODE_GRAPH_PROJECT_DIR": "droid-graph",
             "DROID_CODE_GRAPH_ROOT_DIR": "droid-root",
         ], args: ["hello"])
@@ -109,78 +140,20 @@ struct CodingAgentShimTests {
 
     @Test
     func openCodeShimUsesNativeConfigEnvironment() throws {
-        let result = try runShim(named: "opencode", realEnv: "DROID_REAL_OPENCODE", graphEnv: [
+        let result = try CodingAgentShimTestHarness.runShim(named: "opencode", realEnv: "DROID_REAL_OPENCODE", graphEnv: [
             "DROID_CODE_GRAPH_OPENCODE_CONFIG": "opencode.json",
         ], args: ["run", "hello"])
 
         #expect(result == ["OPENCODE_CONFIG=opencode.json", "run", "hello"])
     }
 
-    private func runShim(
-        named name: String,
-        realEnv: String,
-        graphEnv: [String: String],
-        args: [String],
-        root providedRoot: URL? = nil,
-        workingDirectory: URL? = nil
-    ) throws -> [String] {
-        let fileManager = FileManager.default
-        let root = providedRoot ?? fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let home = root.appendingPathComponent("home", isDirectory: true)
-        let real = root.appendingPathComponent("real-\(name)")
-        let output = root.appendingPathComponent("output.txt")
-        let removesRoot = providedRoot == nil
-        defer {
-            if removesRoot {
-                try? fileManager.removeItem(at: root)
-            }
-        }
-        try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
-        for value in graphEnv.values {
-            let url = root.appendingPathComponent(value)
-            if value.hasSuffix(".md") || value.hasSuffix(".json") {
-                try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try Data("ok".utf8).write(to: url)
-            } else {
-                try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-            }
-        }
-        try Data("#!/bin/sh\nprintf 'OPENCODE_CONFIG=%s\\n' \"${OPENCODE_CONFIG:-}\" > \"$CAPTURE\"\nprintf '%s\\n' \"$@\" >> \"$CAPTURE\"\n".utf8).write(to: real)
-        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: real.path)
+    @Test
+    func openCodeShimUsesBrowserConfigWithoutCodeGraph() throws {
+        let result = try CodingAgentShimTestHarness.runShim(named: "opencode", realEnv: "DROID_REAL_OPENCODE", graphEnv: [
+            "DROID_OPENCODE_BROWSER_MCP_CONFIG": "configs/opencode-browser-mcp.json",
+        ], args: ["run", "hello"])
 
-        let shim = try #require(CodingAgentShimInstaller.install(
-            homeDirectory: home.path,
-            fileManager: fileManager
-        )).appendingPathComponent(name)
-        let env = graphEnv.reduce(into: [
-            realEnv: real.path,
-            "CAPTURE": output.path,
-            "DROID_CODE_GRAPH_INSTRUCTIONS": "",
-            "DROID_CODE_GRAPH_PROJECT_DIR": "",
-            "DROID_CODE_GRAPH_ROOT_DIR": root.appendingPathComponent("inactive-droidcodegraph").path,
-            "DROID_CODE_GRAPH_REPORT": "",
-            "DROID_CODE_GRAPH_JSON": "",
-            "DROID_CODE_GRAPH_OPENCODE_CONFIG": "",
-        ]) { result, pair in
-            result[pair.key] = root.appendingPathComponent(pair.value).path
-        }
-        try run(shim, env: env, args: args, workingDirectory: workingDirectory)
-
-        return try String(contentsOf: output, encoding: .utf8)
-            .split(separator: "\n")
-            .map(String.init)
-            .filter { $0 != "OPENCODE_CONFIG=" }
-            .map { $0.replacingOccurrences(of: root.path + "/", with: "") }
+        #expect(result == ["OPENCODE_CONFIG=configs/opencode-browser-mcp.json", "run", "hello"])
     }
 
-    private func run(_ executable: URL, env: [String: String], args: [String], workingDirectory: URL? = nil) throws {
-        let process = Process()
-        process.executableURL = executable
-        process.arguments = args
-        process.currentDirectoryURL = workingDirectory
-        process.environment = ProcessInfo.processInfo.environment.merging(env) { _, new in new }
-        try process.run()
-        process.waitUntilExit()
-        #expect(process.terminationStatus == 0)
-    }
 }

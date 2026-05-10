@@ -22,8 +22,8 @@ struct CodingAgentShimInstallerTests {
             let text = try String(contentsOfFile: path, encoding: .utf8)
             #expect(text.contains("exec \"$real\""))
             #expect(text.contains("\"$@\""))
-            #expect(!text.contains(["DROID", "BROWSER"].joined(separator: "_")))
         }
+        #expect(fileManager.isExecutableFile(atPath: directory.appendingPathComponent("droid-browser-mcp").path))
     }
 
 }
