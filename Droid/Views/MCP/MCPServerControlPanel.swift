@@ -43,7 +43,7 @@ struct MCPServerControlPanel: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            DroidIcon(systemName: "network", size: 15)
+            DroidIcon(systemName: "mcp", size: 15)
                 .foregroundStyle(DroidTheme.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text("MCP Control Panel")

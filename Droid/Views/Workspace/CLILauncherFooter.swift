@@ -44,7 +44,7 @@ struct CLILauncherFooter: View {
                     .help("Browser")
                 }
 
-                IconButton(symbol: "network", accessibilityLabel: "MCP Servers") {
+                IconButton(symbol: "mcp", accessibilityLabel: "MCP Servers") {
                     onOpenMCPControlPanel?()
                 }
                 .help("MCP Servers")

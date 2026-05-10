@@ -72,7 +72,7 @@ struct MCPAgentServersView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            DroidIcon(systemName: "network", size: 22)
+            DroidIcon(systemName: "mcp", size: 22)
                 .foregroundStyle(DroidTheme.fgDim)
             Text("No MCP servers configured")
                 .droidFont(size: 13, weight: .semibold)
