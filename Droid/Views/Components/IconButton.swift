@@ -28,6 +28,7 @@ struct IconButton: View {
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .droidPointer()
         .accessibilityLabel(accessibilityLabel)
     }
 

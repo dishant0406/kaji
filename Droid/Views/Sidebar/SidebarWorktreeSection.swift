@@ -101,6 +101,7 @@ struct SidebarWorktreeRow: View {
         .background(rowBackground, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
+        .droidPointer()
         .onTapGesture {
             guard !isRenaming else { return }
             onSelect()
@@ -165,9 +166,11 @@ struct SidebarNewWorktreeRow: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(hovered ? DroidTheme.hover.opacity(0.7) : Color.clear, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .accessibilityLabel("New Worktree")
     }
 }

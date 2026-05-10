@@ -30,9 +30,11 @@ struct SettingsSidebarButton: View {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .stroke(rowBorder, lineWidth: 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .animation(DroidMotion.preferred(DroidMotion.hover, reduceMotion: reduceMotion), value: hovered)
         .animation(DroidMotion.preferred(DroidMotion.fast, reduceMotion: reduceMotion), value: isSelected)
     }

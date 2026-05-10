@@ -78,6 +78,7 @@ struct AgentMissionControlChangedFilesView: View {
             .background(DroidTheme.hover.opacity(0.7), in: RoundedRectangle(cornerRadius: 5))
         }
         .buttonStyle(.plain)
+        .droidPointer()
     }
 
     private var message: String {

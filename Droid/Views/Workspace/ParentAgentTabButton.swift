@@ -19,6 +19,7 @@ struct ParentAgentTabButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .help("Droid")
         .accessibilityLabel("Droid")
     }

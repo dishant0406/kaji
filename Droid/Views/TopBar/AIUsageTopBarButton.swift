@@ -54,9 +54,11 @@ struct AIUsageTopBarButton: View {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .strokeBorder(DroidTheme.border.opacity(borderOpacity), lineWidth: 1)
             }
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .droidPointer()
         .help("AI Usage (\(KeyBindingStore.shared.combo(for: .toggleAIUsage).displayString))")
         .accessibilityLabel("AI Usage")
         .droidPopover(isPresented: $showPopover, preferredEdge: .bottom) {

@@ -43,8 +43,10 @@ struct DroidSelect<Value: Hashable>: View {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .stroke(controlBorder, lineWidth: 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
+        .droidPointer()
         .droidPopover(isPresented: $isPresented, preferredEdge: .top) {
             popoverContent
         }
@@ -125,7 +127,9 @@ private struct DroidSelectRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(rowBackground, in: RoundedRectangle(cornerRadius: DroidShape.tileRadius))
+        .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         .onHover { hovered = $0 }
+        .droidPointer()
     }
 
     private var rowBackground: Color {

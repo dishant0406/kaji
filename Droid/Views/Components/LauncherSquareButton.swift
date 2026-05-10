@@ -26,6 +26,7 @@ struct LauncherSquareButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .accessibilityLabel(accessibilityLabel)
         .help(helpText ?? accessibilityLabel)
     }

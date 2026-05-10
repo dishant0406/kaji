@@ -31,7 +31,9 @@ struct MCPAgentTabRow: View {
                 RoundedRectangle(cornerRadius: DroidShape.tileRadius)
                     .stroke(selected ? DroidTheme.border : .clear, lineWidth: 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: DroidShape.tileRadius))
         }
         .buttonStyle(.plain)
+        .droidPointer()
     }
 }

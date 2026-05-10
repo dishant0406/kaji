@@ -84,6 +84,7 @@ struct PaletteOverlay<Item: Identifiable & Sendable>: View {
                         .padding(.horizontal, 8)
                         .contentShape(Rectangle())
                         .onTapGesture { onSelect(item) }
+                        .droidPointer()
                 }
                 .padding(.vertical, 8)
             }

@@ -70,6 +70,7 @@ struct ResourceMonitorPanel: View {
                 .frame(width: 14, height: 14)
             }
             .buttonStyle(.plain)
+            .droidPointer()
             .foregroundStyle(DroidTheme.fgMuted)
             .disabled(isRefreshing)
             .help("Refresh")
@@ -79,6 +80,7 @@ struct ResourceMonitorPanel: View {
                     .frame(width: 14, height: 14)
             }
             .buttonStyle(.plain)
+            .droidPointer()
             .foregroundStyle(DroidTheme.fgMuted)
             .help("Close")
         }

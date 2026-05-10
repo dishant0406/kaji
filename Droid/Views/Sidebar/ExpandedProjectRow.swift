@@ -156,6 +156,7 @@ struct ExpandedProjectRow: View {
         .onChange(of: isAnyDragging) { _, dragging in
             if dragging { hovered = false }
         }
+        .droidPointer()
         .onTapGesture {
             guard !isAnyDragging else { return }
             if isActive, isGitRepo {
@@ -275,6 +276,7 @@ struct ExpandedProjectRow: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .droidPointer()
         .accessibilityLabel(worktreesExpanded ? "Collapse Worktrees" : "Expand Worktrees")
     }
 

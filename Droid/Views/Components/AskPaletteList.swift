@@ -26,6 +26,7 @@ struct AskPaletteList: View {
                         .padding(.horizontal, 8)
                         .contentShape(Rectangle())
                         .onTapGesture { onSelect(entry) }
+                        .droidPointer()
                 }
                 .padding(.vertical, 8)
             }

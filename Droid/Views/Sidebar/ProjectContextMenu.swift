@@ -141,6 +141,7 @@ private struct ProjectContextMenuButton: View {
         .buttonStyle(.plain)
         .disabled(isBusy)
         .onHover { hovered = $0 }
+        .droidPointer()
     }
 
     private var foreground: Color {

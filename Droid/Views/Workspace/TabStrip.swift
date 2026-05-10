@@ -294,6 +294,7 @@ private struct TabAddButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .droidPointer()
         .help("New Tab (\(KeyBindingStore.shared.combo(for: .newTab).displayString))")
         .accessibilityLabel("New Tab")
     }
@@ -414,6 +415,7 @@ private struct TabCell: View {
                         .padding(.trailing, titleHidden ? 0 : 10)
                         .opacity(visible ? 1 : 0)
                         .onTapGesture(perform: onClose)
+                        .droidPointer()
                         .accessibilityLabel("Close Tab")
                         .accessibilityAddTraits(.isButton)
                 }
@@ -446,6 +448,7 @@ private struct TabCell: View {
             .onChange(of: isAnyDragging) { _, dragging in
                 if dragging { hovered = false }
             }
+            .droidPointer()
             .overlay {
                 if !tab.isPinned {
                     MiddleClickView(action: onClose)
