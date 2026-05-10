@@ -2,6 +2,7 @@ import Foundation
 
 protocol CodingAgentModule: AIProviderIntegration {
     var definition: CodingAgentDefinition { get }
+    var mcpServerConfigProvider: MCPServerConfigProvider? { get }
 
     func modelOptions() -> [String]
     func modelOptions(projectPath: String?) -> [String]
@@ -23,6 +24,7 @@ extension CodingAgentModule {
     var displayName: String { definition.displayName }
     var iconName: String { definition.iconName }
     var executableNames: [String] { definition.executableNames }
+    var mcpServerConfigProvider: MCPServerConfigProvider? { nil }
 
     func modelOptions() -> [String] {
         modelOptions(projectPath: nil)

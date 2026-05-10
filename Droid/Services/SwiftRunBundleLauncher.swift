@@ -108,10 +108,12 @@ enum SwiftRunBundleLauncher {
         let helper = projectRoot
             .appendingPathComponent(".dev-support/cef-runtime/build/tests/cefsimple/Release")
             .appendingPathComponent("cefsimple Helper.app/Contents/MacOS/cefsimple Helper")
+        let profile = projectRoot.appendingPathComponent(".build/DroidSwiftRunCEFProfile", isDirectory: true)
         return [
             ("DROID_APP_SUPPORT_DIR", environment["DROID_APP_SUPPORT_DIR"]),
             ("DROID_CEF_ROOT", environment["DROID_CEF_ROOT"] ?? cefRoot.path),
             ("DROID_CEF_HELPER_PATH", environment["DROID_CEF_HELPER_PATH"] ?? helper.path),
+            ("DROID_CEF_PROFILE_PATH", environment["DROID_CEF_PROFILE_PATH"] ?? profile.path),
         ].compactMap { key, value in
             value.map { (key, $0) }
         }

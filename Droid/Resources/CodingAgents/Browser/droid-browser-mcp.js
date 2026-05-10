@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const brokerUrl = process.env.DROID_BROWSER_BROKER_URL || '';
-const token = process.env.DROID_BROWSER_MCP_TOKEN || '';
-const sessionId = process.env.DROID_BROWSER_SESSION_ID || 'default';
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 let buffer = Buffer.alloc(0);
 
 const tools = [
@@ -125,22 +125,45 @@ function actionName(toolName) {
   }[toolName];
 }
 
+function browserState() {
+  const session = readSession();
+  return {
+    brokerUrl: process.env.DROID_BROWSER_BROKER_URL || session.brokerUrl || '',
+    token: process.env.DROID_BROWSER_MCP_TOKEN || session.token || '',
+    sessionId: process.env.DROID_BROWSER_SESSION_ID || session.sessionId || 'default'
+  };
+}
+
+function readSession() {
+  try {
+    return JSON.parse(fs.readFileSync(sessionPath(), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function sessionPath() {
+  return path.join(os.homedir(), '.droid', 'browser', 'session.json');
+}
+
 async function readStatus() {
-  if (!brokerUrl) return { connected: false, error: 'DROID_BROWSER_BROKER_URL is not set' };
-  const response = await fetch(`${brokerUrl}/status`);
+  const state = browserState();
+  if (!state.brokerUrl) return { connected: false, error: 'Droid browser session is not available. Open Droid Browser first.' };
+  const response = await fetch(`${state.brokerUrl}/status`);
   if (!response.ok) return { connected: false, error: `Broker returned ${response.status}` };
   return response.json();
 }
 
 async function browserAction(action, args) {
-  if (!brokerUrl) return { connected: false, error: 'DROID_BROWSER_BROKER_URL is not set' };
-  const response = await fetch(`${brokerUrl}/browser`, {
+  const state = browserState();
+  if (!state.brokerUrl) return { connected: false, error: 'Droid browser session is not available. Open Droid Browser first.' };
+  const response = await fetch(`${state.brokerUrl}/browser`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${state.token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ sessionId, action, arguments: args })
+    body: JSON.stringify({ sessionId: state.sessionId, action, arguments: args })
   });
   const text = await response.text();
   let body;

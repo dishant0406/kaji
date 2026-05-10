@@ -42,18 +42,41 @@ final class DroidBrowserControlBroker: @unchecked Sendable {
             self.listener = listener
             self.stateStorage = state
         }
+        DroidBrowserSessionEnvironmentStore.write(state)
         return state
     }
 
     func updateRuntime(_ runtime: DroidBrowserRuntimeInfo) {
-        lock.withLock {
-            guard let stateStorage else { return }
-            self.stateStorage = DroidBrowserBrokerState(
+        updateState { stateStorage in
+            DroidBrowserBrokerState(
                 port: stateStorage.port,
                 token: stateStorage.token,
                 sessionID: stateStorage.sessionID,
                 cdpPort: runtime.remoteDebuggingPort
             )
+        }
+    }
+
+    func updateSession(_ sessionID: String) {
+        updateState { stateStorage in
+            DroidBrowserBrokerState(
+                port: stateStorage.port,
+                token: stateStorage.token,
+                sessionID: sessionID,
+                cdpPort: stateStorage.cdpPort
+            )
+        }
+    }
+
+    private func updateState(_ transform: (DroidBrowserBrokerState) -> DroidBrowserBrokerState) {
+        let updated = lock.withLock { () -> DroidBrowserBrokerState? in
+            guard let stateStorage else { return nil }
+            let state = transform(stateStorage)
+            self.stateStorage = state
+            return state
+        }
+        if let updated {
+            DroidBrowserSessionEnvironmentStore.write(updated)
         }
     }
 

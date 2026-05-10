@@ -7,7 +7,11 @@ enum CodingAgentShimInstaller {
             .appendingPathComponent("bin", isDirectory: true)
     }
 
-    static func install(homeDirectory: String = NSHomeDirectory(), fileManager: FileManager = .default) -> URL? {
+    static func install(
+        homeDirectory: String = NSHomeDirectory(),
+        fileManager: FileManager = .default,
+        installBrowserMCP: Bool = BrowserExtensionPreferences.isEnabled
+    ) -> URL? {
         let directory = directory(homeDirectory: homeDirectory)
         do {
             try fileManager.createDirectory(
@@ -23,7 +27,7 @@ enum CodingAgentShimInstaller {
                 }
                 try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
             }
-            try installBrowserMCP(into: directory, fileManager: fileManager)
+            try syncBrowserMCP(into: directory, enabled: installBrowserMCP, fileManager: fileManager)
             return directory
         } catch {
             return nil
@@ -34,8 +38,14 @@ enum CodingAgentShimInstaller {
         directory(homeDirectory: homeDirectory).appendingPathComponent("droid-browser-mcp")
     }
 
-    private static func installBrowserMCP(into directory: URL, fileManager: FileManager) throws {
+    private static func syncBrowserMCP(into directory: URL, enabled: Bool, fileManager: FileManager) throws {
         let url = directory.appendingPathComponent("droid-browser-mcp")
+        guard enabled else {
+            if fileManager.fileExists(atPath: url.path) {
+                try fileManager.removeItem(at: url)
+            }
+            return
+        }
         guard let source = DroidBrowserMCPResourceLocator.scriptPath(fileManager: fileManager) else {
             if fileManager.fileExists(atPath: url.path) {
                 try fileManager.removeItem(at: url)

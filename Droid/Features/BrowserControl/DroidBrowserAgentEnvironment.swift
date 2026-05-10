@@ -5,8 +5,10 @@ enum DroidBrowserAgentEnvironment {
     static func variables(
         sessionID: String,
         homeDirectory: String = NSHomeDirectory(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled
     ) -> [(key: String, value: String)] {
+        guard browserEnabled else { return [] }
         guard let state = DroidBrowserControlBroker.shared.ensureStarted(sessionID: sessionID) else { return [] }
         var values = [
             (key: "DROID_BROWSER_BROKER_URL", value: state.brokerURL),
@@ -26,12 +28,14 @@ enum DroidBrowserAgentEnvironment {
     static func dictionary(
         sessionID: String,
         homeDirectory: String = NSHomeDirectory(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled
     ) -> [String: String] {
         Dictionary(uniqueKeysWithValues: variables(
             sessionID: sessionID,
             homeDirectory: homeDirectory,
-            fileManager: fileManager
+            fileManager: fileManager,
+            browserEnabled: browserEnabled
         ).map { ($0.key, $0.value) })
     }
 

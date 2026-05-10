@@ -277,6 +277,7 @@ final class AppState {
     }
 
     func openBrowserPanel(projectID: UUID) {
+        guard BrowserExtensionPreferences.isEnabled else { return }
         NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
     }
 

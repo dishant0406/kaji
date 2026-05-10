@@ -39,7 +39,6 @@ static BOOL droidCEFLibraryLoaded = NO;
   if (droidCEFStarted) {
     return YES;
   }
-  [self installApplicationHooks];
   if (![[NSFileManager defaultManager] fileExistsAtPath:rootPath]) {
     [self assignError:error message:@"CEF runtime is missing."];
     return NO;
@@ -68,6 +67,7 @@ static BOOL droidCEFLibraryLoaded = NO;
     [self assignError:error message:@"CEF initialization failed."];
     return NO;
   }
+  [self installApplicationHooks];
   droidCEFStarted = YES;
   DroidCEFPumpMessageLoopNow();
   return YES;

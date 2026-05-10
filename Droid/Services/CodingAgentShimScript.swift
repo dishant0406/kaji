@@ -140,11 +140,15 @@ struct CodingAgentShimScript {
         }
         resolve_droid_graph
         ensure_droid_bridges
+        browser_agent_config_dir="${HOME:-}/.droid/agent-configs"
+        claude_browser_config="${DROID_CLAUDE_BROWSER_MCP_CONFIG:-$browser_agent_config_dir/claude-browser-mcp.json}"
+        opencode_browser_config="${DROID_OPENCODE_BROWSER_MCP_CONFIG:-$browser_agent_config_dir/opencode-browser-mcp.json}"
+        pi_browser_config="${DROID_PI_BROWSER_MCP_CONFIG:-$browser_agent_config_dir/pi-browser-mcp.json}"
         codex_model_config="model_instructions_file=\\"${DROID_CODE_GRAPH_INSTRUCTIONS:-}\\""
         case "\(bridge)" in
           claude)
-            if [ -n "${DROID_CLAUDE_BROWSER_MCP_CONFIG:-}" ] && [ -f "$DROID_CLAUDE_BROWSER_MCP_CONFIG" ]; then
-              set -- --mcp-config "$DROID_CLAUDE_BROWSER_MCP_CONFIG" "$@"
+            if [ -f "$claude_browser_config" ]; then
+              set -- --mcp-config "$claude_browser_config" "$@"
             fi
             if [ -n "$droid_dir" ] && [ -d "$droid_dir" ] && [ -n "$droid_root" ] && [ -d "$droid_root" ]; then
               CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 exec "$real" --add-dir "$droid_dir" --add-dir "$droid_root" "$@"
@@ -156,6 +160,11 @@ struct CodingAgentShimScript {
           codex)
             if [ -n "${DROID_CODEX_BROWSER_MCP_ARGS:-}" ]; then
               eval "set -- $DROID_CODEX_BROWSER_MCP_ARGS \\"\\$@\\""
+            else
+              browser_mcp="${HOME:-}/.droid/bin/droid-browser-mcp"
+              if [ -x "$browser_mcp" ]; then
+                set -- -c "mcp_servers.droid-browser.command=\\"$browser_mcp\\"" -c "mcp_servers.droid-browser.args=[]" "$@"
+              fi
             fi
             if [ -n "${DROID_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$DROID_CODE_GRAPH_INSTRUCTIONS" ]; then
               if [ -n "$droid_dir" ] && [ -d "$droid_dir" ] && [ -n "$droid_root" ] && [ -d "$droid_root" ]; then
@@ -177,13 +186,13 @@ struct CodingAgentShimScript {
             if [ -n "${DROID_CODE_GRAPH_OPENCODE_CONFIG:-}" ] && [ -f "$DROID_CODE_GRAPH_OPENCODE_CONFIG" ]; then
               OPENCODE_CONFIG="$DROID_CODE_GRAPH_OPENCODE_CONFIG" exec "$real" "$@"
             fi
-            if [ -n "${DROID_OPENCODE_BROWSER_MCP_CONFIG:-}" ] && [ -f "$DROID_OPENCODE_BROWSER_MCP_CONFIG" ]; then
-              OPENCODE_CONFIG="$DROID_OPENCODE_BROWSER_MCP_CONFIG" exec "$real" "$@"
+            if [ -f "$opencode_browser_config" ]; then
+              OPENCODE_CONFIG="$opencode_browser_config" exec "$real" "$@"
             fi
             ;;
           pi)
-            if [ -n "${DROID_PI_BROWSER_MCP_CONFIG:-}" ] && [ -f "$DROID_PI_BROWSER_MCP_CONFIG" ]; then
-              set -- --mcp-config "$DROID_PI_BROWSER_MCP_CONFIG" "$@"
+            if [ -f "$pi_browser_config" ]; then
+              set -- --mcp-config "$pi_browser_config" "$@"
             fi
             if [ -n "${DROID_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$DROID_CODE_GRAPH_INSTRUCTIONS" ]; then
               exec "$real" --append-system-prompt "$DROID_CODE_GRAPH_INSTRUCTIONS" "$@"

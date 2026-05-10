@@ -141,6 +141,7 @@ struct BrowserPane: View {
             controllers: controllers,
             close: onClosePane
         )
+        DroidBrowserControlBroker.shared.updateSession(sessionID)
     }
 
     private func unregisterBrowserControl() {

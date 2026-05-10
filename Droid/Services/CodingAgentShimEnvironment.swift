@@ -11,9 +11,15 @@ enum CodingAgentShimEnvironment {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
         store: DroidCodeGraphStore = .shared,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        browserEnabled: Bool = BrowserExtensionPreferences.isEnabled
     ) -> [(key: String, value: String)] {
-        guard let shimDirectory = CodingAgentShimInstaller.install(homeDirectory: homeDirectory, fileManager: fileManager) else {
+        guard let shimDirectory = CodingAgentShimInstaller.install(
+            homeDirectory: homeDirectory,
+            fileManager: fileManager,
+            installBrowserMCP: browserEnabled
+        )
+        else {
             return []
         }
         var values = [
@@ -31,10 +37,26 @@ enum CodingAgentShimEnvironment {
             fileManager: fileManager,
             shimDirectory: shimDirectory
         ))
+        guard browserEnabled else {
+            CodingAgentBrowserEnvironment.removeConfigs(homeDirectory: homeDirectory, fileManager: fileManager)
+            DroidBrowserSessionEnvironmentStore.remove(homeDirectory: homeDirectory, fileManager: fileManager)
+            return valuesWithCodeGraph(
+                values,
+                context: CodeGraphEnvironmentContext(
+                    projectID: projectID,
+                    worktreeID: worktreeID,
+                    store: store,
+                    fileManager: fileManager,
+                    browserMCPDescriptor: nil
+                )
+            )
+        }
+
         let browserValues = DroidBrowserAgentEnvironment.variables(
             sessionID: worktreeID.uuidString,
             homeDirectory: homeDirectory,
-            fileManager: fileManager
+            fileManager: fileManager,
+            browserEnabled: true
         )
         let browserMCPDescriptor = CodingAgentBrowserEnvironment.descriptor(browserValues)
         values.append(contentsOf: browserValues)
@@ -44,45 +66,70 @@ enum CodingAgentShimEnvironment {
             fileManager: fileManager
         ))
 
-        guard store.isReady,
+        return valuesWithCodeGraph(
+            values,
+            context: CodeGraphEnvironmentContext(
+                projectID: projectID,
+                worktreeID: worktreeID,
+                store: store,
+                fileManager: fileManager,
+                browserMCPDescriptor: browserMCPDescriptor
+            )
+        )
+    }
+
+    private struct CodeGraphEnvironmentContext {
+        let projectID: UUID
+        let worktreeID: UUID
+        let store: DroidCodeGraphStore
+        let fileManager: FileManager
+        let browserMCPDescriptor: DroidBrowserMCPServerDescriptor?
+    }
+
+    private static func valuesWithCodeGraph(
+        _ baseValues: [(key: String, value: String)],
+        context: CodeGraphEnvironmentContext
+    ) -> [(key: String, value: String)] {
+        var values = baseValues
+        guard context.store.isReady,
               let instructions = DroidCodeGraphInstructions.ensureFile(
-                  projectID: projectID,
-                  worktreeID: worktreeID,
-                  store: store,
-                  fileManager: fileManager
+                  projectID: context.projectID,
+                  worktreeID: context.worktreeID,
+                  store: context.store,
+                  fileManager: context.fileManager
               )
         else { return values }
 
-        values.append((key: "DROID_CODE_GRAPH_ROOT_DIR", value: store.rootDirectory.path))
+        values.append((key: "DROID_CODE_GRAPH_ROOT_DIR", value: context.store.rootDirectory.path))
         values.append((
             key: "DROID_CODE_GRAPH_PROJECT_DIR",
-            value: store.projectDirectory(projectID: projectID, worktreeID: worktreeID).path
+            value: context.store.projectDirectory(projectID: context.projectID, worktreeID: context.worktreeID).path
         ))
         values.append(contentsOf: DroidCodeGraphInstructions.environment(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            store: store,
-            fileManager: fileManager
+            projectID: context.projectID,
+            worktreeID: context.worktreeID,
+            store: context.store,
+            fileManager: context.fileManager
         ))
         _ = DroidCodeGraphInstructions.ensureCodexBridge(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            store: store,
-            fileManager: fileManager
+            projectID: context.projectID,
+            worktreeID: context.worktreeID,
+            store: context.store,
+            fileManager: context.fileManager
         )
         _ = DroidCodeGraphInstructions.ensureClaudeBridge(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            store: store,
-            fileManager: fileManager
+            projectID: context.projectID,
+            worktreeID: context.worktreeID,
+            store: context.store,
+            fileManager: context.fileManager
         )
         if let config = DroidCodeGraphInstructions.ensureOpenCodeConfig(
-            projectID: projectID,
-            worktreeID: worktreeID,
+            projectID: context.projectID,
+            worktreeID: context.worktreeID,
             instructionFile: instructions,
-            browserDescriptor: browserMCPDescriptor,
-            store: store,
-            fileManager: fileManager
+            browserDescriptor: context.browserMCPDescriptor,
+            store: context.store,
+            fileManager: context.fileManager
         ) {
             values.append((key: "DROID_CODE_GRAPH_OPENCODE_CONFIG", value: config.path))
         }

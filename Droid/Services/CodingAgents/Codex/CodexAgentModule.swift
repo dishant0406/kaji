@@ -2,6 +2,7 @@ import Foundation
 
 struct CodexAgentModule: CodingAgentModule, AIUsageProvider {
     let socketTypeKey = "codex"
+    let mcpServerConfigProvider: MCPServerConfigProvider? = CodexMCPServerConfigProvider()
 
     let definition = CodingAgentDefinition(
         id: "codex",

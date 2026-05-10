@@ -80,6 +80,7 @@ struct MainWindow: View {
     @AppStorage("droid.codeGraphAgentPanelWidth") private var codeGraphAgentPanelWidth: Double = .init(CodeGraphAgentLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
     @State private var browserPanelVisible = false
+    @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
     @AppStorage("droid.browserPanelWidth") private var browserPanelWidth: Double = .init(BrowserLayout.defaultWidth)
     @State private var browserStates: [WorktreeKey: BrowserPaneState] = [:]
     @State private var agentInstructionPanelVisible = false
@@ -93,6 +94,7 @@ struct MainWindow: View {
     @State private var showAgentCommandCenter = false
     @State private var showWorktreeSwitcher = false
     @State private var showSettings = false
+    @State private var showMCPControlPanel = false
     @State private var showCreateThemeModal = false
     @State private var parentAgentSettings = ParentAgentSettingsStore.shared
     @State private var createWorktreeProjectID: UUID?
@@ -111,7 +113,8 @@ struct MainWindow: View {
             mainLayout
                 .environment(
                     \.overlayActive,
-                    showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showSettings || showCreateThemeModal ||
+                    showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showSettings || showMCPControlPanel ||
+                        showCreateThemeModal ||
                         createWorktreeProjectID != nil || projectLogoCropRequest != nil
                 )
                 .overlay(alignment: toastAlignment) {
@@ -133,6 +136,9 @@ struct MainWindow: View {
                     settingsOverlay
                 }
                 .overlay {
+                    mcpControlPanelOverlay
+                }
+                .overlay {
                     createWorktreeOverlay
                 }
                 .overlay {
@@ -142,6 +148,7 @@ struct MainWindow: View {
                     projectLogoCropperOverlay
                 }
                 .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: showSettings)
+                .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: showMCPControlPanel)
                 .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: showCreateThemeModal)
                 .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: createWorktreeProjectID)
                 .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: reduceMotion), value: projectLogoCropRequest?.id)
@@ -254,6 +261,7 @@ struct MainWindow: View {
                     toggleFileTreePanel()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleBrowserPanel)) { _ in
+                    guard browserEnabled else { return }
                     toggleBrowserPanel()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFooterTerminal)) { _ in
@@ -301,6 +309,11 @@ struct MainWindow: View {
                 .onChange(of: footerTerminalEnabled) { _, enabled in
                     if !enabled {
                         collapseAllFooterTerminals()
+                    }
+                }
+                .onChange(of: browserEnabled) { _, enabled in
+                    if !enabled {
+                        closeBrowserFeature()
                     }
                 }
         )
@@ -441,7 +454,7 @@ struct MainWindow: View {
                 )
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
-        } else if browserPanelVisible, let state = activeBrowserState, let key = activeWorktreeKey {
+        } else if browserEnabled, browserPanelVisible, let state = activeBrowserState, let key = activeWorktreeKey {
             browserSidePanel(state: state, sessionID: key.worktreeID.uuidString)
         }
     }
@@ -606,6 +619,19 @@ struct MainWindow: View {
                 }
                 .padding(24)
                 .transition(DroidMotion.modalTransition(reduceMotion: reduceMotion))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mcpControlPanelOverlay: some View {
+        if showMCPControlPanel {
+            DroidModalOverlay {
+                showMCPControlPanel = false
+            } content: {
+                MCPServerControlPanel(projectPath: activeProject.map { activeWorktreePath(for: $0) }) {
+                    showMCPControlPanel = false
+                }
             }
         }
     }
@@ -801,6 +827,7 @@ struct MainWindow: View {
                 worktreePath: activeWorktreePath(for: project),
                 expanded: isVisible,
                 onToggle: footerTerminalToggleAction,
+                onOpenMCPControlPanel: { showMCPControlPanel = true },
                 onProcessExit: { footerTerminalProcessExited(projectID: project.id) }
             )
         }
@@ -994,7 +1021,16 @@ struct MainWindow: View {
         browserStates = browserStates.filter { validKeys.contains($0.key) }
     }
 
+    private func closeBrowserFeature() {
+        browserPanelVisible = false
+        browserStates.removeAll()
+    }
+
     private func toggleBrowserPanel() {
+        guard browserEnabled else {
+            closeBrowserFeature()
+            return
+        }
         guard let project = activeProject else {
             browserPanelVisible = false
             return

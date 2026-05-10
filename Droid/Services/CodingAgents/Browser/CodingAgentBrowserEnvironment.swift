@@ -47,6 +47,34 @@ enum CodingAgentBrowserEnvironment {
         )
     }
 
+    static func writeInstalledConfigs(homeDirectory: String, fileManager: FileManager = .default) {
+        guard let descriptor = installedDescriptor(homeDirectory: homeDirectory, fileManager: fileManager) else { return }
+        _ = ClaudeBrowserMCPConfig.write(descriptor: descriptor, homeDirectory: homeDirectory, fileManager: fileManager)
+        _ = OpenCodeBrowserMCPConfig.write(descriptor: descriptor, homeDirectory: homeDirectory, fileManager: fileManager)
+        _ = PiBrowserMCPConfig.write(descriptor: descriptor, homeDirectory: homeDirectory, fileManager: fileManager)
+    }
+
+    static func installedDescriptor(
+        homeDirectory: String = NSHomeDirectory(),
+        fileManager: FileManager = .default
+    ) -> DroidBrowserMCPServerDescriptor? {
+        let command = CodingAgentShimInstaller.browserMCPURL(homeDirectory: homeDirectory)
+        guard fileManager.fileExists(atPath: command.path) else { return nil }
+        return DroidBrowserMCPServerDescriptor(name: "droid-browser", command: command.path, arguments: [], environment: [:])
+    }
+
+    static func removeConfigs(homeDirectory: String, fileManager: FileManager = .default) {
+        let directory = URL(fileURLWithPath: homeDirectory)
+            .appendingPathComponent(".droid", isDirectory: true)
+            .appendingPathComponent("agent-configs", isDirectory: true)
+        for name in ["claude-browser-mcp.json", "opencode-browser-mcp.json", "pi-browser-mcp.json"] {
+            let file = directory.appendingPathComponent(name)
+            if fileManager.fileExists(atPath: file.path) {
+                try? fileManager.removeItem(at: file)
+            }
+        }
+    }
+
     private static func configValue(key: String, file: URL?) -> [(key: String, value: String)] {
         guard let file else { return [] }
         return [(key: key, value: file.path)]

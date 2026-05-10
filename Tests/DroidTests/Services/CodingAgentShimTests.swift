@@ -28,6 +28,26 @@ struct CodingAgentShimTests {
         ])
     }
 
+
+    @Test
+    func codexShimAddsInstalledBrowserMCPWithoutInjectedEnvironment() throws {
+        let result = try CodingAgentShimTestHarness.runShim(
+            named: "codex",
+            realEnv: "DROID_REAL_CODEX",
+            graphEnv: [:],
+            args: ["hello"],
+            installBrowserMCP: true
+        )
+
+        #expect(result == [
+            "-c",
+            "mcp_servers.droid-browser.command=\"home/.droid/bin/droid-browser-mcp\"",
+            "-c",
+            "mcp_servers.droid-browser.args=[]",
+            "hello",
+        ])
+    }
+
     @Test
     func codexShimResolvesGraphFromCurrentDirectory() throws {
         let fileManager = FileManager.default

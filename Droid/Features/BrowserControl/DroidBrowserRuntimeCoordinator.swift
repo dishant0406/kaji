@@ -40,8 +40,15 @@ final class DroidBrowserRuntimeCoordinator {
         runtimeInfo
     }
 
-    static func profilePath() -> String {
-        DroidFileStorage.appSupportDirectory()
+    static func profilePath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+        if let override = environment["DROID_CEF_PROFILE_PATH"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !override.isEmpty
+        {
+            return override
+        }
+
+        return DroidFileStorage.appSupportDirectory()
             .appendingPathComponent("CEFProfile", isDirectory: true)
             .path
     }

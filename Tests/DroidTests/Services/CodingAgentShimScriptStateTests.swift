@@ -85,6 +85,14 @@ private final class Fixture {
             "DROID_CODE_GRAPH_REPORT": "",
             "DROID_CODE_GRAPH_JSON": "",
             "DROID_CODE_GRAPH_OPENCODE_CONFIG": "",
+            "DROID_BROWSER_BROKER_URL": "",
+            "DROID_BROWSER_CDP_PORT": "",
+            "DROID_BROWSER_CDP_URL": "",
+            "DROID_BROWSER_MCP_COMMAND": "",
+            "DROID_BROWSER_MCP_TOKEN": "",
+            "DROID_BROWSER_SESSION_ID": "",
+            "DROID_CODEX_BROWSER_MCP_ARGS": "",
+            "HOME": home.path,
             "CAPTURE": output.path,
         ]) { _, new in new }
         try process.run()
