@@ -2,6 +2,7 @@ import Foundation
 
 struct PiAgentModule: CodingAgentModule {
     let socketTypeKey = "pi"
+    let mcpServerConfigProvider: MCPServerConfigProvider? = PiMCPServerConfigProvider()
 
     let definition = CodingAgentDefinition(
         id: "pi",

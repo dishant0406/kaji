@@ -2,6 +2,7 @@ import Foundation
 
 struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
     let socketTypeKey = "claude_hook"
+    let mcpServerConfigProvider: MCPServerConfigProvider? = ClaudeMCPServerConfigProvider()
 
     let definition = CodingAgentDefinition(
         id: "claude",

@@ -18,7 +18,8 @@ struct CodingAgentShimEnvironmentTests {
             environment: ["PATH": fixture.bin.path],
             homeDirectory: fixture.home.path,
             store: fixture.store,
-            fileManager: fixture.fileManager
+            fileManager: fixture.fileManager,
+            browserEnabled: true
         ).map { ($0.key, $0.value) })
 
         let shimDirectory = CodingAgentShimInstaller.directory(homeDirectory: fixture.home.path).path
@@ -46,7 +47,8 @@ struct CodingAgentShimEnvironmentTests {
             environment: ["PATH": fixture.bin.path],
             homeDirectory: fixture.home.path,
             store: fixture.store,
-            fileManager: fixture.fileManager
+            fileManager: fixture.fileManager,
+            browserEnabled: true
         )
 
         let keys = Set(values.map(\.key))
@@ -66,7 +68,8 @@ struct CodingAgentShimEnvironmentTests {
             environment: ["PATH": fixture.bin.path],
             homeDirectory: fixture.home.path,
             store: fixture.store,
-            fileManager: fixture.fileManager
+            fileManager: fixture.fileManager,
+            browserEnabled: true
         )
 
         let keys = Set(values.map(\.key))
@@ -88,10 +91,43 @@ struct CodingAgentShimEnvironmentTests {
             environment: ["PATH": fixture.bin.path],
             homeDirectory: fixture.home.path,
             store: fixture.store,
-            fileManager: fixture.fileManager
+            fileManager: fixture.fileManager,
+            browserEnabled: true
         ).map { ($0.key, $0.value) })
 
         #expect(values["DROID_REAL_CODEX"] == latest.path)
+    }
+
+    @Test
+    func skipsBrowserEnvironmentWhenBrowserDisabled() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+        try fixture.makeInstalledRuntime()
+        let staleConfig = fixture.home
+            .appendingPathComponent(".droid/agent-configs", isDirectory: true)
+            .appendingPathComponent("claude-browser-mcp.json")
+        try fixture.fileManager.createDirectory(at: staleConfig.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: staleConfig)
+        let staleSession = DroidBrowserSessionEnvironmentStore.fileURL(homeDirectory: fixture.home.path)
+        try fixture.fileManager.createDirectory(at: staleSession.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: staleSession)
+
+        let values = CodingAgentShimEnvironment.variables(
+            projectID: fixture.projectID,
+            worktreeID: fixture.worktreeID,
+            environment: ["PATH": fixture.bin.path],
+            homeDirectory: fixture.home.path,
+            store: fixture.store,
+            fileManager: fixture.fileManager,
+            browserEnabled: false
+        )
+
+        let keys = Set(values.map(\.key))
+        #expect(keys.contains("DROID_AGENT_SHIM_DIR"))
+        #expect(!keys.contains("DROID_BROWSER_MCP_COMMAND"))
+        #expect(!keys.contains("DROID_CODEX_BROWSER_MCP_ARGS"))
+        #expect(!fixture.fileManager.fileExists(atPath: staleConfig.path))
+        #expect(!fixture.fileManager.fileExists(atPath: staleSession.path))
     }
 
 }

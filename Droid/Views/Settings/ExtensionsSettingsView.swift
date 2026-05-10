@@ -3,10 +3,18 @@ import SwiftUI
 struct ExtensionsSettingsView: View {
     @State private var store = DroidCodeGraphStore.shared
     @State private var isInstalling = false
+    @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
 
     var body: some View {
         ScrollView {
             SettingsContainer {
+                SettingsSection(
+                    "Browser",
+                    footer: "Enable Droid Browser to show the browser side panel and expose droid-browser tools to coding agents."
+                ) {
+                    BrowserExtensionRow(isEnabled: $browserEnabled)
+                }
+
                 SettingsSection(
                     "Extensions",
                     footer: "DroidCodeGraph runs Graphify from ~/.droid/extensions. Instructions stay outside the project.",
@@ -23,6 +31,16 @@ struct ExtensionsSettingsView: View {
         }
         .onAppear {
             store.refreshFromDisk()
+        }
+        .onChange(of: browserEnabled) { _, enabled in
+            BrowserExtensionPreferences.isEnabled = enabled
+            _ = CodingAgentShimInstaller.install(installBrowserMCP: enabled)
+            if enabled {
+                CodingAgentBrowserEnvironment.writeInstalledConfigs(homeDirectory: NSHomeDirectory())
+            } else {
+                CodingAgentBrowserEnvironment.removeConfigs(homeDirectory: NSHomeDirectory())
+                DroidBrowserSessionEnvironmentStore.remove()
+            }
         }
     }
 
@@ -101,6 +119,37 @@ private struct DroidCodeGraphExtensionRow: View {
     private var statusColor: Color {
         if store.state.phase == .failed { return DroidTheme.diffRemoveFg }
         return store.isInstalled ? DroidTheme.fgMuted : DroidTheme.fgDim
+    }
+}
+
+private struct BrowserExtensionRow: View {
+    @Binding var isEnabled: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            DroidIcon(systemName: "globe", size: 16)
+                .frame(width: 18)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Droid Browser")
+                    .droidFont(size: SettingsMetrics.labelFontSize, weight: .medium)
+                    .foregroundStyle(DroidTheme.fg)
+                Text(statusText)
+                    .droidFont(size: SettingsMetrics.footnoteFontSize)
+                    .foregroundStyle(DroidTheme.fgMuted)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+
+            DroidSwitch(isOn: $isEnabled)
+        }
+        .padding(.horizontal, SettingsMetrics.horizontalPadding)
+        .padding(.vertical, SettingsMetrics.rowVerticalPadding + 4)
+    }
+
+    private var statusText: String {
+        isEnabled ? "Enabled for side panel and coding agents" : "Disabled, browser UI and agent tools hidden"
     }
 }
 

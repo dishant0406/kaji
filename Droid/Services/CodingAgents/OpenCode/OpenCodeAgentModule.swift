@@ -2,6 +2,7 @@ import Foundation
 
 struct OpenCodeAgentModule: CodingAgentModule {
     let socketTypeKey = "opencode"
+    let mcpServerConfigProvider: MCPServerConfigProvider? = OpenCodeMCPServerConfigProvider()
 
     let definition = CodingAgentDefinition(
         id: "opencode",

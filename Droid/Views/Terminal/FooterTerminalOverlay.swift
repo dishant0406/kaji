@@ -7,6 +7,7 @@ struct FooterTerminalOverlay: View {
     let worktreePath: String?
     let expanded: Bool
     let onToggle: (() -> Void)?
+    let onOpenMCPControlPanel: (() -> Void)?
     let onProcessExit: () -> Void
 
     private let terminalHeight: CGFloat = 320
@@ -24,7 +25,8 @@ struct FooterTerminalOverlay: View {
                 worktreeKey: worktreeKey,
                 worktreePath: worktreePath,
                 terminalExpanded: expanded,
-                onToggleTerminal: onToggle
+                onToggleTerminal: onToggle,
+                onOpenMCPControlPanel: onOpenMCPControlPanel
             )
         }
         .animation(DroidMotion.preferred(DroidMotion.modal, reduceMotion: false), value: expanded)

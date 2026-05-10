@@ -11,7 +11,8 @@ enum CodingAgentShimTestHarness {
         graphEnv: [String: String],
         args: [String],
         root providedRoot: URL? = nil,
-        workingDirectory: URL? = nil
+        workingDirectory: URL? = nil,
+        installBrowserMCP: Bool = false
     ) throws -> [String] {
         let fileManager = FileManager.default
         let root = providedRoot ?? fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -27,7 +28,8 @@ enum CodingAgentShimTestHarness {
         try realExecutable(real)
         let shim = try #require(CodingAgentShimInstaller.install(
             homeDirectory: home.path,
-            fileManager: fileManager
+            fileManager: fileManager,
+            installBrowserMCP: installBrowserMCP
         )).appendingPathComponent(name)
         try run(shim, env: environment(
             realEnv: realEnv,
@@ -72,12 +74,23 @@ enum CodingAgentShimTestHarness {
         [
             realEnv: real.path,
             "CAPTURE": output.path,
+            "HOME": root.appendingPathComponent("home").path,
             "DROID_CODE_GRAPH_INSTRUCTIONS": "",
             "DROID_CODE_GRAPH_PROJECT_DIR": "",
             "DROID_CODE_GRAPH_ROOT_DIR": root.appendingPathComponent("inactive-droidcodegraph").path,
             "DROID_CODE_GRAPH_REPORT": "",
             "DROID_CODE_GRAPH_JSON": "",
             "DROID_CODE_GRAPH_OPENCODE_CONFIG": "",
+            "DROID_BROWSER_BROKER_URL": "",
+            "DROID_BROWSER_CDP_PORT": "",
+            "DROID_BROWSER_CDP_URL": "",
+            "DROID_BROWSER_MCP_COMMAND": "",
+            "DROID_BROWSER_MCP_TOKEN": "",
+            "DROID_BROWSER_SESSION_ID": "",
+            "DROID_CODEX_BROWSER_MCP_ARGS": "",
+            "DROID_CLAUDE_BROWSER_MCP_CONFIG": "",
+            "DROID_OPENCODE_BROWSER_MCP_CONFIG": "",
+            "DROID_PI_BROWSER_MCP_CONFIG": "",
         ]
     }
 

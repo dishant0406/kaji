@@ -6,9 +6,11 @@ struct CLILauncherFooter: View {
     let worktreePath: String?
     var terminalExpanded = false
     var onToggleTerminal: (() -> Void)?
+    var onOpenMCPControlPanel: (() -> Void)?
     @Environment(AppState.self) private var appState
     @State private var settings = CLILauncherSettings.shared
     @State private var showsShortcuts = false
+    @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
 
     private var enabledLaunchers: [CLILauncherConfiguration] {
         settings.enabledLaunchers
@@ -35,10 +37,17 @@ struct CLILauncherFooter: View {
                     worktreePath: worktreePath
                 )
 
-                IconButton(symbol: "globe", accessibilityLabel: "Browser") {
-                    NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
+                if browserEnabled {
+                    IconButton(symbol: "globe", accessibilityLabel: "Browser") {
+                        NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
+                    }
+                    .help("Browser")
                 }
-                .help("Browser")
+
+                IconButton(symbol: "network", accessibilityLabel: "MCP Servers") {
+                    onOpenMCPControlPanel?()
+                }
+                .help("MCP Servers")
 
                 IconButton(symbol: "keyboard", selected: showsShortcuts, accessibilityLabel: "Shortcuts") {
                     showsShortcuts.toggle()
