@@ -31,7 +31,8 @@ struct CodexAgentModule: CodingAgentModule, AIUsageProvider {
         globalInstructionFiles: [".codex/AGENTS.md", ".codex/AGENTS.override.md", ".agents/AGENTS.md"],
         projectInstructionFiles: ["AGENTS.md", "AGENTS.override.md"],
         homeSkillDirectories: [".codex/skills"],
-        projectSkillDirectories: [".agents/skills"]
+        projectSkillDirectories: [".agents/skills"],
+        notificationPolicy: .init(coalesceGenericCompletions: true)
     )
 
     private static let configFileName = "config.toml"

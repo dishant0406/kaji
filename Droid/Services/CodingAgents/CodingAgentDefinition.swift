@@ -24,6 +24,59 @@ struct CodingAgentDefinition: Hashable, Identifiable {
     let projectInstructionFiles: [String]
     let homeSkillDirectories: [String]
     let projectSkillDirectories: [String]
+    let notificationPolicy: CodingAgentNotificationPolicy
+
+    init(
+        id: String,
+        displayName: String,
+        annotationValues: [String],
+        iconName: String,
+        executableNames: [String],
+        executableSearchDirectories: [String],
+        defaultCommand: String,
+        installCommand: AIProviderInstaller.InstallCommand?,
+        configDirectories: [String],
+        dataDirectories: [String],
+        hookStrategy: CodingAgentHookStrategy,
+        historyStrategy: CodingAgentHistoryStrategy,
+        modelStrategy: CodingAgentModelStrategy,
+        usageStrategy: CodingAgentUsageStrategy,
+        commandProfile: CodingAgentCommandProfile,
+        models: [String],
+        defaultModel: String?,
+        modelListCommand: CodingAgentListCommand?,
+        stopEscapeCount: Int,
+        globalInstructionFiles: [String],
+        projectInstructionFiles: [String],
+        homeSkillDirectories: [String],
+        projectSkillDirectories: [String],
+        notificationPolicy: CodingAgentNotificationPolicy = .default
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.annotationValues = annotationValues
+        self.iconName = iconName
+        self.executableNames = executableNames
+        self.executableSearchDirectories = executableSearchDirectories
+        self.defaultCommand = defaultCommand
+        self.installCommand = installCommand
+        self.configDirectories = configDirectories
+        self.dataDirectories = dataDirectories
+        self.hookStrategy = hookStrategy
+        self.historyStrategy = historyStrategy
+        self.modelStrategy = modelStrategy
+        self.usageStrategy = usageStrategy
+        self.commandProfile = commandProfile
+        self.models = models
+        self.defaultModel = defaultModel
+        self.modelListCommand = modelListCommand
+        self.stopEscapeCount = stopEscapeCount
+        self.globalInstructionFiles = globalInstructionFiles
+        self.projectInstructionFiles = projectInstructionFiles
+        self.homeSkillDirectories = homeSkillDirectories
+        self.projectSkillDirectories = projectSkillDirectories
+        self.notificationPolicy = notificationPolicy
+    }
 
     func matches(_ value: String) -> Bool {
         let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -39,6 +92,24 @@ struct CodingAgentDefinition: Hashable, Identifiable {
 
     private var searchableValues: [String] {
         ([id, displayName] + annotationValues + executableNames).map { $0.lowercased() }
+    }
+}
+
+struct CodingAgentNotificationPolicy: Hashable {
+    static let `default` = Self()
+
+    let suppressRoutineProviderEvents: Bool
+    let suppressCompletionUserDelivery: Bool
+    let coalesceGenericCompletions: Bool
+
+    init(
+        suppressRoutineProviderEvents: Bool = false,
+        suppressCompletionUserDelivery: Bool = false,
+        coalesceGenericCompletions: Bool = false
+    ) {
+        self.suppressRoutineProviderEvents = suppressRoutineProviderEvents
+        self.suppressCompletionUserDelivery = suppressCompletionUserDelivery
+        self.coalesceGenericCompletions = coalesceGenericCompletions
     }
 }
 

@@ -14,7 +14,8 @@ enum ProviderEventDispatcher {
             return
         }
 
-        guard !suppressesRoutineCompletionEvent(event) else { return }
+        let policy = AIProviderRegistry.shared.notificationPolicy(for: event.type)
+        guard !suppressesRoutineCompletionEvent(event, policy: policy) else { return }
 
         let source = AIProviderRegistry.shared.notificationSource(for: event.type)
         guard let appState = NotificationStore.shared.appState else {
@@ -61,9 +62,8 @@ enum ProviderEventDispatcher {
     }
 
     private static func suppressesRoutineCompletionNotification(source: DroidNotification.Source, title: String, body: String) -> Bool {
-        guard case let .aiProvider(providerID) = source,
-              ["codex", "opencode"].contains(providerID)
-        else { return false }
+        let policy = AIProviderRegistry.shared.notificationPolicy(for: source)
+        guard policy.suppressRoutineProviderEvents else { return false }
         let text = "\(title) \(body)".lowercased()
         return !text.contains("needs permission") &&
             !text.contains("needs attention") &&
@@ -71,8 +71,8 @@ enum ProviderEventDispatcher {
             !text.contains("error")
     }
 
-    private static func suppressesRoutineCompletionEvent(_ event: ProviderEvent) -> Bool {
-        guard ["codex", "opencode"].contains(event.type) else { return false }
+    private static func suppressesRoutineCompletionEvent(_ event: ProviderEvent, policy: CodingAgentNotificationPolicy) -> Bool {
+        guard policy.suppressRoutineProviderEvents else { return false }
         let text = "\(event.title) \(event.body)".lowercased()
         return !text.contains("needs permission") &&
             !text.contains("needs attention") &&

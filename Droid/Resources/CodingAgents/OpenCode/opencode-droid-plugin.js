@@ -167,6 +167,8 @@ export const DroidNotificationPlugin = async ({ client }) => {
         }
       } catch {}
 
+      await send("opencode", "OpenCode", body)
+
     },
   }
 }

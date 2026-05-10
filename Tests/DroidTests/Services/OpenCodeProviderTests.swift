@@ -41,6 +41,7 @@ struct OpenCodeProviderTests {
             if (event.type === "permission.asked") await send("opencode_attention", "permission", "detail")
             if (event.type === "question.asked") await send("opencode_attention", "question", "detail")
             if (event.type === "session.idle") await stop()
+            if (event.type === "session.idle") await send("opencode", "OpenCode", "Session completed")
             if (projectID && worktreeID) return
           },
         })
@@ -69,6 +70,7 @@ struct OpenCodeProviderTests {
             #expect(text.contains("permission.asked"))
             #expect(text.contains("question.asked"))
             #expect(text.contains("await stop()"))
+            #expect(text.contains("await send(\"opencode\", \"OpenCode\""))
             #expect(text.contains("typeof raw === \"string\""))
             #expect(text.contains("raw.type"))
             #expect(text.contains("busy"))

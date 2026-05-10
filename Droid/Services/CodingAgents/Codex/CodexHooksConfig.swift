@@ -3,6 +3,20 @@ import Foundation
 enum CodexHooksConfig {
     private static let marker = "droid-activity-hook"
     private static let obsoleteMarkers = [marker, "muxy-activity-hook"]
+    private static let hookEvents = [
+        HookEvent(name: "SessionStart", matcher: "startup|resume|clear", action: "start"),
+        HookEvent(name: "UserPromptSubmit", matcher: nil, action: "start"),
+        HookEvent(name: "PreToolUse", matcher: "*", action: "observe"),
+        HookEvent(name: "PermissionRequest", matcher: "*", action: "attention"),
+        HookEvent(name: "PostToolUse", matcher: "*", action: "observe"),
+        HookEvent(name: "Stop", matcher: nil, action: "stop"),
+    ]
+
+    private struct HookEvent {
+        let name: String
+        let matcher: String?
+        let action: String
+    }
 
     static func install(config: String, hooksContent: String, hookClientPath: String) -> (config: String, hooks: String) {
         (
@@ -14,13 +28,13 @@ enum CodexHooksConfig {
     static func uninstall(from hooksContent: String) -> String {
         var root = parseRoot(hooksContent)
         var hooks = root["hooks"] as? [String: Any] ?? [:]
-        for event in ["SessionStart", "UserPromptSubmit", "Stop", "PermissionRequest"] {
-            guard let existing = hooks[event] as? [[String: Any]] else { continue }
+        for event in hookEvents {
+            guard let existing = hooks[event.name] as? [[String: Any]] else { continue }
             let filtered = existing.filter { !isDroidHookEntry($0) }
             if filtered.isEmpty {
-                hooks.removeValue(forKey: event)
+                hooks.removeValue(forKey: event.name)
             } else {
-                hooks[event] = filtered
+                hooks[event.name] = filtered
             }
         }
         if hooks.isEmpty {
@@ -35,22 +49,13 @@ enum CodexHooksConfig {
         var root = parseRoot(content)
         var hooks = root["hooks"] as? [String: Any] ?? [:]
 
-        hooks["SessionStart"] = merge(
-            entries: hooks["SessionStart"] as? [[String: Any]],
-            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "start")
-        )
-        hooks["UserPromptSubmit"] = merge(
-            entries: hooks["UserPromptSubmit"] as? [[String: Any]],
-            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "start")
-        )
-        hooks["Stop"] = merge(
-            entries: hooks["Stop"] as? [[String: Any]],
-            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "stop")
-        )
-        hooks["PermissionRequest"] = merge(
-            entries: hooks["PermissionRequest"] as? [[String: Any]],
-            command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", state: "attention")
-        )
+        for event in hookEvents {
+            hooks[event.name] = merge(
+                entries: hooks[event.name] as? [[String: Any]],
+                matcher: event.matcher,
+                command: hookCommand(hookClientPath: hookClientPath, providerID: "codex", action: event.action)
+            )
+        }
 
         root["hooks"] = hooks
         return normalizedJSON(root)
@@ -99,10 +104,10 @@ enum CodexHooksConfig {
         return object
     }
 
-    private static func merge(entries: [[String: Any]]?, command: String) -> [[String: Any]] {
+    private static func merge(entries: [[String: Any]]?, matcher: String?, command: String) -> [[String: Any]] {
         var merged = entries ?? []
         merged.removeAll { isDroidHookEntry($0) }
-        merged.append([
+        var entry: [String: Any] = [
             "hooks": [
                 [
                     "type": "command",
@@ -110,7 +115,11 @@ enum CodexHooksConfig {
                     "timeout": 5,
                 ],
             ],
-        ])
+        ]
+        if let matcher {
+            entry["matcher"] = matcher
+        }
+        merged.append(entry)
         return merged
     }
 
@@ -122,13 +131,13 @@ enum CodexHooksConfig {
         }
     }
 
-    private static func hookCommand(hookClientPath: String, providerID: String, state: String) -> String {
+    private static func hookCommand(hookClientPath: String, providerID: String, action: String) -> String {
         let fallbackPath = ShellEscaper.escape(hookClientPath)
         return [
-            "if [ -n \"${DROID_HOOK_CLIENT_PATH:-}\" ] && [ -x \"$DROID_HOOK_CLIENT_PATH\" ]; then",
-            "\"$DROID_HOOK_CLIENT_PATH\" codex-activity \(providerID) \(state);",
-            "elif [ -x \(fallbackPath) ]; then",
-            "\(fallbackPath) codex-activity \(providerID) \(state);",
+            "if [ -x \(fallbackPath) ]; then",
+            "\(fallbackPath) codex-activity \(providerID) \(action);",
+            "elif [ -n \"${DROID_HOOK_CLIENT_PATH:-}\" ] && [ -x \"$DROID_HOOK_CLIENT_PATH\" ]; then",
+            "\"$DROID_HOOK_CLIENT_PATH\" codex-activity \(providerID) \(action);",
             "fi # \(marker)",
         ].joined(separator: " ")
     }

@@ -4,17 +4,32 @@ enum CodexHookHandler {
     static func handle(args: [String], input: String) {
         guard args.count >= 2 else { return }
         let provider = args[0]
-        let state = args[1]
-        guard !provider.isEmpty, ["start", "stop", "attention"].contains(state) else { return }
+        let parsed = parse(args: args, input: input)
+        guard !provider.isEmpty, ["start", "stop", "attention", "observe"].contains(parsed.action) else { return }
         if shouldIgnoreNestedCodex(provider: provider, input: input) { return }
-        HookEventEmitter.emitSession(provider: provider, input: input, source: state)
-        if state == "attention" {
+        HookEventEmitter.emitSession(provider: provider, input: input, source: parsed.eventName)
+        if parsed.action == "attention" {
             emitAttention(provider: provider, input: input)
             return
         }
-        HookEventEmitter.emitActivity(provider: provider, state: state)
+        if parsed.action == "observe" {
+            return
+        }
+        HookEventEmitter.emitActivity(provider: provider, state: parsed.action)
         guard provider == "codex" else { return }
-        emitTranscript(provider: provider, state: state, input: input)
+        emitTranscript(provider: provider, action: parsed.action, eventName: parsed.eventName, input: input)
+        if parsed.action == "stop" {
+            emitCompletion(provider: provider, input: input)
+        }
+    }
+
+    private static func parse(args: [String], input: String) -> (eventName: String, action: String) {
+        if args.count >= 3 {
+            return (args[1], args[2])
+        }
+        let action = args[1]
+        let eventName = extractedText(input, keys: ["hook_event_name"], limit: 100)
+        return (eventName.isEmpty ? action : eventName, action)
     }
 
     private static func shouldIgnoreNestedCodex(provider: String, input: String) -> Bool {
@@ -25,7 +40,7 @@ enum CodexHookHandler {
     }
 
     private static func emitAttention(provider: String, input: String) {
-        let detail = extractedText(input, keys: ["tool_name", "tool", "command", "path", "reason", "message"], limit: 500)
+        let detail = extractedText(input, keys: ["description", "tool_name", "tool", "command", "path", "reason", "message"], limit: 500)
         let body = detail.isEmpty ? "Needs permission" : "Needs permission: \(detail)"
         HookEventEmitter.emit(
             type: "\(provider)_attention",
@@ -41,11 +56,23 @@ enum CodexHookHandler {
         )
     }
 
-    private static func emitTranscript(provider: String, state: String, input: String) {
+    private static func emitCompletion(provider: String, input: String) {
+        let body = extractedText(input, keys: ["last_assistant_message", "message", "text"], limit: 500)
+        HookEventEmitter.emit(
+            type: provider,
+            paneID: ProcessInfo.processInfo.environment["DROID_PANE_ID"],
+            title: "Codex",
+            body: body.isEmpty ? "Turn completed" : body
+        )
+    }
+
+    private static func emitTranscript(provider: String, action: String, eventName: String, input: String) {
         guard !input.isEmpty else { return }
-        let text = extractedText(input, keys: ["prompt", "user_prompt", "last_assistant_message", "message", "text"], limit: 500)
+        let keys = action == "stop" ? ["last_assistant_message", "message", "text"] : ["prompt", "user_prompt", "message", "text"]
+        let text = extractedText(input, keys: keys, limit: 500)
         guard !text.isEmpty else { return }
-        HookEventEmitter.emitTranscript(provider: provider, kind: state == "start" ? "user" : "update", text: text)
+        let kind = action == "stop" ? "assistant" : eventName.lowercased() == "userpromptsubmit" ? "user" : "update"
+        HookEventEmitter.emitTranscript(provider: provider, kind: kind, text: text)
     }
 
     private static func extractedText(_ input: String, keys: [String], limit: Int) -> String {

@@ -4,10 +4,10 @@ import Testing
 @testable import Droid
 
 @MainActor
-struct CodexOutboundNotificationCoordinatorTests {
+struct CodingAgentOutboundNotificationCoordinatorTests {
     @Test
     func richerCodexMessageCancelsPendingGenericDelivery() async {
-        let coordinator = CodexOutboundNotificationCoordinator(delay: .seconds(1)) { _ in
+        let coordinator = CodingAgentOutboundNotificationCoordinator(delay: .seconds(1)) { _ in
             while !Task.isCancelled {
                 await Task.yield()
             }
@@ -32,7 +32,7 @@ struct CodexOutboundNotificationCoordinatorTests {
 
     @Test
     func genericCodexMessageDeliversWhenNoRicherUpdateArrives() async {
-        let coordinator = CodexOutboundNotificationCoordinator(delay: .milliseconds(25)) { _ in }
+        let coordinator = CodingAgentOutboundNotificationCoordinator(delay: .milliseconds(25)) { _ in }
         let recorder = DeliveryRecorder()
 
         coordinator.deliver(

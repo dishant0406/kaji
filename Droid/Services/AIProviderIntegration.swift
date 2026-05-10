@@ -105,6 +105,20 @@ final class AIProviderRegistry {
         return .socket
     }
 
+    func notificationPolicy(for source: DroidNotification.Source) -> CodingAgentNotificationPolicy {
+        guard case let .aiProvider(id) = source,
+              let definition = CodingAgentRegistry.shared.definition(id: id)
+        else { return .default }
+        return definition.notificationPolicy
+    }
+
+    func notificationPolicy(for socketType: String) -> CodingAgentNotificationPolicy {
+        guard let provider = providers.first(where: { $0.socketTypeKey == socketType }),
+              let definition = CodingAgentRegistry.shared.definition(id: provider.id)
+        else { return .default }
+        return definition.notificationPolicy
+    }
+
     func iconName(for source: DroidNotification.Source) -> String {
         switch source {
         case .osc: "terminal"

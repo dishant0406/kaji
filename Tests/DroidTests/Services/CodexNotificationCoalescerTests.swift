@@ -4,7 +4,7 @@ import Testing
 @testable import Droid
 
 @MainActor
-struct CodexNotificationCoalescerTests {
+struct CodingAgentNotificationCoalescerTests {
     @Test
     func replacesGenericCompletionWithRicherMessage() {
         var existing = [
@@ -32,7 +32,7 @@ struct CodexNotificationCoalescerTests {
             body: "Hello."
         )
 
-        #expect(CodexNotificationCoalescer.merge(richer, into: &existing) == .replaced)
+        #expect(CodingAgentNotificationCoalescer.merge(richer, into: &existing) == .replaced)
         #expect(existing.first?.body == "Hello.")
     }
 
@@ -63,7 +63,7 @@ struct CodexNotificationCoalescerTests {
             body: "Turn completed (codex-tui)"
         )
 
-        #expect(CodexNotificationCoalescer.merge(generic, into: &existing) == .ignored)
+        #expect(CodingAgentNotificationCoalescer.merge(generic, into: &existing) == .ignored)
         #expect(existing.first?.body == "Hello.")
     }
 }

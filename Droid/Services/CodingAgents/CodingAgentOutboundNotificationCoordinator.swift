@@ -1,8 +1,8 @@
 import Foundation
 
 @MainActor
-final class CodexOutboundNotificationCoordinator {
-    static let shared = CodexOutboundNotificationCoordinator()
+final class CodingAgentOutboundNotificationCoordinator {
+    static let shared = CodingAgentOutboundNotificationCoordinator()
 
     private let delay: Duration
     private let sleep: @Sendable (Duration) async -> Void
@@ -23,7 +23,7 @@ final class CodexOutboundNotificationCoordinator {
         event: NotificationOutboundEvent,
         send: @escaping @Sendable (NotificationOutboundEvent) async -> Void
     ) {
-        guard isCodex(notification) else {
+        guard shouldDelayGenericCompletion(notification) else {
             Task { await send(event) }
             return
         }
@@ -53,11 +53,8 @@ final class CodexOutboundNotificationCoordinator {
         }
     }
 
-    private func isCodex(_ notification: DroidNotification) -> Bool {
-        if case .aiProvider("codex") = notification.source {
-            return true
-        }
-        return false
+    private func shouldDelayGenericCompletion(_ notification: DroidNotification) -> Bool {
+        AIProviderRegistry.shared.notificationPolicy(for: notification.source).coalesceGenericCompletions
     }
 
     private func isGeneric(_ body: String) -> Bool {
