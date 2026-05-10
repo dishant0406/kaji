@@ -15,6 +15,8 @@ final class BrowserWebController {
     private var startURL = ""
     private var startTask: Task<Void, Never>?
 
+    var isReady: Bool { browserView != nil }
+
     func attach(
         surface: NativeBrowserSurfaceView,
         page: BrowserPageState,
@@ -101,6 +103,11 @@ final class BrowserWebController {
         }
     }
 
+    func screenshotPNG() -> Data? {
+        guard let browserView else { return nil }
+        return BrowserScreenshotRenderer.pngData(from: browserView)
+    }
+
     func close() {
         startTask?.cancel()
         startTask = nil
@@ -147,18 +154,7 @@ final class BrowserWebController {
     }
 
     private func startRuntime() throws {
-        guard let rootPath = CEFRuntimeLocator.rootPath() else { throw BrowserRuntimeError.runtimeMissing }
-        guard let helperPath = CEFRuntimeLocator.helperPath(rootPath: rootPath) else { throw BrowserRuntimeError.helperMissing }
-        let profilePath = DroidFileStorage.appSupportDirectory()
-            .appendingPathComponent("CEFProfiles", isDirectory: true)
-            .appendingPathComponent(BrowserProfileIdentifier.value(for: projectPath), isDirectory: true)
-            .path
-        try FileManager.default.createDirectory(atPath: profilePath, withIntermediateDirectories: true)
-        do {
-            try DroidCEFRuntime.start(withRootPath: rootPath, profilePath: profilePath, helperPath: helperPath)
-        } catch {
-            throw error
-        }
+        _ = try DroidBrowserRuntimeCoordinator.shared.ensureStarted(projectPath: projectPath)
     }
 
     private func updatePage(url: String, title: String) {
@@ -182,19 +178,5 @@ final class BrowserWebController {
         guard activeState != active else { return }
         activeState = active
         browserView.setActive(active)
-    }
-}
-
-enum BrowserRuntimeError: LocalizedError {
-    case runtimeMissing
-    case helperMissing
-    case initializationFailed
-
-    var errorDescription: String? {
-        switch self {
-        case .runtimeMissing: "Bundled CEF runtime not found. Run scripts/install-cef-runtime.sh and rebuild Droid."
-        case .helperMissing: "Bundled CEF helper app not found. Run scripts/install-cef-runtime.sh and rebuild Droid."
-        case .initializationFailed: "CEF failed to initialize."
-        }
     }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserPane: View {
     @Bindable var state: BrowserPaneState
+    let sessionID: String?
     let onClosePane: () -> Void
     @State private var controllers = BrowserControllerRegistry()
     @State private var pendingURL = ""
@@ -37,8 +38,10 @@ struct BrowserPane: View {
         .clipped()
         .task {
             pendingURL = state.url
+            registerBrowserControl()
         }
         .onDisappear {
+            unregisterBrowserControl()
             controllers.closeAll()
         }
         .onChange(of: state.url) { _, newValue in
@@ -48,6 +51,7 @@ struct BrowserPane: View {
             pendingURL = state.url
             showsPageText = false
             selectedController?.ensureStarted(url: state.url)
+            registerBrowserControl()
         }
     }
 
@@ -127,6 +131,21 @@ struct BrowserPane: View {
 
     private func navigate() {
         selectedController?.navigate(to: pendingURL)
+    }
+
+    private func registerBrowserControl() {
+        guard let sessionID else { return }
+        DroidBrowserControlRegistry.shared.register(
+            sessionID: sessionID,
+            state: state,
+            controllers: controllers,
+            close: onClosePane
+        )
+    }
+
+    private func unregisterBrowserControl() {
+        guard let sessionID else { return }
+        DroidBrowserControlRegistry.shared.unregister(sessionID: sessionID)
     }
 
     private func closeBrowserPage(_ pageID: UUID) {

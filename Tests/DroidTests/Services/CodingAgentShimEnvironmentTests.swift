@@ -26,6 +26,11 @@ struct CodingAgentShimEnvironmentTests {
         #expect(values["DROID_REAL_CODEX"] == fixture.bin.appendingPathComponent("codex").path)
         #expect(values["DROID_AGENT_SHIM_DIR"] == shimDirectory)
         #expect(values["ZDOTDIR"] == DroidShellBootstrapInstaller.directory(homeDirectory: fixture.home.path).path)
+        #expect(values["DROID_BROWSER_MCP_COMMAND"] == "\(shimDirectory)/droid-browser-mcp")
+        #expect(values["DROID_CODEX_BROWSER_MCP_ARGS"]?.contains("mcp_servers.droid-browser.command") == true)
+        #expect(values["DROID_CLAUDE_BROWSER_MCP_CONFIG"]?.hasSuffix(".droid/agent-configs/claude-browser-mcp.json") == true)
+        #expect(values["DROID_OPENCODE_BROWSER_MCP_CONFIG"]?.hasSuffix(".droid/agent-configs/opencode-browser-mcp.json") == true)
+        #expect(values["DROID_PI_BROWSER_MCP_CONFIG"]?.hasSuffix(".droid/agent-configs/pi-browser-mcp.json") == true)
     }
 
     @Test

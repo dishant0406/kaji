@@ -69,6 +69,25 @@ struct DroidCodeGraphInstructionsTests {
         #expect(openCodeText.contains("\"instructions\""))
         #expect(openCodeText.contains("AGENTS.md"))
         #expect(!openCodeText.contains("droid-browser"))
+
+
+        let descriptor = DroidBrowserMCPServerDescriptor(
+            name: "droid-browser",
+            command: "/tmp/droid-browser-mcp",
+            arguments: [],
+            environment: ["DROID_BROWSER_BROKER_URL": "http://127.0.0.1:1"]
+        )
+        let openCodeBrowserConfig = try #require(DroidCodeGraphInstructions.ensureOpenCodeConfig(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            instructionFile: file,
+            browserDescriptor: descriptor,
+            store: store,
+            fileManager: fileManager
+        ))
+        let openCodeBrowserText = try String(contentsOf: openCodeBrowserConfig, encoding: .utf8)
+        #expect(openCodeBrowserText.contains("droid-browser"))
+        #expect(openCodeBrowserText.contains("DROID_BROWSER_BROKER_URL"))
         let environment = Dictionary(uniqueKeysWithValues: DroidCodeGraphInstructions.environment(
             projectID: projectID,
             worktreeID: worktreeID,

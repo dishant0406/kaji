@@ -63,21 +63,31 @@ enum CodexHooksConfig {
                 let trimmed = $0.trimmingCharacters(in: .whitespaces)
                 return trimmed.hasPrefix("[") && trimmed.hasSuffix("]")
             } ?? lines.endIndex
-            if let settingIndex = lines[(featuresIndex + 1) ..< sectionEnd].firstIndex(where: {
-                $0.trimmingCharacters(in: .whitespaces).hasPrefix("codex_hooks")
+            let obsoleteIndices = lines[(featuresIndex + 1) ..< sectionEnd].indices.filter {
+                lines[$0].trimmingCharacters(in: .whitespaces).hasPrefix("codex_hooks")
+            }
+            for index in obsoleteIndices.reversed() {
+                lines.remove(at: index)
+            }
+            let updatedSectionEnd = lines[(featuresIndex + 1)...].firstIndex {
+                let trimmed = $0.trimmingCharacters(in: .whitespaces)
+                return trimmed.hasPrefix("[") && trimmed.hasSuffix("]")
+            } ?? lines.endIndex
+            if let settingIndex = lines[(featuresIndex + 1) ..< updatedSectionEnd].firstIndex(where: {
+                $0.trimmingCharacters(in: .whitespaces).hasPrefix("hooks")
             }) {
-                lines[settingIndex] = "codex_hooks = true"
+                lines[settingIndex] = "hooks = true"
             } else {
-                lines.insert("codex_hooks = true", at: featuresIndex + 1)
+                lines.insert("hooks = true", at: featuresIndex + 1)
             }
             return normalizedText(lines)
         }
 
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            return "[features]\ncodex_hooks = true\n"
+            return "[features]\nhooks = true\n"
         }
-        return trimmed + "\n\n[features]\ncodex_hooks = true\n"
+        return trimmed + "\n\n[features]\nhooks = true\n"
     }
 
     private static func parseRoot(_ content: String) -> [String: Any] {

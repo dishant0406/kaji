@@ -735,6 +735,7 @@ final class GhosttyTerminalNSView: NSView {
     }
 
     private func unshiftedCodepoint(from event: NSEvent) -> UInt32 {
+        if event.type == .flagsChanged { return 0 }
         if let scalar = KeyCombo.scalar(for: event.keyCode) {
             return scalar.value
         }

@@ -8,6 +8,7 @@ typedef void (^DroidCEFTextHandler)(NSString *text);
 
 @interface DroidCEFRuntime : NSObject
 + (BOOL)startWithRootPath:(NSString *)rootPath profilePath:(NSString *)profilePath helperPath:(NSString *)helperPath error:(NSError **)error;
++ (BOOL)startWithRootPath:(NSString *)rootPath profilePath:(NSString *)profilePath helperPath:(NSString *)helperPath remoteDebuggingPort:(int)remoteDebuggingPort error:(NSError **)error;
 + (void)pumpMessageLoop;
 @end
 

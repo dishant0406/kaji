@@ -7,7 +7,7 @@ enum CodingAgentShimEnvironment {
     static func variables(
         projectID: UUID,
         worktreeID: UUID,
-        worktreePath _: String? = nil,
+        worktreePath: String? = nil,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectory: String = NSHomeDirectory(),
         store: DroidCodeGraphStore = .shared,
@@ -30,6 +30,18 @@ enum CodingAgentShimEnvironment {
             homeDirectory: homeDirectory,
             fileManager: fileManager,
             shimDirectory: shimDirectory
+        ))
+        let browserValues = DroidBrowserAgentEnvironment.variables(
+            sessionID: worktreeID.uuidString,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        )
+        let browserMCPDescriptor = CodingAgentBrowserEnvironment.descriptor(browserValues)
+        values.append(contentsOf: browserValues)
+        values.append(contentsOf: CodingAgentBrowserEnvironment.variables(
+            browserValues: browserValues,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
         ))
 
         guard store.isReady,
@@ -68,6 +80,7 @@ enum CodingAgentShimEnvironment {
             projectID: projectID,
             worktreeID: worktreeID,
             instructionFile: instructions,
+            browserDescriptor: browserMCPDescriptor,
             store: store,
             fileManager: fileManager
         ) {

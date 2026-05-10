@@ -143,6 +143,9 @@ struct CodingAgentShimScript {
         codex_model_config="model_instructions_file=\\"${DROID_CODE_GRAPH_INSTRUCTIONS:-}\\""
         case "\(bridge)" in
           claude)
+            if [ -n "${DROID_CLAUDE_BROWSER_MCP_CONFIG:-}" ] && [ -f "$DROID_CLAUDE_BROWSER_MCP_CONFIG" ]; then
+              set -- --mcp-config "$DROID_CLAUDE_BROWSER_MCP_CONFIG" "$@"
+            fi
             if [ -n "$droid_dir" ] && [ -d "$droid_dir" ] && [ -n "$droid_root" ] && [ -d "$droid_root" ]; then
               CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 exec "$real" --add-dir "$droid_dir" --add-dir "$droid_root" "$@"
             fi
@@ -151,6 +154,9 @@ struct CodingAgentShimScript {
             fi
             ;;
           codex)
+            if [ -n "${DROID_CODEX_BROWSER_MCP_ARGS:-}" ]; then
+              eval "set -- $DROID_CODEX_BROWSER_MCP_ARGS \\"\\$@\\""
+            fi
             if [ -n "${DROID_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$DROID_CODE_GRAPH_INSTRUCTIONS" ]; then
               if [ -n "$droid_dir" ] && [ -d "$droid_dir" ] && [ -n "$droid_root" ] && [ -d "$droid_root" ]; then
                 exec "$real" -c "$codex_model_config" --add-dir "$droid_dir" --add-dir "$droid_root" "$@"
@@ -171,8 +177,14 @@ struct CodingAgentShimScript {
             if [ -n "${DROID_CODE_GRAPH_OPENCODE_CONFIG:-}" ] && [ -f "$DROID_CODE_GRAPH_OPENCODE_CONFIG" ]; then
               OPENCODE_CONFIG="$DROID_CODE_GRAPH_OPENCODE_CONFIG" exec "$real" "$@"
             fi
+            if [ -n "${DROID_OPENCODE_BROWSER_MCP_CONFIG:-}" ] && [ -f "$DROID_OPENCODE_BROWSER_MCP_CONFIG" ]; then
+              OPENCODE_CONFIG="$DROID_OPENCODE_BROWSER_MCP_CONFIG" exec "$real" "$@"
+            fi
             ;;
           pi)
+            if [ -n "${DROID_PI_BROWSER_MCP_CONFIG:-}" ] && [ -f "$DROID_PI_BROWSER_MCP_CONFIG" ]; then
+              set -- --mcp-config "$DROID_PI_BROWSER_MCP_CONFIG" "$@"
+            fi
             if [ -n "${DROID_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$DROID_CODE_GRAPH_INSTRUCTIONS" ]; then
               exec "$real" --append-system-prompt "$DROID_CODE_GRAPH_INSTRUCTIONS" "$@"
             fi

@@ -23,9 +23,29 @@ enum CodingAgentShimInstaller {
                 }
                 try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
             }
+            try installBrowserMCP(into: directory, fileManager: fileManager)
             return directory
         } catch {
             return nil
         }
+    }
+
+    static func browserMCPURL(homeDirectory: String = NSHomeDirectory()) -> URL {
+        directory(homeDirectory: homeDirectory).appendingPathComponent("droid-browser-mcp")
+    }
+
+    private static func installBrowserMCP(into directory: URL, fileManager: FileManager) throws {
+        let url = directory.appendingPathComponent("droid-browser-mcp")
+        guard let source = DroidBrowserMCPResourceLocator.scriptPath(fileManager: fileManager) else {
+            if fileManager.fileExists(atPath: url.path) {
+                try fileManager.removeItem(at: url)
+            }
+            return
+        }
+        let data = try Data(contentsOf: URL(fileURLWithPath: source))
+        if !fileManager.fileExists(atPath: url.path) || (try? Data(contentsOf: url)) != data {
+            try data.write(to: url, options: .atomic)
+        }
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
     }
 }
