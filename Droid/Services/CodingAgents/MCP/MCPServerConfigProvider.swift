@@ -8,7 +8,9 @@ protocol MCPServerConfigProvider: Sendable {
 }
 
 extension MCPServerConfigProvider {
-    func runtimeMCPServers(projectPath: String?, homeDirectory: String) -> [MCPServerRuntimeRecord] { [] }
+    func runtimeMCPServers(projectPath: String?, homeDirectory: String) -> [MCPServerRuntimeRecord] {
+        []
+    }
 
     func readMCPServers(location: MCPServerConfigLocation) throws -> [MCPServer] {
         try MCPServerConfigProviderDefault.read(location: location)

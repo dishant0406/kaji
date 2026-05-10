@@ -39,7 +39,8 @@ struct OpenCodeMCPServerConfigProvider: MCPServerConfigProvider {
             arguments: ["mcp", "list"],
             projectPath: projectPath,
             homeDirectory: homeDirectory
-        ) else { return [] }
+        )
+        else { return [] }
         return MCPRuntimeListParser.parseOpenCodeList(output)
     }
 }
