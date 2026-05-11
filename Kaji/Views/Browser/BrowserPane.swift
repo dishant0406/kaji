@@ -3,8 +3,10 @@ import SwiftUI
 struct BrowserPane: View {
     @Bindable var state: BrowserPaneState
     let sessionID: String?
+    let controllers: BrowserControllerRegistry
+    let closeOnDisappear: Bool
+    let managesBrowserControl: Bool
     let onClosePane: () -> Void
-    @State private var controllers = BrowserControllerRegistry()
     @State private var pendingURL = ""
     @State private var showsPageText = false
     @State private var isReading = false
@@ -38,11 +40,18 @@ struct BrowserPane: View {
         .clipped()
         .task {
             pendingURL = state.url
-            registerBrowserControl()
+            if managesBrowserControl {
+                registerBrowserControl()
+            }
         }
         .onDisappear {
-            unregisterBrowserControl()
-            controllers.closeAll()
+            if managesBrowserControl {
+                unregisterBrowserControl()
+            }
+            controllers.setActive(false)
+            if closeOnDisappear {
+                controllers.closeAll()
+            }
         }
         .onChange(of: state.url) { _, newValue in
             pendingURL = newValue
@@ -52,7 +61,9 @@ struct BrowserPane: View {
             showsPageText = false
             selectedController?.ensureStarted(url: state.url)
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
-            registerBrowserControl()
+            if managesBrowserControl {
+                registerBrowserControl()
+            }
         }
         .onChange(of: state.selectedDeviceProfileID) { _, _ in
             selectedController?.applyDeviceProfile(selectedDeviceProfile)

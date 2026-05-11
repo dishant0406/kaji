@@ -69,7 +69,7 @@ async function browserAction(action, args) {
     headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId: state.sessionId, action, arguments: args })
   });
-  return parseResponse(response);
+  return await awaitReadyResult(await parseResponse(response), action, args);
 }
 
 async function parseResponse(response) {
@@ -82,6 +82,20 @@ async function parseResponse(response) {
   }
   if (!response.ok) body.error = body.error || `Broker returned ${response.status}`;
   return body;
+}
+
+async function awaitReadyResult(result, action, args) {
+  if (!result || result.connected || result.error || !result.pending) return result;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await sleep(150);
+    const current = await browserAction('current', {});
+    if (current.connected || current.error) return current;
+  }
+  return { ...result, connected: false, error: `${action} did not attach to the Kaji browser in time` };
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = { call, tools };

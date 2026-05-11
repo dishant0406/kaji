@@ -29,4 +29,8 @@ final class BrowserControllerRegistry {
             closingControllers.forEach { $0.close() }
         }
     }
+
+    func setActive(_ active: Bool) {
+        controllers.values.forEach { $0.setActive(active) }
+    }
 }
