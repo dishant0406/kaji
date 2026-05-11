@@ -71,30 +71,39 @@ struct BrowserPane: View {
     }
 
     private var tabStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(state.pages) { page in
-                    BrowserTabButton(
-                        page: page,
-                        selected: page.id == state.selectedPageID,
-                        onSelect: {
-                            state.selectPage(id: page.id)
-                            pendingURL = page.url
-                        },
-                        onClose: { closeBrowserPage(page.id) }
-                    )
-                }
-                IconButton(symbol: "plus", accessibilityLabel: "New browser tab") {
-                    let page = state.openPage()
-                    pendingURL = page.url
-                    controllers.controller(for: page.id).ensureStarted(url: page.url)
-                }
-                .help("New tab")
+        ViewThatFits(in: .horizontal) {
+            tabStripContent(scrolls: false)
+            ScrollView(.horizontal, showsIndicators: false) {
+                tabStripContent(scrolls: true)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
         }
         .background(KajiTheme.secondaryBackground)
+    }
+
+    private func tabStripContent(scrolls: Bool) -> some View {
+        HStack(spacing: 6) {
+            ForEach(state.pages) { page in
+                BrowserTabButton(
+                    page: page,
+                    selected: page.id == state.selectedPageID,
+                    onSelect: {
+                        state.selectPage(id: page.id)
+                        pendingURL = page.url
+                    },
+                    onClose: { closeBrowserPage(page.id) }
+                )
+                .frame(maxWidth: scrolls ? nil : .infinity)
+            }
+            IconButton(symbol: "plus", accessibilityLabel: "New browser tab") {
+                let page = state.openPage()
+                pendingURL = page.url
+                controllers.controller(for: page.id).ensureStarted(url: page.url)
+            }
+            .fixedSize()
+            .help("New tab")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
     }
 
     private var toolbar: some View {
