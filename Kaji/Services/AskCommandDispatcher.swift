@@ -5,14 +5,6 @@ enum AskCommandDispatcher {
     static func send(_ request: AskDispatchRequest, appState: AppState) async {
         let prompt = adaptedPrompt(for: request)
 
-        appState.selectProject(request.project, worktree: request.worktree)
-        let sessions = AskSessionCatalog.sessions(
-            projectID: request.project.id,
-            worktreeID: request.worktree.id,
-            worktrees: [request.worktree],
-            appState: appState
-        )
-
         if let history = request.history {
             await sendToHistory(
                 history,
@@ -22,6 +14,14 @@ enum AskCommandDispatcher {
             )
             return
         }
+
+        appState.selectProject(request.project, worktree: request.worktree)
+        let sessions = AskSessionCatalog.sessions(
+            projectID: request.project.id,
+            worktreeID: request.worktree.id,
+            worktrees: [request.worktree],
+            appState: appState
+        )
 
         switch request.sessionMode {
         case .existingSession:
@@ -75,6 +75,7 @@ enum AskCommandDispatcher {
             prompt: prompt
         )
         guard !resume.isEmpty else { return }
+        appState.selectProject(request.project, worktree: request.worktree)
         appState.createStartupCommandTab(
             projectID: request.project.id,
             title: request.provider.title,
