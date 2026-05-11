@@ -10,12 +10,19 @@ final class TerminalViewRegistry {
     private init() {}
 
     func view(for paneID: UUID, workingDirectory: String, command: String? = nil) -> GhosttyTerminalNSView {
+        AskHangDebugLog.mark("TerminalViewRegistry.view.start", [
+            "command": command == nil ? "nil" : "set",
+            "existing": String(views[paneID] != nil),
+            "paneID": paneID.uuidString,
+        ])
         if let existing = views[paneID] {
+            AskHangDebugLog.mark("TerminalViewRegistry.view.existing", ["paneID": paneID.uuidString])
             return existing
         }
         let view = GhosttyTerminalNSView(workingDirectory: workingDirectory, command: command)
         views[paneID] = view
         paneIDs[ObjectIdentifier(view)] = paneID
+        AskHangDebugLog.mark("TerminalViewRegistry.view.created", ["paneID": paneID.uuidString])
         return view
     }
 
