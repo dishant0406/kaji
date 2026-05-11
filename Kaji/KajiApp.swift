@@ -11,6 +11,7 @@ struct KajiApp: App {
 
     init() {
         SwiftRunBundleLauncher.relaunchIfNeeded()
+        DroidDataMigration.run()
         let environment = AppEnvironment.live
         let projectStore = ProjectStore(persistence: environment.projectPersistence)
         let worktreeStore = WorktreeStore(
