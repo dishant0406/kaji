@@ -38,6 +38,10 @@ final class GhosttyTerminalNSView: NSView {
     init(workingDirectory: String, command: String? = nil) {
         self.workingDirectory = workingDirectory
         self.command = command
+        AskHangDebugLog.mark("GhosttyTerminalNSView.init.start", [
+            "command": command == nil ? "nil" : "set",
+            "cwd": workingDirectory,
+        ])
         super.init(frame: .zero)
         wantsLayer = true
         setupTrackingArea()
@@ -47,6 +51,7 @@ final class GhosttyTerminalNSView: NSView {
         let directoryName = URL(fileURLWithPath: workingDirectory).lastPathComponent
         let label = directoryName.isEmpty ? "Terminal" : "Terminal — \(directoryName)"
         setAccessibilityLabel(label)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.init.end", ["command": command == nil ? "nil" : "set"])
     }
 
     @available(*, unavailable)
@@ -77,12 +82,23 @@ final class GhosttyTerminalNSView: NSView {
     private var pendingSurfaceCreation = false
 
     func createSurface() {
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.start", [
+            "command": command == nil ? "nil" : "set",
+            "envCount": String(envVars.count),
+            "hasApp": String(GhosttyService.shared.app != nil),
+            "hasSurface": String(surface != nil),
+        ])
         guard surface == nil, let app = GhosttyService.shared.app else { return }
 
         guard let backingSize = backingPixelSize() else {
+            AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.noBacking")
             pendingSurfaceCreation = true
             return
         }
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.backing", [
+            "height": String(Int(backingSize.height)),
+            "width": String(Int(backingSize.width)),
+        ])
         pendingSurfaceCreation = false
 
         var config = ghostty_surface_config_new()
@@ -98,6 +114,7 @@ final class GhosttyTerminalNSView: NSView {
         defer { cStrings.forEach { free($0) } }
 
         if let command, let loginWrapped = strdup(Self.loginShellCommand(command)) {
+            AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.commandSet", ["length": String(command.count)])
             cStrings.append(loginWrapped)
             config.command = UnsafePointer(loginWrapped)
             config.wait_after_command = false
@@ -116,32 +133,52 @@ final class GhosttyTerminalNSView: NSView {
                 cEnvVars.withUnsafeMutableBufferPointer { buffer in
                     config.env_vars = buffer.baseAddress
                     config.env_var_count = buffer.count
+                    AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeNew", ["envCount": String(buffer.count)])
                     surface = ghostty_surface_new(app, &config)
+                    AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterNew", ["success": String(surface != nil)])
                 }
             } else {
+                AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeNew", ["envCount": "0"])
                 surface = ghostty_surface_new(app, &config)
+                AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterNew", ["success": String(surface != nil)])
             }
         }
 
-        guard let surface else { return }
+        guard let surface else {
+            AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.noSurface")
+            return
+        }
 
         let scale = Double(window?.backingScaleFactor ?? 2.0)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeScale")
         ghostty_surface_set_content_scale(surface, scale, scale)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterScale")
 
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeSize")
         ghostty_surface_set_size(surface, backingSize.width, backingSize.height)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterSize")
 
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeColorScheme")
         let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         ghostty_surface_set_color_scheme(surface, isDark ? GHOSTTY_COLOR_SCHEME_DARK : GHOSTTY_COLOR_SCHEME_LIGHT)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterColorScheme")
 
         if let screen = window?.screen ?? NSScreen.main,
            let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32
         {
+            AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeDisplayID")
             ghostty_surface_set_display_id(surface, displayID)
+            AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterDisplayID")
         }
 
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeOcclusion")
         ghostty_surface_set_occlusion(surface, isSurfaceVisible)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterOcclusion")
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.beforeFocus")
         ghostty_surface_set_focus(surface, isFocused)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.afterFocus")
         flushInjectedCommandIfNeeded()
+        AskHangDebugLog.mark("GhosttyTerminalNSView.createSurface.end")
     }
 
     func destroySurface() {
@@ -236,6 +273,7 @@ final class GhosttyTerminalNSView: NSView {
     nonisolated(unsafe) private var delayedResizeWorkItem: DispatchWorkItem?
 
     override func viewDidMoveToWindow() {
+        AskHangDebugLog.mark("GhosttyTerminalNSView.viewDidMoveToWindow.start", ["hasWindow": String(window != nil)])
         super.viewDidMoveToWindow()
 
         screenChangeObserver.flatMap { NotificationCenter.default.removeObserver($0) }
@@ -243,10 +281,15 @@ final class GhosttyTerminalNSView: NSView {
         delayedResizeWorkItem?.cancel()
         delayedResizeWorkItem = nil
 
-        guard let window else { return }
+        guard let window else {
+            AskHangDebugLog.mark("GhosttyTerminalNSView.viewDidMoveToWindow.noWindow")
+            return
+        }
 
         if surface == nil {
+            AskHangDebugLog.mark("GhosttyTerminalNSView.viewDidMoveToWindow.beforeCreateSurface")
             createSurface()
+            AskHangDebugLog.mark("GhosttyTerminalNSView.viewDidMoveToWindow.afterCreateSurface")
         }
 
         screenChangeObserver = NotificationCenter.default.addObserver(
@@ -260,6 +303,7 @@ final class GhosttyTerminalNSView: NSView {
         }
 
         updateMetalLayerSize(deferred: true)
+        AskHangDebugLog.mark("GhosttyTerminalNSView.viewDidMoveToWindow.end")
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -785,13 +829,27 @@ final class GhosttyTerminalNSView: NSView {
     }
 
     private func flushInjectedCommandIfNeeded() {
+        AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.start", [
+            "hasSurface": String(surface != nil),
+            "injected": injectedCommand == nil ? "nil" : "set",
+            "sent": String(injectedCommandSent),
+        ])
         guard surface != nil else { return }
         guard let injectedCommand, !injectedCommandSent else { return }
         injectedCommandSent = true
+        AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.scheduled", ["length": String(injectedCommand.count)])
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-            guard let self, self.surface != nil else { return }
+            AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.fire")
+            guard let self, self.surface != nil else {
+                AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.noSurfaceOnFire")
+                return
+            }
+            AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.beforeSendText")
             self.sendText(injectedCommand)
+            AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.afterSendText")
+            AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.beforeReturn")
             self.sendReturnKey()
+            AskHangDebugLog.mark("GhosttyTerminalNSView.flushInjected.afterReturn")
         }
     }
 
