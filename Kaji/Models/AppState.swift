@@ -566,10 +566,12 @@ final class AppState {
     }
 
     func dispatch(_ action: Action) {
+        AskHangDebugLog.mark("AppState.dispatch.start", ["action": action.debugName])
         if case let .focusArea(projectID, areaID) = action,
            let key = activeWorktreeKey(for: projectID),
            focusedAreaID[key] == areaID
         {
+            AskHangDebugLog.mark("AppState.dispatch.skipFocus")
             return
         }
 
@@ -593,7 +595,9 @@ final class AppState {
             focusHistory: focusHistory,
             keepProjectOpenWhenEmpty: ProjectLifecyclePreferences.keepOpenWhenNoTabs
         )
+        AskHangDebugLog.mark("AppState.dispatch.beforeReduce", ["action": action.debugName])
         let effects = WorkspaceReducer.reduce(action: action, state: &workspace)
+        AskHangDebugLog.mark("AppState.dispatch.afterReduce", ["action": action.debugName])
         if activeProjectID != workspace.activeProjectID {
             activeProjectID = workspace.activeProjectID
         }
@@ -632,8 +636,12 @@ final class AppState {
             NotificationStore.shared.markAsRead(tabID: activeTabID)
         }
 
+        AskHangDebugLog.mark("AppState.dispatch.beforeSaveWorkspaces", ["action": action.debugName])
         saveWorkspaces()
+        AskHangDebugLog.mark("AppState.dispatch.afterSaveWorkspaces", ["action": action.debugName])
+        AskHangDebugLog.mark("AppState.dispatch.beforeSaveSelection", ["action": action.debugName])
         saveSelection()
+        AskHangDebugLog.mark("AppState.dispatch.end", ["action": action.debugName])
     }
 
     func goBack() {
@@ -838,5 +846,78 @@ final class AppState {
             replacementWorktreeID: replacement?.id,
             replacementWorktreePath: replacement?.path
         ))
+    }
+}
+
+extension AppState.Action {
+    var debugName: String {
+        switch self {
+        case .selectProject:
+            "selectProject"
+        case .selectWorktree:
+            "selectWorktree"
+        case .removeProject:
+            "removeProject"
+        case .removeWorktree:
+            "removeWorktree"
+        case .createTab:
+            "createTab"
+        case .createTabInDirectory:
+            "createTabInDirectory"
+        case .createCommandTab:
+            "createCommandTab"
+        case .createStartupCommandTab:
+            "createStartupCommandTab"
+        case .createCommandSplit:
+            "createCommandSplit"
+        case .createVCSTab:
+            "createVCSTab"
+        case .createParentAgentTab:
+            "createParentAgentTab"
+        case .createCodeGraphTab:
+            "createCodeGraphTab"
+        case .createBrowserSplit:
+            "createBrowserSplit"
+        case .createEditorTab:
+            "createEditorTab"
+        case .createExternalEditorTab:
+            "createExternalEditorTab"
+        case .createDiffViewerTab:
+            "createDiffViewerTab"
+        case .splitArea:
+            "splitArea"
+        case .closeArea:
+            "closeArea"
+        case .focusArea:
+            "focusArea"
+        case .focusPaneLeft:
+            "focusPaneLeft"
+        case .focusPaneRight:
+            "focusPaneRight"
+        case .focusPaneUp:
+            "focusPaneUp"
+        case .focusPaneDown:
+            "focusPaneDown"
+        case .selectTab:
+            "selectTab"
+        case .selectNextTab:
+            "selectNextTab"
+        case .selectPreviousTab:
+            "selectPreviousTab"
+        case .closeTab:
+            "closeTab"
+        case .moveTab:
+            "moveTab"
+        case .movePane:
+            "movePane"
+        case .selectTabByIndex:
+            "selectTabByIndex"
+        case .navigate:
+            "navigate"
+        case .selectNextProject:
+            "selectNextProject"
+        case .selectPreviousProject:
+            "selectPreviousProject"
+        }
     }
 }
