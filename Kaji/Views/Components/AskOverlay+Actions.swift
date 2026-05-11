@@ -28,6 +28,10 @@ extension AskOverlay {
     }
 
     func handleSubmit(_ latestFieldText: String) {
+        AskHangDebugLog.mark("AskOverlay.handleSubmit.start", [
+            "field": latestFieldText,
+            "provider": provider.rawValue,
+        ])
         if isBookmarkFolderPickerVisible {
             confirmHighlight()
             return
@@ -45,9 +49,18 @@ extension AskOverlay {
             return
         }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
+        AskHangDebugLog.mark("AskOverlay.handleSubmit.parsed", [
+            "active": parsed.activeAnnotation.map { $0.key.rawValue } ?? "nil",
+            "annotations": parsed.annotations.map { "\($0.key.rawValue):\($0.value)" }.sorted().joined(separator: ","),
+            "promptEmpty": String(parsed.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+        ])
         fieldText = latestFieldText
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
+        AskHangDebugLog.mark("AskOverlay.handleSubmit.appliedInline", [
+            "provider": provider.rawValue,
+            "sessionMode": sessionMode.rawValue,
+        ])
 
         if handleResolvedScriptAnnotation(parsed) { return }
 
@@ -94,7 +107,17 @@ extension AskOverlay {
             return
         }
         let target = resolvedTarget(for: parsed)
+        AskHangDebugLog.mark("AskOverlay.handleSubmit.resolvedTarget", [
+            "history": target.history?.sessionID ?? "nil",
+            "provider": target.provider.rawValue,
+            "promptEmpty": String(target.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+            "sessionMode": target.sessionMode.rawValue,
+        ])
         applyResolvedTarget(target)
+        AskHangDebugLog.mark("AskOverlay.handleSubmit.appliedTarget", [
+            "provider": provider.rawValue,
+            "sessionMode": sessionMode.rawValue,
+        ])
         if targetHasMissingSelection(target, parsed: parsed) {
             confirmHighlight()
             return
@@ -344,11 +367,20 @@ extension AskOverlay {
     }
 
     func submit(target: AskResolvedTarget) {
+        AskHangDebugLog.mark("AskOverlay.submit.start", [
+            "canSend": String(canSend(target: target)),
+            "history": target.history?.sessionID ?? "nil",
+            "provider": target.provider.rawValue,
+        ])
         guard canSend(target: target),
               let selectedProject = target.project,
               let selectedWorktree = target.worktree
-        else { return }
+        else {
+            AskHangDebugLog.mark("AskOverlay.submit.blocked")
+            return
+        }
         isSending = true
+        AskHangDebugLog.mark("AskOverlay.submit.beforeTask")
         let request = AskDispatchRequest(
             prompt: promptWithAttachments(target.prompt),
             project: selectedProject,
@@ -360,9 +392,12 @@ extension AskOverlay {
             skill: target.skill
         )
         Task { @MainActor in
+            AskHangDebugLog.mark("AskOverlay.submit.task.start")
             await AskCommandDispatcher.send(request, appState: appState)
+            AskHangDebugLog.mark("AskOverlay.submit.task.afterSend")
             isSending = false
             onDismiss()
+            AskHangDebugLog.mark("AskOverlay.submit.task.dismissed")
         }
     }
 
