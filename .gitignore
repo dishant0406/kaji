@@ -18,6 +18,7 @@ GhosttyKit/ghostty.h
 *.dmg
 appcast*.xml
 .plans/
+.playwright-mcp/
 /kaji-markdown-remote-image-urlcache
 /External/pi-mono
 /Vendor/pi-mono/node_modules
