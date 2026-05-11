@@ -64,6 +64,16 @@ struct AskSubmitPolicyTests {
     }
 
     @Test
+    func bookmarkAnnotationAppliesHighlightedEntry() {
+        #expect(AskSubmitPolicy.shouldApplyHighlightedEntry(key: .bookmark))
+    }
+
+    @Test
+    func historyAnnotationDoesNotApplyHighlightedEntry() {
+        #expect(!AskSubmitPolicy.shouldApplyHighlightedEntry(key: .history))
+    }
+
+    @Test
     func resolvedHistoryAnnotationCanSubmitOnNextEnter() {
         #expect(AskSubmitPolicy.activeAnnotationIsResolved(
             key: .history,
