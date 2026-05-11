@@ -62,12 +62,12 @@ enum TabReducer {
 
     static func createStartupCommandTab(_ request: AppState.StartupCommandTabRequest, state: inout WorkspaceState) {
         let trimmed = request.command.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty || request.injectedCommand != nil else { return }
         _ = appendWorkspaceTab(projectID: request.projectID, state: &state) { path in
             let area = TabArea(projectPath: path, existingTab: TerminalTab(pane: TerminalPaneState(
                 projectPath: path,
                 title: request.title,
-                startupCommand: trimmed,
+                startupCommand: trimmed.isEmpty ? nil : trimmed,
                 injectedCommand: request.injectedCommand,
                 agentSessionSeed: request.seed
             )))
