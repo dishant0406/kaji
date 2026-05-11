@@ -2,13 +2,8 @@ import CEFBridge
 import Foundation
 
 extension BrowserWebController {
-    func evaluateJavaScript(_ script: String) async -> String {
-        guard let browserView else { return "Browser is not ready." }
-        return await withCheckedContinuation { continuation in
-            browserView.evaluateJavaScript(script) { result in
-                continuation.resume(returning: result)
-            }
-        }
+    func showDevTools() {
+        browserView?.showDevTools()
     }
 
     func applyDeviceProfile(_ profile: BrowserDeviceProfile) {

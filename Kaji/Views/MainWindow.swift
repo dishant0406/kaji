@@ -36,6 +36,7 @@ struct MainWindow: View {
         static let minWidth: CGFloat = 420
         static let defaultWidth: CGFloat = 560
         static let maxWidth: CGFloat = 980
+        static let resizeHandleWidth: CGFloat = 28
     }
 
     private enum CloseConfirmationKind {
@@ -986,20 +987,9 @@ struct MainWindow: View {
     }
 
     private func sidePanelResizeHandle(onDrag: @escaping (CGFloat) -> Void) -> some View {
-        Rectangle().fill(KajiTheme.border).frame(width: 1)
+        SidePanelResizeHandle(onDrag: onDrag)
+            .frame(width: BrowserLayout.resizeHandleWidth)
             .accessibilityHidden(true)
-            .overlay {
-                Color.clear
-                    .frame(width: 5)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 1)
-                            .onChanged { v in onDrag(v.translation.width) }
-                    )
-                    .onHover { on in
-                        if on { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-                    }
-            }
     }
 
     private var activeBrowserState: BrowserPaneState? {

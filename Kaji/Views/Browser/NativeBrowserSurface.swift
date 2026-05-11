@@ -37,6 +37,8 @@ struct NativeBrowserSurface: NSViewRepresentable {
 
 @MainActor
 final class NativeBrowserSurfaceView: NSView {
+    private static let resizeEdgePassthrough: CGFloat = 28
+
     weak var controller: BrowserWebController?
     private var status = "Starting Chromium…"
     private weak var browserView: KajiCEFBrowserView?
@@ -54,6 +56,13 @@ final class NativeBrowserSurfaceView: NSView {
     }
 
     override var acceptsFirstResponder: Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if isResizeEdge(point) {
+            return nil
+        }
+        return super.hitTest(point)
+    }
 
     override func mouseDown(with event: NSEvent) {
         browserView?.focusBrowser()
@@ -104,6 +113,13 @@ final class NativeBrowserSurfaceView: NSView {
         let width = min(CGFloat(deviceProfile.width), bounds.width)
         let x = max(0, (bounds.width - width) / 2)
         return NSRect(x: x, y: 0, width: width, height: bounds.height)
+    }
+
+    private func isResizeEdge(_ point: NSPoint) -> Bool {
+        point.x <= Self.resizeEdgePassthrough ||
+            bounds.maxX - point.x <= Self.resizeEdgePassthrough ||
+            point.y <= Self.resizeEdgePassthrough ||
+            bounds.maxY - point.y <= Self.resizeEdgePassthrough
     }
 
     override func draw(_ dirtyRect: NSRect) {
