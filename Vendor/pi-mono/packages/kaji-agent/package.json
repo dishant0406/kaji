@@ -1,0 +1,14 @@
+{
+	"name": "@kaji/pi-parent-agent",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"main": "./src/main.ts",
+	"dependencies": {
+		"typebox": "^1.1.24"
+	},
+	"devDependencies": {
+		"@types/node": "^24.3.0",
+		"typescript": "^5.7.3"
+	}
+}

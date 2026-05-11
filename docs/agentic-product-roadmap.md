@@ -1,14 +1,14 @@
-# Droid Agentic Product Roadmap
+# Kaji Agentic Product Roadmap
 
 ## Product Direction
 
-Droid should become the **hands-off local command center for terminal-native AI work**.
+Kaji should become the **hands-off local command center for terminal-native AI work**.
 
 The core promise:
 
 > Start AI work from one place, let it run safely in the background, know exactly when it needs you, resume context instantly, and ship only after verification.
 
-This is different from Cursor, Windsurf, Claude Code, Codex, or OpenCode because Droid owns the local runtime layer: terminal panes, projects, worktrees, notifications, sessions, provider hooks, and native macOS UI.
+This is different from Cursor, Windsurf, Claude Code, Codex, or OpenCode because Kaji owns the local runtime layer: terminal panes, projects, worktrees, notifications, sessions, provider hooks, and native macOS UI.
 
 ## Market Signals
 
@@ -46,11 +46,11 @@ Secondary jobs:
 
 Current positioning:
 
-> Droid is a native macOS terminal workspace for developers using AI coding agents.
+> Kaji is a native macOS terminal workspace for developers using AI coding agents.
 
 Stronger positioning:
 
-> Droid is the local command center for hands-off AI coding work: launch agents, isolate tasks, track progress, preserve context, and verify results without babysitting terminals.
+> Kaji is the local command center for hands-off AI coding work: launch agents, isolate tasks, track progress, preserve context, and verify results without babysitting terminals.
 
 Tagline options:
 
@@ -174,11 +174,11 @@ V1 scope:
 | `/task` or `:task:` selector | Makes recipes discoverable. |
 | Save current Ask input as recipe | Converts power-user syntax into reusable UI. |
 | Project-level defaults | Provider, skill, and verification command. |
-| Local storage | `~/Library/Application Support/Droid/ask-recipes.json`. |
+| Local storage | `~/Library/Application Support/Kaji/ask-recipes.json`. |
 
 ### 3. Context Capsules
 
-A provider-neutral context package Droid can inject, reference, or summarize.
+A provider-neutral context package Kaji can inject, reference, or summarize.
 
 Sources:
 
@@ -218,11 +218,11 @@ Allow AI tasks to run in safe isolated worktrees.
 Flow:
 
 1. User enters a task.
-2. Droid suggests or auto-selects a new worktree.
-3. Droid creates branch and worktree.
-4. Droid launches selected provider inside that worktree.
-5. Droid tracks status, files, and verification.
-6. Droid offers merge, keep, or delete after completion.
+2. Kaji suggests or auto-selects a new worktree.
+3. Kaji creates branch and worktree.
+4. Kaji launches selected provider inside that worktree.
+5. Kaji tracks status, files, and verification.
+6. Kaji offers merge, keep, or delete after completion.
 
 V1 scope:
 
@@ -262,14 +262,14 @@ V1 scope:
 
 ### Verification Gate
 
-Before a task is marked done, Droid should run configured checks.
+Before a task is marked done, Kaji should run configured checks.
 
 Examples:
 
 | Project Type | Verification Command |
 | --- | --- |
 | Swift | `swift build && swift test` |
-| Droid | `swift build && swift test --filter Ask` |
+| Kaji | `swift build && swift test --filter Ask` |
 | Node | `npm test` |
 | Rust | `cargo test` |
 | Custom | User-defined command. |
@@ -302,7 +302,7 @@ Timeline events:
 
 ### Auto-Handoff Summaries
 
-At the end of a run, Droid should help preserve useful context.
+At the end of a run, Kaji should help preserve useful context.
 
 Summary fields:
 
@@ -355,7 +355,7 @@ Example flow:
 1. Codex investigates.
 2. Claude implements.
 3. OpenCode reviews.
-4. Droid verifies.
+4. Kaji verifies.
 5. User reviews final diff.
 
 Do not build this first. It will amplify chaos unless dashboard, worktree isolation, and verification are solid.
@@ -410,7 +410,7 @@ Ambitious ideas:
 
 | Metric | Formula | Why It Matters |
 | --- | --- | --- |
-| AI activation | Users launching any AI provider through Droid / active users | Measures core adoption. |
+| AI activation | Users launching any AI provider through Kaji / active users | Measures core adoption. |
 | Hands-off completion | Runs completed or verified without manual terminal monitoring / AI runs | Measures product promise. |
 | Attention precision | Attention items acted on within 5 minutes / attention items | Measures notification quality. |
 | Resume success | Resumed sessions with follow-up or completion / resumed sessions | Measures history value. |
@@ -504,6 +504,6 @@ Do not build every advanced feature at once.
 
 Build around one sharp promise:
 
-> Droid lets you delegate AI coding tasks locally and come back only when your attention matters.
+> Kaji lets you delegate AI coding tasks locally and come back only when your attention matters.
 
 The next product milestone should be **Agent Mission Control** because it turns the existing Ask overlay, provider hooks, worktrees, notifications, history, and skills into one coherent hands-off workflow.

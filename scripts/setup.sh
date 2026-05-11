@@ -4,11 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GHOSTTY_REPO="${GHOSTTY_REPO:-dishant0406/ghostty}"
-GHOSTTY_REF="${GHOSTTY_REF:-droid-performance-spike}"
+GHOSTTY_REF="${GHOSTTY_REF:-336805e5c5e7ddd759186ed234586d9b55334c0e}"
 GHOSTTY_URL="https://github.com/${GHOSTTY_REPO}.git"
 XCFRAMEWORK_DIR="$PROJECT_ROOT/GhosttyKit.xcframework"
 HEADER_PATH="$PROJECT_ROOT/GhosttyKit/ghostty.h"
-RUNTIME_RESOURCES_DIR="$PROJECT_ROOT/Droid/Resources/ghostty"
+RUNTIME_RESOURCES_DIR="$PROJECT_ROOT/Kaji/Resources/ghostty"
 STAMP_FILE="$PROJECT_ROOT/.ghostty-source"
 REQUIRED_ZIG_VERSION="${REQUIRED_ZIG_VERSION:-0.15.2}"
 EXPECTED_STAMP="repo=${GHOSTTY_REPO}
@@ -72,7 +72,13 @@ if ! command -v zig >/dev/null 2>&1 || [[ "$(zig version)" != "$REQUIRED_ZIG_VER
 fi
 
 echo "==> Cloning $GHOSTTY_REPO@$GHOSTTY_REF"
-git clone --depth 1 --branch "$GHOSTTY_REF" "$GHOSTTY_URL" "$WORK_DIR/ghostty"
+if git ls-remote --exit-code --heads "$GHOSTTY_URL" "$GHOSTTY_REF" >/dev/null 2>&1; then
+    git clone --depth 1 --branch "$GHOSTTY_REF" "$GHOSTTY_URL" "$WORK_DIR/ghostty"
+else
+    git clone --depth 1 --no-checkout "$GHOSTTY_URL" "$WORK_DIR/ghostty"
+    git -C "$WORK_DIR/ghostty" fetch --depth 1 origin "$GHOSTTY_REF"
+    git -C "$WORK_DIR/ghostty" checkout --detach FETCH_HEAD
+fi
 git -C "$WORK_DIR/ghostty" submodule update --init --recursive --depth 1
 
 echo "==> Building GhosttyKit.xcframework from upstream source"

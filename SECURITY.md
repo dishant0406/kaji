@@ -8,11 +8,11 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Droid, please report it responsibly.
+If you discover a security vulnerability in Kaji, please report it responsibly.
 
 **Do not open a public issue for security vulnerabilities.**
 
-Instead, please use [GitHub's private vulnerability reporting](https://github.com/droid-app/droid/security/advisories/new) to submit your report.
+Instead, please use [GitHub's private vulnerability reporting](https://github.com/kaji-app/kaji/security/advisories/new) to submit your report.
 
 ### What to include
 
@@ -29,4 +29,4 @@ Instead, please use [GitHub's private vulnerability reporting](https://github.co
 
 ## Scope
 
-This policy applies to the Droid application and its build tooling. For vulnerabilities in [libghostty](https://github.com/ghostty-org/ghostty), please report them to the Ghostty project directly.
+This policy applies to the Kaji application and its build tooling. For vulnerabilities in [libghostty](https://github.com/ghostty-org/ghostty), please report them to the Ghostty project directly.

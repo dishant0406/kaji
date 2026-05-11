@@ -1,0 +1,60 @@
+import Foundation
+import Testing
+
+@testable import Kaji
+
+@Suite("BrowserPaneState")
+@MainActor
+struct BrowserPaneStateTests {
+    @Test("openPage selects a new browser page")
+    func openPageSelectsNewPage() throws {
+        let state = BrowserPaneState(projectPath: "/tmp/test")
+        let firstID = state.selectedPageID
+
+        let page = state.openPage(url: "https://example.com")
+
+        #expect(state.pages.count == 2)
+        #expect(state.selectedPageID == page.id)
+        #expect(state.selectedPageID != firstID)
+        #expect(state.url == "https://example.com")
+    }
+
+    @Test("closePage keeps one reusable page")
+    func closePageKeepsOneReusablePage() throws {
+        let state = BrowserPaneState(projectPath: "/tmp/test", url: "https://example.com")
+        let pageID = state.selectedPageID
+
+        state.closePage(id: pageID)
+
+        #expect(state.pages.count == 1)
+        #expect(state.url == BrowserPaneState.defaultURL)
+        #expect(state.title == "Browser")
+    }
+
+    @Test("snapshot restore preserves browser pages and selection")
+    func snapshotRestorePreservesPages() throws {
+        let first = UUID()
+        let second = UUID()
+        let snapshot = TerminalTabSnapshot(
+            kind: .browser,
+            customTitle: nil,
+            colorID: nil,
+            isPinned: false,
+            projectPath: "/tmp/test",
+            paneTitle: "Browser",
+            browserURL: "https://fallback.example",
+            browserPages: [
+                BrowserPageSnapshot(id: first, url: "https://one.example", title: "One"),
+                BrowserPageSnapshot(id: second, url: "https://two.example", title: "Two"),
+            ],
+            selectedBrowserPageID: second
+        )
+
+        let state = BrowserPaneState(projectPath: "/tmp/test", snapshot: snapshot)
+
+        #expect(state.pages.count == 2)
+        #expect(state.selectedPageID == second)
+        #expect(state.url == "https://two.example")
+        #expect(state.title == "Two")
+    }
+}

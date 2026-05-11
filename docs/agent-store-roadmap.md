@@ -2,7 +2,7 @@
 
 ## Product Thesis
 
-Droid's Agents surface should stop being a notification view and become the local source of truth for AI coding work.
+Kaji's Agents surface should stop being a notification view and become the local source of truth for AI coding work.
 
 The user job is:
 
@@ -65,7 +65,7 @@ struct AgentRun {
 | `needsAttention` | User question, permission, or blocker. |
 | `completed` | Provider completed the turn or task. |
 | `failed` | Provider or command failed. |
-| `verifying` | Droid is running checks. |
+| `verifying` | Kaji is running checks. |
 | `verified` | Checks passed. |
 | `verificationFailed` | Checks failed. |
 | `stale` | Run disappeared or pane closed without a clean terminal event. |
@@ -74,7 +74,7 @@ struct AgentRun {
 
 | Confidence | Source |
 | --- | --- |
-| `exactPane` | Provider hook included `DROID_PANE_ID` and pane still exists. |
+| `exactPane` | Provider hook included `KAJI_PANE_ID` and pane still exists. |
 | `exactSession` | Provider session ID/transcript path maps to a known pane/run. |
 | `worktreeMatch` | Provider cwd maps to a known worktree, but pane is unknown. |
 | `fallback` | Active context or detached notification fallback. |
@@ -182,7 +182,7 @@ Verification defaults:
 
 | Source | Command |
 | --- | --- |
-| Project config | Future `droid project settings`. |
+| Project config | Future `kaji project settings`. |
 | Repo docs | Parse `AGENTS.md` recommended checks. |
 | Swift package | `swift build && swift test`. |
 | Fallback | No automatic verification, show `Verification pending`. |
@@ -205,7 +205,7 @@ Attribution rule:
 | Multiple runs overlap in the same worktree | Do not claim exact files; show `shared worktree` until provider-specific evidence exists. |
 | Run uses a separate worktree | Show that worktree's files independently. |
 
-This means two OpenCode agents on the same branch and same worktree cannot be separated exactly from git state alone. Droid should either use provider session diffs when available or encourage isolated worktrees for exact per-agent evidence.
+This means two OpenCode agents on the same branch and same worktree cannot be separated exactly from git state alone. Kaji should either use provider session diffs when available or encourage isolated worktrees for exact per-agent evidence.
 
 ## Agent Store V3: Control Plane
 
@@ -237,7 +237,7 @@ Acceptance criteria:
 
 Goal:
 
-> Turn Droid into a local operating system for multiple AI agents working as a team.
+> Turn Kaji into a local operating system for multiple AI agents working as a team.
 
 Scope:
 
@@ -254,7 +254,7 @@ Acceptance criteria:
 
 | Criterion | Expected behavior |
 | --- | --- |
-| Agents are orchestrated | Droid can run independent tasks safely in parallel. |
+| Agents are orchestrated | Kaji can run independent tasks safely in parallel. |
 | Learning improves routing | Provider and recipe recommendations reflect past outcomes. |
 | Automation remains auditable | Every automatic action has a timeline event and rollback path. |
 

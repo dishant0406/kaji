@@ -12,10 +12,10 @@ permissions:
   contents: write
 
 env:
-  APP_NAME: Droid
+  APP_NAME: Kaji
   ARCH: arm64
   REPOSITORY_SLUG: ${{ github.repository }}
-  TAP_REPOSITORY: dishant0406/homebrew-droid
+  TAP_REPOSITORY: dishant0406/homebrew-kaji
   TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GH_PAT }}
 
 jobs:
@@ -42,12 +42,12 @@ jobs:
         run: |
           VERSION="${{ steps.validate.outputs.version }}"
           BUILD_NUMBER=$(( $(git rev-list --count HEAD) + 1 ))
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Droid/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" Droid/Info.plist
-          if ! git diff --quiet -- Droid/Info.plist; then
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Kaji/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" Kaji/Info.plist
+          if ! git diff --quiet -- Kaji/Info.plist; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add Droid/Info.plist
+            git add Kaji/Info.plist
             git commit -m "Release $VERSION"
             git push
           fi
@@ -68,7 +68,7 @@ jobs:
           unzip -oq GhosttyKit.xcframework.zip
           test -f .ghostty-source
           grep -qx 'repo=dishant0406/ghostty' .ghostty-source
-          grep -qx 'ref=droid-performance-spike' .ghostty-source
+          grep -qx 'ref=336805e5c5e7ddd759186ed234586d9b55334c0e' .ghostty-source
 
       - name: Resolve Swift packages
         run: swift package resolve
@@ -125,8 +125,8 @@ jobs:
           SHA256="${{ steps.dmg.outputs.sha256 }}"
           git clone "https://x-access-token:${GH_TOKEN}@github.com/${TAP_REPOSITORY}.git" tap
           mkdir -p tap/Casks
-          cat > tap/Casks/droidkit.rb <<EOF
-          cask "droidkit" do
+          cat > tap/Casks/kajikit.rb <<EOF
+          cask "kajikit" do
             version "$VERSION"
             sha256 "$SHA256"
 
@@ -154,14 +154,14 @@ jobs:
           end
           EOF
           cat > tap/README.md <<EOF
-          # homebrew-droid
+          # homebrew-kaji
           Homebrew tap for ${APP_NAME}
 
           ## Install
 
           \`\`\`bash
-          brew tap dishant0406/droid
-          brew install --cask droidkit
+          brew tap dishant0406/kaji
+          brew install --cask kajikit
           \`\`\`
 
           ## Launch
@@ -171,12 +171,12 @@ jobs:
           \`\`\`
           EOF
           cd tap
-          ruby -c Casks/droidkit.rb
+          ruby -c Casks/kajikit.rb
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md Casks/droidkit.rb
+          git add README.md Casks/kajikit.rb
           if ! git diff --cached --quiet; then
-            git commit -m "Update DroidKit to $VERSION"
+            git commit -m "Update KajiKit to $VERSION"
             git push
           fi
 

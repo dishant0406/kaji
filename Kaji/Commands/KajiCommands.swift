@@ -1,0 +1,298 @@
+import AppKit
+import SwiftUI
+
+struct KajiCommands: Commands {
+    let appState: AppState
+    let projectStore: ProjectStore
+    let worktreeStore: WorktreeStore
+    let keyBindings: KeyBindingStore
+    let config: KajiConfig
+    let ghostty: GhosttyService
+    let updateService: UpdateService
+
+    private var isMainWindowFocused: Bool {
+        ShortcutContext.isMainWindow(NSApp.keyWindow)
+    }
+
+    private var activeProject: Project? {
+        guard let projectID = appState.activeProjectID else { return nil }
+        return projectStore.projects.first { $0.id == projectID }
+    }
+
+    private var shortcutDispatcher: ShortcutActionDispatcher {
+        ShortcutActionDispatcher(
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            ghostty: ghostty
+        )
+    }
+
+    private func performShortcutAction(_ action: ShortcutAction) {
+        _ = shortcutDispatcher.perform(action, activeProject: activeProject) { project in
+            NotificationCenter.default.post(name: .toggleAttachedVCS, object: project.id)
+        }
+    }
+
+    var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings...") {
+                NotificationCenter.default.post(name: .toggleSettings, object: nil)
+            }
+            .keyboardShortcut(",", modifiers: .command)
+        }
+
+        CommandGroup(after: .appSettings) {
+            Button {
+                NSWorkspace.shared.open(
+                    [config.ghosttyConfigURL],
+                    withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
+                    configuration: NSWorkspace.OpenConfiguration()
+                )
+            } label: {
+                Label {
+                    Text("Open Configuration...")
+                } icon: {
+                    KajiIcon(systemName: "doc.text", size: 12)
+                }
+            }
+
+            Button {
+                performShortcutAction(.reloadConfig)
+            } label: {
+                Label {
+                    Text("Reload Configuration")
+                } icon: {
+                    KajiIcon(systemName: "arrow.clockwise", size: 12)
+                }
+            }
+            .shortcut(for: .reloadConfig, store: keyBindings)
+
+            Divider()
+
+            Button {
+                updateService.checkForUpdates()
+            } label: {
+                Label {
+                    Text("Check for Updates...")
+                } icon: {
+                    KajiIcon(systemName: "arrow.triangle.2.circlepath", size: 12)
+                }
+            }
+            .disabled(!updateService.canCheckForUpdates)
+        }
+
+        CommandGroup(replacing: .pasteboard) {
+            Button("Cut") { NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil) }
+                .keyboardShortcut("x", modifiers: .command)
+            Button("Copy") { NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil) }
+                .keyboardShortcut("c", modifiers: .command)
+            Button("Paste") { NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil) }
+                .keyboardShortcut("v", modifiers: .command)
+            Button("Select All") { NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) }
+                .keyboardShortcut("a", modifiers: .command)
+
+            Divider()
+
+            Button("Find") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.findInTerminal)
+            }
+            .shortcut(for: .findInTerminal, store: keyBindings)
+
+            Button("Toggle Footer Terminal") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.toggleFooterTerminal)
+            }
+            .shortcut(for: .toggleFooterTerminal, store: keyBindings)
+        }
+
+        CommandGroup(replacing: .newItem) {
+            Button("Open Project...") {
+                performShortcutAction(.openProject)
+            }
+            .shortcut(for: .openProject, store: keyBindings)
+
+            Button("New Tab") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.newTab)
+            }
+            .shortcut(for: .newTab, store: keyBindings)
+
+            Button("Source Control") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.openVCSTab)
+            }
+            .shortcut(for: .openVCSTab, store: keyBindings)
+
+            Button("Quick Open") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.quickOpen)
+            }
+            .shortcut(for: .quickOpen, store: keyBindings)
+
+            Button("Ask") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.ask)
+            }
+            .shortcut(for: .ask, store: keyBindings)
+
+            Button("Save") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.saveFile)
+            }
+            .shortcut(for: .saveFile, store: keyBindings)
+
+            Divider()
+
+            Button("Close Tab") {
+                guard isMainWindowFocused else {
+                    NSApp.keyWindow?.performClose(nil)
+                    return
+                }
+                performShortcutAction(.closeTab)
+            }
+            .shortcut(for: .closeTab, store: keyBindings)
+
+            Divider()
+
+            Button("Rename Tab") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.renameTab)
+            }
+            .shortcut(for: .renameTab, store: keyBindings)
+
+            Button("Pin/Unpin Tab") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.pinUnpinTab)
+            }
+            .shortcut(for: .pinUnpinTab, store: keyBindings)
+
+            Divider()
+
+            Button("Split Right") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.splitRight)
+            }
+            .shortcut(for: .splitRight, store: keyBindings)
+
+            Button("Split Down") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.splitDown)
+            }
+            .shortcut(for: .splitDown, store: keyBindings)
+
+            Button("Close Pane") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.closePane)
+            }
+            .shortcut(for: .closePane, store: keyBindings)
+
+            Button("Focus Pane Left") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.focusPaneLeft)
+            }
+            .shortcut(for: .focusPaneLeft, store: keyBindings)
+
+            Button("Focus Pane Right") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.focusPaneRight)
+            }
+            .shortcut(for: .focusPaneRight, store: keyBindings)
+
+            Button("Focus Pane Up") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.focusPaneUp)
+            }
+            .shortcut(for: .focusPaneUp, store: keyBindings)
+
+            Button("Focus Pane Down") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.focusPaneDown)
+            }
+            .shortcut(for: .focusPaneDown, store: keyBindings)
+        }
+
+        CommandGroup(after: .windowList) {
+            Button("Next Tab") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.nextTab)
+            }
+            .shortcut(for: .nextTab, store: keyBindings)
+
+            Button("Previous Tab") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.previousTab)
+            }
+            .shortcut(for: .previousTab, store: keyBindings)
+
+            Divider()
+
+            ForEach(1 ... 9, id: \.self) { index in
+                if let action = ShortcutAction.tabAction(for: index) {
+                    Button("Tab \(index)") {
+                        guard isMainWindowFocused else { return }
+                        performShortcutAction(action)
+                    }
+                    .shortcut(for: action, store: keyBindings)
+                }
+            }
+        }
+
+        CommandGroup(after: .sidebar) {
+            Button("Toggle Sidebar") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.toggleSidebar)
+            }
+            .shortcut(for: .toggleSidebar, store: keyBindings)
+
+            Divider()
+
+            Button("Switch Worktree...") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.switchWorktree)
+            }
+            .shortcut(for: .switchWorktree, store: keyBindings)
+
+            Divider()
+
+            Button("Next Project") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.nextProject)
+            }
+            .shortcut(for: .nextProject, store: keyBindings)
+
+            Button("Previous Project") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.previousProject)
+            }
+            .shortcut(for: .previousProject, store: keyBindings)
+
+            Divider()
+
+            ForEach(1 ... 9, id: \.self) { index in
+                if let action = ShortcutAction.projectAction(for: index) {
+                    Button("Project \(index)") {
+                        guard isMainWindowFocused else { return }
+                        performShortcutAction(action)
+                    }
+                    .shortcut(for: action, store: keyBindings)
+                }
+            }
+
+            Divider()
+
+            Button("Theme Picker") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.toggleThemePicker)
+            }
+            .shortcut(for: .toggleThemePicker, store: keyBindings)
+
+            Button("AI Usage") {
+                guard isMainWindowFocused else { return }
+                performShortcutAction(.toggleAIUsage)
+            }
+            .shortcut(for: .toggleAIUsage, store: keyBindings)
+        }
+    }
+}

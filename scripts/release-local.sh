@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-INFO_PLIST="$PROJECT_ROOT/Droid/Info.plist"
+INFO_PLIST="$PROJECT_ROOT/Kaji/Info.plist"
 
 VERSION=""
 MESSAGE=""
@@ -16,7 +16,7 @@ usage() {
 Usage: $0 --message "Commit message" [options]
 
 Options:
-  --version X.Y.Z   Use an explicit version. Defaults to a patch bump from Droid/Info.plist.
+  --version X.Y.Z   Use an explicit version. Defaults to a patch bump from Kaji/Info.plist.
   --message TEXT    Commit message to use for the release commit.
   --arch ARCH       DMG architecture. Defaults to arm64.
   --all             Stage all tracked and untracked changes before committing.
@@ -125,7 +125,7 @@ git push "$PUSH_REMOTE" "$current_branch"
 
 "$SCRIPT_DIR/build-release.sh" --arch "$ARCH" --version "$VERSION"
 
-DMG_PATH="$PROJECT_ROOT/build/Droid-${VERSION}-${ARCH}.dmg"
+DMG_PATH="$PROJECT_ROOT/build/Kaji-${VERSION}-${ARCH}.dmg"
 if [[ ! -f "$DMG_PATH" ]]; then
     echo "Error: expected DMG not found at $DMG_PATH" >&2
     exit 1

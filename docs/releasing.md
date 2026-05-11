@@ -18,17 +18,17 @@
 
 - `HOMEBREW_TAP_REPOSITORY`: override the tap target
 
-If unset, the workflow defaults to `<repo-owner>/homebrew-droid`.
+If unset, the workflow defaults to `<repo-owner>/homebrew-kaji`.
 
 ## Homebrew Tap
 
-The public preview cask is `droidkit` in `dishant0406/homebrew-droid`.
+The public preview cask is `kajikit` in `dishant0406/homebrew-kaji`.
 
 Install path:
 
 ```bash
-brew tap dishant0406/droid
-brew install --cask droidkit
+brew tap dishant0406/kaji
+brew install --cask kajikit
 ```
 
 ## Running A Release
@@ -55,7 +55,7 @@ Useful options:
 
 ## Local Distribution Flow
 
-To bump, commit, push, build the DMG, create or update the GitHub release, update the `droidkit` Homebrew cask, rewrite tap emails, and verify the cask:
+To bump, commit, push, build the DMG, create or update the GitHub release, update the `kajikit` Homebrew cask, rewrite tap emails, and verify the cask:
 
 ```bash
 scripts/release-distribute.sh --version 0.0.3 --message "Release 0.0.3" --all --test-install

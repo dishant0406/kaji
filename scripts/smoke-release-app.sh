@@ -25,25 +25,25 @@ fail() {
 [[ -n "$APP_BUNDLE" ]] || fail "app bundle path is required"
 [[ -d "$APP_BUNDLE" ]] || fail "app bundle not found at $APP_BUNDLE"
 
-EXECUTABLE="$APP_BUNDLE/Contents/MacOS/Droid"
+EXECUTABLE="$APP_BUNDLE/Contents/MacOS/Kaji"
 INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
 
-[[ -x "$EXECUTABLE" ]] || fail "Droid executable missing"
+[[ -x "$EXECUTABLE" ]] || fail "Kaji executable missing"
 plutil -lint "$INFO_PLIST" >/dev/null
 
 if otool -L "$EXECUTABLE" | grep -q ".dev-support"; then
-    fail "Droid binary links to .dev-support"
+    fail "Kaji binary links to .dev-support"
 fi
 
 if otool -l "$EXECUTABLE" | grep -q ".dev-support"; then
-    fail "Droid binary has .dev-support load command"
+    fail "Kaji binary has .dev-support load command"
 fi
 
-if [[ "$LAUNCH" == true || "${DROID_RELEASE_SMOKE_LAUNCH:-}" == "1" ]]; then
+if [[ "$LAUNCH" == true || "${KAJI_RELEASE_SMOKE_LAUNCH:-}" == "1" ]]; then
     open -n "$APP_BUNDLE"
-    sleep "${DROID_RELEASE_SMOKE_SECONDS:-5}"
+    sleep "${KAJI_RELEASE_SMOKE_SECONDS:-5}"
     PID="$(pgrep -f "$EXECUTABLE" | head -1 || true)"
-    [[ -n "$PID" ]] || fail "Droid did not stay running during smoke launch"
+    [[ -n "$PID" ]] || fail "Kaji did not stay running during smoke launch"
     kill "$PID" >/dev/null 2>&1 || true
 fi
 
