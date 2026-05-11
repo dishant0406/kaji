@@ -106,7 +106,7 @@ enum AskCommandDispatcher {
         appState.createStartupCommandTab(
             projectID: request.project.id,
             title: request.provider.title,
-            command: "${SHELL:-/bin/zsh} -i",
+            command: " ",
             seed: CodingAgentSessionSeed(
                 providerID: request.provider.rawValue,
                 sessionID: history.sessionID,
