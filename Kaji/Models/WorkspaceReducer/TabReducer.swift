@@ -68,6 +68,7 @@ enum TabReducer {
                 projectPath: path,
                 title: request.title,
                 startupCommand: trimmed,
+                injectedCommand: request.injectedCommand,
                 agentSessionSeed: request.seed
             )))
             return WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)

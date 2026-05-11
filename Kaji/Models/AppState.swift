@@ -91,6 +91,7 @@ final class AppState {
         let title: String
         let command: String
         let seed: CodingAgentSessionSeed?
+        let injectedCommand: String?
     }
 
     var workspaces: [WorktreeKey: WorktreeWorkspace] = [:]
@@ -285,13 +286,20 @@ final class AppState {
         dispatch(.createCommandTab(projectID: projectID, areaID: nil, title: title, command: command))
     }
 
-    func createStartupCommandTab(projectID: UUID, title: String, command: String, seed: CodingAgentSessionSeed? = nil) {
+    func createStartupCommandTab(
+        projectID: UUID,
+        title: String,
+        command: String,
+        seed: CodingAgentSessionSeed? = nil,
+        injectedCommand: String? = nil
+    ) {
         dispatch(.createStartupCommandTab(StartupCommandTabRequest(
             projectID: projectID,
             areaID: nil,
             title: title,
             command: command,
-            seed: seed
+            seed: seed,
+            injectedCommand: injectedCommand
         )))
     }
 

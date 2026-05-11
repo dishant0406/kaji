@@ -69,26 +69,24 @@ enum AskCommandDispatcher {
         request: AskDispatchRequest,
         appState: AppState
     ) async {
-        let command = commandWithCompletionNotification(
-            resumeCommand(
-                for: request.provider,
-                sessionID: history.sessionID,
-                prompt: prompt
-            ),
-            provider: request.provider
+        let resume = resumeCommand(
+            for: request.provider,
+            sessionID: history.sessionID,
+            prompt: prompt
         )
-        guard !command.isEmpty else { return }
+        guard !resume.isEmpty else { return }
         appState.createStartupCommandTab(
             projectID: request.project.id,
             title: request.provider.title,
-            command: command,
+            command: "${SHELL:-/bin/zsh} -i",
             seed: CodingAgentSessionSeed(
                 providerID: request.provider.rawValue,
                 sessionID: history.sessionID,
                 title: history.title,
                 transcriptPath: nil,
                 cwd: history.projectPath
-            )
+            ),
+            injectedCommand: commandWithCompletionNotification(resume, provider: request.provider)
         )
     }
 

@@ -321,14 +321,15 @@ extension AskOverlay {
         appState.createStartupCommandTab(
             projectID: project.id,
             title: provider.title,
-            command: command,
+            command: "${SHELL:-/bin/zsh} -i",
             seed: CodingAgentSessionSeed(
                 providerID: provider.rawValue,
                 sessionID: bookmark.sessionID,
                 title: bookmark.title,
                 transcriptPath: nil,
                 cwd: bookmark.worktreePath
-            )
+            ),
+            injectedCommand: command
         )
         onDismiss()
     }
