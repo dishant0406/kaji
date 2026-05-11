@@ -38,9 +38,21 @@ struct AskCommandDispatcherTests {
         let claude = AskCommandDispatcher.resumeCommand(for: .claude, history: history, prompt: "continue")
         let opencode = AskCommandDispatcher.resumeCommand(for: .opencode, history: history, prompt: "continue")
 
-        #expect(codex.contains("resume 'session one' continue"))
+        #expect(codex.contains("resume 'session one' -- continue"))
         #expect(claude.contains("--resume 'session one' continue"))
         #expect(opencode.contains("--session 'session one' --prompt continue"))
+    }
+
+    @Test
+    @MainActor
+    func codexResumeCommandSeparatesPromptFromSessionArguments() {
+        let command = AskCommandDispatcher.resumeCommand(
+            for: .codex,
+            sessionID: "session-one",
+            prompt: "--help"
+        )
+
+        #expect(command.contains("resume session-one -- --help"))
     }
 
     @Test

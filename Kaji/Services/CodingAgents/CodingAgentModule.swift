@@ -57,6 +57,10 @@ extension CodingAgentModule {
             return ""
         case let .subcommand(command):
             return [baseCommand, command, escapedID, escapedPrompt].compactMap(\.self).joined(separator: " ")
+        case let .subcommandWithPromptFlag(command, promptFlag):
+            return [baseCommand, command, escapedID, escapedPrompt.map { "\(promptFlag) \($0)" }]
+                .compactMap(\.self)
+                .joined(separator: " ")
         case let .flag(flag):
             return [baseCommand, flag, escapedID, escapedPrompt].compactMap(\.self).joined(separator: " ")
         case let .flagWithPrompt(sessionFlag, promptFlag):
