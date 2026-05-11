@@ -7,6 +7,7 @@ struct NativeBrowserSurface: NSViewRepresentable {
     let page: BrowserPageState
     let projectPath: String
     let isActive: Bool
+    let deviceProfile: BrowserDeviceProfile
     let callbacks: BrowserSurfaceCallbacks
 
     func makeNSView(context _: Context) -> NativeBrowserSurfaceView {
@@ -16,6 +17,7 @@ struct NativeBrowserSurface: NSViewRepresentable {
             page: page,
             projectPath: projectPath,
             isActive: isActive,
+            deviceProfile: deviceProfile,
             callbacks: callbacks
         )
         return view
@@ -27,6 +29,7 @@ struct NativeBrowserSurface: NSViewRepresentable {
             page: page,
             projectPath: projectPath,
             isActive: isActive,
+            deviceProfile: deviceProfile,
             callbacks: callbacks
         )
     }
@@ -37,6 +40,7 @@ final class NativeBrowserSurfaceView: NSView {
     weak var controller: BrowserWebController?
     private var status = "Starting Chromium…"
     private weak var browserView: KajiCEFBrowserView?
+    private var deviceProfile = BrowserDeviceProfiles.profile(for: BrowserDeviceProfiles.desktopID)
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -63,15 +67,21 @@ final class NativeBrowserSurfaceView: NSView {
 
     func install(browserView: KajiCEFBrowserView) {
         guard self.browserView !== browserView || browserView.superview !== self else {
-            browserView.frame = bounds
+            browserView.frame = browserFrame
             return
         }
         self.browserView = browserView
         status = ""
         browserView.removeFromSuperview()
-        browserView.frame = bounds
-        browserView.autoresizingMask = [.width, .height]
+        browserView.frame = browserFrame
+        browserView.autoresizingMask = []
         addSubview(browserView)
+        needsDisplay = true
+    }
+
+    func applyDeviceProfile(_ profile: BrowserDeviceProfile) {
+        deviceProfile = profile
+        browserView?.frame = browserFrame
         needsDisplay = true
     }
 
@@ -86,7 +96,14 @@ final class NativeBrowserSurfaceView: NSView {
 
     override func layout() {
         super.layout()
-        browserView?.frame = bounds
+        browserView?.frame = browserFrame
+    }
+
+    private var browserFrame: NSRect {
+        guard !deviceProfile.isDesktop else { return bounds }
+        let width = min(CGFloat(deviceProfile.width), bounds.width)
+        let x = max(0, (bounds.width - width) / 2)
+        return NSRect(x: x, y: 0, width: width, height: bounds.height)
     }
 
     override func draw(_ dirtyRect: NSRect) {

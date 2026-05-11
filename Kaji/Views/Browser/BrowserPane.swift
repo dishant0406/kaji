@@ -7,7 +7,11 @@ struct BrowserPane: View {
     @State private var controllers = BrowserControllerRegistry()
     @State private var pendingURL = ""
     @State private var showsPageText = false
+    @State private var showsConsole = false
     @State private var isReading = false
+    @State private var consoleCommand = ""
+    @State private var consoleEntries: [BrowserConsoleEntry] = []
+    @State private var isConsoleRunning = false
 
     private var selectedPage: BrowserPageState? { state.selectedPage }
     private var selectedController: BrowserWebController? {
@@ -30,6 +34,15 @@ struct BrowserPane: View {
                         onClose: { showsPageText = false }
                     )
                 }
+                if showsConsole {
+                    BrowserConsolePanel(
+                        command: $consoleCommand,
+                        entries: consoleEntries,
+                        isRunning: isConsoleRunning,
+                        onRun: { Task { await runConsoleCommand() } },
+                        onClose: { showsConsole = false }
+                    )
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
@@ -50,8 +63,13 @@ struct BrowserPane: View {
         .onChange(of: state.selectedPageID) { _, _ in
             pendingURL = state.url
             showsPageText = false
+            showsConsole = false
             selectedController?.ensureStarted(url: state.url)
+            selectedController?.applyDeviceProfile(selectedDeviceProfile)
             registerBrowserControl()
+        }
+        .onChange(of: state.selectedDeviceProfileID) { _, _ in
+            selectedController?.applyDeviceProfile(selectedDeviceProfile)
         }
     }
 
@@ -83,34 +101,18 @@ struct BrowserPane: View {
     }
 
     private var toolbar: some View {
-        HStack(spacing: 8) {
-            IconButton(symbol: "arrow.left", accessibilityLabel: "Back") {
-                selectedController?.goBack()
-            }
-            IconButton(symbol: "arrow.right", accessibilityLabel: "Forward") {
-                selectedController?.goForward()
-            }
-            IconButton(symbol: "arrow.clockwise", accessibilityLabel: "Reload") {
-                selectedController?.reload()
-            }
-            TextField("Search or enter URL", text: $pendingURL)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .padding(.horizontal, 10)
-                .frame(height: 28)
-                .background(KajiTheme.surface, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
-                .onSubmit { navigate() }
-            IconButton(symbol: "paperplane", accessibilityLabel: "Open URL") {
-                navigate()
-            }
-            IconButton(symbol: "text.page", selected: showsPageText, accessibilityLabel: "Read Page") {
-                Task { await readPage() }
-            }
-            .help("Read page text")
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(KajiTheme.secondaryBackground)
+        BrowserToolbar(
+            pendingURL: $pendingURL,
+            deviceProfileID: $state.selectedDeviceProfileID,
+            showsConsole: showsConsole,
+            showsPageText: showsPageText,
+            onBack: { selectedController?.goBack() },
+            onForward: { selectedController?.goForward() },
+            onReload: { selectedController?.reload() },
+            onNavigate: navigate,
+            onToggleConsole: { showsConsole.toggle() },
+            onReadPage: { Task { await readPage() } }
+        )
     }
 
     private var pageStack: some View {
@@ -121,6 +123,7 @@ struct BrowserPane: View {
                     page: page,
                     projectPath: state.projectPath,
                     isActive: page.id == state.selectedPageID,
+                    deviceProfile: selectedDeviceProfile,
                     callbacks: BrowserSurfaceCallbacks(pageChanged: pageChanged, popupRequested: popupRequested)
                 )
                 .opacity(page.id == state.selectedPageID ? 1 : 0)
@@ -131,6 +134,10 @@ struct BrowserPane: View {
 
     private func navigate() {
         selectedController?.navigate(to: pendingURL)
+    }
+
+    private var selectedDeviceProfile: BrowserDeviceProfile {
+        BrowserDeviceProfiles.profile(for: state.selectedDeviceProfileID)
     }
 
     private func registerBrowserControl() {
@@ -155,9 +162,9 @@ struct BrowserPane: View {
             onClosePane()
             return
         }
-        controllers.removeController(for: pageID)
         state.closePage(id: pageID)
         pendingURL = state.url
+        controllers.removeController(for: pageID)
     }
 
     private func pageChanged(pageID: UUID, url: String) {
@@ -181,5 +188,20 @@ struct BrowserPane: View {
         } catch {
             state.pageSummary = error.localizedDescription
         }
+    }
+
+    private func runConsoleCommand() async {
+        let command = consoleCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !command.isEmpty else { return }
+        isConsoleRunning = true
+        consoleCommand = ""
+        let entry = BrowserConsoleEntry(command: command, result: "", isRunning: true)
+        consoleEntries.append(entry)
+        let result = await selectedController?.evaluateJavaScript(command) ?? "Browser is not ready."
+        if let index = consoleEntries.firstIndex(where: { $0.id == entry.id }) {
+            consoleEntries[index].result = result
+            consoleEntries[index].isRunning = false
+        }
+        isConsoleRunning = false
     }
 }

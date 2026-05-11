@@ -131,6 +131,7 @@ struct TerminalTabSnapshot: Codable {
     let browserURL: String?
     let browserPages: [BrowserPageSnapshot]?
     let selectedBrowserPageID: UUID?
+    let browserDeviceProfileID: String?
 
     init(
         kind: TerminalTab.Kind,
@@ -142,7 +143,8 @@ struct TerminalTabSnapshot: Codable {
         filePath: String? = nil,
         browserURL: String? = nil,
         browserPages: [BrowserPageSnapshot]? = nil,
-        selectedBrowserPageID: UUID? = nil
+        selectedBrowserPageID: UUID? = nil,
+        browserDeviceProfileID: String? = nil
     ) {
         self.kind = kind
         self.customTitle = customTitle
@@ -154,6 +156,7 @@ struct TerminalTabSnapshot: Codable {
         self.browserURL = browserURL
         self.browserPages = browserPages
         self.selectedBrowserPageID = selectedBrowserPageID
+        self.browserDeviceProfileID = browserDeviceProfileID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -167,6 +170,7 @@ struct TerminalTabSnapshot: Codable {
         case browserURL
         case browserPages
         case selectedBrowserPageID
+        case browserDeviceProfileID
     }
 
     init(from decoder: Decoder) throws {
@@ -181,6 +185,7 @@ struct TerminalTabSnapshot: Codable {
         browserURL = try container.decodeIfPresent(String.self, forKey: .browserURL)
         browserPages = try container.decodeIfPresent([BrowserPageSnapshot].self, forKey: .browserPages)
         selectedBrowserPageID = try container.decodeIfPresent(UUID.self, forKey: .selectedBrowserPageID)
+        browserDeviceProfileID = try container.decodeIfPresent(String.self, forKey: .browserDeviceProfileID)
     }
 }
 
