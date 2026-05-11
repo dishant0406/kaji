@@ -38,9 +38,9 @@ cat > "$OUT_PATH" << EOF
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
-    <title>Droid Updates</title>
+    <title>Kaji Updates</title>
     <link>https://github.com/${REPOSITORY_SLUG}</link>
-    <description>Updates for Droid</description>
+    <description>Updates for Kaji</description>
     <language>en</language>
     <item>
       <title>Version ${VERSION}</title>

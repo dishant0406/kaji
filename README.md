@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/images/droid-icon-master.png" alt="Droid" width="128" height="128">
+  <img src="docs/images/kaji-icon-master.png" alt="Kaji" width="128" height="128">
 </p>
 
-<h1 align="center">Droid</h1>
+<h1 align="center">Kaji</h1>
 
 <p align="center">
   Native macOS command center for terminal-native AI coding agents.
@@ -13,33 +13,33 @@
 </p>
 
 <div align="center">
-  <img src="https://img.shields.io/github/downloads/dishant0406/droid/total" alt="Downloads" />
-  <img src="https://img.shields.io/github/v/release/dishant0406/droid" alt="Release" />
-  <img src="https://img.shields.io/github/license/dishant0406/droid" alt="License" />
-  <img src="https://img.shields.io/github/commit-activity/m/dishant0406/droid" alt="Commit activity" />
+  <img src="https://img.shields.io/github/downloads/dishant0406/kaji/total" alt="Downloads" />
+  <img src="https://img.shields.io/github/v/release/dishant0406/kaji" alt="Release" />
+  <img src="https://img.shields.io/github/license/dishant0406/kaji" alt="License" />
+  <img src="https://img.shields.io/github/commit-activity/m/dishant0406/kaji" alt="Commit activity" />
 </div>
 
 ## Screenshot
 
-<img width="1800" alt="Droid screenshot" src="docs/images/droid-ss.png" />
+<img width="1800" alt="Kaji screenshot" src="docs/images/kaji-ss.png" />
 
-## What Is Droid?
+## What Is Kaji?
 
-Droid is a local operations layer for AI coding work.
+Kaji is a local operations layer for AI coding work.
 
-Instead of managing a pile of terminal windows, Droid keeps projects, worktrees, panes, agent runs, notifications, changed files, diffs, and verification state inside one native macOS app.
+Instead of managing a pile of terminal windows, Kaji keeps projects, worktrees, panes, agent runs, notifications, changed files, diffs, and verification state inside one native macOS app.
 
-It is built with SwiftUI and embeds a Droid-tuned [libghostty](https://github.com/dishant0406/ghostty) fork through `GhosttyKit` for native terminal rendering.
+It is built with SwiftUI and embeds a Kaji-tuned [libghostty](https://github.com/dishant0406/ghostty) fork through `GhosttyKit` for native terminal rendering.
 
 ## Core Features
 
 ### AI Agent Workflow And Command Center
 
 - **Cmd+K Ask palette**: send prompts to Codex, Claude Code, OpenCode, Pi, or a normal terminal.
-- **Inline routing**: target a project, worktree, provider, session mode, history session, skill, task recipe, file mention, attachment, or DroidKit script from one input.
+- **Inline routing**: target a project, worktree, provider, session mode, history session, skill, task recipe, file mention, attachment, or KajiKit script from one input.
 - **Session-aware dispatch**: reuse a matching live session, choose an existing session, resume provider history, or force a new terminal.
 - **Saved task recipes**: built-in recipes for fixing tests, reviewing diffs, explaining repos, debugging errors, updating docs, preparing commits, and implementing features.
-- **DroidKit scripts**: store and run reusable project/global commands from `~/.droidkit`, with risky-command confirmation.
+- **KajiKit scripts**: store and run reusable project/global commands from `~/.kajikit`, with risky-command confirmation.
 - **Cmd+J Agent Command Center**: jump to an agent run, reply, stop, resume, start a new run, verify, open changed files, or review diffs.
 - **Agent Mission Control**: sidebar surface for active and recent agent runs with provider, project, worktree, status, last event, changed files, and verification state.
 - **Run evidence**: completed runs can attach git changed-file snapshots and expose per-file open/diff actions.
@@ -57,16 +57,16 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 | `:task:`, `:ta:`, `:te:`, `:td:` | Run, add, edit, or delete saved task recipes |
 | `:pa:` | Add a project from a directory path |
 | `:attach:` | Attach files, folders, or images |
-| `:x:`, `:xa:`, `:xe:`, `:xd:` | Run, add, edit, or delete DroidKit scripts |
+| `:x:`, `:xa:`, `:xe:`, `:xd:` | Run, add, edit, or delete KajiKit scripts |
 | `@path` | Attach file or folder context from the current worktree |
 | `/project`, `/worktree`, `/provider`, `/session` | Slash-command aliases for the main route pickers |
 
 ### Parent Agent And Providers
 
-- Droid includes a native Parent Agent surface backed by a bundled Pi runtime.
+- Kaji includes a native Parent Agent surface backed by a bundled Pi runtime.
 - The Parent Agent can plan work, choose provider/model options, spawn child agents, send follow-up prompts, observe runs, stop/resume agents, and jump back to live panes.
-- It can create isolated git worktrees for subagents, collect changed files, open native diffs, and start verification while Droid remains the source of truth for projects, worktrees, pane IDs, permissions, and UI state.
-- Droid also supports Pi as a normal coding provider alongside Codex, Claude Code, and OpenCode.
+- It can create isolated git worktrees for subagents, collect changed files, open native diffs, and start verification while Kaji remains the source of truth for projects, worktrees, pane IDs, permissions, and UI state.
+- Kaji also supports Pi as a normal coding provider alongside Codex, Claude Code, and OpenCode.
 - **Codex**: launcher, history/resume support, local session monitoring, activity hooks, completion events, usage tracking.
 - **Claude Code**: launcher, history support, user-prompt, stop, notification, and permission-request hooks, usage tracking.
 - **OpenCode**: launcher, history support, plugin-based activity, transcript, question, permission, and completion events.
@@ -90,8 +90,8 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 
 ### Notifications And Remote Delivery
 
-- Native bundled `DroidHookClient` receives provider events through macOS `DistributedNotificationCenter`.
-- Every Droid terminal exports context variables such as `DROID_PANE_ID`, `DROID_PROJECT_ID`, `DROID_WORKTREE_ID`, and `DROID_HOOK_CLIENT_PATH`.
+- Native bundled `KajiHookClient` receives provider events through macOS `DistributedNotificationCenter`.
+- Every Kaji terminal exports context variables such as `KAJI_PANE_ID`, `KAJI_PROJECT_ID`, `KAJI_WORKTREE_ID`, and `KAJI_HOOK_CLIENT_PATH`.
 - In-app toasts, sounds, unread badges, notification panel, and agent activity tracking are built in.
 - Remote notification destinations support `ntfy` and custom HTTP webhooks.
 - Routing rules can match by source and event kind, such as Codex completed, Claude Code attention, OpenCode error, Terminal info, or custom events.
@@ -99,7 +99,7 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 ### Customization And Operations
 
 - Configurable keyboard shortcuts for tabs, panes, projects, quick open, Ask, Agent Command Center, VCS, worktrees, file tree, AI usage, and navigation.
-- Theme picker, Ghostty theme import/export, user themes, transparency settings, and shared Droid UI tokens.
+- Theme picker, Ghostty theme import/export, user themes, transparency settings, and shared Kaji UI tokens.
 - CLI launcher settings for enabling/disabling agents and overriding commands.
 - AI usage board for supported providers including Codex, Claude Code, Copilot, Amp, Z.ai, MiniMax, Kimi, and Factory.
 - Sparkle update support for packaged releases.
@@ -130,15 +130,15 @@ Shortcuts can be changed in Settings.
 ### Homebrew
 
 ```bash
-brew tap dishant0406/droid
-brew install --cask droidkit
+brew tap dishant0406/kaji
+brew install --cask kajikit
 ```
 
-Droid is currently distributed as an unsigned developer preview. The Homebrew cask removes the macOS quarantine attribute after install so Droid can launch.
+Kaji is currently distributed as an unsigned developer preview. The Homebrew cask removes the macOS quarantine attribute after install so Kaji can launch.
 
 ### Manual
 
-Download the latest release from the [releases page](https://github.com/dishant0406/droid/releases).
+Download the latest release from the [releases page](https://github.com/dishant0406/kaji/releases).
 
 ## Requirements
 
@@ -155,24 +155,24 @@ Download the latest release from the [releases page](https://github.com/dishant0
 ```bash
 scripts/setup.sh          # Build GhosttyKit.xcframework from dishant0406/ghostty
 swift build               # Debug build
-swift run Droid           # Run from SwiftPM
-./start.sh                # Open the preview lab and launch a real Droid.app bundle
+swift run Kaji           # Run from SwiftPM
+./start.sh                # Open the preview lab and launch a real Kaji.app bundle
 scripts/checks.sh --fix   # Format, lint, and build
 ```
 
 `scripts/setup.sh` requires Xcode and `gettext`. If a matching Zig toolchain is not already installed, the script downloads the Ghostty-required Zig version temporarily. See [docs/building-ghostty.md](docs/building-ghostty.md).
 
-`./start.sh` is the fastest supported app workflow in this repo. It opens `Droid/Previews/DeveloperPreviewLab.swift` in Xcode for SwiftUI previews and launches a real `Droid.app` bundle through `script/build_and_run.sh`.
+`./start.sh` is the fastest supported app workflow in this repo. It opens `Kaji/Previews/DeveloperPreviewLab.swift` in Xcode for SwiftUI previews and launches a real `Kaji.app` bundle through `script/build_and_run.sh`.
 
 ## Architecture
 
 ```text
-Droid/                       SwiftUI macOS app target
-DroidHookClient/             Native provider hook helper
+Kaji/                       SwiftUI macOS app target
+KajiHookClient/             Native provider hook helper
 GhosttyKit/                  C module exposing ghostty.h
 GhosttyKit.xcframework/      Built libghostty artifact from dishant0406/ghostty
-Vendor/pi-mono/              Vendored Pi runtime used by Droid's Parent Agent
-Tests/DroidTests/            Swift Testing suite
+Vendor/pi-mono/              Vendored Pi runtime used by Kaji's Parent Agent
+Tests/KajiTests/            Swift Testing suite
 docs/                        Architecture, release, and integration docs
 scripts/                     Setup, checks, packaging, and release scripts
 ```

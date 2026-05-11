@@ -3,15 +3,14 @@ set -euo pipefail
 
 MODE="${1:-run}"
 RUN_IN_PLACE="${RUN_IN_PLACE:-1}"
-DEFAULT_APP_NAME="Droid"
-DEFAULT_BUNDLE_ID="com.droid.app"
+DEFAULT_APP_NAME="Kaji"
+DEFAULT_BUNDLE_ID="com.kaji.app"
 if [[ "$RUN_IN_PLACE" == "1" ]]; then
-  DEFAULT_APP_NAME="DroidDev"
-  DEFAULT_BUNDLE_ID="com.droid.dev"
+  DEFAULT_BUNDLE_ID="com.kaji.dev"
 fi
 APP_NAME="${APP_NAME_OVERRIDE:-$DEFAULT_APP_NAME}"
-BUILD_PRODUCT_NAME="${BUILD_PRODUCT_NAME_OVERRIDE:-Droid}"
-APP_EXECUTABLE_NAME="${APP_EXECUTABLE_NAME_OVERRIDE:-$APP_NAME}"
+BUILD_PRODUCT_NAME="${BUILD_PRODUCT_NAME_OVERRIDE:-Kaji}"
+APP_EXECUTABLE_NAME="${APP_EXECUTABLE_NAME_OVERRIDE:-Kaji}"
 BUNDLE_ID="${BUNDLE_ID_OVERRIDE:-$DEFAULT_BUNDLE_ID}"
 MIN_SYSTEM_VERSION="${MIN_SYSTEM_VERSION_OVERRIDE:-14.0}"
 APP_SUPPORT_DIR_OVERRIDE="${APP_SUPPORT_DIR_OVERRIDE:-}"
@@ -50,21 +49,21 @@ cd "$ROOT_DIR"
 stop_existing_app
 "$ROOT_DIR/scripts/install-cef-runtime.sh"
 swift build
-swift build --target DroidHookClient
+swift build --target KajiHookClient
 BUILD_BIN_DIR="$(swift build --show-bin-path)"
 BUILD_BINARY="$BUILD_BIN_DIR/$BUILD_PRODUCT_NAME"
-HOOK_CLIENT_BINARY="$BUILD_BIN_DIR/DroidHookClient"
+HOOK_CLIENT_BINARY="$BUILD_BIN_DIR/KajiHookClient"
 RESOURCE_BUNDLE_NAME="${BUILD_PRODUCT_NAME}_${BUILD_PRODUCT_NAME}.bundle"
 RESOURCE_BUNDLE="$BUILD_BIN_DIR/$RESOURCE_BUNDLE_NAME"
 SPARKLE_FRAMEWORK="$ROOT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
-APP_ICONSET_SOURCE="$ROOT_DIR/Droid/Resources/Assets.xcassets/AppIcon.appiconset"
+APP_ICONSET_SOURCE="$ROOT_DIR/Kaji/Resources/Assets.xcassets/AppIcon.appiconset"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$APP_FRAMEWORKS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
-cp "$HOOK_CLIENT_BINARY" "$APP_MACOS/DroidHookClient"
-chmod +x "$APP_MACOS/DroidHookClient"
+cp "$HOOK_CLIENT_BINARY" "$APP_MACOS/KajiHookClient"
+chmod +x "$APP_MACOS/KajiHookClient"
 install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_BINARY" 2>/dev/null || true
 install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BINARY" 2>/dev/null || true
 
@@ -101,19 +100,19 @@ if [[ -d "$APP_ICONSET_SOURCE" ]]; then
   rm -rf "$ICONSET_DIR"
 fi
 
-cp "$ROOT_DIR/Droid/Info.plist" "$INFO_PLIST"
+cp "$ROOT_DIR/Kaji/Info.plist" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $APP_EXECUTABLE_NAME" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $MIN_SYSTEM_VERSION" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Set :NSPrincipalClass DroidCEFApplication" "$INFO_PLIST"
+/usr/libexec/PlistBuddy -c "Set :NSPrincipalClass KajiCEFApplication" "$INFO_PLIST"
 printf 'APPL????' >"$PKGINFO"
 codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 
 open_app() {
   local open_args=(-n)
   if [[ -n "$APP_SUPPORT_DIR_OVERRIDE" ]]; then
-    open_args+=(--env "DROID_APP_SUPPORT_DIR=$APP_SUPPORT_DIR_OVERRIDE")
+    open_args+=(--env "KAJI_APP_SUPPORT_DIR=$APP_SUPPORT_DIR_OVERRIDE")
   fi
 
   if [[ "$RUN_IN_PLACE" == "1" ]]; then
@@ -139,8 +138,8 @@ case "$MODE" in
     ;;
   --telemetry|telemetry)
     open_app
-    /usr/bin/log show --last 5s --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.droid\" && category == \"GhosttyPerf\""
-    /usr/bin/log stream --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.droid\" && category == \"GhosttyPerf\""
+    /usr/bin/log show --last 5s --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.kaji\" && category == \"GhosttyPerf\""
+    /usr/bin/log stream --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.kaji\" && category == \"GhosttyPerf\""
     ;;
   --verify|verify)
     open_app

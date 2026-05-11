@@ -4,8 +4,8 @@ Pi runs on Android via [Termux](https://termux.dev/), a terminal emulator and Li
 
 ## Prerequisites
 
-1. Install [Termux](https://github.com/termux/termux-app#installation) from GitHub or F-Droid (not Google Play, that version is deprecated)
-2. Install [Termux:API](https://github.com/termux/termux-api#installation) from GitHub or F-Droid for clipboard and other device integrations
+1. Install [Termux](https://github.com/termux/termux-app#installation) from GitHub or the open-source Android app store (not Google Play, that version is deprecated)
+2. Install [Termux:API](https://github.com/termux/termux-api#installation) from GitHub or the open-source Android app store for clipboard and other device integrations
 
 ## Installation
 
@@ -104,8 +104,8 @@ termux-camera-photo out.jpg   # Take photo
 ### Clipboard not working
 
 Ensure both apps are installed:
-1. Termux (from GitHub or F-Droid)
-2. Termux:API (from GitHub or F-Droid)
+1. Termux (from GitHub or the open-source Android app store)
+2. Termux:API (from GitHub or the open-source Android app store)
 
 Then install the CLI tools:
 ```bash

@@ -1,6 +1,6 @@
 # GhosttyKit
 
-Droid embeds libghostty through `GhosttyKit.xcframework/`. The repo builds that xcframework from the Droid-tuned Ghostty fork at [dishant0406/ghostty](https://github.com/dishant0406/ghostty), branch `droid-performance-spike`.
+Kaji embeds libghostty through `GhosttyKit.xcframework/`. The repo builds that xcframework from the Kaji-tuned Ghostty fork at [dishant0406/ghostty](https://github.com/dishant0406/ghostty), commit `336805e5c5e7ddd759186ed234586d9b55334c0e`.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ scripts/setup.sh
 
 The setup script:
 
-1. Clones `dishant0406/ghostty` at `droid-performance-spike` by default
+1. Clones `dishant0406/ghostty` at commit `336805e5c5e7ddd759186ed234586d9b55334c0e` by default
 2. Builds `macos/GhosttyKit.xcframework` with Zig
 3. Copies the xcframework into this repo
 4. Syncs `include/ghostty.h` into `GhosttyKit/ghostty.h`
@@ -27,7 +27,7 @@ The setup script:
 If you want to build against a specific tag or branch, set `GHOSTTY_REF`:
 
 ```bash
-GHOSTTY_REF=droid-performance-spike scripts/setup.sh
+GHOSTTY_REF=336805e5c5e7ddd759186ed234586d9b55334c0e scripts/setup.sh
 ```
 
 You can also override the repo slug entirely:

@@ -1,10 +1,10 @@
-# Contributing to Droid
+# Contributing to Kaji
 
-Thank you for your interest in contributing to Droid! This guide will help you get started.
+Thank you for your interest in contributing to Kaji! This guide will help you get started.
 
 ## Humans Only Policy
 
-Droid is a community project and we want communication to stay between humans. **AI-generated text is not allowed** in:
+Kaji is a community project and we want communication to stay between humans. **AI-generated text is not allowed** in:
 
 - Issue descriptions and comments
 - Pull request titles, descriptions, summaries, and comments
@@ -23,8 +23,8 @@ You are welcome to use AI to help you write code, but the text you post on GitHu
 ### Setup
 
 ```bash
-git clone https://github.com/droid-app/droid.git
-cd droid
+git clone https://github.com/kaji-app/kaji.git
+cd kaji
 scripts/setup.sh          # builds GhosttyKit.xcframework from dishant0406/ghostty
 swift build               # verify everything compiles
 ```
@@ -34,7 +34,7 @@ swift build               # verify everything compiles
 ### Running
 
 ```bash
-swift run Droid
+swift run Kaji
 ```
 
 ## Development Workflow

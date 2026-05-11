@@ -62,8 +62,8 @@ fi
 
 TRIPLE="${ARCH}-apple-macosx14.0"
 BUILD_NUMBER=$(git -C "$PROJECT_ROOT" rev-list --count HEAD)
-APP_BUNDLE="$BUILD_DIR/Droid.app"
-DMG_NAME="Droid-${VERSION}-${ARCH}.dmg"
+APP_BUNDLE="$BUILD_DIR/Kaji.app"
+DMG_NAME="Kaji-${VERSION}-${ARCH}.dmg"
 CEF_ROOT="$PROJECT_ROOT/.dev-support/cef-runtime/cef_binary"
 CEF_BUILD="$PROJECT_ROOT/.dev-support/cef-runtime/build/tests/cefsimple/Release"
 
@@ -74,7 +74,7 @@ cd "$PROJECT_ROOT"
 "$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
 "$SCRIPT_DIR/build-parent-agent.sh"
 swift build -c release --triple "$TRIPLE"
-swift build -c release --triple "$TRIPLE" --target DroidHookClient
+swift build -c release --triple "$TRIPLE" --target KajiHookClient
 
 SPM_BUILD_DIR=$(swift build -c release --triple "$TRIPLE" --show-bin-path)
 
@@ -82,18 +82,18 @@ echo "==> Creating app bundle"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-cp "$SPM_BUILD_DIR/Droid" "$APP_BUNDLE/Contents/MacOS/Droid"
-cp "$SPM_BUILD_DIR/DroidHookClient" "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
-otool -l "$APP_BUNDLE/Contents/MacOS/Droid" | grep -Fq "path @executable_path/../Frameworks" || install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Droid"
-install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BUNDLE/Contents/MacOS/Droid" 2>/dev/null || true
+cp "$SPM_BUILD_DIR/Kaji" "$APP_BUNDLE/Contents/MacOS/Kaji"
+cp "$SPM_BUILD_DIR/KajiHookClient" "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
+otool -l "$APP_BUNDLE/Contents/MacOS/Kaji" | grep -Fq "path @executable_path/../Frameworks" || install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Kaji"
+install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BUNDLE/Contents/MacOS/Kaji" 2>/dev/null || true
 
 echo "==> Stripping local and debug symbols"
-strip -Sx "$APP_BUNDLE/Contents/MacOS/Droid"
-strip -Sx "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/Kaji"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
 
-if [[ -d "$SPM_BUILD_DIR/Droid_Droid.bundle" ]]; then
-    cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Contents/Resources/Droid_Droid.bundle"
-    cp -R "$SPM_BUILD_DIR/Droid_Droid.bundle" "$APP_BUNDLE/Droid_Droid.bundle"
+if [[ -d "$SPM_BUILD_DIR/Kaji_Kaji.bundle" ]]; then
+    cp -R "$SPM_BUILD_DIR/Kaji_Kaji.bundle" "$APP_BUNDLE/Contents/Resources/Kaji_Kaji.bundle"
+    cp -R "$SPM_BUILD_DIR/Kaji_Kaji.bundle" "$APP_BUNDLE/Kaji_Kaji.bundle"
 fi
 
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
@@ -105,7 +105,7 @@ for helper in "$CEF_BUILD"/cefsimple\ Helper*.app; do
     cp -R "$helper" "$APP_BUNDLE/Contents/Frameworks/$(basename "$helper")"
 done
 
-cp "$PROJECT_ROOT/Droid/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+cp "$PROJECT_ROOT/Kaji/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
 
@@ -154,14 +154,14 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
         --sign "$SIGN_IDENTITY" \
         "$SPARKLE_DIR"
 
-    echo "==> Signing DroidHookClient"
+    echo "==> Signing KajiHookClient"
     /usr/bin/codesign --force --options runtime \
         --sign "$SIGN_IDENTITY" \
-        "$APP_BUNDLE/Contents/MacOS/DroidHookClient"
+        "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
 
     echo "==> Signing app bundle"
     /usr/bin/codesign --force --options runtime \
-        --entitlements "$PROJECT_ROOT/Droid/Droid.entitlements" \
+        --entitlements "$PROJECT_ROOT/Kaji/Kaji.entitlements" \
         --sign "$SIGN_IDENTITY" \
         "$APP_BUNDLE"
 fi
@@ -184,10 +184,10 @@ if ! command -v create-dmg &> /dev/null; then
 fi
 
 cd "$BUILD_DIR"
-find "$BUILD_DIR" -maxdepth 1 -name "Droid*.dmg" -delete
+find "$BUILD_DIR" -maxdepth 1 -name "Kaji*.dmg" -delete
 create-dmg "$APP_BUNDLE" "$BUILD_DIR" || true
 
-GENERATED_DMG=$(find "$BUILD_DIR" -maxdepth 1 -name "Droid*.dmg" -not -name "$DMG_NAME" -print0 | xargs -0 ls -t | head -1)
+GENERATED_DMG=$(find "$BUILD_DIR" -maxdepth 1 -name "Kaji*.dmg" -not -name "$DMG_NAME" -print0 | xargs -0 ls -t | head -1)
 if [[ -n "$GENERATED_DMG" ]]; then
     mv "$GENERATED_DMG" "$BUILD_DIR/$DMG_NAME"
 fi

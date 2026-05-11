@@ -1,0 +1,130 @@
+import Foundation
+import Testing
+
+@testable import Kaji
+
+@Suite("KeyBinding")
+struct KeyBindingTests {
+    @Test("ShortcutAction.allCases is non-empty")
+    func allCasesNonEmpty() {
+        #expect(!ShortcutAction.allCases.isEmpty)
+    }
+
+    @Test("ShortcutAction.displayName is non-empty for every case")
+    func displayNameNonEmpty() {
+        for action in ShortcutAction.allCases {
+            #expect(!action.displayName.isEmpty, "displayName empty for \(action.rawValue)")
+        }
+    }
+
+    @Test("ShortcutAction.category is in known set for every case")
+    func categoryInKnownSet() {
+        let known = Set(ShortcutAction.categories)
+        for action in ShortcutAction.allCases {
+            #expect(known.contains(action.category), "\(action.rawValue) has unknown category '\(action.category)'")
+        }
+    }
+
+    @Test("ShortcutAction.tabAction returns correct actions for valid indices")
+    func tabActionValid() {
+        for i in 1 ... 9 {
+            let action = ShortcutAction.tabAction(for: i)
+            #expect(action != nil, "tabAction(for: \(i)) should not be nil")
+        }
+    }
+
+    @Test("ShortcutAction.tabAction returns nil for invalid indices")
+    func tabActionInvalid() {
+        #expect(ShortcutAction.tabAction(for: 0) == nil)
+        #expect(ShortcutAction.tabAction(for: 10) == nil)
+    }
+
+    @Test("ShortcutAction.projectAction returns correct actions for valid indices")
+    func projectActionValid() {
+        for i in 1 ... 9 {
+            let action = ShortcutAction.projectAction(for: i)
+            #expect(action != nil, "projectAction(for: \(i)) should not be nil")
+        }
+    }
+
+    @Test("ShortcutAction.projectAction returns nil for invalid indices")
+    func projectActionInvalid() {
+        #expect(ShortcutAction.projectAction(for: 0) == nil)
+        #expect(ShortcutAction.projectAction(for: 10) == nil)
+    }
+
+    @Test("ShortcutAction tabSelectionIndex maps tab actions")
+    func tabSelectionIndex() {
+        #expect(ShortcutAction.selectTab1.tabSelectionIndex == 0)
+        #expect(ShortcutAction.selectTab9.tabSelectionIndex == 8)
+        #expect(ShortcutAction.newTab.tabSelectionIndex == nil)
+    }
+
+    @Test("ShortcutAction projectSelectionIndex maps project actions")
+    func projectSelectionIndex() {
+        #expect(ShortcutAction.selectProject1.projectSelectionIndex == 0)
+        #expect(ShortcutAction.selectProject9.projectSelectionIndex == 8)
+        #expect(ShortcutAction.nextProject.projectSelectionIndex == nil)
+    }
+
+    @Test("KeyBinding.defaults has unique actions")
+    func defaultsUniqueActions() {
+        let actions = KeyBinding.defaults.map(\.action)
+        let unique = Set(actions)
+        #expect(actions.count == unique.count)
+    }
+
+    @Test("KeyBinding.defaults has unique combos")
+    func defaultsUniqueCombos() {
+        let combos = KeyBinding.defaults.map(\.combo)
+        let unique = Set(combos)
+        #expect(combos.count == unique.count)
+    }
+
+    @Test("Agent Command Center defaults to Command-J")
+    func agentCommandCenterDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .agentCommandCenter })
+
+        #expect(binding.combo == KeyCombo(key: "j", command: true))
+    }
+
+    @Test("Ask defaults to Command-K")
+    func askDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .ask })
+
+        #expect(binding.combo == KeyCombo(key: "k", command: true))
+    }
+
+    @Test("Source Control defaults to Command-Shift-G")
+    func sourceControlDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .openVCSTab })
+
+        #expect(binding.combo == KeyCombo(key: "g", command: true, shift: true))
+    }
+
+    @Test("New Tab defaults to Command-N")
+    func newTabDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .newTab })
+
+        #expect(binding.combo == KeyCombo(key: "n", command: true))
+    }
+
+    @Test("Footer Terminal defaults to Command-T")
+    func footerTerminalDefaultShortcut() throws {
+        let binding = try #require(KeyBinding.defaults.first { $0.action == .toggleFooterTerminal })
+
+        #expect(binding.combo == KeyCombo(key: "t", command: true))
+    }
+
+    @Test("KeyBinding Codable round-trip")
+    func codableRoundTrip() throws {
+        let binding = KeyBinding(
+            action: .newTab,
+            combo: KeyCombo(key: "t", command: true)
+        )
+        let data = try JSONEncoder().encode(binding)
+        let decoded = try JSONDecoder().decode(KeyBinding.self, from: data)
+        #expect(decoded.action == binding.action)
+        #expect(decoded.combo == binding.combo)
+    }
+}

@@ -3,15 +3,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-INFO_PLIST="$PROJECT_ROOT/Droid/Info.plist"
+INFO_PLIST="$PROJECT_ROOT/Kaji/Info.plist"
 BUILD_DIR="$PROJECT_ROOT/build"
 
 VERSION=""
 MESSAGE=""
 ARCH="arm64"
 REMOTE="origin"
-REPO="dishant0406/droid"
-TAP_REPO="dishant0406/homebrew-droid"
+REPO="dishant0406/kaji"
+TAP_REPO="dishant0406/homebrew-kaji"
 TAP_PATH=""
 SSH_HOST="github.com-personal"
 TAP_EMAIL="dishu5570@gmail.com"
@@ -26,14 +26,14 @@ Options:
   --version X.Y.Z       Explicit release version. Defaults to patch bump.
   --message TEXT        Commit/release message.
   --arch ARCH           arm64 or x86_64. Defaults to arm64.
-  --all                 Stage all current Droid repo changes before commit.
-  --remote NAME         Droid git remote. Defaults to origin.
-  --repo OWNER/REPO     GitHub release repo. Defaults to dishant0406/droid.
-  --tap-repo OWNER/REPO Homebrew tap repo. Defaults to dishant0406/homebrew-droid.
+  --all                 Stage all current Kaji repo changes before commit.
+  --remote NAME         Kaji git remote. Defaults to origin.
+  --repo OWNER/REPO     GitHub release repo. Defaults to dishant0406/kaji.
+  --tap-repo OWNER/REPO Homebrew tap repo. Defaults to dishant0406/homebrew-kaji.
   --tap-path PATH       Existing local tap checkout. Defaults to a temp clone.
   --ssh-host HOST       SSH host alias for tap remote. Defaults to github.com-personal.
   --tap-email EMAIL     Email enforced in tap history. Defaults to dishu5570@gmail.com.
-  --test-install        Install droidkit into a temp appdir and uninstall after.
+  --test-install        Install kajikit into a temp appdir and uninstall after.
 EOF
 }
 
@@ -90,14 +90,14 @@ git commit -m "$MESSAGE"
 git push "$REMOTE" "$BRANCH"
 
 if ! "$SCRIPT_DIR/build-release.sh" --arch "$ARCH" --version "$VERSION"; then
-    [[ -d "$BUILD_DIR/Droid.app" ]] || { echo "Error: release app bundle was not created" >&2; exit 1; }
+    [[ -d "$BUILD_DIR/Kaji.app" ]] || { echo "Error: release app bundle was not created" >&2; exit 1; }
     echo "Continuing with hdiutil DMG packaging because create-dmg is unavailable."
 fi
 
-DMG_PATH="$BUILD_DIR/Droid-${VERSION}-${ARCH}.dmg"
+DMG_PATH="$BUILD_DIR/Kaji-${VERSION}-${ARCH}.dmg"
 if [[ ! -f "$DMG_PATH" ]]; then
     rm -f "$DMG_PATH"
-    hdiutil create -volname "Droid" -srcfolder "$BUILD_DIR/Droid.app" -ov -format UDZO "$DMG_PATH"
+    hdiutil create -volname "Kaji" -srcfolder "$BUILD_DIR/Kaji.app" -ov -format UDZO "$DMG_PATH"
 fi
 hdiutil verify "$DMG_PATH" >/dev/null
 SHA256="$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
@@ -107,7 +107,7 @@ HEAD_SHA="$(git rev-parse HEAD)"
 if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
     gh release upload "$TAG" "$DMG_PATH" --repo "$REPO" --clobber
 else
-    gh release create "$TAG" "$DMG_PATH" --repo "$REPO" --target "$HEAD_SHA" --title "Droid $VERSION" --notes "$MESSAGE"
+    gh release create "$TAG" "$DMG_PATH" --repo "$REPO" --target "$HEAD_SHA" --title "Kaji $VERSION" --notes "$MESSAGE"
 fi
 
 prepare_tap() {
@@ -124,73 +124,73 @@ prepare_tap() {
 
 TAP_DIR="$(prepare_tap)"
 mkdir -p "$TAP_DIR/Casks"
-cat > "$TAP_DIR/Casks/droidkit.rb" <<EOF
-cask "droidkit" do
+cat > "$TAP_DIR/Casks/kajikit.rb" <<EOF
+cask "kajikit" do
   version "$VERSION"
   sha256 "$SHA256"
 
-  url "https://github.com/$REPO/releases/download/v#{version}/Droid-#{version}-$ARCH.dmg"
-  name "Droid"
+  url "https://github.com/$REPO/releases/download/v#{version}/Kaji-#{version}-$ARCH.dmg"
+  name "Kaji"
   desc "macOS terminal multiplexer for AI coding agents"
   homepage "https://github.com/$REPO"
 
   depends_on macos: ">= :sonoma"
 
-  app "Droid.app"
+  app "Kaji.app"
 
   postflight do
     system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Droid.app"],
+                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Kaji.app"],
                    sudo: false
   end
 
   caveats <<~EOS
-    Droid is currently distributed as an unsigned developer preview.
+    Kaji is currently distributed as an unsigned developer preview.
 
-    This cask removes the macOS quarantine attribute after install so Droid can launch.
+    This cask removes the macOS quarantine attribute after install so Kaji can launch.
     Managed or corporate Macs may still block unsigned apps.
   EOS
 end
 EOF
 
 cat > "$TAP_DIR/README.md" <<EOF
-# homebrew-droid
-Homebrew tap for Droid
+# homebrew-kaji
+Homebrew tap for Kaji
 
 ## Install
 
 \`\`\`bash
-brew tap dishant0406/droid
-brew install --cask droidkit
+brew tap dishant0406/kaji
+brew install --cask kajikit
 \`\`\`
 
 ## Launch
 
 \`\`\`bash
-open /Applications/Droid.app
+open /Applications/Kaji.app
 \`\`\`
 EOF
 
 cd "$TAP_DIR"
-ruby -c Casks/droidkit.rb >/dev/null
-git add README.md Casks/droidkit.rb
+ruby -c Casks/kajikit.rb >/dev/null
+git add README.md Casks/kajikit.rb
 if ! git diff --cached --quiet; then
-    GIT_AUTHOR_EMAIL="$TAP_EMAIL" GIT_COMMITTER_EMAIL="$TAP_EMAIL" git commit -m "Update DroidKit to $VERSION"
+    GIT_AUTHOR_EMAIL="$TAP_EMAIL" GIT_COMMITTER_EMAIL="$TAP_EMAIL" git commit -m "Update KajiKit to $VERSION"
 fi
 git filter-repo --force --email-callback "return b'$TAP_EMAIL'" >/dev/null
 git remote add origin "git@$SSH_HOST:$TAP_REPO.git" 2>/dev/null || git remote set-url origin "git@$SSH_HOST:$TAP_REPO.git"
 git push --force origin main
 
 brew update || true
-brew info --cask droidkit
+brew info --cask kajikit
 
 if [[ "$TEST_INSTALL" == true ]]; then
     APPDIR="$(mktemp -d)"
-    brew uninstall --cask droidkit --force >/dev/null 2>&1 || true
-    brew install --cask droidkit --appdir="$APPDIR" --force
-    /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APPDIR/Droid.app/Contents/Info.plist"
-    /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APPDIR/Droid.app/Contents/Info.plist"
-    brew uninstall --cask droidkit --force
+    brew uninstall --cask kajikit --force >/dev/null 2>&1 || true
+    brew install --cask kajikit --appdir="$APPDIR" --force
+    /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APPDIR/Kaji.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APPDIR/Kaji.app/Contents/Info.plist"
+    brew uninstall --cask kajikit --force
     rm -rf "$APPDIR"
 fi
 
@@ -198,4 +198,4 @@ echo "Version: $VERSION"
 echo "Build: $BUILD_NUMBER"
 echo "DMG: $DMG_PATH"
 echo "SHA256: $SHA256"
-echo "Install: brew tap dishant0406/droid && brew install --cask droidkit"
+echo "Install: brew tap dishant0406/kaji && brew install --cask kajikit"

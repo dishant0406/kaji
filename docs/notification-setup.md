@@ -1,37 +1,37 @@
 # Notification Setup
 
-Droid's coding-agent integrations use the bundled `DroidHookClient` helper. The helper is a native Swift executable inside the app bundle and posts normalized events to Droid through macOS `DistributedNotificationCenter`.
+Kaji's coding-agent integrations use the bundled `KajiHookClient` helper. The helper is a native Swift executable inside the app bundle and posts normalized events to Kaji through macOS `DistributedNotificationCenter`.
 
 ## Built-In Integrations
 
-Toggle agents under **Settings -> Coding Agents**. Droid installs enabled agent hooks that call the native helper directly:
+Toggle agents under **Settings -> Coding Agents**. Kaji installs enabled agent hooks that call the native helper directly:
 
 ```bash
-/Applications/Droid.app/Contents/MacOS/DroidHookClient send custom "$DROID_PANE_ID" "Build finished" "All tests passed"
+/Applications/Kaji.app/Contents/MacOS/KajiHookClient send custom "$KAJI_PANE_ID" "Build finished" "All tests passed"
 ```
 
-Built-in agent hook behavior lives under `Droid/Services/CodingAgents/<AgentName>/`. Codex completion notifications come from Droid's native `CodexSessionMonitor`, which reads Codex session JSONL files in-process. Droid no longer installs Codex `notify` shell hooks.
+Built-in agent hook behavior lives under `Kaji/Services/CodingAgents/<AgentName>/`. Codex completion notifications come from Kaji's native `CodexSessionMonitor`, which reads Codex session JSONL files in-process. Kaji no longer installs Codex `notify` shell hooks.
 
 ## Environment
 
-Every terminal spawned by Droid exports:
+Every terminal spawned by Kaji exports:
 
 ```bash
-DROID_HOOK_CLIENT_PATH
-DROID_INSTANCE_ID
-DROID_PANE_ID
-DROID_PROJECT_ID
-DROID_WORKTREE_ID
-DROID_WORKTREE_PATH
+KAJI_HOOK_CLIENT_PATH
+KAJI_INSTANCE_ID
+KAJI_PANE_ID
+KAJI_PROJECT_ID
+KAJI_WORKTREE_ID
+KAJI_WORKTREE_PATH
 ```
 
-Use `DROID_HOOK_CLIENT_PATH` for custom tools running inside Droid panes.
+Use `KAJI_HOOK_CLIENT_PATH` for custom tools running inside Kaji panes.
 
 ## Sending A Custom Event
 
 ```bash
-if [ -n "${DROID_HOOK_CLIENT_PATH:-}" ]; then
-  "$DROID_HOOK_CLIENT_PATH" send custom "${DROID_PANE_ID:-}" "Build finished" "All tests passed"
+if [ -n "${KAJI_HOOK_CLIENT_PATH:-}" ]; then
+  "$KAJI_HOOK_CLIENT_PATH" send custom "${KAJI_PANE_ID:-}" "Build finished" "All tests passed"
 fi
 ```
 
@@ -40,7 +40,7 @@ Arguments for `send`:
 | Argument | Required | Description |
 | --- | --- | --- |
 | `type` | yes | Source identifier. Unknown values are shown generically. |
-| `paneID` | no | Target pane. Use `$DROID_PANE_ID` inside a Droid terminal. |
+| `paneID` | no | Target pane. Use `$KAJI_PANE_ID` inside a Kaji terminal. |
 | `title` | yes | Notification title. |
 | `body` | no | Notification body. The helper strips delimiters and newlines. |
 
@@ -49,24 +49,24 @@ Arguments for `send`:
 Claude Code hooks use:
 
 ```bash
-"$DROID_HOOK_CLIENT_PATH" claude-hook userpromptsubmit
-"$DROID_HOOK_CLIENT_PATH" claude-hook stop
-"$DROID_HOOK_CLIENT_PATH" claude-hook notification
-"$DROID_HOOK_CLIENT_PATH" claude-hook permissionrequest
+"$KAJI_HOOK_CLIENT_PATH" claude-hook userpromptsubmit
+"$KAJI_HOOK_CLIENT_PATH" claude-hook stop
+"$KAJI_HOOK_CLIENT_PATH" claude-hook notification
+"$KAJI_HOOK_CLIENT_PATH" claude-hook permissionrequest
 ```
 
 Codex activity hooks use:
 
 ```bash
-"$DROID_HOOK_CLIENT_PATH" codex-activity codex start
-"$DROID_HOOK_CLIENT_PATH" codex-activity codex stop
+"$KAJI_HOOK_CLIENT_PATH" codex-activity codex start
+"$KAJI_HOOK_CLIENT_PATH" codex-activity codex stop
 ```
 
 OpenCode's plugin calls the same helper with `send` for activity, transcript, and completion events. New coding-agent modules should either install native hooks through their `CodingAgentModule` or call `send`/`codex-activity` directly from their own integration script.
 
 ## Delivery Settings
 
-Droid respects the user's choices under **Settings -> Notifications**:
+Kaji respects the user's choices under **Settings -> Notifications**:
 
 - **Toast** shows an in-app banner.
 - **Sound** plays the selected notification sound.

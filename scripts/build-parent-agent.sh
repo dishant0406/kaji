@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PI_ROOT="$PROJECT_ROOT/Vendor/pi-mono"
-OUT_DIR="$PROJECT_ROOT/Droid/Resources/pi"
+OUT_DIR="$PROJECT_ROOT/Kaji/Resources/pi"
 
 if [[ ! -d "$PI_ROOT" ]]; then
     echo "Error: vendored Pi runtime not found at $PI_ROOT" >&2
@@ -27,18 +27,18 @@ npm --prefix "$PI_ROOT/packages/agent" run build
 
 mkdir -p "$OUT_DIR"
 
-echo "==> Bundling Droid parent agent runtime"
+echo "==> Bundling Kaji parent agent runtime"
 "$PI_ROOT/node_modules/.bin/esbuild" \
-    "$PI_ROOT/packages/droid-agent/src/main.ts" \
+    "$PI_ROOT/packages/kaji-agent/src/main.ts" \
     --bundle \
     --platform=node \
     --format=esm \
     --target=node20 \
-    --outfile="$OUT_DIR/droid-agent.mjs" \
+    --outfile="$OUT_DIR/kaji-agent.mjs" \
     --banner:js='import { createRequire } from "module"; const require = createRequire(import.meta.url);'
 
 "$PI_ROOT/node_modules/.bin/esbuild" \
-    "$PI_ROOT/packages/droid-agent/src/oauth-login.ts" \
+    "$PI_ROOT/packages/kaji-agent/src/oauth-login.ts" \
     --bundle \
     --platform=node \
     --format=esm \

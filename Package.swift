@@ -8,7 +8,7 @@ let cefRoot = packageRoot + "/.dev-support/cef-runtime/cef_binary"
 let cefBuild = packageRoot + "/.dev-support/cef-runtime/build"
 
 let package = Package(
-    name: "Droid",
+    name: "Kaji",
     platforms: [
         .macOS(.v14),
     ],
@@ -55,7 +55,7 @@ let package = Package(
             publicHeadersPath: "."
         ),
         .executableTarget(
-            name: "Droid",
+            name: "Kaji",
             dependencies: [
                 "CEFBridge",
                 "GhosttyKit",
@@ -64,8 +64,8 @@ let package = Package(
                 .product(name: "SwiftTreeSitter", package: "swift-tree-sitter"),
                 .product(name: "TreeSitterBash", package: "tree-sitter-bash"),
             ],
-            path: "Droid",
-            exclude: ["Info.plist", "Droid.entitlements"],
+            path: "Kaji",
+            exclude: ["Info.plist", "Kaji.entitlements"],
             resources: [
                 .process("Resources"),
             ],
@@ -89,15 +89,15 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "DroidHookClient",
-            path: "DroidHookClient"
+            name: "KajiHookClient",
+            path: "KajiHookClient"
         ),
         .testTarget(
-            name: "DroidTests",
+            name: "KajiTests",
             dependencies: [
-                "Droid",
+                "Kaji",
             ],
-            path: "Tests/DroidTests",
+            path: "Tests/KajiTests",
             linkerSettings: [
                 .unsafeFlags([
                     "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
