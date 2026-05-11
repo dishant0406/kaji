@@ -37,6 +37,7 @@ struct MainWindow: View {
         static let defaultWidth: CGFloat = 560
         static let maxWidth: CGFloat = 980
         static let resizeHandleWidth: CGFloat = 28
+        static let maxRetainedSessions = 3
     }
 
     private enum CloseConfirmationKind {
@@ -81,9 +82,10 @@ struct MainWindow: View {
     @AppStorage("kaji.codeGraphAgentPanelWidth") private var codeGraphAgentPanelWidth: Double = .init(CodeGraphAgentLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
     @State private var browserPanelVisible = false
+    @State private var browserPanelKey: WorktreeKey?
     @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
     @AppStorage("kaji.browserPanelWidth") private var browserPanelWidth: Double = .init(BrowserLayout.defaultWidth)
-    @State private var browserStates: [WorktreeKey: BrowserPaneState] = [:]
+    @State private var browserSessions: [WorktreeKey: BrowserSession] = [:]
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
     @State private var codeGraphAgentCoordinator = KajiCodeGraphAgentCoordinator.shared
@@ -286,6 +288,9 @@ struct MainWindow: View {
                     if fileTreePanelVisible {
                         ensureFileTreeState(for: project)
                     }
+                    if isBrowserPanelVisibleForActiveWorktree {
+                        ensureBrowserState(for: project)
+                    }
                 }
                 .onChange(of: appState.pendingLastTabClose != nil) { _, isPresented in
                     guard isPresented else { return }
@@ -455,8 +460,8 @@ struct MainWindow: View {
                 )
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
-        } else if browserEnabled, browserPanelVisible, let state = activeBrowserState, let key = activeWorktreeKey {
-            browserSidePanel(state: state, sessionID: key.worktreeID.uuidString)
+        } else if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let state = activeBrowserState, let key = activeWorktreeKey {
+            browserSidePanel(state: state, session: browserSessions[key], sessionID: key.worktreeID.uuidString)
         }
     }
 
@@ -483,7 +488,7 @@ struct MainWindow: View {
         }
     }
 
-    private func browserSidePanel(state: BrowserPaneState, sessionID: String) -> some View {
+    private func browserSidePanel(state: BrowserPaneState, session: BrowserSession?, sessionID: String) -> some View {
         HStack(spacing: 0) {
             sidePanelResizeHandle { delta in
                 let next = browserPanelWidth - Double(delta)
@@ -492,7 +497,14 @@ struct MainWindow: View {
                     min(Double(BrowserLayout.maxWidth), next)
                 )
             }
-            BrowserPane(state: state, sessionID: sessionID, onClosePane: { browserPanelVisible = false })
+            BrowserPane(
+                state: state,
+                sessionID: sessionID,
+                controllers: session?.controllers ?? BrowserControllerRegistry(),
+                closeOnDisappear: false,
+                managesBrowserControl: false,
+                onClosePane: { hideBrowserPanel() }
+            )
                 .frame(width: CGFloat(browserPanelWidth))
                 .clipped()
         }
@@ -994,26 +1006,68 @@ struct MainWindow: View {
 
     private var activeBrowserState: BrowserPaneState? {
         guard let project = activeProject,
-              let key = appState.activeWorktreeKey(for: project.id)
+               let key = appState.activeWorktreeKey(for: project.id)
         else { return nil }
-        return browserStates[key]
+        return browserSessions[key]?.state
     }
 
     private func ensureBrowserState(for project: Project) {
         guard let key = appState.activeWorktreeKey(for: project.id) else { return }
         let path = activeWorktreePath(for: project)
-        if let existing = browserStates[key], existing.projectPath == path { return }
-        browserStates[key] = BrowserPaneState(projectPath: path)
+        if let existing = browserSessions[key], existing.state.projectPath == path {
+            existing.touch()
+            existing.registerControl(close: { closeBrowserSession(for: key) })
+            enforceBrowserSessionLimit(activeKey: key)
+            return
+        }
+        browserSessions[key]?.close()
+        let session = BrowserSession(key: key, state: BrowserPaneState(projectPath: path))
+        session.registerControl(close: { closeBrowserSession(for: key) })
+        browserSessions[key] = session
+        enforceBrowserSessionLimit(activeKey: key)
     }
 
     private func pruneBrowserStates() {
         let validKeys = validVCSKeys()
-        browserStates = browserStates.filter { validKeys.contains($0.key) }
+        let staleKeys = browserSessions.keys.filter { !validKeys.contains($0) }
+        for key in staleKeys {
+            browserSessions.removeValue(forKey: key)?.close()
+        }
+        enforceBrowserSessionLimit(activeKey: activeWorktreeKey)
+    }
+
+    private func enforceBrowserSessionLimit(activeKey: WorktreeKey?) {
+        let overflow = browserSessions.count - BrowserLayout.maxRetainedSessions
+        guard overflow > 0 else { return }
+        let removable = browserSessions.values
+            .filter { $0.key != activeKey }
+            .sorted { $0.lastUsedAt < $1.lastUsedAt }
+            .prefix(overflow)
+        for session in removable {
+            browserSessions.removeValue(forKey: session.key)?.close()
+        }
     }
 
     private func closeBrowserFeature() {
+        hideBrowserPanel()
+        browserSessions.values.forEach { $0.close() }
+        browserSessions.removeAll()
+    }
+
+    private func hideBrowserPanel() {
         browserPanelVisible = false
-        browserStates.removeAll()
+        browserPanelKey = nil
+    }
+
+    private func closeBrowserSession(for key: WorktreeKey) {
+        browserSessions.removeValue(forKey: key)?.close()
+        if browserPanelKey == key {
+            hideBrowserPanel()
+        }
+    }
+
+    private var isBrowserPanelVisibleForActiveWorktree: Bool {
+        browserPanelVisible && browserPanelKey == activeWorktreeKey
     }
 
     private func toggleBrowserPanel() {
@@ -1022,14 +1076,16 @@ struct MainWindow: View {
             return
         }
         guard let project = activeProject else {
-            browserPanelVisible = false
+            hideBrowserPanel()
             return
         }
 
         activateWorkspace()
         ensureBrowserState(for: project)
-        let isShowing = !browserPanelVisible
+        guard let key = activeWorktreeKey else { return }
+        let isShowing = !(browserPanelVisible && browserPanelKey == key)
         browserPanelVisible = isShowing
+        browserPanelKey = isShowing ? key : nil
         if isShowing {
             vcsPanelVisible = false
             fileTreePanelVisible = false
@@ -1086,7 +1142,7 @@ struct MainWindow: View {
         vcsPanelVisible = isShowing
         if isShowing {
             fileTreePanelVisible = false
-            browserPanelVisible = false
+            hideBrowserPanel()
             agentInstructionPanelVisible = false
         }
     }
@@ -1103,7 +1159,7 @@ struct MainWindow: View {
         fileTreePanelVisible = isShowing
         if isShowing {
             vcsPanelVisible = false
-            browserPanelVisible = false
+            hideBrowserPanel()
             agentInstructionPanelVisible = false
         }
     }
@@ -1124,7 +1180,7 @@ struct MainWindow: View {
         if isShowing {
             vcsPanelVisible = false
             fileTreePanelVisible = false
-            browserPanelVisible = false
+            hideBrowserPanel()
         }
     }
 
@@ -1156,7 +1212,7 @@ struct MainWindow: View {
         vcsPanelVisible = isShowing
         if isShowing {
             fileTreePanelVisible = false
-            browserPanelVisible = false
+            hideBrowserPanel()
             agentInstructionPanelVisible = false
         }
     }

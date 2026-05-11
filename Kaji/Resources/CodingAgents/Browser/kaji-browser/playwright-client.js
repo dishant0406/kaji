@@ -25,6 +25,7 @@ class PlaywrightClient {
   }
 
   async callTool(name, args) {
+    await ensureBrokerSessionReady();
     await this.ensureStarted();
     return this.request('tools/call', { name, arguments: args || {} }, timeoutMs());
   }
@@ -94,6 +95,19 @@ async function waitForCdpEndpoint() {
     await sleep(250);
   }
   throw new Error('Kaji browser CDP endpoint is not available. Open the Kaji browser panel first.');
+}
+
+async function ensureBrokerSessionReady() {
+  const state = browserState();
+  if (!state.brokerUrl) throw new Error('Kaji browser session is not available. Open the Kaji browser panel first.');
+  const response = await fetch(`${state.brokerUrl}/browser`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: state.sessionId, action: 'current', arguments: {} })
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.error) throw new Error(body.error || `Kaji browser broker returned ${response.status}`);
+  if (!body.connected) throw new Error('Kaji browser session is not attached yet. Use kaji_browser_current or open the matching Kaji Browser panel first.');
 }
 
 async function isReady(endpoint) {

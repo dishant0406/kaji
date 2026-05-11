@@ -65,7 +65,7 @@ final class KajiBrowserControlRegistry {
     private func newTab(_ arguments: [String: String], target: KajiBrowserSessionTarget) -> [String: Any] {
         let page = target.state.openPage(url: arguments["url"] ?? BrowserPaneState.defaultURL)
         target.controllers.controller(for: page.id).ensureStarted(url: page.url)
-        return current(target: target)
+        return pendingCurrent(target: target)
     }
 
     private func readPage(target: KajiBrowserSessionTarget) async -> [String: Any] {
@@ -120,6 +120,12 @@ final class KajiBrowserControlRegistry {
             "title": page?.title ?? "Browser",
             "tabs": target.state.pages.map(pagePayload),
         ]
+    }
+
+    private func pendingCurrent(target: KajiBrowserSessionTarget) -> [String: Any] {
+        var result = current(target: target)
+        result["pending"] = true
+        return result
     }
 
     private func pagePayload(_ page: BrowserPageState) -> [String: Any] {
