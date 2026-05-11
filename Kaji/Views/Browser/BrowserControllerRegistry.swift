@@ -14,12 +14,19 @@ final class BrowserControllerRegistry {
     }
 
     func removeController(for id: UUID) {
-        controllers[id]?.close()
-        controllers.removeValue(forKey: id)
+        let controller = controllers.removeValue(forKey: id)
+        Task { @MainActor in
+            await Task.yield()
+            controller?.close()
+        }
     }
 
     func closeAll() {
-        controllers.values.forEach { $0.close() }
+        let closingControllers = Array(controllers.values)
         controllers.removeAll()
+        Task { @MainActor in
+            await Task.yield()
+            closingControllers.forEach { $0.close() }
+        }
     }
 }

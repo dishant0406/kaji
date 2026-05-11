@@ -8,6 +8,7 @@ final class BrowserPaneState {
     let projectPath: String
     var pages: [BrowserPageState]
     var selectedPageID: UUID
+    var selectedDeviceProfileID: String
 
     var selectedPage: BrowserPageState? {
         pages.first { $0.id == selectedPageID } ?? pages.first
@@ -33,15 +34,17 @@ final class BrowserPaneState {
         let page = BrowserPageState(url: url)
         pages = [page]
         selectedPageID = page.id
+        selectedDeviceProfileID = BrowserDeviceProfiles.desktopID
     }
 
-    init(projectPath: String, pages: [BrowserPageState], selectedPageID: UUID?) {
+    init(projectPath: String, pages: [BrowserPageState], selectedPageID: UUID?, selectedDeviceProfileID: String = BrowserDeviceProfiles.desktopID) {
         self.projectPath = projectPath
         let restoredPages = pages.isEmpty ? [BrowserPageState()] : pages
         self.pages = restoredPages
         self.selectedPageID = selectedPageID.flatMap { id in
             restoredPages.contains { $0.id == id } ? id : nil
         } ?? restoredPages[0].id
+        self.selectedDeviceProfileID = BrowserDeviceProfiles.profile(for: selectedDeviceProfileID).id
     }
 
     @discardableResult
@@ -80,7 +83,8 @@ final class BrowserPaneState {
         self.init(
             projectPath: projectPath,
             pages: pageSnapshots.map { BrowserPageState(id: $0.id, url: $0.url, title: $0.title) },
-            selectedPageID: snapshot.selectedBrowserPageID
+            selectedPageID: snapshot.selectedBrowserPageID,
+            selectedDeviceProfileID: snapshot.browserDeviceProfileID ?? BrowserDeviceProfiles.desktopID
         )
     }
 

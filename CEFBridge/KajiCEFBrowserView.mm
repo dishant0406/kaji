@@ -10,6 +10,7 @@
 @implementation KajiCEFBrowserView {
   CefRefPtr<KajiCEFClient> _client;
   BOOL _created;
+  BOOL _closing;
 }
 
 - (instancetype)initWithURL:(NSString*)url {
@@ -31,6 +32,9 @@
 }
 
 - (void)focusBrowser {
+  if (_closing) {
+    return;
+  }
   if (_client) {
     _client->SetHidden(NO);
   }
@@ -103,6 +107,25 @@
   _client->ReadPage(completion);
   [KajiCEFRuntime pumpMessageLoop];
 }
+
+- (void)evaluateJavaScript:(NSString*)script completion:(KajiCEFScriptHandler)completion {
+  if (!_client) {
+    completion(@"Browser is not ready.");
+    return;
+  }
+  _client->EvaluateJavaScript(script, completion);
+  [KajiCEFRuntime pumpMessageLoop];
+}
+
+- (void)applyDeviceProfileWithWidth:(int)width height:(int)height deviceScaleFactor:(double)deviceScaleFactor userAgent:(NSString*)userAgent mobile:(BOOL)mobile touch:(BOOL)touch platform:(NSString*)platform {
+  if (!_client) {
+    return;
+  }
+  _client->ApplyDeviceProfile(width, height, deviceScaleFactor, userAgent, mobile, touch, platform);
+  [self resizeBrowser];
+  [KajiCEFRuntime pumpMessageLoop];
+}
+
 - (void)setActive:(BOOL)active {
   self.hidden = !active;
   if (_client) {
@@ -111,12 +134,19 @@
 }
 
 - (void)closeBrowser {
+  if (_closing) {
+    return;
+  }
+  _closing = YES;
   if (_client) {
+    _client->RetainUntilClose();
     _client->CloseBrowser();
     _client = nullptr;
   }
   _created = NO;
-  [self removeFromSuperview];
+  if (self.superview) {
+    [self removeFromSuperview];
+  }
 }
 
 - (void)dealloc {
@@ -144,7 +174,7 @@
 }
 
 - (void)createBrowserIfNeeded {
-  if (_created || !self.window || self.bounds.size.width < 1 || self.bounds.size.height < 1) {
+  if (_closing || _created || !self.window || self.bounds.size.width < 1 || self.bounds.size.height < 1) {
     return;
   }
   _created = YES;

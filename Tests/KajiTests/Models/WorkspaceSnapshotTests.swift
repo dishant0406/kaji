@@ -83,7 +83,8 @@ struct WorkspaceSnapshotTests {
                 BrowserPageSnapshot(id: firstID, url: "https://one.example", title: "One"),
                 BrowserPageSnapshot(id: secondID, url: "https://two.example", title: "Two"),
             ],
-            selectedBrowserPageID: secondID
+            selectedBrowserPageID: secondID,
+            browserDeviceProfileID: "iphone-15-pro"
         )
 
         let data = try JSONEncoder().encode(snapshot)
@@ -92,6 +93,7 @@ struct WorkspaceSnapshotTests {
         #expect(decoded.browserPages?.count == 2)
         #expect(decoded.browserPages?.last?.url == "https://two.example")
         #expect(decoded.selectedBrowserPageID == secondID)
+        #expect(decoded.browserDeviceProfileID == "iphone-15-pro")
     }
 
     @Test("legacy root snapshot upgrades hidden pane tabs into workspace tabs")

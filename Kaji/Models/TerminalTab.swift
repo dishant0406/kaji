@@ -172,7 +172,8 @@ final class TerminalTab: Identifiable {
             filePath: content.editorState?.filePath,
             browserURL: content.browserState?.url,
             browserPages: content.browserState?.pageSnapshots,
-            selectedBrowserPageID: content.browserState?.selectedPageID
+            selectedBrowserPageID: content.browserState?.selectedPageID,
+            browserDeviceProfileID: content.browserState?.selectedDeviceProfileID
         )
     }
 }

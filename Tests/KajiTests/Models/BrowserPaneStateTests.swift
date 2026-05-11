@@ -57,4 +57,26 @@ struct BrowserPaneStateTests {
         #expect(state.url == "https://two.example")
         #expect(state.title == "Two")
     }
+
+    @Test("snapshot restore preserves selected browser device")
+    func snapshotRestorePreservesSelectedBrowserDevice() throws {
+        let snapshot = TerminalTabSnapshot(
+            kind: .browser,
+            customTitle: nil,
+            colorID: nil,
+            isPinned: false,
+            projectPath: "/tmp/test",
+            paneTitle: "Browser",
+            browserURL: "https://example.com",
+            browserPages: [
+                BrowserPageSnapshot(id: UUID(), url: "https://example.com", title: "Example"),
+            ],
+            selectedBrowserPageID: nil,
+            browserDeviceProfileID: "pixel-8"
+        )
+
+        let state = BrowserPaneState(projectPath: "/tmp/test", snapshot: snapshot)
+
+        #expect(state.selectedDeviceProfileID == "pixel-8")
+    }
 }

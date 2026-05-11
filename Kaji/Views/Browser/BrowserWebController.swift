@@ -9,11 +9,13 @@ final class BrowserWebController {
     private var projectPath = ""
     private var pageChanged: ((UUID, String) -> Void)?
     private var popupRequested: ((UUID, String) -> Void)?
-    private var browserView: KajiCEFBrowserView?
+    var browserView: KajiCEFBrowserView?
     private var isStarting = false
     private var activeState: Bool?
     private var startURL = ""
     private var startTask: Task<Void, Never>?
+    private var deviceProfile = BrowserDeviceProfiles.profile(for: BrowserDeviceProfiles.desktopID)
+    private var isClosed = false
 
     var isReady: Bool { browserView != nil }
 
@@ -22,11 +24,14 @@ final class BrowserWebController {
         page: BrowserPageState,
         projectPath: String,
         isActive: Bool,
+        deviceProfile: BrowserDeviceProfile,
         callbacks: BrowserSurfaceCallbacks
     ) {
         self.surface = surface
         self.page = page
         self.projectPath = projectPath
+        self.deviceProfile = deviceProfile
+        surface.applyDeviceProfile(deviceProfile)
         pageChanged = callbacks.pageChanged
         popupRequested = callbacks.popupRequested
         surface.controller = self
@@ -36,6 +41,9 @@ final class BrowserWebController {
         if let browserView {
             if !surface.contains(browserView: browserView) {
                 surface.install(browserView: browserView)
+            }
+            if isActive {
+                applyDeviceProfile(deviceProfile)
             }
             updateActiveState(isActive, browserView: browserView)
             return
@@ -82,6 +90,7 @@ final class BrowserWebController {
     }
 
     func ensureStarted(url: String) {
+        guard !isClosed else { return }
         startURL = BrowserURLParser.url(from: url)?.absoluteString ?? url
         scheduleStart()
     }
@@ -109,6 +118,7 @@ final class BrowserWebController {
     }
 
     func close() {
+        isClosed = true
         startTask?.cancel()
         startTask = nil
         startURL = ""
@@ -122,12 +132,13 @@ final class BrowserWebController {
     }
 
     private func startIfNeeded(url: String) {
-        guard browserView == nil, !isStarting else { return }
+        guard !isClosed, surface != nil, browserView == nil, !isStarting else { return }
         isStarting = true
         defer { isStarting = false }
         surface?.show(status: "Starting Chromium…")
         do {
             try startRuntime()
+            guard !isClosed, surface != nil else { return }
             let browserView = KajiCEFBrowserView(url: BrowserURLParser.url(from: url)?.absoluteString ?? "about:blank")
             browserView.pageChanged = { [weak self] url, title in
                 Task { @MainActor in self?.updatePage(url: url, title: title) }
@@ -137,6 +148,7 @@ final class BrowserWebController {
             }
             self.browserView = browserView
             surface?.install(browserView: browserView)
+            applyDeviceProfile(deviceProfile)
             updateActiveState(true, browserView: browserView)
         } catch {
             surface?.show(status: error.localizedDescription)
@@ -144,10 +156,11 @@ final class BrowserWebController {
     }
 
     private func scheduleStart() {
-        guard surface != nil, !projectPath.isEmpty, browserView == nil, !isStarting, startTask == nil else { return }
+        guard !isClosed, surface != nil, !projectPath.isEmpty, browserView == nil, !isStarting, startTask == nil else { return }
         surface?.show(status: "Starting Chromium…")
         startTask = Task { @MainActor in
             await Task.yield()
+            guard !Task.isCancelled else { return }
             startIfNeeded(url: startURL)
             startTask = nil
         }
