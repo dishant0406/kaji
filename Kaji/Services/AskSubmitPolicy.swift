@@ -11,6 +11,31 @@ enum AskSubmitPolicy {
         return canSend && !hasActiveAnnotation
     }
 
+    static func shouldApplyHighlightedEntry(key: AskAnnotationKey) -> Bool {
+        switch key {
+        case .bookmark:
+            true
+        case .project,
+             .worktree,
+             .provider,
+             .mode,
+             .history,
+             .skill,
+             .task,
+             .taskAdd,
+             .taskEdit,
+             .taskDelete,
+             .projectAdd,
+             .attach,
+             .execute,
+             .executeAdd,
+             .executeEdit,
+             .executeDelete,
+             .bookmarkFolder:
+            false
+        }
+    }
+
     static func activeAnnotationIsResolved(
         key: AskAnnotationKey,
         hasHistory: Bool,

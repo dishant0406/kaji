@@ -58,6 +58,10 @@ extension AskOverlay {
 
         if let activeAnnotation = parsed.activeAnnotation {
             if handleUtilityAnnotation(activeAnnotation) { return }
+            if AskSubmitPolicy.shouldApplyHighlightedEntry(key: activeAnnotation.key) {
+                confirmHighlight()
+                return
+            }
             let activeTarget = resolvedTarget(for: parsed)
             if activeAnnotationIsResolved(activeAnnotation, target: activeTarget) {
                 applyResolvedTarget(activeTarget)
