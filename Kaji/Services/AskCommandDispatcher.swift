@@ -3,18 +3,9 @@ import Foundation
 @MainActor
 enum AskCommandDispatcher {
     static func send(_ request: AskDispatchRequest, appState: AppState) async {
-        AskHangDebugLog.mark("AskCommandDispatcher.send.start", [
-            "history": request.history?.sessionID ?? "nil",
-            "provider": request.provider.rawValue,
-            "sessionMode": request.sessionMode.rawValue,
-        ])
         let prompt = adaptedPrompt(for: request)
-        AskHangDebugLog.mark("AskCommandDispatcher.send.adaptedPrompt", [
-            "promptEmpty": String(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
-        ])
 
         if let history = request.history {
-            AskHangDebugLog.mark("AskCommandDispatcher.send.historyBranch")
             await sendToHistory(
                 history,
                 prompt: prompt,
@@ -24,17 +15,13 @@ enum AskCommandDispatcher {
             return
         }
 
-        AskHangDebugLog.mark("AskCommandDispatcher.send.beforeSelectProject")
         appState.selectProject(request.project, worktree: request.worktree)
-        AskHangDebugLog.mark("AskCommandDispatcher.send.afterSelectProject")
-        AskHangDebugLog.mark("AskCommandDispatcher.send.beforeSessionScan")
         let sessions = AskSessionCatalog.sessions(
             projectID: request.project.id,
             worktreeID: request.worktree.id,
             worktrees: [request.worktree],
             appState: appState
         )
-        AskHangDebugLog.mark("AskCommandDispatcher.send.afterSessionScan", ["count": String(sessions.count)])
 
         switch request.sessionMode {
         case .existingSession:
@@ -82,27 +69,13 @@ enum AskCommandDispatcher {
         request: AskDispatchRequest,
         appState: AppState
     ) async {
-        AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.start", [
-            "history": history.sessionID,
-            "provider": request.provider.rawValue,
-        ])
         let resume = resumeCommand(
             for: request.provider,
             sessionID: history.sessionID,
             prompt: prompt
         )
-        AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.resumeBuilt", [
-            "empty": String(resume.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
-            "length": String(resume.count),
-        ])
-        guard !resume.isEmpty else {
-            AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.emptyResume")
-            return
-        }
-        AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.beforeSelectProject")
+        guard !resume.isEmpty else { return }
         appState.selectProject(request.project, worktree: request.worktree)
-        AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.afterSelectProject")
-        AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.beforeCreateTab")
         appState.createStartupCommandTab(
             projectID: request.project.id,
             title: request.provider.title,
@@ -116,7 +89,6 @@ enum AskCommandDispatcher {
             ),
             injectedCommand: commandWithCompletionNotification(resume, provider: request.provider)
         )
-        AskHangDebugLog.mark("AskCommandDispatcher.sendToHistory.afterCreateTab")
     }
 
     private static func sendToNewSession(

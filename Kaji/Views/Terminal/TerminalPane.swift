@@ -69,30 +69,17 @@ struct TerminalBridge: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> GhosttyTerminalNSView {
-        AskHangDebugLog.mark("TerminalBridge.makeNSView.start", [
-            "focused": String(focused),
-            "injected": state.injectedCommand == nil ? "nil" : "set",
-            "paneID": state.id.uuidString,
-            "startup": state.startupCommand == nil ? "nil" : "set",
-            "visible": String(visible),
-        ])
         let registry = TerminalViewRegistry.shared
         let view = registry.view(
             for: state.id,
             workingDirectory: state.projectPath,
             command: state.startupCommand
         )
-        AskHangDebugLog.mark("TerminalBridge.makeNSView.afterRegistry", ["paneID": state.id.uuidString])
         if view.envVars.isEmpty, let key = worktreeKey {
-            AskHangDebugLog.mark("TerminalBridge.makeNSView.beforeEnv", ["paneID": state.id.uuidString])
             view.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
-            AskHangDebugLog.mark("TerminalBridge.makeNSView.afterEnv", ["paneID": state.id.uuidString])
         }
-        AskHangDebugLog.mark("TerminalBridge.makeNSView.beforeInjected", ["paneID": state.id.uuidString])
         view.setInjectedCommand(state.injectedCommand)
-        AskHangDebugLog.mark("TerminalBridge.makeNSView.afterInjected", ["paneID": state.id.uuidString])
         registerInitialAgentSessionIfNeeded(context: context)
-        AskHangDebugLog.mark("TerminalBridge.makeNSView.afterRegisterSeed", ["paneID": state.id.uuidString])
         view.isFocused = focused
         view.overlayActive = overlayActive
         view.setSurfaceVisible(visible)
@@ -112,24 +99,15 @@ struct TerminalBridge: NSViewRepresentable {
                 view.window?.makeFirstResponder(view)
             }
         }
-        AskHangDebugLog.mark("TerminalBridge.makeNSView.end", ["paneID": state.id.uuidString])
         return view
     }
 
     func updateNSView(_ nsView: GhosttyTerminalNSView, context: Context) {
-        AskHangDebugLog.mark("TerminalBridge.updateNSView.start", [
-            "injected": state.injectedCommand == nil ? "nil" : "set",
-            "paneID": state.id.uuidString,
-            "surface": String(nsView.hasLiveSurface),
-            "visible": String(visible),
-        ])
         if nsView.envVars.isEmpty, nsView.surface == nil, let key = worktreeKey {
             nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
         }
         nsView.setInjectedCommand(state.injectedCommand)
-        AskHangDebugLog.mark("TerminalBridge.updateNSView.afterInjected", ["paneID": state.id.uuidString])
         registerInitialAgentSessionIfNeeded(context: context)
-        AskHangDebugLog.mark("TerminalBridge.updateNSView.afterRegisterSeed", ["paneID": state.id.uuidString])
         nsView.overlayActive = overlayActive
         nsView.onFocus = onFocus
         nsView.onProcessExit = onProcessExit
@@ -166,7 +144,6 @@ struct TerminalBridge: NSViewRepresentable {
         } else if !focused, wasFocused {
             nsView.notifySurfaceUnfocused()
         }
-        AskHangDebugLog.mark("TerminalBridge.updateNSView.end", ["paneID": state.id.uuidString])
     }
 
     private static func buildEnvVars(
@@ -195,20 +172,12 @@ struct TerminalBridge: NSViewRepresentable {
     }
 
     private func registerInitialAgentSessionIfNeeded(context: Context) {
-        AskHangDebugLog.mark("TerminalBridge.registerSeed.start", ["paneID": state.id.uuidString])
         guard let seed = state.agentSessionSeed,
                !seed.sessionID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else {
-            AskHangDebugLog.mark("TerminalBridge.registerSeed.none", ["paneID": state.id.uuidString])
-            return
-        }
+        else { return }
         let seedKey = "\(seed.providerID):\(seed.sessionID):\(state.id.uuidString)"
-        guard context.coordinator.registeredSeedKey != seedKey else {
-            AskHangDebugLog.mark("TerminalBridge.registerSeed.alreadyRegistered", ["paneID": state.id.uuidString])
-            return
-        }
+        guard context.coordinator.registeredSeedKey != seedKey else { return }
         context.coordinator.registeredSeedKey = seedKey
-        AskHangDebugLog.mark("TerminalBridge.registerSeed.beforeStore", ["paneID": state.id.uuidString])
         CodingAgentSessionMetadataStore.shared.update(CodingAgentSessionMetadata(
             providerID: seed.providerID,
             paneID: state.id,
@@ -219,7 +188,6 @@ struct TerminalBridge: NSViewRepresentable {
             source: "kaji-launch",
             updatedAt: Date()
         ))
-        AskHangDebugLog.mark("TerminalBridge.registerSeed.afterStore", ["paneID": state.id.uuidString])
     }
 
     private func configureSearchCallbacks(_ view: GhosttyTerminalNSView) {
