@@ -156,12 +156,7 @@ extension AskOverlay {
 
     var historyOptions: [AskHistoryOption] {
         guard fieldText.contains(AskAnnotationKey.history.token) else { return [] }
-        let query = activeAnnotation?.key == .history ? activeAnnotation?.value ?? "" : ""
-        guard !query.isEmpty else { return cachedHistoryOptions }
-        return cachedHistoryOptions.filter { option in
-            option.title.localizedCaseInsensitiveContains(query) ||
-                option.sessionID.localizedCaseInsensitiveContains(query)
-        }
+        return cachedHistoryOptions
     }
 
     var skillOptions: [AskSkillOption] {
@@ -289,7 +284,8 @@ extension AskOverlay {
             isHistoryLoading = false
             return
         }
-        let key = AskHistoryCacheKey(provider: provider, projectPath: selectedWorktree?.path ?? selectedProject?.path)
+        let query = parsed.activeAnnotation?.key == .history ? parsed.activeAnnotation?.value ?? "" : parsed.annotations[.history] ?? ""
+        let key = AskHistoryCacheKey(provider: provider, projectPath: selectedWorktree?.path ?? selectedProject?.path, query: query)
         guard historyCacheKey != key else { return }
         historyLoadTask?.cancel()
         historyCacheKey = key
@@ -297,7 +293,7 @@ extension AskOverlay {
         isHistoryLoading = true
         historyLoadTask = Task { @MainActor in
             let options = await Task.detached(priority: .userInitiated) {
-                AskHistoryCatalog.options(provider: key.provider, projectPath: key.projectPath, query: "")
+                AskHistoryCatalog.options(provider: key.provider, projectPath: key.projectPath, query: key.query)
             }.value
             guard !Task.isCancelled, historyCacheKey == key else { return }
             isHistoryLoading = false
