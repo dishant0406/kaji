@@ -7,11 +7,7 @@ struct BrowserPane: View {
     @State private var controllers = BrowserControllerRegistry()
     @State private var pendingURL = ""
     @State private var showsPageText = false
-    @State private var showsConsole = false
     @State private var isReading = false
-    @State private var consoleCommand = ""
-    @State private var consoleEntries: [BrowserConsoleEntry] = []
-    @State private var isConsoleRunning = false
 
     private var selectedPage: BrowserPageState? { state.selectedPage }
     private var selectedController: BrowserWebController? {
@@ -34,15 +30,6 @@ struct BrowserPane: View {
                         onClose: { showsPageText = false }
                     )
                 }
-                if showsConsole {
-                    BrowserConsolePanel(
-                        command: $consoleCommand,
-                        entries: consoleEntries,
-                        isRunning: isConsoleRunning,
-                        onRun: { Task { await runConsoleCommand() } },
-                        onClose: { showsConsole = false }
-                    )
-                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
@@ -63,7 +50,6 @@ struct BrowserPane: View {
         .onChange(of: state.selectedPageID) { _, _ in
             pendingURL = state.url
             showsPageText = false
-            showsConsole = false
             selectedController?.ensureStarted(url: state.url)
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
             registerBrowserControl()
@@ -104,13 +90,12 @@ struct BrowserPane: View {
         BrowserToolbar(
             pendingURL: $pendingURL,
             deviceProfileID: $state.selectedDeviceProfileID,
-            showsConsole: showsConsole,
             showsPageText: showsPageText,
             onBack: { selectedController?.goBack() },
             onForward: { selectedController?.goForward() },
             onReload: { selectedController?.reload() },
             onNavigate: navigate,
-            onToggleConsole: { showsConsole.toggle() },
+            onOpenDevTools: { selectedController?.showDevTools() },
             onReadPage: { Task { await readPage() } }
         )
     }
@@ -190,18 +175,4 @@ struct BrowserPane: View {
         }
     }
 
-    private func runConsoleCommand() async {
-        let command = consoleCommand.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !command.isEmpty else { return }
-        isConsoleRunning = true
-        consoleCommand = ""
-        let entry = BrowserConsoleEntry(command: command, result: "", isRunning: true)
-        consoleEntries.append(entry)
-        let result = await selectedController?.evaluateJavaScript(command) ?? "Browser is not ready."
-        if let index = consoleEntries.firstIndex(where: { $0.id == entry.id }) {
-            consoleEntries[index].result = result
-            consoleEntries[index].isRunning = false
-        }
-        isConsoleRunning = false
-    }
 }

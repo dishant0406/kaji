@@ -108,12 +108,11 @@
   [KajiCEFRuntime pumpMessageLoop];
 }
 
-- (void)evaluateJavaScript:(NSString*)script completion:(KajiCEFScriptHandler)completion {
+- (void)showDevTools {
   if (!_client) {
-    completion(@"Browser is not ready.");
     return;
   }
-  _client->EvaluateJavaScript(script, completion);
+  _client->ShowDevTools();
   [KajiCEFRuntime pumpMessageLoop];
 }
 

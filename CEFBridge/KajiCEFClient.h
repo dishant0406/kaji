@@ -2,9 +2,7 @@
 #import "KajiCEFBridge.h"
 
 #include "include/cef_client.h"
-#include "include/cef_devtools_message_observer.h"
 #include <string>
-#include <unordered_map>
 
 class KajiCEFClient : public CefClient,
                        public CefDisplayHandler,
@@ -37,22 +35,18 @@ class KajiCEFClient : public CefClient,
   void GoForward();
   void Reload();
   void ReadPage(KajiCEFTextHandler completion);
-  void EvaluateJavaScript(NSString* script, KajiCEFScriptHandler completion);
+  void ShowDevTools();
   void ApplyDeviceProfile(int width, int height, double device_scale_factor, NSString* user_agent, bool mobile, bool touch, NSString* platform);
   void RunJavaScript(NSString* script);
   void SetHidden(bool hidden);
   void CloseBrowser();
   void RetainUntilClose();
   CefRefPtr<CefBrowser> browser() const;
-  void CompleteDevToolsMethod(int message_id, bool success, const void* result, size_t result_size);
  private:
-  NSString* FormatScriptResult(bool success, const void* result, size_t result_size);
   __weak KajiCEFBrowserView* owner_;
   CefRefPtr<CefBrowser> browser_;
-  CefRefPtr<CefRegistration> devtools_registration_;
-  int devtools_message_id_ = 0;
+  CefRefPtr<CefClient> devtools_client_;
   bool close_requested_ = false;
   std::string pending_url_;
-  std::unordered_map<int, KajiCEFScriptHandler> pending_script_handlers_;
   IMPLEMENT_REFCOUNTING(KajiCEFClient);
 };

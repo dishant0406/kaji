@@ -18,23 +18,23 @@ void ReleaseClosingClient(KajiCEFClient* client) {
 }
 }
 
-class KajiCEFDevToolsObserver : public CefDevToolsMessageObserver {
+class KajiCEFDevToolsClient : public CefClient, public CefLifeSpanHandler {
  public:
-  explicit KajiCEFDevToolsObserver(KajiCEFClient* client) : client_(client) {}
+  CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
 
-  void OnDevToolsMethodResult(CefRefPtr<CefBrowser> browser,
-                              int message_id,
-                              bool success,
-                              const void* result,
-                              size_t result_size) override {
-    if (client_) {
-      client_->CompleteDevToolsMethod(message_id, success, result, result_size);
-    }
+  void OnAfterCreated(CefRefPtr<CefBrowser> browser) override {
+    browser_ = browser;
   }
 
+  void OnBeforeClose(CefRefPtr<CefBrowser> browser) override {
+    browser_ = nullptr;
+  }
+
+  CefRefPtr<CefBrowser> browser() const { return browser_; }
+
  private:
-  KajiCEFClient* client_;
-  IMPLEMENT_REFCOUNTING(KajiCEFDevToolsObserver);
+  CefRefPtr<CefBrowser> browser_;
+  IMPLEMENT_REFCOUNTING(KajiCEFDevToolsClient);
 };
 
 KajiCEFClient::KajiCEFClient(KajiCEFBrowserView* owner) : owner_(owner) {}
@@ -160,68 +160,17 @@ void KajiCEFClient::ReadPage(KajiCEFTextHandler completion) {
   browser_->GetMainFrame()->GetText(new KajiCEFTextVisitor(completion));
 }
 
-void KajiCEFClient::EvaluateJavaScript(NSString* script, KajiCEFScriptHandler completion) {
+void KajiCEFClient::ShowDevTools() {
   if (!browser_) {
-    completion(@"Browser is not ready.");
     return;
   }
-  if (!devtools_registration_) {
-    devtools_registration_ = browser_->GetHost()->AddDevToolsMessageObserver(new KajiCEFDevToolsObserver(this));
+  if (browser_->GetHost()->HasDevTools()) {
+    browser_->GetHost()->CloseDevTools();
   }
-  CefRefPtr<CefDictionaryValue> params = CefDictionaryValue::Create();
-  params->SetString("expression", std::string([script UTF8String]));
-  params->SetBool("returnByValue", true);
-  params->SetBool("awaitPromise", true);
-  params->SetBool("userGesture", true);
-  int message_id = browser_->GetHost()->ExecuteDevToolsMethod(++devtools_message_id_, "Runtime.evaluate", params);
-  if (message_id == 0) {
-    completion(@"JavaScript evaluation failed to start.");
-    return;
-  }
-  pending_script_handlers_[message_id] = [completion copy];
-}
-
-void KajiCEFClient::CompleteDevToolsMethod(int message_id, bool success, const void* result, size_t result_size) {
-  auto handler = pending_script_handlers_.find(message_id);
-  if (handler == pending_script_handlers_.end()) {
-    return;
-  }
-  KajiCEFScriptHandler completion = handler->second;
-  pending_script_handlers_.erase(handler);
-  NSString* output = FormatScriptResult(success, result, result_size);
-  dispatch_async(dispatch_get_main_queue(), ^{
-    completion(output ?: @"");
-  });
-}
-
-NSString* KajiCEFClient::FormatScriptResult(bool success, const void* result, size_t result_size) {
-  if (!result || result_size == 0) {
-    return success ? @"undefined" : @"Evaluation failed.";
-  }
-  NSData* data = [NSData dataWithBytes:result length:result_size];
-  NSDictionary* payload = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-  if (!success) {
-    NSString* message = payload[@"message"];
-    return message.length > 0 ? message : @"Evaluation failed.";
-  }
-  NSDictionary* exception = payload[@"exceptionDetails"];
-  if ([exception isKindOfClass:[NSDictionary class]]) {
-    NSString* text = exception[@"text"];
-    NSDictionary* details = exception[@"exception"];
-    NSString* description = details[@"description"] ?: details[@"value"];
-    return description.length > 0 ? description : (text.length > 0 ? text : @"Uncaught exception");
-  }
-  NSDictionary* remoteObject = payload[@"result"];
-  id value = remoteObject[@"value"];
-  if (!value || value == [NSNull null]) {
-    NSString* description = remoteObject[@"description"];
-    return description.length > 0 ? description : @"undefined";
-  }
-  if ([value isKindOfClass:[NSString class]]) {
-    return value;
-  }
-  NSData* valueData = [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingPrettyPrinted error:nil];
-  return [[NSString alloc] initWithData:valueData encoding:NSUTF8StringEncoding] ?: [value description];
+  CefWindowInfo windowInfo;
+  CefBrowserSettings settings;
+  devtools_client_ = new KajiCEFDevToolsClient();
+  browser_->GetHost()->ShowDevTools(windowInfo, devtools_client_, settings, CefPoint());
 }
 
 void KajiCEFClient::RunJavaScript(NSString* script) {
@@ -270,17 +219,11 @@ void KajiCEFClient::SetHidden(bool hidden) {
 void KajiCEFClient::CloseBrowser() {
   owner_ = nil;
   close_requested_ = true;
-  for (auto& entry : pending_script_handlers_) {
-    KajiCEFScriptHandler completion = entry.second;
-    dispatch_async(dispatch_get_main_queue(), ^{
-      completion(@"Browser closed before JavaScript finished.");
-    });
-  }
-  pending_script_handlers_.clear();
-  devtools_registration_ = nullptr;
   if (!browser_) {
     return;
   }
+  browser_->GetHost()->CloseDevTools();
+  devtools_client_ = nullptr;
   browser_->GetHost()->CloseBrowser(true);
   browser_ = nullptr;
 }

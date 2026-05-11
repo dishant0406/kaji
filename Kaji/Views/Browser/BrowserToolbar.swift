@@ -3,13 +3,12 @@ import SwiftUI
 struct BrowserToolbar: View {
     @Binding var pendingURL: String
     @Binding var deviceProfileID: String
-    let showsConsole: Bool
     let showsPageText: Bool
     let onBack: () -> Void
     let onForward: () -> Void
     let onReload: () -> Void
     let onNavigate: () -> Void
-    let onToggleConsole: () -> Void
+    let onOpenDevTools: () -> Void
     let onReadPage: () -> Void
 
     var body: some View {
@@ -27,13 +26,8 @@ struct BrowserToolbar: View {
             IconButton(symbol: "paperplane", accessibilityLabel: "Open URL", action: onNavigate)
             BrowserDeviceSelect(selection: $deviceProfileID)
                 .help("Device mode")
-            IconButton(
-                symbol: "chevron.left.forwardslash.chevron.right",
-                selected: showsConsole,
-                accessibilityLabel: "Dev Console",
-                action: onToggleConsole
-            )
-            .help("Dev console")
+            IconButton(symbol: "hammer", accessibilityLabel: "Open DevTools", action: onOpenDevTools)
+                .help("Open Chromium DevTools")
             IconButton(symbol: "text.page", selected: showsPageText, accessibilityLabel: "Read Page", action: onReadPage)
                 .help("Read page text")
         }
