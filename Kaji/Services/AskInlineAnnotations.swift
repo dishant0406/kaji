@@ -113,10 +113,11 @@ enum AskInlineAnnotations {
         switch key {
         case .provider:
             AskProvider.resolveAnnotation(value) != nil
+        case .history:
+            true
         case .mode:
             AskSessionMode.resolveAnnotation(value) != nil
-        case .history,
-             .skill,
+        case .skill,
              .task,
              .taskAdd,
              .taskEdit,
