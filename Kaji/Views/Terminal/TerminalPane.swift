@@ -61,6 +61,7 @@ struct TerminalBridge: NSViewRepresentable {
         var wasFocused = false
         var wasOverlayActive = false
         var wasVisible = true
+        var registeredSeedKey: String?
     }
 
     func makeCoordinator() -> Coordinator {
@@ -90,7 +91,7 @@ struct TerminalBridge: NSViewRepresentable {
         AskHangDebugLog.mark("TerminalBridge.makeNSView.beforeInjected", ["paneID": state.id.uuidString])
         view.setInjectedCommand(state.injectedCommand)
         AskHangDebugLog.mark("TerminalBridge.makeNSView.afterInjected", ["paneID": state.id.uuidString])
-        registerInitialAgentSessionIfNeeded()
+        registerInitialAgentSessionIfNeeded(context: context)
         AskHangDebugLog.mark("TerminalBridge.makeNSView.afterRegisterSeed", ["paneID": state.id.uuidString])
         view.isFocused = focused
         view.overlayActive = overlayActive
@@ -127,7 +128,7 @@ struct TerminalBridge: NSViewRepresentable {
         }
         nsView.setInjectedCommand(state.injectedCommand)
         AskHangDebugLog.mark("TerminalBridge.updateNSView.afterInjected", ["paneID": state.id.uuidString])
-        registerInitialAgentSessionIfNeeded()
+        registerInitialAgentSessionIfNeeded(context: context)
         AskHangDebugLog.mark("TerminalBridge.updateNSView.afterRegisterSeed", ["paneID": state.id.uuidString])
         nsView.overlayActive = overlayActive
         nsView.onFocus = onFocus
@@ -193,7 +194,7 @@ struct TerminalBridge: NSViewRepresentable {
         return vars
     }
 
-    private func registerInitialAgentSessionIfNeeded() {
+    private func registerInitialAgentSessionIfNeeded(context: Context) {
         AskHangDebugLog.mark("TerminalBridge.registerSeed.start", ["paneID": state.id.uuidString])
         guard let seed = state.agentSessionSeed,
                !seed.sessionID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -201,6 +202,12 @@ struct TerminalBridge: NSViewRepresentable {
             AskHangDebugLog.mark("TerminalBridge.registerSeed.none", ["paneID": state.id.uuidString])
             return
         }
+        let seedKey = "\(seed.providerID):\(seed.sessionID):\(state.id.uuidString)"
+        guard context.coordinator.registeredSeedKey != seedKey else {
+            AskHangDebugLog.mark("TerminalBridge.registerSeed.alreadyRegistered", ["paneID": state.id.uuidString])
+            return
+        }
+        context.coordinator.registeredSeedKey = seedKey
         AskHangDebugLog.mark("TerminalBridge.registerSeed.beforeStore", ["paneID": state.id.uuidString])
         CodingAgentSessionMetadataStore.shared.update(CodingAgentSessionMetadata(
             providerID: seed.providerID,
