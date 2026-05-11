@@ -22,7 +22,7 @@ struct CodexAgentModule: CodingAgentModule, AIUsageProvider {
         commandProfile: .init(
             prompt: .positional,
             modelFlag: "--model",
-            resume: .subcommand("resume"),
+            resume: .subcommandWithPromptFlag(command: "resume", promptFlag: "--"),
             skillInvocation: .instructionTemplate("Use the {name} skill. Follow the instructions in {path}.")
         ),
         models: ["gpt-5.5", "gpt-5.4", "gpt-5.2-codex", "gpt-5.1-codex", "gpt-5-codex"],

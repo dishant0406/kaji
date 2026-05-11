@@ -160,6 +160,7 @@ enum CodingAgentPromptPlacement: Hashable {
 enum CodingAgentResumeStrategy: Hashable {
     case unsupported
     case subcommand(String)
+    case subcommandWithPromptFlag(command: String, promptFlag: String)
     case flag(String)
     case flagWithPrompt(sessionFlag: String, promptFlag: String)
 }
