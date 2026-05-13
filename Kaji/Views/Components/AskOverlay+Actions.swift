@@ -339,6 +339,14 @@ extension AskOverlay {
         highlightedIndex = entries.isEmpty ? nil : 0
     }
 
+    func applyPrefillIfNeeded() {
+        let prefill = prefillState.consume()
+        guard !prefill.isEmpty else { return }
+        fieldText = prefill
+        prompt = prefill
+        handleFieldChange(prefill)
+    }
+
     func submit() {
         submit(target: resolvedTarget(for: AskInlineAnnotations.parse(fieldText)))
     }

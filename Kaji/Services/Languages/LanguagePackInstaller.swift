@@ -60,7 +60,7 @@ enum LanguagePackInstaller {
             paths.append(parser)
         }
         if let queries = syntax.treeSitter?.queries {
-            paths.append(contentsOf: [queries.highlights, queries.injections, queries.locals, queries.folds].compactMap(\.self))
+            paths.append(contentsOf: [queries.highlights, queries.injections, queries.locals, queries.folds, queries.symbols].compactMap(\.self))
         }
         if let grammar = syntax.textMate?.grammar {
             paths.append(grammar)

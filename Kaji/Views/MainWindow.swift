@@ -96,6 +96,8 @@ struct MainWindow: View {
     @State private var showAsk = false
     @State private var showAgentCommandCenter = false
     @State private var showWorktreeSwitcher = false
+    @State private var showGoToSymbol = false
+    @State private var showGoToLine = false
     @State private var showSettings = false
     @State private var showMCPControlPanel = false
     @State private var showCreateThemeModal = false
@@ -112,44 +114,25 @@ struct MainWindow: View {
     }
 
     private var configuredMainLayout: AnyView {
-        let base = AnyView(
+        let overlayed = AnyView(
             mainLayout
-                .environment(
-                    \.overlayActive,
-                    showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showSettings || showMCPControlPanel ||
-                        showCreateThemeModal ||
-                        createWorktreeProjectID != nil || projectLogoCropRequest != nil
-                )
-                .overlay(alignment: toastAlignment) {
-                    toastOverlay
-                }
-                .overlay {
-                    quickOpenOverlay
-                }
-                .overlay {
-                    askOverlay
-                }
-                .overlay {
-                    agentCommandCenterOverlay
-                }
-                .overlay {
-                    worktreeSwitcherOverlay
-                }
-                .overlay {
-                    settingsOverlay
-                }
-                .overlay {
-                    mcpControlPanelOverlay
-                }
-                .overlay {
-                    createWorktreeOverlay
-                }
-                .overlay {
-                    createThemeOverlay
-                }
-                .overlay {
-                    projectLogoCropperOverlay
-                }
+                .environment(\.overlayActive, overlayActive)
+                .overlay(alignment: toastAlignment) { toastOverlay }
+                .overlay { quickOpenOverlay }
+                .overlay { askOverlay }
+                .overlay { agentCommandCenterOverlay }
+                .overlay { worktreeSwitcherOverlay }
+                .overlay { goToSymbolOverlay }
+                .overlay { goToLineOverlay }
+        )
+
+        let base = AnyView(
+            overlayed
+                .overlay { settingsOverlay }
+                .overlay { mcpControlPanelOverlay }
+                .overlay { createWorktreeOverlay }
+                .overlay { createThemeOverlay }
+                .overlay { projectLogoCropperOverlay }
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showSettings)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showMCPControlPanel)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showCreateThemeModal)
@@ -188,18 +171,46 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .quickOpen)) { _ in
                     showQuickOpen.toggle()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .goToSymbol)) { _ in
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showGoToLine = false
+                    showGoToSymbol.toggle()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .goToLine)) { _ in
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showGoToSymbol = false
+                    showGoToLine.toggle()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .ask)) { _ in
                     let shouldShow = !showAsk
                     showQuickOpen = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    showGoToSymbol = false
+                    showGoToLine = false
                     showAsk = shouldShow
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .openAskWithPrefill)) { _ in
+                    showQuickOpen = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showGoToSymbol = false
+                    showGoToLine = false
+                    showAsk = true
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .agentCommandCenter)) { _ in
                     let shouldShow = !showAgentCommandCenter
                     showQuickOpen = false
                     showAsk = false
                     showWorktreeSwitcher = false
+                    showGoToSymbol = false
+                    showGoToLine = false
                     showAgentCommandCenter = shouldShow
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .showParentAgentHome)) { _ in
@@ -211,6 +222,8 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    showGoToSymbol = false
+                    showGoToLine = false
                     appState.showParentAgentHome()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .hideParentAgentHome)) { _ in
@@ -332,6 +345,11 @@ struct MainWindow: View {
                     }
                 }
         )
+    }
+
+    private var overlayActive: Bool {
+        showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showGoToSymbol || showGoToLine || showSettings || showMCPControlPanel ||
+            showCreateThemeModal || createWorktreeProjectID != nil || projectLogoCropRequest != nil
     }
 
     private var mainLayout: some View {
@@ -637,6 +655,37 @@ struct MainWindow: View {
                     }
                 },
                 onDismiss: { showWorktreeSwitcher = false }
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        }
+    }
+
+    @ViewBuilder
+    private var goToSymbolOverlay: some View {
+        if showGoToSymbol, let editor = activeEditorState {
+            GoToSymbolOverlay(
+                symbols: editor.symbols(),
+                onSelect: { symbol in
+                    editor.navigate(to: symbol)
+                    showGoToSymbol = false
+                },
+                onDismiss: { showGoToSymbol = false }
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        }
+    }
+
+    @ViewBuilder
+    private var goToLineOverlay: some View {
+        if showGoToLine, let editor = activeEditorState {
+            GoToLineOverlay(
+                currentLine: editor.cursorLine,
+                maxLine: max(1, editor.backingStore?.lineCount ?? 1),
+                onSelect: { request in
+                    editor.navigate(to: request)
+                    showGoToLine = false
+                },
+                onDismiss: { showGoToLine = false }
             )
             .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
@@ -1137,6 +1186,11 @@ struct MainWindow: View {
         return appState.activeTab(for: project.id)?.content.editorState?.filePath
     }
 
+    private var activeEditorState: EditorTabState? {
+        guard let project = activeProject else { return nil }
+        return appState.activeTab(for: project.id)?.content.editorState
+    }
+
     private func syncFileTreeSelection(filePath: String?) {
         guard fileTreePanelVisible,
               let project = activeProject,
@@ -1513,8 +1567,11 @@ private extension ShortcutAction {
              .selectProject7,
              .selectProject8,
              .selectProject9,
-             .findInTerminal,
-             .saveFile:
+               .findInTerminal,
+               .goToSymbol,
+               .goToLine,
+               .inlineEdit,
+              .saveFile:
             true
         }
     }

@@ -96,7 +96,8 @@
         "highlights": "queries/highlights.scm",
         "injections": "queries/injections.scm",
         "locals": "queries/locals.scm",
-        "folds": "queries/folds.scm"
+        "folds": "queries/folds.scm",
+        "symbols": "queries/symbols.scm"
       }
     },
     "textMate": {

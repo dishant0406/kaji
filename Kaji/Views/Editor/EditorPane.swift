@@ -4,8 +4,11 @@ struct EditorPane: View {
     @Bindable var state: EditorTabState
     let focused: Bool
     let onFocus: () -> Void
+    let project: Project?
+    let worktree: Worktree?
     @Environment(GhosttyService.self) private var ghostty
     @Environment(AppTypographySettings.self) private var typography
+    @State private var showsOutline = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +23,7 @@ struct EditorPane: View {
             } else {
                 editorContentLayer
             }
+            EditorStatusBar(state: state)
         }
         .background(KajiTheme.bg)
         .contentShape(Rectangle())
@@ -34,6 +38,15 @@ struct EditorPane: View {
             }
             state.searchVisible = true
             state.searchFocusVersion += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .inlineEdit)) { _ in
+            guard focused else { return }
+            state.requestInlineEdit()
+        }
+        .overlay {
+            if state.inlineEditVisible {
+                InlineEditOverlay(state: state, project: project, worktree: worktree)
+            }
         }
     }
 
@@ -120,8 +133,31 @@ struct EditorPane: View {
                 replaceVersion: state.replaceVersion,
                 replaceAllVersion: state.replaceAllVersion,
                 editorFocusVersion: state.editorFocusVersion,
+                symbolNavigationVersion: state.symbolNavigationVersion,
+                lineNavigationVersion: state.lineNavigationVersion,
+                inlineEditRequestVersion: state.inlineEditRequestVersion,
+                inlineEditApplyVersion: state.inlineEditApplyVersion,
                 onFocus: onFocus
             )
+            if showsOutline {
+                EditorOutlinePanel(symbols: state.symbols()) { symbol in
+                    state.navigate(to: symbol)
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                showsOutline.toggle()
+            } label: {
+                KajiIcon(systemName: "list.bullet.rectangle", size: 12)
+                    .foregroundStyle(showsOutline ? KajiTheme.accent : KajiTheme.fgMuted)
+                    .frame(width: 26, height: 24)
+                    .background(KajiTheme.bg.opacity(0.72), in: RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 6)
+            .padding(.trailing, showsOutline ? 248 : 8)
+            .help("Toggle Outline")
         }
     }
 

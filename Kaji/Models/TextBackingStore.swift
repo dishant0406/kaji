@@ -66,6 +66,11 @@ final class TextBackingStore {
         return old
     }
 
+    func insertLines(_ newLines: [String], at index: Int) {
+        let clamped = min(max(0, index), lines.count)
+        lines.insert(contentsOf: newLines, at: clamped)
+    }
+
     struct SearchMatch {
         let lineIndex: Int
         let range: NSRange

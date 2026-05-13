@@ -167,6 +167,9 @@ private struct TabContentView: View {
     let onClosePane: () -> Void
     let onSplitRequest: (SplitDirection, SplitPosition) -> Void
     @Environment(\.activeWorktreeKey) private var worktreeKey
+    @Environment(AppState.self) private var appState
+    @Environment(ProjectStore.self) private var projectStore
+    @Environment(WorktreeStore.self) private var worktreeStore
 
     var body: some View {
         switch tab.content {
@@ -182,7 +185,13 @@ private struct TabContentView: View {
         case let .vcs(vcsState):
             VCSTabView(state: vcsState, focused: focused, onFocus: onFocus)
         case let .editor(editorState):
-            EditorPane(state: editorState, focused: focused, onFocus: onFocus)
+            EditorPane(
+                state: editorState,
+                focused: focused,
+                onFocus: onFocus,
+                project: activeProject,
+                worktree: activeWorktree
+            )
         case let .diffViewer(diffState):
             DiffViewerPane(state: diffState, focused: focused, onFocus: onFocus)
         case .parentAgent:
@@ -199,5 +208,18 @@ private struct TabContentView: View {
                 onClosePane: onClosePane
             )
         }
+    }
+
+    private var activeProject: Project? {
+        guard let projectID = appState.activeProjectID else { return nil }
+        return projectStore.projects.first { $0.id == projectID }
+    }
+
+    private var activeWorktree: Worktree? {
+        guard let project = activeProject else { return nil }
+        if let worktreeKey {
+            return worktreeStore.worktrees[project.id]?.first { $0.id == worktreeKey.worktreeID }
+        }
+        return worktreeStore.primary(for: project.id)
     }
 }

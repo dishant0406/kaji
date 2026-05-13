@@ -95,6 +95,7 @@ struct LanguageSyntaxDefinition: Codable, Equatable {
             let injections: String?
             let locals: String?
             let folds: String?
+            let symbols: String?
         }
 
         let parser: Parser
