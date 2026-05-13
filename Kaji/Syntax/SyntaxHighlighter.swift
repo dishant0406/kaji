@@ -1,7 +1,18 @@
 import Foundation
 
 @MainActor
-final class SyntaxHighlighter {
+protocol SyntaxHighlighting: AnyObject {
+    var grammar: SyntaxGrammar { get }
+
+    func reset()
+    func invalidate(fromLine index: Int)
+    func tokens(forLine line: Int) -> [TokenSpan]?
+    func applyEdit(startLine: Int, oldLineCount: Int, newLineCount: Int, backingStore: TextBackingStore) -> SyntaxHighlighter.EditOutcome
+    func spans(in range: Range<Int>, lineStartOffsets: [Int], backingStore: TextBackingStore) -> [SyntaxHighlighter.AppliedSpan]
+}
+
+@MainActor
+final class SyntaxHighlighter: SyntaxHighlighting {
     struct AppliedSpan {
         let range: NSRange
         let scope: SyntaxScope

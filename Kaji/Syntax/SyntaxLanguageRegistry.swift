@@ -70,6 +70,11 @@ enum SyntaxLanguageRegistry {
         return nil
     }
 
+    static func grammar(forLanguageID id: String) -> SyntaxGrammar? {
+        allGrammars.first { $0.name.localizedCaseInsensitiveCompare(id) == .orderedSame }
+            ?? grammar(forLanguageHint: id)
+    }
+
     private static let hintAliases: [String: String] = [
         "objc": "m",
         "objective-c": "m",

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "python",
+  "name": "Python",
+  "extensions": [
+    "py",
+    "pyw"
+  ],
+  "filenames": [],
+  "configuration": {
+    "comments": {
+      "lineComment": "#"
+    },
+    "brackets": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ]
+    ],
+    "autoClosingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ]
+    ],
+    "surroundingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ]
+    ],
+    "indentationRules": null,
+    "folding": null
+  },
+  "syntax": {
+    "engine": "builtInTokenizer",
+    "builtInTokenizer": {
+      "grammarID": "python"
+    }
+  },
+  "lsp": null,
+  "snippets": [],
+  "formatter": null
+}

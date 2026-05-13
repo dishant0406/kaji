@@ -5,11 +5,12 @@ struct EditorSettingsView: View {
     @State private var typography = AppTypographySettings.shared
     @State private var monoFonts: [String] = []
     @State private var allowMarkdownRemoteImages = MarkdownPreviewPreferences.allowRemoteImages
+    private let tabSizeOptions = [2, 4, 8]
 
     private var showsAppearanceSection: Bool { settings.defaultEditor == .builtIn }
 
     var body: some View {
-        VStack(spacing: 0) {
+        SettingsContainer {
             SettingsSection("Editor") {
                 SettingsRow("Default Editor") {
                     KajiSelect(
@@ -43,7 +44,7 @@ struct EditorSettingsView: View {
             }
 
             if showsAppearanceSection {
-                SettingsSection("Appearance", showsDivider: false) {
+                SettingsSection("Appearance") {
                     SettingsRow("Font Family") {
                         KajiSelect(
                             options: monoFonts.map {
@@ -81,6 +82,26 @@ struct EditorSettingsView: View {
                         }
                     }
                 }
+
+                SettingsSection("Code Editor", showsDivider: false) {
+                    SettingsToggleRow(label: "Line Numbers", isOn: $settings.showsLineNumbers)
+                    SettingsToggleRow(label: "Active Line", isOn: $settings.highlightsActiveLine)
+                    SettingsToggleRow(label: "Indent Guides", isOn: $settings.showsIndentGuides)
+                    SettingsToggleRow(label: "Render Whitespace", isOn: $settings.rendersWhitespace)
+                    SettingsToggleRow(label: "Bracket Matching", isOn: $settings.highlightsMatchingBrackets)
+                    SettingsToggleRow(label: "Word Wrap", isOn: $settings.wordWrapEnabled)
+                    SettingsToggleRow(label: "Auto Close Pairs", isOn: $settings.autoClosesPairs)
+                    SettingsToggleRow(label: "Auto Indent New Lines", isOn: $settings.autoIndentsNewLines)
+                    SettingsRow("Tab Size") {
+                        KajiSelect(
+                            options: tabSizeOptions.map {
+                                KajiSelectOption(id: String($0), title: String($0), value: $0)
+                            },
+                            selection: $settings.tabSize,
+                            width: SettingsMetrics.controlWidth
+                        )
+                    }
+                }
             }
 
             Spacer(minLength: 0)
@@ -96,6 +117,7 @@ struct EditorSettingsView: View {
             .padding(.horizontal, SettingsMetrics.horizontalPadding)
             .padding(.bottom, SettingsMetrics.verticalPadding)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
             monoFonts = AppTypographySettings.availableMonospacedFonts
         }

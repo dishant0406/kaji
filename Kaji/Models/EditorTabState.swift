@@ -92,7 +92,8 @@ final class EditorTabState: Identifiable {
     @ObservationIgnored let markdownSyncCoordinator = MarkdownSyncCoordinator()
     @ObservationIgnored private var markdownSyncAnchorsCache: [MarkdownSyncAnchor] = []
     @ObservationIgnored private var markdownSyncAnchorsCacheVersion: Int = -1
-    @ObservationIgnored private(set) var syntaxHighlighter: SyntaxHighlighter?
+    @ObservationIgnored private(set) var syntaxHighlighter: (any SyntaxHighlighting)?
+    @ObservationIgnored private let filePathForLogging: String
 
     static let largeFileWarningThreshold: Int64 = 5 * 1024 * 1024
     static let largeFileRefuseThreshold: Int64 = 50 * 1024 * 1024
@@ -142,10 +143,13 @@ final class EditorTabState: Identifiable {
     init(projectPath: String, filePath: String) {
         self.projectPath = projectPath
         self.filePath = filePath
+        filePathForLogging = filePath
+        DebugFileLog.log("EditorState", "init projectPath=\(projectPath) filePath=\(filePath)")
         if isMarkdownFile {
             markdownViewMode = .preview
         }
         syntaxHighlighter = Self.makeSyntaxHighlighter(for: filePath)
+        DebugFileLog.log("EditorState", "syntaxHighlighter=\(syntaxHighlighter == nil ? "nil" : "created") filePath=\(filePath)")
         loadFile()
     }
 
@@ -194,23 +198,26 @@ final class EditorTabState: Identifiable {
         )
     }
 
-    private static func makeSyntaxHighlighter(for filePath: String) -> SyntaxHighlighter? {
-        guard let grammar = SyntaxLanguageRegistry.grammar(forFile: filePath) else { return nil }
-        return SyntaxHighlighter(grammar: grammar)
+    private static func makeSyntaxHighlighter(for filePath: String) -> (any SyntaxHighlighting)? {
+        SyntaxEngineRegistry.highlighter(forFile: filePath)
     }
 
     deinit {
+        DebugFileLog.log("EditorState", "deinit filePath=\(filePathForLogging)")
         loadTask?.cancel()
     }
 
     func loadFile() {
+        DebugFileLog.log("EditorLoad", "loadFile requested filePath=\(filePath) isLoading=\(isLoading)")
         guard !isLoading else { return }
         errorMessage = nil
         isIncrementalLoading = false
         refreshReadOnlyStatus()
 
         let size = fileSize(at: filePath)
+        DebugFileLog.log("EditorLoad", "file size=\(size) path=\(filePath)")
         if size >= Self.largeFileRefuseThreshold {
+            DebugFileLog.log("EditorLoad", "refusing large file size=\(size) path=\(filePath)")
             errorMessage = "File is too large to open (\(Self.formatBytes(size))). " +
                 "Use a dedicated editor for files over \(Self.formatBytes(Self.largeFileRefuseThreshold))."
             isLoading = false
@@ -218,6 +225,7 @@ final class EditorTabState: Identifiable {
             return
         }
         if size >= Self.largeFileWarningThreshold {
+            DebugFileLog.log("EditorLoad", "awaiting large file confirmation size=\(size) path=\(filePath)")
             largeFileSize = size
             awaitingLargeFileConfirmation = true
             isLoading = false
@@ -229,18 +237,21 @@ final class EditorTabState: Identifiable {
     }
 
     func confirmLargeFileOpen() {
+        DebugFileLog.log("EditorLoad", "large file confirmed path=\(filePath) size=\(largeFileSize)")
         awaitingLargeFileConfirmation = false
         isIncrementalLoading = false
         performLoad()
     }
 
     func cancelLargeFileOpen() {
+        DebugFileLog.log("EditorLoad", "large file cancelled path=\(filePath)")
         awaitingLargeFileConfirmation = false
         isIncrementalLoading = false
         errorMessage = "File load cancelled."
     }
 
     private func performLoad() {
+        DebugFileLog.log("EditorLoad", "performLoad started path=\(filePath)")
         isLoading = true
         isIncrementalLoading = false
         isModified = false
@@ -256,6 +267,7 @@ final class EditorTabState: Identifiable {
                     guard !Task.isCancelled, let self else { return }
                     switch event {
                     case let .initial(text, hasMore):
+                        DebugFileLog.log("EditorLoad", "initial chunk chars=\(text.count) hasMore=\(hasMore) path=\(path)")
                         hasInitialChunk = true
                         let store = TextBackingStore()
                         store.loadFromText(text)
@@ -265,10 +277,13 @@ final class EditorTabState: Identifiable {
                         isModified = false
                         isLoading = false
                         isIncrementalLoading = hasMore
+                        DebugFileLog.log("EditorLoad", "initial chunk applied lineCount=\(store.lineCount) version=\(backingStoreVersion) path=\(path)")
                     case let .appended(text):
+                        DebugFileLog.log("EditorLoad", "append chunk chars=\(text.count) path=\(path)")
                         if let backingStore {
                             backingStore.appendText(text)
                             backingStoreVersion += 1
+                            DebugFileLog.log("EditorLoad", "append applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)")
                         }
                         if isLoading {
                             isLoading = false
@@ -277,9 +292,11 @@ final class EditorTabState: Identifiable {
                             isIncrementalLoading = true
                         }
                     case .finished:
+                        DebugFileLog.log("EditorLoad", "stream finished path=\(path)")
                         if let backingStore {
                             backingStore.finishLoading()
                             backingStoreVersion += 1
+                            DebugFileLog.log("EditorLoad", "finish applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)")
                         }
                         refreshReadOnlyStatus()
                         if isLoading {
@@ -293,11 +310,13 @@ final class EditorTabState: Identifiable {
 
                 guard let self else { return }
                 if !hasInitialChunk {
+                    DebugFileLog.log("EditorLoad", "no initial chunk path=\(path)")
                     isLoading = false
                     isIncrementalLoading = false
                 }
             } catch {
                 guard !Task.isCancelled, let self else { return }
+                DebugFileLog.logError("EditorLoad", error, context: "performLoad failed path=\(path)")
                 errorMessage = error.localizedDescription
                 isLoading = false
                 isIncrementalLoading = false
@@ -329,6 +348,7 @@ final class EditorTabState: Identifiable {
                 do {
                     let attrs = try FileManager.default.attributesOfItem(atPath: path)
                     let fileSize = (attrs[.size] as? NSNumber)?.int64Value ?? 0
+                    DebugFileLog.log("EditorStream", "stream opened path=\(path) bytes=\(fileSize)")
                     var pendingUTF8 = Data()
 
                     func decodeChunk(_ chunk: Data, isFinal: Bool) throws -> String {
@@ -363,11 +383,13 @@ final class EditorTabState: Identifiable {
                     }
 
                     let initialData = try handle.read(upToCount: initialChunkSize) ?? Data()
+                    DebugFileLog.log("EditorStream", "initial read bytes=\(initialData.count) path=\(path)")
                     let initialText = try decodeChunk(initialData, isFinal: false)
                     let initialDataCount = Int64(initialData.count)
                     let hasMore = initialDataCount < fileSize
                     if !hasMore {
                         let tail = try decodeChunk(Data(), isFinal: true)
+                        DebugFileLog.log("EditorStream", "single chunk completed tailChars=\(tail.count) path=\(path)")
                         continuation.yield(FileLoadEvent.initial(initialText + tail, hasMore: false))
                         continuation.finish()
                         return
@@ -388,6 +410,7 @@ final class EditorTabState: Identifiable {
                         batch += text
                         batchBytes += data.count
                         if batchBytes >= yieldChunkSize {
+                            DebugFileLog.log("EditorStream", "yield append batchChars=\(batch.count) batchBytes=\(batchBytes) path=\(path)")
                             continuation.yield(FileLoadEvent.appended(batch))
                             batch = ""
                             batchBytes = 0
@@ -399,16 +422,20 @@ final class EditorTabState: Identifiable {
                         batch += tail
                     }
                     if !batch.isEmpty {
+                        DebugFileLog.log("EditorStream", "yield final batchChars=\(batch.count) path=\(path)")
                         continuation.yield(FileLoadEvent.appended(batch))
                     }
+                    DebugFileLog.log("EditorStream", "stream completed path=\(path)")
                     continuation.yield(FileLoadEvent.finished)
                     continuation.finish()
                 } catch {
+                    DebugFileLog.logError("EditorStream", error, context: "stream failed path=\(path)")
                     continuation.finish(throwing: error)
                 }
             }
 
             continuation.onTermination = { _ in
+                DebugFileLog.log("EditorStream", "stream termination path=\(path)")
                 workerTask.cancel()
             }
         }

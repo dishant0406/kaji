@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "id": "ruby",
+  "name": "Ruby",
+  "extensions": [
+    "rb",
+    "rake",
+    "gemspec"
+  ],
+  "filenames": [
+    "Gemfile",
+    "Rakefile"
+  ],
+  "configuration": {
+    "comments": {
+      "lineComment": "#"
+    },
+    "brackets": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ]
+    ],
+    "autoClosingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ]
+    ],
+    "surroundingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ]
+    ],
+    "indentationRules": {
+      "increaseIndentPattern": "^.*(\\{|\\b(do|then|else|class|module|def|case|begin)\\b).*$",
+      "decreaseIndentPattern": "^\\s*(\\}|end|else|elsif|when|rescue|ensure)\\b.*$",
+      "indentNextLinePattern": null,
+      "unIndentedLinePattern": null
+    },
+    "folding": {
+      "markers": {
+        "start": "^\\s*#\\s*region\\b",
+        "end": "^\\s*#\\s*endregion\\b"
+      }
+    }
+  },
+  "syntax": {
+    "engine": "tokenizer",
+    "treeSitter": {
+      "parser": {
+        "id": "tree-sitter-ruby",
+        "version": null,
+        "kind": "remote-signed-binary",
+        "artifact": "parsers/macos-arm64/tree-sitter-ruby.dylib",
+        "sha256": null
+      },
+      "queries": {
+        "highlights": "queries/highlights.scm",
+        "injections": "queries/injections.scm",
+        "locals": "queries/locals.scm",
+        "folds": "queries/folds.scm"
+      }
+    },
+    "textMate": {
+      "grammar": "textmate/ruby.tmLanguage.json",
+      "scopeName": "source.ruby"
+    },
+    "tokenizer": {
+      "keywords": [
+        {
+          "scope": "keyword",
+          "words": [
+            "BEGIN",
+            "END",
+            "alias",
+            "and",
+            "begin",
+            "break",
+            "case",
+            "class",
+            "def",
+            "defined?",
+            "do",
+            "else",
+            "elsif",
+            "end",
+            "ensure",
+            "false",
+            "for",
+            "if",
+            "in",
+            "module",
+            "next",
+            "nil",
+            "not",
+            "or",
+            "redo",
+            "rescue",
+            "retry",
+            "return",
+            "self",
+            "super",
+            "then",
+            "true",
+            "undef",
+            "unless",
+            "until",
+            "when",
+            "while",
+            "yield",
+            "require",
+            "require_relative",
+            "include",
+            "extend",
+            "attr_accessor",
+            "attr_reader",
+            "attr_writer",
+            "private",
+            "protected",
+            "public",
+            "lambda",
+            "proc"
+          ]
+        },
+        {
+          "scope": "builtin",
+          "words": [
+            "true",
+            "false",
+            "nil",
+            "self"
+          ]
+        }
+      ],
+      "strings": [
+        {
+          "open": "\"",
+          "close": "\"",
+          "escape": "\\",
+          "multiline": true,
+          "scope": "string"
+        },
+        {
+          "open": "'",
+          "close": "'",
+          "escape": "\\",
+          "multiline": true,
+          "scope": "string"
+        },
+        {
+          "open": "%w(",
+          "close": ")",
+          "escape": "\\",
+          "multiline": true,
+          "scope": "string"
+        },
+        {
+          "open": "%Q(",
+          "close": ")",
+          "escape": "\\",
+          "multiline": true,
+          "scope": "string"
+        }
+      ],
+      "supportsNumbers": true,
+      "supportsHashDirectives": false,
+      "supportsAtAttributes": true,
+      "highlightFunctionCalls": true,
+      "highlightAllCapsAsConstant": true,
+      "caseSensitiveKeywords": true
+    }
+  },
+  "lsp": {
+    "serverID": "ruby-lsp",
+    "command": "solargraph",
+    "arguments": [],
+    "installHint": "gem install solargraph"
+  },
+  "snippets": [
+    {
+      "prefix": "def",
+      "body": [
+        "def ${1:method}",
+        "  ${0}",
+        "end"
+      ],
+      "description": "Method definition"
+    }
+  ],
+  "formatter": {
+    "command": "rubyfmt",
+    "arguments": [
+      "${file}"
+    ],
+    "stdin": false
+  }
+}
