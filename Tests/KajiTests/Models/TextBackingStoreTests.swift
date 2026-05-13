@@ -132,6 +132,30 @@ struct TextBackingStoreTests {
         #expect(store.line(at: 4) == "d")
     }
 
+    @Test("insertLines appends past trailing empty line")
+    func insertLinesAtEnd() {
+        let store = TextBackingStore()
+        store.loadFromText("a\n")
+
+        store.insertLines([""], at: 2)
+
+        #expect(store.lineCount == 3)
+        #expect(store.fullText() == "a\n\n")
+    }
+
+    @Test("repeated insertLines at end adds one line per insertion")
+    func repeatedInsertLinesAtEnd() {
+        let store = TextBackingStore()
+        store.loadFromText("a\n")
+
+        store.insertLines([""], at: store.lineCount)
+        store.insertLines([""], at: store.lineCount)
+        store.insertLines([""], at: store.lineCount)
+
+        #expect(store.lineCount == 5)
+        #expect(store.fullText() == "a\n\n\n\n")
+    }
+
     @Test("search case insensitive finds matches")
     func searchCaseInsensitive() {
         let store = TextBackingStore()

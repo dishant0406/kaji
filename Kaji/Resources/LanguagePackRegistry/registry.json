@@ -11,7 +11,7 @@
       "filenames": [],
       "manifestPath": "packs/zig/manifest.json",
       "version": "1.0.0",
-      "sha256": "62c0078104127227720d6f57bd724defb1db7530175cfe82cd4f50cf19f63cf1"
+      "sha256": "1950425dda79c4e1cb23f019b4a85a9035a2f7ac7ef979027afd6e2aaa5d0dbc"
     },
     {
       "id": "ruby",
@@ -27,7 +27,7 @@
       ],
       "manifestPath": "packs/ruby/manifest.json",
       "version": "1.0.0",
-      "sha256": "5afe9fa52ebb28586fcb899349b248ccfe9fe64b7cc29398ca6c36fde1c93e22"
+      "sha256": "fe540c8f13937033361ee14275a4361aaa8ed9d5c85bb29a8163e59e0cbb937e"
     }
   ]
 }

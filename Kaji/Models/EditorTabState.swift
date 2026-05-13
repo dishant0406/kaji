@@ -50,8 +50,9 @@ final class EditorTabState: Identifiable {
     var isSaving = false
     var errorMessage: String?
     var isReadOnly = false
-    var cursorLine: Int = 1
-    var cursorColumn: Int = 1
+    var cursorPosition: EditorCursorPosition = .initial
+    var cursorLine: Int { cursorPosition.line }
+    var cursorColumn: Int { cursorPosition.column }
     var searchVisible = false
     var searchFocusVersion = 0
     var editorFocusVersion = 0
@@ -68,6 +69,12 @@ final class EditorTabState: Identifiable {
     var replaceVersion = 0
     var replaceAllVersion = 0
     var currentSelection = ""
+    var inlineEditVisible = false
+    var inlineEditInstruction = ""
+    var inlineEditOriginal = ""
+    var inlineEditProposal = ""
+    var inlineEditRequestVersion = 0
+    var inlineEditApplyVersion = 0
     var awaitingLargeFileConfirmation = false
     var largeFileSize: Int64 = 0
     var backingStore: TextBackingStore?
@@ -94,6 +101,15 @@ final class EditorTabState: Identifiable {
     @ObservationIgnored private var markdownSyncAnchorsCacheVersion: Int = -1
     @ObservationIgnored private(set) var syntaxHighlighter: (any SyntaxHighlighting)?
     @ObservationIgnored private let filePathForLogging: String
+    @ObservationIgnored private var foldRegionsCache: [EditorFoldRegion] = []
+    @ObservationIgnored private var foldRegionsCacheVersion: Int = -1
+    @ObservationIgnored private var symbolsCache: [EditorSymbol] = []
+    @ObservationIgnored private var symbolsCacheVersion: Int = -1
+    var collapsedFoldRegionIDs: Set<String> = []
+    var symbolNavigationRequest: EditorSymbol?
+    var symbolNavigationVersion = 0
+    var lineNavigationRequest: EditorLineNavigationRequest?
+    var lineNavigationVersion = 0
 
     static let largeFileWarningThreshold: Int64 = 5 * 1024 * 1024
     static let largeFileRefuseThreshold: Int64 = 50 * 1024 * 1024
@@ -115,6 +131,18 @@ final class EditorTabState: Identifiable {
     var displayTitle: String {
         let name = fileName
         return isModified ? "\(name) \u{2022}" : name
+    }
+
+    var languageDisplayName: String {
+        LanguageRegistry.shared.definition(forFile: filePath)?.name ?? "Plain Text"
+    }
+
+    func updateCursorPosition(line: Int, column: Int, selectionLength: Int) {
+        cursorPosition = EditorCursorPosition(
+            line: max(1, line),
+            column: max(1, column),
+            selectionLength: max(0, selectionLength)
+        )
     }
 
     var isMarkdownFile: Bool {
@@ -169,6 +197,81 @@ final class EditorTabState: Identifiable {
         markdownSyncAnchorsCache = MarkdownAnchorParser.parseAnchors(in: backingStore.fullText())
         markdownSyncAnchorsCacheVersion = backingStoreVersion
         return markdownSyncAnchorsCache
+    }
+
+    func foldRegions() -> [EditorFoldRegion] {
+        guard let backingStore else { return [] }
+        guard foldRegionsCacheVersion != backingStoreVersion else { return foldRegionsCache }
+        foldRegionsCache = LanguageFoldingRegionParser.regions(
+            in: backingStore,
+            configuration: LanguageRegistry.shared.configuration(forFile: filePath)
+        )
+        foldRegionsCacheVersion = backingStoreVersion
+        return foldRegionsCache
+    }
+
+    func foldRegionStarting(at line: Int) -> EditorFoldRegion? {
+        foldRegions().first { $0.startLine == line }
+    }
+
+    func isFoldRegionCollapsed(_ region: EditorFoldRegion) -> Bool {
+        collapsedFoldRegionIDs.contains(region.id)
+    }
+
+    func toggleFoldRegion(_ region: EditorFoldRegion) {
+        if collapsedFoldRegionIDs.contains(region.id) {
+            collapsedFoldRegionIDs.remove(region.id)
+        } else {
+            collapsedFoldRegionIDs.insert(region.id)
+        }
+    }
+
+    func symbols() -> [EditorSymbol] {
+        guard let backingStore else { return [] }
+        guard symbolsCacheVersion != backingStoreVersion else { return symbolsCache }
+        let definition = LanguageRegistry.shared.definition(forFile: filePath)
+        if let definition,
+           let treeSitterSymbols = TreeSitterSymbolParser.symbols(in: backingStore, definition: definition)
+        {
+            symbolsCache = treeSitterSymbols
+            symbolsCacheVersion = backingStoreVersion
+            return symbolsCache
+        }
+        symbolsCache = EditorSymbolParser.symbols(
+            in: backingStore,
+            languageID: definition?.id
+        )
+        symbolsCacheVersion = backingStoreVersion
+        return symbolsCache
+    }
+
+    func navigate(to symbol: EditorSymbol) {
+        symbolNavigationRequest = symbol
+        symbolNavigationVersion += 1
+        editorFocusVersion += 1
+    }
+
+    func navigate(to request: EditorLineNavigationRequest) {
+        lineNavigationRequest = request
+        lineNavigationVersion += 1
+        editorFocusVersion += 1
+    }
+
+    func requestInlineEdit() {
+        inlineEditVisible = true
+        inlineEditRequestVersion += 1
+    }
+
+    func proposeInlineEdit(instruction: String, original: String) {
+        inlineEditInstruction = instruction
+        inlineEditOriginal = original
+        inlineEditProposal = original
+    }
+
+    func applyInlineEdit(proposal: String) {
+        inlineEditProposal = proposal
+        inlineEditApplyVersion += 1
+        inlineEditVisible = false
     }
 
     func applyMarkdownSyncOutput(_ output: MarkdownSyncCoordinator.Output) {

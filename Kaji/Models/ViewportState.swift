@@ -11,6 +11,8 @@ final class ViewportState {
     private(set) var viewportEndLine = 0
     private(set) var estimatedLineHeight: CGFloat = 16
     private(set) var documentVerticalPadding: CGFloat = 8
+    private(set) var visualLines: [Int] = []
+    private var foldedLineSet: Set<Int> = []
 
     static let viewportBuffer = 500
     static let scrollHysteresis = 200
@@ -18,11 +20,30 @@ final class ViewportState {
     var viewportLineCount: Int { viewportEndLine - viewportStartLine }
 
     var totalDocumentHeight: CGFloat {
-        CGFloat(backingStore.lineCount) * estimatedLineHeight + documentVerticalPadding
+        CGFloat(visualLineCount) * estimatedLineHeight + documentVerticalPadding
+    }
+
+    var visualLineCount: Int {
+        max(visualLines.count, 1)
     }
 
     init(backingStore: TextBackingStore) {
         self.backingStore = backingStore
+        rebuildVisualLines(collapsedRegions: [])
+    }
+
+    func rebuildVisualLines(collapsedRegions: [EditorFoldRegion]) {
+        var hidden = Set<Int>()
+        for region in collapsedRegions where region.endLine > region.startLine {
+            for line in (region.startLine + 1) ... region.endLine {
+                hidden.insert(line)
+            }
+        }
+        foldedLineSet = hidden
+        visualLines = (0 ..< backingStore.lineCount).filter { !hidden.contains($0) }
+        if visualLines.isEmpty { visualLines = [0] }
+        viewportStartLine = min(viewportStartLine, visualLineCount)
+        viewportEndLine = min(viewportEndLine, visualLineCount)
     }
 
     func updateEstimatedLineHeight(font: NSFont) {
@@ -39,7 +60,7 @@ final class ViewportState {
     func visibleLineRange(scrollY: CGFloat, visibleHeight: CGFloat) -> Range<Int> {
         let firstVisible = max(0, Int(floor(scrollY / estimatedLineHeight)))
         let lastVisible = min(
-            backingStore.lineCount,
+            visualLineCount,
             Int(ceil((scrollY + visibleHeight) / estimatedLineHeight))
         )
         return firstVisible ..< max(firstVisible, lastVisible)
@@ -48,7 +69,7 @@ final class ViewportState {
     func computeViewport(scrollY: CGFloat, visibleHeight: CGFloat) -> Range<Int> {
         let visible = visibleLineRange(scrollY: scrollY, visibleHeight: visibleHeight)
         let start = max(0, visible.lowerBound - Self.viewportBuffer)
-        let end = min(backingStore.lineCount, visible.upperBound + Self.viewportBuffer)
+        let end = min(visualLineCount, visible.upperBound + Self.viewportBuffer)
         return start ..< max(start, end)
     }
 
@@ -67,7 +88,8 @@ final class ViewportState {
     }
 
     func viewportText() -> String {
-        backingStore.textForRange(viewportStartLine ..< viewportEndLine)
+        let lines = visualLines[viewportStartLine ..< min(viewportEndLine, visualLines.count)].map { backingStore.line(at: $0) }
+        return lines.joined(separator: "\n")
     }
 
     func viewportYOffset() -> CGFloat {
@@ -75,19 +97,29 @@ final class ViewportState {
     }
 
     func backingStoreLine(forViewportLine localLine: Int) -> Int {
-        viewportStartLine + localLine
+        let visualLine = viewportStartLine + localLine
+        guard visualLine >= 0, visualLine < visualLines.count else { return visualLines.last ?? 0 }
+        return visualLines[visualLine]
     }
 
     func viewportLine(forBackingStoreLine globalLine: Int) -> Int? {
-        guard globalLine >= viewportStartLine, globalLine < viewportEndLine else { return nil }
-        return globalLine - viewportStartLine
+        guard let visualLine = visualLines.firstIndex(of: globalLine), visualLine >= viewportStartLine, visualLine < viewportEndLine else { return nil }
+        return visualLine - viewportStartLine
     }
 
     func isLineInViewport(_ globalLine: Int) -> Bool {
-        globalLine >= viewportStartLine && globalLine < viewportEndLine
+        viewportLine(forBackingStoreLine: globalLine) != nil
     }
 
     func scrollY(forLine globalLine: Int) -> CGFloat {
-        CGFloat(globalLine) * estimatedLineHeight
+        guard let visualLine = visualLines.firstIndex(of: globalLine) else {
+            let closest = visualLines.lastIndex { $0 < globalLine } ?? 0
+            return CGFloat(closest) * estimatedLineHeight
+        }
+        return CGFloat(visualLine) * estimatedLineHeight
+    }
+
+    func isLineFolded(_ globalLine: Int) -> Bool {
+        foldedLineSet.contains(globalLine)
     }
 }

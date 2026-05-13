@@ -46,6 +46,9 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case agentCommandCenter
     case switchWorktree
     case saveFile
+    case goToSymbol
+    case goToLine
+    case inlineEdit
     case toggleSidebar
     case toggleFileTree
     case toggleFooterTerminal

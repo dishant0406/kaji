@@ -44,6 +44,7 @@ struct AskOverlay: View {
     @State var isBookmarkLookupLoading = false
     @State var pendingBookmarkCandidates: [AgentSessionBookmarkCandidate] = []
     @State var isBookmarkFolderPickerVisible = false
+    @State var prefillState = AskPrefillState.shared
 
     var body: some View {
         ZStack {
@@ -106,6 +107,7 @@ struct AskOverlay: View {
         .overlay { attachmentPreview }
         .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })
         .onAppear(perform: configureDefaults)
+        .onAppear(perform: applyPrefillIfNeeded)
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
         .onChange(of: projectID) { _, _ in
             syncWorktreeSelection()

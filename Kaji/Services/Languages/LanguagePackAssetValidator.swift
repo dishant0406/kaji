@@ -11,6 +11,7 @@ enum LanguagePackAssetValidator {
                 appendMissing(queries.injections, definition: definition, missing: &missing)
                 appendMissing(queries.locals, definition: definition, missing: &missing)
                 appendMissing(queries.folds, definition: definition, missing: &missing)
+                appendMissing(queries.symbols, definition: definition, missing: &missing)
             }
             appendMissing(syntax.treeSitter?.parser.artifact, definition: definition, missing: &missing)
         case .textMate:

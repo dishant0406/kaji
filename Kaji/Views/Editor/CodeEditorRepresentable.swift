@@ -163,6 +163,9 @@ final class ViewportContainerView: NSView {
 
     weak var textView: NSTextView?
     weak var viewport: ViewportState?
+    var foldRegions: [EditorFoldRegion] = []
+    var collapsedFoldRegionIDs: Set<String> = []
+    var onToggleFold: ((EditorFoldRegion) -> Void)?
     fileprivate var editorAppearance = CodeEditorAppearanceSnapshot(settings: EditorSettings.shared)
     var activeGlobalLine = 0
     var lineStartOffsets: [Int] = [0]
@@ -179,6 +182,7 @@ final class ViewportContainerView: NSView {
         drawWhitespace(dirtyRect)
         drawBracketHighlights(dirtyRect)
         drawGutter(dirtyRect)
+        drawFoldControls(dirtyRect)
         DebugFileLog.log("EditorDraw", "draw completed dirty=\(Self.describe(dirtyRect))")
     }
 
@@ -194,6 +198,11 @@ final class ViewportContainerView: NSView {
         if textView.frame.contains(pointInContainer) {
             DebugFileLog.log("EditorInput", "container mouseDown forwarded to textView point=\(pointInContainer)")
             super.mouseDown(with: event)
+            return
+        }
+
+        if let region = foldRegion(at: pointInContainer) {
+            onToggleFold?(region)
             return
         }
 
@@ -283,6 +292,29 @@ final class ViewportContainerView: NSView {
             )
             string.draw(in: rect, withAttributes: attrs)
         }
+    }
+
+    private func drawFoldControls(_ dirtyRect: NSRect) {
+        guard editorAppearance.showsLineNumbers, let viewport else { return }
+        let visibleRegions = foldRegions.filter { viewport.isLineInViewport($0.startLine) }
+        guard !visibleRegions.isEmpty else { return }
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 9, weight: .semibold),
+            .foregroundColor: GhosttyService.shared.foregroundColor.withAlphaComponent(0.55),
+        ]
+        for region in visibleRegions {
+            let y = viewport.scrollY(forLine: region.startLine)
+            let rect = NSRect(x: CodeEditorMetrics.gutterWidth - 12, y: y, width: 10, height: viewport.estimatedLineHeight)
+            guard dirtyRect.intersects(rect) else { continue }
+            let symbol = collapsedFoldRegionIDs.contains(region.id) ? "›" : "⌄"
+            NSString(string: symbol).draw(in: rect, withAttributes: attrs)
+        }
+    }
+
+    private func foldRegion(at point: NSPoint) -> EditorFoldRegion? {
+        guard editorAppearance.showsLineNumbers, let viewport, point.x >= CodeEditorMetrics.gutterWidth - 18, point.x <= CodeEditorMetrics.gutterWidth else { return nil }
+        let line = Int(floor(point.y / viewport.estimatedLineHeight))
+        return foldRegions.first { $0.startLine == line }
     }
 
     private func drawIndentGuides(_ dirtyRect: NSRect) {
@@ -453,6 +485,10 @@ struct CodeEditorView: NSViewRepresentable {
     let replaceVersion: Int
     let replaceAllVersion: Int
     let editorFocusVersion: Int
+    let symbolNavigationVersion: Int
+    let lineNavigationVersion: Int
+    let inlineEditRequestVersion: Int
+    let inlineEditApplyVersion: Int
     let onFocus: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -665,6 +701,26 @@ struct CodeEditorView: NSViewRepresentable {
             coordinator.lastEditorFocusVersion = editorFocusVersion
             coordinator.focusEditorPreservingSelection()
         }
+
+        if coordinator.lastSymbolNavigationVersion != symbolNavigationVersion {
+            coordinator.lastSymbolNavigationVersion = symbolNavigationVersion
+            coordinator.navigateToRequestedSymbol()
+        }
+
+        if coordinator.lastLineNavigationVersion != lineNavigationVersion {
+            coordinator.lastLineNavigationVersion = lineNavigationVersion
+            coordinator.navigateToRequestedLine()
+        }
+
+        if coordinator.lastInlineEditRequestVersion != inlineEditRequestVersion {
+            coordinator.lastInlineEditRequestVersion = inlineEditRequestVersion
+            coordinator.prepareInlineEdit()
+        }
+
+        if coordinator.lastInlineEditApplyVersion != inlineEditApplyVersion {
+            coordinator.lastInlineEditApplyVersion = inlineEditApplyVersion
+            coordinator.applyInlineEditProposal()
+        }
     }
 
     // MARK: - Shared helpers
@@ -840,6 +896,10 @@ struct CodeEditorView: NSViewRepresentable {
         var lastReplaceVersion = 0
         var lastReplaceAllVersion = 0
         var lastEditorFocusVersion = 0
+        var lastSymbolNavigationVersion = 0
+        var lastLineNavigationVersion = 0
+        var lastInlineEditRequestVersion = 0
+        var lastInlineEditApplyVersion = 0
         var lastSyncedBackingStoreVersion = -1
         fileprivate var lastAppearance = CodeEditorAppearanceSnapshot(settings: EditorSettings.shared)
         var wasIncrementalLoading = false
@@ -948,8 +1008,23 @@ struct CodeEditorView: NSViewRepresentable {
             containerView?.activeGlobalLine = max(0, state.cursorLine - 1)
             containerView?.lineStartOffsets = lineStartOffsets
             containerView?.matchingBracketLocalRanges = matchingBracketRanges()
+            containerView?.foldRegions = state.foldRegions()
+            containerView?.collapsedFoldRegionIDs = state.collapsedFoldRegionIDs
+            containerView?.onToggleFold = { [weak self] region in
+                self?.toggleFold(region)
+            }
             containerView?.layer?.backgroundColor = GhosttyService.shared.backgroundColor.cgColor
             containerView?.needsDisplay = true
+        }
+
+        private func toggleFold(_ region: EditorFoldRegion) {
+            state.toggleFoldRegion(region)
+            viewportState?.rebuildVisualLines(collapsedRegions: state.foldRegions().filter { state.isFoldRegionCollapsed($0) })
+            invalidateRenderedViewportText()
+            updateContainerHeight()
+            refreshViewport(force: true)
+            refreshEditorDecorations()
+            ToastState.shared.show(state.isFoldRegionCollapsed(region) ? "Folded lines \(region.startLine + 1)-\(region.endLine + 1)" : "Unfolded lines \(region.startLine + 1)-\(region.endLine + 1)")
         }
 
         private func matchingBracketRanges() -> [NSRange] {
@@ -976,8 +1051,8 @@ struct CodeEditorView: NSViewRepresentable {
 
         private func matchingBracketLocation(from location: Int, content: NSString) -> Int? {
             let character = content.character(at: location)
-            let pairs: [unichar: unichar] = [40: 41, 91: 93, 123: 125]
-            let reversePairs: [unichar: unichar] = [41: 40, 93: 91, 125: 123]
+            let pairs = languagePairMap()
+            let reversePairs = Dictionary(uniqueKeysWithValues: pairs.map { ($0.value, $0.key) })
             if let close = pairs[character] {
                 return scanBracket(content: content, start: location + 1, open: character, close: close, direction: 1)
             }
@@ -1041,7 +1116,7 @@ struct CodeEditorView: NSViewRepresentable {
             textView.frame = NSRect(
                 x: 0, y: 0,
                 width: width,
-                height: viewport.estimatedLineHeight * CGFloat(min(Self.initialViewportLineLimit, store.lineCount))
+                height: viewport.estimatedLineHeight * CGFloat(min(Self.initialViewportLineLimit, viewport.visualLineCount))
             )
             DebugFileLog.log("EditorViewport", "enterViewportMode completed container=\(container.frame) textFrame=\(textView.frame) filePath=\(state.filePath)")
         }
@@ -1397,6 +1472,39 @@ struct CodeEditorView: NSViewRepresentable {
                 guard let textView, let window = textView.window else { return }
                 window.makeFirstResponder(textView)
             }
+        }
+
+        func navigateToRequestedSymbol() {
+            guard let symbol = state.symbolNavigationRequest else { return }
+            scrollToGlobalLine(symbol.line, column: symbol.column)
+            textView?.window?.makeFirstResponder(textView)
+        }
+
+        func navigateToRequestedLine() {
+            guard let request = state.lineNavigationRequest else { return }
+            let maxLine = max(0, (viewportState?.backingStore.lineCount ?? state.backingStore?.lineCount ?? 1) - 1)
+            let targetLine = min(max(0, request.line - 1), maxLine)
+            scrollToGlobalLine(targetLine, column: max(0, request.column - 1))
+            textView?.window?.makeFirstResponder(textView)
+        }
+
+        func prepareInlineEdit() {
+            guard let textView else { return }
+            let range = textView.selectedRange()
+            let content = textView.string as NSString
+            guard range.location != NSNotFound, range.length > 0, NSMaxRange(range) <= content.length else {
+                ToastState.shared.show("Select code before using Inline Edit")
+                state.inlineEditVisible = false
+                return
+            }
+            state.proposeInlineEdit(instruction: "", original: content.substring(with: range))
+        }
+
+        func applyInlineEditProposal() {
+            guard let textView else { return }
+            let range = textView.selectedRange()
+            guard range.location != NSNotFound, range.length > 0 else { return }
+            textView.insertText(state.inlineEditProposal, replacementRange: range)
         }
 
         // MARK: - Search Highlighting
@@ -1922,8 +2030,7 @@ struct CodeEditorView: NSViewRepresentable {
             var recordedViewportEdit = false
 
             if let pendingEdit {
-                let oldRange = pendingEdit.startLine ..< pendingEdit.startLine + pendingEdit.oldLines.count
-                _ = viewport.backingStore.replaceLines(in: oldRange, with: pendingEdit.newLines)
+                applyPendingEdit(pendingEdit, to: viewport.backingStore)
                 lineDelta = pendingEdit.newLines.count - pendingEdit.oldLines.count
                 let newViewportEnd = max(viewportStartLine, viewport.viewportEndLine + lineDelta)
                 viewport.applyViewport(viewportStartLine ..< newViewportEnd)
@@ -1971,6 +2078,7 @@ struct CodeEditorView: NSViewRepresentable {
             }
 
             if lineDelta != 0 {
+                viewport.rebuildVisualLines(collapsedRegions: state.foldRegions().filter { state.isFoldRegionCollapsed($0) })
                 updateContainerHeight()
                 updateViewportFrames(
                     viewport: viewport,
@@ -2183,7 +2291,7 @@ struct CodeEditorView: NSViewRepresentable {
                 newEnd += lineDelta
             }
 
-            let maxLine = max(1, viewport.backingStore.lineCount)
+            let maxLine = max(1, viewport.visualLineCount)
             newStart = max(0, min(newStart, maxLine - 1))
             newEnd = max(newStart + 1, min(newEnd, maxLine))
             viewport.applyViewport(newStart ..< newEnd)
@@ -2230,15 +2338,35 @@ struct CodeEditorView: NSViewRepresentable {
             guard isValidEditRange(relativeRange, textLength: oldBlock.length) else { return }
 
             let replacement = replacementString ?? ""
-            let newBlock = oldBlock.replacingCharacters(in: relativeRange, with: replacement)
-            let newLines = newBlock.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            let isAppendOnlyTrailingNewline = affectedCharRange.location == content.length
+                && affectedCharRange.length == 0
+                && replacement == "\n"
+                && clampedStartLocalLine == maxLocalLine
+                && oldLines.count == 1
+                && oldLines[0].isEmpty
+            let newLines: [String]
+            if isAppendOnlyTrailingNewline {
+                newLines = [""]
+            } else {
+                let newBlock = oldBlock.replacingCharacters(in: relativeRange, with: replacement)
+                newLines = newBlock.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            }
 
             pendingViewportEdit = PendingViewportEdit(
                 startLine: globalStartLine,
-                oldLines: oldLines,
+                oldLines: isAppendOnlyTrailingNewline ? [] : oldLines,
                 newLines: newLines,
                 selectionBefore: selectionBefore
             )
+        }
+
+        private func applyPendingEdit(_ edit: PendingViewportEdit, to store: TextBackingStore) {
+            if edit.oldLines.isEmpty {
+                store.insertLines(edit.newLines, at: edit.startLine)
+                return
+            }
+            let oldRange = edit.startLine ..< edit.startLine + edit.oldLines.count
+            _ = store.replaceLines(in: oldRange, with: edit.newLines)
         }
 
         private func globalCursorFromLocalLocation(_ location: Int) -> ViewportCursor? {
@@ -2343,27 +2471,34 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         private func closingPair(for opening: String) -> String? {
-            switch opening {
-            case "(": ")"
-            case "[": "]"
-            case "{": "}"
-            case "\"": "\""
-            case "'": "'"
-            default: nil
-            }
+            languagePairs().first { $0.open == opening }?.close
         }
 
         private func isClosingPairCharacter(_ value: String) -> Bool {
-            value == ")" || value == "]" || value == "}" || value == "\"" || value == "'"
+            languagePairs().contains { $0.close == value }
         }
 
         private func isPair(open: unichar, close: unichar) -> Bool {
-            switch (open, close) {
-            case (40, 41), (91, 93), (123, 125), (34, 34), (39, 39):
-                true
-            default:
-                false
+            languagePairMap()[open] == close
+        }
+
+        private func languagePairs() -> [(open: String, close: String)] {
+            let configured = LanguageRegistry.shared.configuration(forFile: state.filePath)?.autoClosingPairs ?? []
+            let pairs = configured.compactMap { pair -> (open: String, close: String)? in
+                guard pair.count == 2, pair[0].utf16.count == 1, pair[1].utf16.count == 1 else { return nil }
+                return (pair[0], pair[1])
             }
+            guard !pairs.isEmpty else {
+                return [("(", ")"), ("[", "]"), ("{", "}"), ("\"", "\""), ("'", "'")]
+            }
+            return pairs
+        }
+
+        private func languagePairMap() -> [unichar: unichar] {
+            Dictionary(uniqueKeysWithValues: languagePairs().compactMap { pair in
+                guard let open = pair.open.utf16.first, let close = pair.close.utf16.first else { return nil }
+                return (open, close)
+            })
         }
 
         func textViewDidChangeSelection(_: Notification) {
@@ -2376,9 +2511,12 @@ struct CodeEditorView: NSViewRepresentable {
             let localLineIndex = localLine - 1
 
             let globalLine = viewportState?.backingStoreLine(forViewportLine: localLineIndex) ?? localLine
-            state.cursorLine = globalLine + 1
             let localLineStart = lineStartOffsets[max(0, min(localLineIndex, lineStartOffsets.count - 1))]
-            state.cursorColumn = max(1, loc - localLineStart + 1)
+            state.updateCursorPosition(
+                line: globalLine + 1,
+                column: loc - localLineStart + 1,
+                selectionLength: range.length
+            )
 
             updateCurrentSelection(in: textView, range: range)
             refreshEditorDecorations()
@@ -2405,11 +2543,10 @@ struct CodeEditorView: NSViewRepresentable {
                 return true
             }
 
-            if direction > 0, atLastLine, viewport.viewportEndLine < viewport.backingStore.lineCount {
+            if direction > 0, atLastLine, viewport.viewportEndLine < viewport.visualLineCount {
                 let lineStart = lineStartOffsets[max(0, min(localLineIndex, lineStartOffsets.count - 1))]
                 let column = max(0, loc - lineStart)
-                let globalLine = viewport.backingStoreLine(forViewportLine: localLineIndex)
-                let targetGlobalLine = min(viewport.backingStore.lineCount - 1, globalLine + 1)
+                let targetGlobalLine = viewport.backingStoreLine(forViewportLine: localLineIndex + 1)
                 scrollToGlobalLine(targetGlobalLine, column: column)
                 return true
             }
@@ -2435,7 +2572,7 @@ struct CodeEditorView: NSViewRepresentable {
             }
 
             let maxScrollY = max(0, viewport.totalDocumentHeight - visibleHeight)
-            if globalLine >= viewport.backingStore.lineCount - 1 {
+            if viewport.scrollY(forLine: globalLine) >= maxScrollY {
                 newScrollY = maxScrollY
             } else {
                 newScrollY = min(maxScrollY, max(0, newScrollY))
@@ -2459,9 +2596,12 @@ struct CodeEditorView: NSViewRepresentable {
             textView.setSelectedRange(NSRange(location: safeCursor, length: 0))
             isUpdating = false
 
-            state.cursorLine = globalLine + 1
             let cursorLineStart = lineStartOffsets[max(0, min(newLocalLine, lineStartOffsets.count - 1))]
-            state.cursorColumn = max(1, safeCursor - cursorLineStart + 1)
+            state.updateCursorPosition(
+                line: globalLine + 1,
+                column: safeCursor - cursorLineStart + 1,
+                selectionLength: 0
+            )
         }
 
         private func updateCurrentSelection(in textView: NSTextView, range: NSRange) {
@@ -2780,6 +2920,12 @@ struct CodeEditorView: NSViewRepresentable {
             if shouldIncreaseIndent(after: linePrefix) {
                 indent += indentUnit()
             }
+            if shouldDecreaseIndent(before: content, cursor: cursor) {
+                let unit = indentUnit()
+                if indent.hasSuffix(unit) {
+                    indent.removeLast(unit.count)
+                }
+            }
             textView.insertText("\n" + indent, replacementRange: range)
             return true
         }
@@ -2875,8 +3021,29 @@ struct CodeEditorView: NSViewRepresentable {
         }
 
         private func shouldIncreaseIndent(after linePrefix: String) -> Bool {
+            if let pattern = LanguageRegistry.shared.configuration(forFile: state.filePath)?.indentationRules?.increaseIndentPattern,
+               regexMatches(pattern, linePrefix)
+            {
+                return true
+            }
             let trimmed = linePrefix.trimmingCharacters(in: .whitespaces)
             return trimmed.hasSuffix("{") || trimmed.hasSuffix("[") || trimmed.hasSuffix("(") || trimmed.hasSuffix(":")
+        }
+
+        private func shouldDecreaseIndent(before content: NSString, cursor: Int) -> Bool {
+            guard let pattern = LanguageRegistry.shared.configuration(forFile: state.filePath)?.indentationRules?.decreaseIndentPattern else { return false }
+            guard cursor < content.length else { return false }
+            let lineRange = content.lineRange(for: NSRange(location: cursor, length: 0))
+            let suffixLocation = cursor
+            let suffixLength = max(0, NSMaxRange(lineRange) - suffixLocation)
+            guard suffixLength > 0 else { return false }
+            return regexMatches(pattern, content.substring(with: NSRange(location: suffixLocation, length: suffixLength)))
+        }
+
+        private func regexMatches(_ pattern: String, _ text: String) -> Bool {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { return false }
+            let range = NSRange(location: 0, length: (text as NSString).length)
+            return regex.firstMatch(in: text, range: range) != nil
         }
 
         private func indentUnit() -> String {

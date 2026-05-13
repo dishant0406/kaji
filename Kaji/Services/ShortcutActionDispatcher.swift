@@ -23,6 +23,8 @@ struct ShortcutActionDispatcher {
     }
 
     func perform(_ action: ShortcutAction, activeProject: Project?, openVCS: (Project) -> Void) -> Bool {
+        if performRegisteredCommand(action) { return true }
+
         if let index = action.tabSelectionIndex {
             guard let projectID = appState.activeProjectID else { return false }
             appState.selectTabByIndex(index, projectID: projectID)
@@ -131,9 +133,11 @@ struct ShortcutActionDispatcher {
         case .switchWorktree:
             notificationCenter.post(name: .switchWorktree, object: nil)
             return true
-        case .saveFile:
-            notificationCenter.post(name: .saveActiveEditor, object: nil)
-            return true
+        case .saveFile,
+             .goToSymbol,
+             .goToLine,
+             .inlineEdit:
+            return false
         case .toggleSidebar:
             notificationCenter.post(name: .toggleSidebar, object: nil)
             return true
@@ -174,6 +178,22 @@ struct ShortcutActionDispatcher {
              .selectProject8,
              .selectProject9:
             return false
+        }
+    }
+
+    private func performRegisteredCommand(_ action: ShortcutAction) -> Bool {
+        guard let notification = editorCommandNotification(for: action) else { return false }
+        notificationCenter.post(name: notification, object: nil)
+        return true
+    }
+
+    private func editorCommandNotification(for action: ShortcutAction) -> Notification.Name? {
+        switch action {
+        case .saveFile: .saveActiveEditor
+        case .goToSymbol: .goToSymbol
+        case .goToLine: .goToLine
+        case .inlineEdit: .inlineEdit
+        default: nil
         }
     }
 }
