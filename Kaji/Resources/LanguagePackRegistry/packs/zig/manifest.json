@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "id": "zig",
+  "name": "Zig",
+  "extensions": [
+    "zig",
+    "zon"
+  ],
+  "filenames": [],
+  "configuration": {
+    "comments": {
+      "lineComment": "//"
+    },
+    "brackets": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ]
+    ],
+    "autoClosingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ]
+    ],
+    "surroundingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ]
+    ],
+    "indentationRules": {
+      "increaseIndentPattern": "^.*(\\{|\\b(do|then|else|class|module|def|case|begin)\\b).*$",
+      "decreaseIndentPattern": "^\\s*(\\}|end|else|elsif|when|rescue|ensure)\\b.*$",
+      "indentNextLinePattern": null,
+      "unIndentedLinePattern": null
+    },
+    "folding": {
+      "markers": {
+        "start": "^\\s*//\\s*#?region\\b",
+        "end": "^\\s*//\\s*#?endregion\\b"
+      }
+    }
+  },
+  "syntax": {
+    "engine": "tokenizer",
+    "treeSitter": {
+      "parser": {
+        "id": "tree-sitter-zig",
+        "version": null,
+        "kind": "remote-signed-binary",
+        "artifact": "parsers/macos-arm64/tree-sitter-zig.dylib",
+        "sha256": null
+      },
+      "queries": {
+        "highlights": "queries/highlights.scm",
+        "injections": "queries/injections.scm",
+        "locals": "queries/locals.scm",
+        "folds": "queries/folds.scm"
+      }
+    },
+    "textMate": {
+      "grammar": "textmate/zig.tmLanguage.json",
+      "scopeName": "source.zig"
+    },
+    "tokenizer": {
+      "keywords": [
+        {
+          "scope": "keyword",
+          "words": [
+            "addrspace",
+            "align",
+            "allowzero",
+            "and",
+            "anyframe",
+            "anytype",
+            "asm",
+            "async",
+            "await",
+            "break",
+            "callconv",
+            "catch",
+            "comptime",
+            "const",
+            "continue",
+            "defer",
+            "else",
+            "enum",
+            "errdefer",
+            "error",
+            "export",
+            "extern",
+            "fn",
+            "for",
+            "if",
+            "inline",
+            "noalias",
+            "nosuspend",
+            "opaque",
+            "or",
+            "orelse",
+            "packed",
+            "pub",
+            "resume",
+            "return",
+            "linksection",
+            "struct",
+            "suspend",
+            "switch",
+            "test",
+            "threadlocal",
+            "try",
+            "union",
+            "unreachable",
+            "usingnamespace",
+            "var",
+            "volatile",
+            "while"
+          ]
+        },
+        {
+          "scope": "builtin",
+          "words": [
+            "true",
+            "false",
+            "null",
+            "undefined"
+          ]
+        },
+        {
+          "scope": "type",
+          "words": [
+            "bool",
+            "void",
+            "noreturn",
+            "type",
+            "anyerror",
+            "comptime_int",
+            "comptime_float",
+            "usize",
+            "isize",
+            "c_short",
+            "c_ushort",
+            "c_int",
+            "c_uint",
+            "c_long",
+            "c_ulong",
+            "c_longlong",
+            "c_ulonglong",
+            "c_longdouble",
+            "f16",
+            "f32",
+            "f64",
+            "f80",
+            "f128",
+            "i8",
+            "u8",
+            "i16",
+            "u16",
+            "i32",
+            "u32",
+            "i64",
+            "u64",
+            "i128",
+            "u128"
+          ]
+        }
+      ],
+      "strings": [
+        {
+          "open": "\"",
+          "close": "\"",
+          "escape": "\\",
+          "multiline": false,
+          "scope": "string"
+        },
+        {
+          "open": "'",
+          "close": "'",
+          "escape": "\\",
+          "multiline": false,
+          "scope": "string"
+        }
+      ],
+      "supportsNumbers": true,
+      "supportsHashDirectives": false,
+      "supportsAtAttributes": true,
+      "highlightFunctionCalls": true,
+      "highlightAllCapsAsConstant": true,
+      "caseSensitiveKeywords": true
+    }
+  },
+  "lsp": {
+    "serverID": "zig-lsp",
+    "command": "zls",
+    "arguments": [],
+    "installHint": "brew install zls"
+  },
+  "snippets": [
+    {
+      "prefix": "fn",
+      "body": [
+        "fn ${1:name}(${2:args}) ${3:void} {",
+        "    ${0}",
+        "}"
+      ],
+      "description": "Function declaration"
+    }
+  ],
+  "formatter": {
+    "command": "zig",
+    "arguments": [
+      "fmt",
+      "${file}"
+    ],
+    "stdin": false
+  }
+}

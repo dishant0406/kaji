@@ -10,6 +10,8 @@ struct KajiApp: App {
     private let updateService = UpdateService.shared
 
     init() {
+        DebugFileLog.start()
+        DebugFileLog.log("Lifecycle", "KajiApp init started")
         SwiftRunBundleLauncher.relaunchIfNeeded()
         DroidDataMigration.run()
         let environment = AppEnvironment.live
@@ -30,6 +32,7 @@ struct KajiApp: App {
         _appState = State(initialValue: appState)
         _projectStore = State(initialValue: projectStore)
         _worktreeStore = State(initialValue: worktreeStore)
+        DebugFileLog.log("Lifecycle", "KajiApp init completed projects=\(projectStore.projects.count)")
     }
 
     var body: some Scene {
@@ -92,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DebugFileLog.log("Lifecycle", "applicationDidFinishLaunching started")
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         HugeIconFont.registerIfNeeded()
@@ -109,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = CodingAgentShimInstaller.install()
         AIProviderRegistry.shared.installAll()
         _ = AIUsageSettingsStore.isUsageEnabled()
+        DebugFileLog.log("Lifecycle", "applicationDidFinishLaunching completed")
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -171,12 +176,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationWillTerminate(_ notification: Notification) {
+        DebugFileLog.log("Lifecycle", "applicationWillTerminate started")
         onTerminate?()
         NotificationStore.shared.saveToDisk()
         SleepPreventionController.shared.stop()
         SystemWakeCoordinator.shared.stop()
         CodexSessionMonitor.shared.stop()
         ProviderEventReceiver.shared.stop()
+        DebugFileLog.log("Lifecycle", "applicationWillTerminate completed")
     }
 
     @MainActor

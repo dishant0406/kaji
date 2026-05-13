@@ -65,8 +65,10 @@ let package = Package(
                 .product(name: "TreeSitterBash", package: "tree-sitter-bash"),
             ],
             path: "Kaji",
-            exclude: ["Info.plist", "Kaji.entitlements"],
+            exclude: ["Info.plist", "Kaji.entitlements", "Resources/LanguagePacks", "Resources/LanguagePackRegistry"],
             resources: [
+                .copy("Resources/LanguagePacks"),
+                .copy("Resources/LanguagePackRegistry"),
                 .process("Resources"),
             ],
             linkerSettings: [

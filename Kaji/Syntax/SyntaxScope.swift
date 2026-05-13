@@ -26,6 +26,39 @@ enum SyntaxScope: Hashable {
     case emphasis
 }
 
+extension SyntaxScope {
+    static func fromLanguagePack(_ value: String?) -> SyntaxScope? {
+        guard let value else { return nil }
+        switch value {
+        case "keyword": return .keyword
+        case "storage": return .storage
+        case "type": return .type
+        case "builtin": return .builtin
+        case "constant": return .constant
+        case "string": return .string
+        case "stringEscape": return .stringEscape
+        case "number": return .number
+        case "comment": return .comment
+        case "docComment": return .docComment
+        case "function": return .function
+        case "variable": return .variable
+        case "attribute": return .attribute
+        case "preprocessor": return .preprocessor
+        case "op": return .op
+        case "punctuation": return .punctuation
+        case "tag": return .tag
+        case "attributeName": return .attributeName
+        case "attributeValue": return .attributeValue
+        case "regex": return .regex
+        case "heading": return .heading
+        case "link": return .link
+        case "emphasis": return .emphasis
+        default:
+            return Optional<SyntaxScope>.none
+        }
+    }
+}
+
 @MainActor
 enum SyntaxTheme {
     private static var cachedColors: [SyntaxScope: NSColor] = [:]

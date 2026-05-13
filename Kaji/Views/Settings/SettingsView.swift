@@ -96,6 +96,8 @@ struct SettingsView: View {
                 AgentSettingsView()
             case .editor:
                 EditorSettingsView()
+            case .languages:
+                LanguagePacksSettingsView()
             case .shortcuts:
                 KeyboardShortcutsSettingsView()
             case .notifications:

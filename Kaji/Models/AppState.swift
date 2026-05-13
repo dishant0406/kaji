@@ -100,7 +100,9 @@ final class AppState {
     var pendingLastTabClose: PendingTabClose?
     var pendingUnsavedEditorTabClose: PendingTabClose?
     var pendingProcessTabClose: PendingTabClose?
+    var pendingLanguagePackInstall: PendingLanguagePackInstall?
     var pendingSaveErrorMessage: String?
+    var pendingLanguagePackInstallErrorMessage: String?
     let navigation = NavigationHistory()
     private var focusHistory: [WorktreeKey: [UUID]] = [:]
 
@@ -112,6 +114,13 @@ final class AppState {
         self.selectionStore = selectionStore
         self.terminalViews = terminalViews
         self.workspacePersistence = workspacePersistence
+    }
+
+    func finishLanguagePackInstall(_ result: Result<LanguageDefinition, Error>) {
+        pendingLanguagePackInstall = nil
+        if case let .failure(error) = result {
+            pendingLanguagePackInstallErrorMessage = error.localizedDescription
+        }
     }
 
     func restoreSelection(projects: [Project], worktrees: [UUID: [Worktree]]) {
@@ -308,19 +317,34 @@ final class AppState {
     }
 
     func openFile(_ filePath: String, projectID: UUID) {
+        DebugFileLog.log("FileOpen", "requested path=\(filePath) projectID=\(projectID.uuidString)")
+        DebugFileLog.log("FileOpen", "loading editor settings path=\(filePath)")
         let settings = EditorSettings.shared
+        DebugFileLog.log(
+            "FileOpen",
+            "settings loaded defaultEditor=\(settings.defaultEditor.rawValue) command=\(settings.externalEditorCommand) lineNumbers=\(settings.showsLineNumbers) activeLine=\(settings.highlightsActiveLine) indent=\(settings.showsIndentGuides) whitespace=\(settings.rendersWhitespace) brackets=\(settings.highlightsMatchingBrackets) tabSize=\(settings.tabSize) path=\(filePath)"
+        )
         if settings.defaultEditor == .terminalCommand {
+            DebugFileLog.log("FileOpen", "default editor is terminal command path=\(filePath)")
             let command = settings.externalEditorCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+            DebugFileLog.log("FileOpen", "trimmed external command=\(command) path=\(filePath)")
             if !command.isEmpty {
+                DebugFileLog.log("FileOpen", "routing to terminal command=\(command) path=\(filePath)")
                 openFileInExternalEditor(filePath, projectID: projectID, command: command)
                 return
             }
         }
+        DebugFileLog.log("FileOpen", "checking existing editor tabs path=\(filePath)")
         for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
             area.tabs.contains(where: { $0.content.editorState?.filePath == filePath })
         }) {
+            DebugFileLog.log("FileOpen", "activating existing editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
             activateWorkspaceTab(workspaceTab.id, projectID: projectID)
             return
+        }
+        DebugFileLog.log("FileOpen", "creating built-in editor tab path=\(filePath)")
+        if let entry = LanguagePackCatalog.availableEntry(forFile: filePath), pendingLanguagePackInstall?.filePath != filePath {
+            pendingLanguagePackInstall = PendingLanguagePackInstall(filePath: filePath, entry: entry)
         }
         dispatch(.createEditorTab(projectID: projectID, areaID: nil, filePath: filePath))
     }
@@ -366,9 +390,11 @@ final class AppState {
         for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
             area.tabs.contains(where: { $0.content.pane?.externalEditorFilePath == filePath })
         }) {
+            DebugFileLog.log("FileOpen", "activating existing external editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
             activateWorkspaceTab(workspaceTab.id, projectID: projectID)
             return
         }
+        DebugFileLog.log("FileOpen", "creating external editor tab command=\(command) path=\(filePath)")
         dispatch(.createExternalEditorTab(projectID: projectID, areaID: nil, filePath: filePath, command: command))
     }
 

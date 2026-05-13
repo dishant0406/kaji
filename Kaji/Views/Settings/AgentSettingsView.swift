@@ -97,6 +97,7 @@ struct AgentSettingsView: View {
                 )
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear(perform: selectDefaultProject)
         .onChange(of: projectStore.projects.map(\.id)) { _, _ in selectDefaultProject() }
     }

@@ -139,6 +139,7 @@ enum TabReducer {
     }
 
     static func createEditorTab(projectID: UUID, areaID _: UUID?, filePath: String, state: inout WorkspaceState) {
+        DebugFileLog.log("EditorTab", "createEditorTab projectID=\(projectID.uuidString) path=\(filePath)")
         _ = appendWorkspaceTab(projectID: projectID, state: &state) { path in
             let area = TabArea(projectPath: path, existingTab: TerminalTab(editorState: EditorTabState(
                 projectPath: path,

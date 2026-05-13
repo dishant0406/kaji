@@ -49,6 +49,10 @@ struct SyntaxGrammar {
     let jsxAware: Bool
     let yamlAware: Bool
 
+    var lineCommentToken: String? {
+        lineComments.first
+    }
+
     init(
         name: String,
         extensions: [String],

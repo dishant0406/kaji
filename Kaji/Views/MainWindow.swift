@@ -312,6 +312,15 @@ struct MainWindow: View {
                     guard isPresented, let message = appState.pendingSaveErrorMessage else { return }
                     presentSaveErrorAlert(message: message)
                 }
+                .onChange(of: appState.pendingLanguagePackInstall != nil) { _, isPresented in
+                    guard isPresented else { return }
+                    presentLanguagePackInstallToast()
+                }
+                .onChange(of: appState.pendingLanguagePackInstallErrorMessage != nil) { _, isPresented in
+                    guard isPresented, let message = appState.pendingLanguagePackInstallErrorMessage else { return }
+                    ToastState.shared.show("Language pack install failed: \(message)")
+                    appState.pendingLanguagePackInstallErrorMessage = nil
+                }
                 .onChange(of: footerTerminalEnabled) { _, enabled in
                     if !enabled {
                         collapseAllFooterTerminals()
@@ -546,6 +555,22 @@ struct MainWindow: View {
                 Text(toast)
                     .kajiFont(size: 12, weight: .medium)
                     .foregroundStyle(KajiTheme.fg)
+                if let actionTitle = ToastState.shared.actionTitle {
+                    Button(actionTitle) {
+                        ToastState.shared.performAction()
+                    }
+                    .buttonStyle(.plain)
+                    .kajiFont(size: 12, weight: .semibold)
+                    .foregroundStyle(KajiTheme.accent)
+                    Button {
+                        ToastState.shared.dismissActionToast()
+                    } label: {
+                        KajiIcon(systemName: "xmark", size: 9)
+                            .foregroundStyle(KajiTheme.fgMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -556,7 +581,7 @@ struct MainWindow: View {
             )
             .padding(toastEdgePadding)
             .transition(.move(edge: toastTransitionEdge).combined(with: .opacity))
-            .allowsHitTesting(false)
+            .allowsHitTesting(ToastState.shared.actionTitle != nil)
             .accessibilityLabel(toast)
             .accessibilityAddTraits(.isStaticText)
         }
@@ -1404,6 +1429,17 @@ struct MainWindow: View {
 
         alert.beginSheetModal(for: window) { _ in
             appState.pendingSaveErrorMessage = nil
+        }
+    }
+
+    private func presentLanguagePackInstallToast() {
+        guard let pending = appState.pendingLanguagePackInstall else { return }
+        let fileName = (pending.filePath as NSString).lastPathComponent
+        ToastState.shared.showAction(
+            message: "Install \(pending.entry.name) support for \(fileName)?",
+            actionTitle: "Install"
+        ) {
+            appState.finishLanguagePackInstall(LanguagePackInstaller.install(pending.entry))
         }
     }
 }
