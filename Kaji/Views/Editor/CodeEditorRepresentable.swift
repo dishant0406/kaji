@@ -241,16 +241,29 @@ final class ViewportContainerView: NSView {
     }
 
     private func drawActiveLine(_ dirtyRect: NSRect) {
-        guard editorAppearance.highlightsActiveLine, let viewport else {
-            DebugFileLog.log("EditorDraw", "active line skipped enabled=\(editorAppearance.highlightsActiveLine) viewport=\(viewport == nil ? "nil" : "set")")
-            return
-        }
-        guard viewport.isLineInViewport(activeGlobalLine) else {
-            DebugFileLog.log("EditorDraw", "active line outside viewport active=\(activeGlobalLine) range=\(viewport.viewportStartLine)..<\(viewport.viewportEndLine)")
-            return
-        }
-        let y = viewport.scrollY(forLine: activeGlobalLine)
-        let rect = NSRect(x: 0, y: y, width: bounds.width, height: viewport.estimatedLineHeight)
+        guard editorAppearance.highlightsActiveLine,
+              let viewport,
+              let textView,
+              let layoutManager = textView.layoutManager,
+              viewport.isLineInViewport(activeGlobalLine),
+              let localLine = viewport.viewportLine(forBackingStoreLine: activeGlobalLine),
+              localLine >= 0,
+              localLine < lineStartOffsets.count
+        else { return }
+
+        let content = textView.string as NSString
+        let lineStart = min(lineStartOffsets[localLine], content.length)
+        let lineRange = content.lineRange(for: NSRange(location: lineStart, length: 0))
+        guard lineRange.length > 0, NSMaxRange(lineRange) <= content.length else { return }
+
+        layoutManager.ensureLayout(forCharacterRange: lineRange)
+        let glyphRange = layoutManager.glyphRange(forCharacterRange: lineRange, actualCharacterRange: nil)
+        var rect = layoutManager.lineFragmentRect(forGlyphAt: glyphRange.location, effectiveRange: nil, withoutAdditionalLayout: true)
+        rect.origin.x = 0
+        rect.origin.y += textView.frame.origin.y + textView.textContainerInset.height
+        rect.size.width = bounds.width
+        rect.size.height = max(rect.height, viewport.estimatedLineHeight)
+
         guard dirtyRect.intersects(rect) else { return }
         GhosttyService.shared.foregroundColor.withAlphaComponent(0.06).setFill()
         rect.fill()
