@@ -119,6 +119,7 @@ struct LanguageLSPDefinition: Codable, Equatable {
     let command: String
     let arguments: [String]
     let installHint: String?
+    let installCommand: String?
 }
 
 struct LanguageDefinition: Codable, Equatable, Identifiable {

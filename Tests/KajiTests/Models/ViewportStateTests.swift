@@ -1,5 +1,4 @@
 import Testing
-
 @testable import Kaji
 
 @Suite("ViewportState")
@@ -49,15 +48,33 @@ struct ViewportStateTests {
         #expect(range.upperBound == 5)
     }
 
+    @Test("visibleLineRange clamps lower bound after stale overscroll")
+    func visibleLineRangeClampsLowerBoundAfterOverscroll() {
+        let vp = makeViewport(lineCount: 100)
+        let range = vp.visibleLineRange(scrollY: 100_000, visibleHeight: 1_000)
+
+        #expect(range == 100 ..< 100)
+    }
+
     @Test("computeViewport adds buffer")
     func computeViewportBuffer() {
         let vp = makeViewport(lineCount: 2000)
         let range = vp.computeViewport(scrollY: 16000, visibleHeight: 160)
         let visible = vp.visibleLineRange(scrollY: 16000, visibleHeight: 160)
-        let expectedStart = max(0, visible.lowerBound - ViewportState.viewportBuffer)
-        let expectedEnd = min(2000, visible.upperBound + ViewportState.viewportBuffer)
+        let buffer = vp.viewportBuffer(visibleLineCount: visible.count)
+        let expectedStart = max(0, visible.lowerBound - buffer)
+        let expectedEnd = min(2000, visible.upperBound + buffer)
         #expect(range.lowerBound == expectedStart)
         #expect(range.upperBound == expectedEnd)
+    }
+
+    @Test("viewport buffer is bounded and proportional")
+    func viewportBufferBounds() {
+        let vp = makeViewport(lineCount: 2000)
+
+        #expect(vp.viewportBuffer(visibleLineCount: 10) == ViewportState.minimumViewportBuffer)
+        #expect(vp.viewportBuffer(visibleLineCount: 70) == 140)
+        #expect(vp.viewportBuffer(visibleLineCount: 200) == ViewportState.maximumViewportBuffer)
     }
 
     @Test("computeViewport clamps to bounds")
@@ -65,7 +82,7 @@ struct ViewportStateTests {
         let vp = makeViewport(lineCount: 100)
         let range = vp.computeViewport(scrollY: 0, visibleHeight: 160)
         #expect(range.lowerBound == 0)
-        #expect(range.upperBound == 100)
+        #expect(range.upperBound == 90)
     }
 
     @Test("shouldUpdateViewport returns true initially")
@@ -84,8 +101,8 @@ struct ViewportStateTests {
     @Test("shouldUpdateViewport returns true when margin below hysteresis")
     func shouldUpdateTrueLowMargin() {
         let vp = makeViewport(lineCount: 2000)
-        vp.applyViewport(0 ..< 600)
-        #expect(vp.shouldUpdateViewport(scrollY: 6400, visibleHeight: 160))
+        vp.applyViewport(0 ..< 480)
+        #expect(vp.shouldUpdateViewport(scrollY: 7200, visibleHeight: 160))
     }
 
     @Test("applyViewport sets start and end")
@@ -95,6 +112,17 @@ struct ViewportStateTests {
         #expect(vp.viewportStartLine == 10)
         #expect(vp.viewportEndLine == 50)
         #expect(vp.viewportLineCount == 40)
+    }
+
+    @Test("applyViewport clamps stale ranges to visual line count")
+    func applyViewportClampsStaleRanges() {
+        let vp = makeViewport(lineCount: 100)
+
+        vp.applyViewport(9_000 ..< 9_500)
+
+        #expect(vp.viewportStartLine == 100)
+        #expect(vp.viewportEndLine == 100)
+        #expect(vp.viewportText().isEmpty)
     }
 
     @Test("viewportText returns correct content")
@@ -149,5 +177,18 @@ struct ViewportStateTests {
         let vp = makeViewport(lineCount: 100)
         #expect(vp.scrollY(forLine: 10) == 160)
         #expect(vp.scrollY(forLine: 0) == 0)
+    }
+
+    @Test("folded viewport maps only visible lines")
+    func foldedViewportMapsVisibleLines() {
+        let vp = makeViewport(lineCount: 8)
+        vp.rebuildVisualLines(collapsedRegions: [EditorFoldRegion(startLine: 1, endLine: 4)])
+        vp.applyViewport(0 ..< 4)
+
+        #expect(vp.visualLineCount == 5)
+        #expect(vp.viewportText() == "line 0\nline 1\nline 5\nline 6")
+        #expect(vp.viewportLine(forBackingStoreLine: 3) == nil)
+        #expect(vp.viewportLine(forBackingStoreLine: 5) == 2)
+        #expect(vp.isLineFolded(3))
     }
 }

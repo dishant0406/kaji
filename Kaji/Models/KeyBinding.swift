@@ -40,7 +40,9 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case selectProject8
     case selectProject9
     case findInTerminal
+    case replaceInEditor
     case openVCSTab
+    case commandPalette
     case quickOpen
     case ask
     case agentCommandCenter
@@ -51,6 +53,8 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case inlineEdit
     case toggleSidebar
     case toggleFileTree
+    case toggleGlobalSearch
+    case toggleProblemsPanel
     case toggleFooterTerminal
     case toggleAIUsage
     case navigateBack

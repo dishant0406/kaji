@@ -71,6 +71,45 @@ final class TextBackingStore {
         lines.insert(contentsOf: newLines, at: clamped)
     }
 
+    func replaceFirstMatch(
+        _ match: SearchMatch,
+        with replacement: String,
+        needle: String,
+        caseSensitive: Bool,
+        useRegex: Bool
+    ) -> SearchMatch? {
+        let line = self.line(at: match.lineIndex)
+        let nsLine = line as NSString
+        guard NSMaxRange(match.range) <= nsLine.length else { return nil }
+        let newLine = nsLine.replacingCharacters(in: match.range, with: replacement)
+        _ = replaceLines(in: match.lineIndex ..< match.lineIndex + 1, with: [newLine])
+        return search(needle: needle, caseSensitive: caseSensitive, useRegex: useRegex)
+            .first { candidate in
+                candidate.lineIndex > match.lineIndex
+                    || candidate.lineIndex == match.lineIndex && candidate.range.location >= match.range.location + (replacement as NSString).length
+            }
+    }
+
+    func replaceAllMatches(_ matches: [SearchMatch], with replacement: String) -> Int? {
+        guard !matches.isEmpty else { return nil }
+        var grouped: [Int: [NSRange]] = [:]
+        for match in matches {
+            grouped[match.lineIndex, default: []].append(match.range)
+        }
+        var earliestLine: Int?
+        for lineIndex in grouped.keys.sorted().reversed() {
+            guard let lineRanges = grouped[lineIndex] else { continue }
+            let ranges = lineRanges.sorted { $0.location > $1.location }
+            var nsLine = line(at: lineIndex) as NSString
+            for range in ranges where NSMaxRange(range) <= nsLine.length {
+                nsLine = nsLine.replacingCharacters(in: range, with: replacement) as NSString
+            }
+            _ = replaceLines(in: lineIndex ..< lineIndex + 1, with: [nsLine as String])
+            earliestLine = min(earliestLine ?? lineIndex, lineIndex)
+        }
+        return earliestLine
+    }
+
     struct SearchMatch {
         let lineIndex: Int
         let range: NSRange

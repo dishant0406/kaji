@@ -49,6 +49,7 @@ final class AppState {
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
         case createExternalEditorTab(projectID: UUID, areaID: UUID?, filePath: String, command: String)
         case createDiffViewerTab(projectID: UUID, areaID: UUID?, request: DiffViewerRequest)
+        case createProblemsTab(projectID: UUID, areaID: UUID?)
         case closeTab(projectID: UUID, areaID: UUID, tabID: UUID)
         case selectTab(projectID: UUID, areaID: UUID, tabID: UUID)
         case selectTabByIndex(projectID: UUID, areaID: UUID?, index: Int)
@@ -286,6 +287,10 @@ final class AppState {
         )))
     }
 
+    func openProblemsTab(projectID: UUID) {
+        dispatch(.createProblemsTab(projectID: projectID, areaID: nil))
+    }
+
     func openBrowserPanel(projectID: UUID) {
         guard BrowserExtensionPreferences.isEnabled else { return }
         NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
@@ -335,12 +340,14 @@ final class AppState {
             }
         }
         DebugFileLog.log("FileOpen", "checking existing editor tabs path=\(filePath)")
-        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
-            area.tabs.contains(where: { $0.content.editorState?.filePath == filePath })
-        }) {
-            DebugFileLog.log("FileOpen", "activating existing editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
-            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-            return
+        for workspaceTab in workspaceTabs(for: projectID) {
+            for area in workspaceTab.root.allAreas() {
+                guard let tab = area.tabs.first(where: { $0.content.editorState?.filePath == filePath }) else { continue }
+                DebugFileLog.log("FileOpen", "activating existing editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
+                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
+                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tab.id))
+                return
+            }
         }
         DebugFileLog.log("FileOpen", "creating built-in editor tab path=\(filePath)")
         if let entry = LanguagePackCatalog.availableEntry(forFile: filePath), pendingLanguagePackInstall?.filePath != filePath {
@@ -363,6 +370,20 @@ final class AppState {
                         } else if currentPath.hasPrefix(oldPrefix) {
                             editorState.updateFilePath(newPath + "/" + String(currentPath.dropFirst(oldPrefix.count)))
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    func reloadOpenEditors(paths: Set<String>) {
+        guard !paths.isEmpty else { return }
+        for workspace in workspaces.values {
+            for workspaceTab in workspace.tabs {
+                for area in workspaceTab.root.allAreas() {
+                    for tab in area.tabs {
+                        guard let editorState = tab.content.editorState, paths.contains(editorState.filePath) else { continue }
+                        editorState.reloadFromDiskAfterExternalChange()
                     }
                 }
             }

@@ -117,9 +117,15 @@ struct ShortcutActionDispatcher {
         case .findInTerminal:
             notificationCenter.post(name: .findInTerminal, object: nil)
             return true
+        case .replaceInEditor:
+            notificationCenter.post(name: .replaceInEditor, object: nil)
+            return true
         case .openVCSTab:
             guard let activeProject else { return false }
             openVCS(activeProject)
+            return true
+        case .commandPalette:
+            notificationCenter.post(name: .commandPalette, object: nil)
             return true
         case .quickOpen:
             notificationCenter.post(name: .quickOpen, object: nil)
@@ -143,6 +149,12 @@ struct ShortcutActionDispatcher {
             return true
         case .toggleFileTree:
             notificationCenter.post(name: .toggleFileTree, object: nil)
+            return true
+        case .toggleGlobalSearch:
+            notificationCenter.post(name: .toggleGlobalSearch, object: nil)
+            return true
+        case .toggleProblemsPanel:
+            notificationCenter.post(name: .toggleProblemsPanel, object: nil)
             return true
         case .toggleFooterTerminal:
             notificationCenter.post(name: .toggleFooterTerminal, object: nil)

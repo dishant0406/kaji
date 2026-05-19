@@ -14,8 +14,10 @@ final class ViewportState {
     private(set) var visualLines: [Int] = []
     private var foldedLineSet: Set<Int> = []
 
-    static let viewportBuffer = 500
-    static let scrollHysteresis = 200
+    static let minimumViewportBuffer = 80
+    static let maximumViewportBuffer = 180
+    static let minimumScrollHysteresis = 30
+    static let maximumScrollHysteresis = 80
 
     var viewportLineCount: Int { viewportEndLine - viewportStartLine }
 
@@ -58,18 +60,20 @@ final class ViewportState {
     }
 
     func visibleLineRange(scrollY: CGFloat, visibleHeight: CGFloat) -> Range<Int> {
-        let firstVisible = max(0, Int(floor(scrollY / estimatedLineHeight)))
+        let rawFirstVisible = max(0, Int(floor(scrollY / estimatedLineHeight)))
+        let firstVisible = min(rawFirstVisible, visualLineCount)
         let lastVisible = min(
             visualLineCount,
-            Int(ceil((scrollY + visibleHeight) / estimatedLineHeight))
+            max(firstVisible, Int(ceil((scrollY + visibleHeight) / estimatedLineHeight)))
         )
         return firstVisible ..< max(firstVisible, lastVisible)
     }
 
     func computeViewport(scrollY: CGFloat, visibleHeight: CGFloat) -> Range<Int> {
         let visible = visibleLineRange(scrollY: scrollY, visibleHeight: visibleHeight)
-        let start = max(0, visible.lowerBound - Self.viewportBuffer)
-        let end = min(visualLineCount, visible.upperBound + Self.viewportBuffer)
+        let buffer = viewportBuffer(visibleLineCount: visible.count)
+        let start = max(0, visible.lowerBound - buffer)
+        let end = min(visualLineCount, visible.upperBound + buffer)
         return start ..< max(start, end)
     }
 
@@ -77,18 +81,31 @@ final class ViewportState {
         let visible = visibleLineRange(scrollY: scrollY, visibleHeight: visibleHeight)
         guard viewportStartLine < viewportEndLine else { return true }
 
+        let hysteresis = scrollHysteresis(visibleLineCount: visible.count)
         let topMargin = visible.lowerBound - viewportStartLine
         let bottomMargin = viewportEndLine - visible.upperBound
-        return topMargin < Self.scrollHysteresis || bottomMargin < Self.scrollHysteresis
+        return topMargin < hysteresis || bottomMargin < hysteresis
+    }
+
+    func viewportBuffer(visibleLineCount: Int) -> Int {
+        min(Self.maximumViewportBuffer, max(Self.minimumViewportBuffer, visibleLineCount * 2))
+    }
+
+    func scrollHysteresis(visibleLineCount: Int) -> Int {
+        min(Self.maximumScrollHysteresis, max(Self.minimumScrollHysteresis, visibleLineCount))
     }
 
     func applyViewport(_ range: Range<Int>) {
-        viewportStartLine = range.lowerBound
-        viewportEndLine = range.upperBound
+        let start = min(max(0, range.lowerBound), visualLineCount)
+        let end = min(max(start, range.upperBound), visualLineCount)
+        viewportStartLine = start
+        viewportEndLine = end
     }
 
     func viewportText() -> String {
-        let lines = visualLines[viewportStartLine ..< min(viewportEndLine, visualLines.count)].map { backingStore.line(at: $0) }
+        let start = min(max(0, viewportStartLine), visualLines.count)
+        let end = min(max(start, viewportEndLine), visualLines.count)
+        let lines = visualLines[start ..< end].map { backingStore.line(at: $0) }
         return lines.joined(separator: "\n")
     }
 

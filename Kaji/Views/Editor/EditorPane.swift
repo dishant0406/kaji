@@ -33,11 +33,14 @@ struct EditorPane: View {
             if state.isMarkdownFile, state.markdownViewMode == .preview {
                 state.markdownViewMode = .code
             }
-            if !state.currentSelection.isEmpty {
-                state.searchNeedle = state.currentSelection
+            state.showFind()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .replaceInEditor)) { _ in
+            guard focused else { return }
+            if state.isMarkdownFile, state.markdownViewMode == .preview {
+                state.markdownViewMode = .code
             }
-            state.searchVisible = true
-            state.searchFocusVersion += 1
+            state.showReplace()
         }
         .onReceive(NotificationCenter.default.publisher(for: .inlineEdit)) { _ in
             guard focused else { return }
@@ -137,6 +140,7 @@ struct EditorPane: View {
                 lineNavigationVersion: state.lineNavigationVersion,
                 inlineEditRequestVersion: state.inlineEditRequestVersion,
                 inlineEditApplyVersion: state.inlineEditApplyVersion,
+                lspChangeVersion: state.lspChangeVersion,
                 onFocus: onFocus
             )
             if showsOutline {

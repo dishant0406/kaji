@@ -78,6 +78,8 @@ struct MainWindow: View {
     @State private var vcsPanelWidth: CGFloat = AttachedVCSLayout.defaultWidth
     @State private var vcsStates: [WorktreeKey: VCSTabState] = [:]
     @State private var fileTreePanelVisible = false
+    @State private var globalSearchPanelVisible = false
+    @State private var problemsPanelVisible = false
     @AppStorage("kaji.fileTreeWidth") private var fileTreePanelWidth: Double = .init(FileTreeLayout.defaultWidth)
     @AppStorage("kaji.codeGraphAgentPanelWidth") private var codeGraphAgentPanelWidth: Double = .init(CodeGraphAgentLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
@@ -92,6 +94,7 @@ struct MainWindow: View {
     @State private var cliLauncherSettings = CLILauncherSettings.shared
     @State private var footerTerminalStore = FooterTerminalStateStore()
     @State private var footerTerminalCleanupTasks: [UUID: Task<Void, Never>] = [:]
+    @State private var showCommandPalette = false
     @State private var showQuickOpen = false
     @State private var showAsk = false
     @State private var showAgentCommandCenter = false
@@ -118,6 +121,7 @@ struct MainWindow: View {
             mainLayout
                 .environment(\.overlayActive, overlayActive)
                 .overlay(alignment: toastAlignment) { toastOverlay }
+                .overlay { commandPaletteOverlay }
                 .overlay { quickOpenOverlay }
                 .overlay { askOverlay }
                 .overlay { agentCommandCenterOverlay }
@@ -168,7 +172,17 @@ struct MainWindow: View {
 
         let receives1 = AnyView(
             base
+                .onReceive(NotificationCenter.default.publisher(for: .commandPalette)) { _ in
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showGoToSymbol = false
+                    showGoToLine = false
+                    showCommandPalette.toggle()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .quickOpen)) { _ in
+                    showCommandPalette = false
                     showQuickOpen.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .goToSymbol)) { _ in
@@ -176,6 +190,7 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    showCommandPalette = false
                     showGoToLine = false
                     showGoToSymbol.toggle()
                 }
@@ -184,11 +199,13 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    showCommandPalette = false
                     showGoToSymbol = false
                     showGoToLine.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .ask)) { _ in
                     let shouldShow = !showAsk
+                    showCommandPalette = false
                     showQuickOpen = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
@@ -197,6 +214,7 @@ struct MainWindow: View {
                     showAsk = shouldShow
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openAskWithPrefill)) { _ in
+                    showCommandPalette = false
                     showQuickOpen = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
@@ -206,6 +224,7 @@ struct MainWindow: View {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .agentCommandCenter)) { _ in
                     let shouldShow = !showAgentCommandCenter
+                    showCommandPalette = false
                     showQuickOpen = false
                     showAsk = false
                     showWorktreeSwitcher = false
@@ -218,6 +237,7 @@ struct MainWindow: View {
                         showSettings = true
                         return
                     }
+                    showCommandPalette = false
                     showQuickOpen = false
                     showAsk = false
                     showAgentCommandCenter = false
@@ -230,9 +250,11 @@ struct MainWindow: View {
                     appState.hideParentAgentHome()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
+                    showCommandPalette = false
                     showWorktreeSwitcher.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleSettings)) { _ in
+                    showCommandPalette = false
                     showQuickOpen = false
                     showAsk = false
                     showAgentCommandCenter = false
@@ -275,6 +297,12 @@ struct MainWindow: View {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFileTree)) { _ in
                     toggleFileTreePanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleGlobalSearch)) { _ in
+                    toggleGlobalSearchPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleProblemsPanel)) { _ in
+                    toggleProblemsPanel()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleBrowserPanel)) { _ in
                     guard browserEnabled else { return }
@@ -348,7 +376,7 @@ struct MainWindow: View {
     }
 
     private var overlayActive: Bool {
-        showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showGoToSymbol || showGoToLine || showSettings || showMCPControlPanel ||
+        showCommandPalette || showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showGoToSymbol || showGoToLine || showSettings || showMCPControlPanel ||
             showCreateThemeModal || createWorktreeProjectID != nil || projectLogoCropRequest != nil
     }
 
@@ -474,6 +502,10 @@ struct MainWindow: View {
                 VCSTabView(state: state, focused: false, onFocus: {})
                     .frame(width: vcsPanelWidth)
             }
+        } else if problemsPanelVisible {
+            problemsSidePanel()
+        } else if globalSearchPanelVisible, let project = activeProject {
+            globalSearchSidePanel(project: project)
         } else if fileTreePanelVisible, let treeState = activeFileTreeState {
             fileTreeSidePanel(treeState: treeState)
         } else if agentInstructionPanelVisible, let project = activeProject {
@@ -564,6 +596,48 @@ struct MainWindow: View {
         }
     }
 
+    private func globalSearchSidePanel(project: Project) -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                let next = fileTreePanelWidth - Double(delta)
+                fileTreePanelWidth = max(Double(FileTreeLayout.minWidth), min(Double(FileTreeLayout.maxWidth), next))
+            }
+            GlobalSearchPanel(
+                projectPath: activeWorktreePath(for: project),
+                onOpenMatch: { match in
+                    activateWorkspace()
+                    appState.openFile(match.filePath, projectID: project.id)
+                    activeEditorState?.navigate(to: .init(line: match.line, column: match.column))
+                },
+                onReplaceComplete: { changedPaths in
+                    appState.reloadOpenEditors(paths: Set(changedPaths))
+                },
+                onClose: { globalSearchPanelVisible = false }
+            )
+            .frame(width: CGFloat(fileTreePanelWidth))
+        }
+    }
+
+    private func problemsSidePanel() -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                let next = fileTreePanelWidth - Double(delta)
+                fileTreePanelWidth = max(Double(FileTreeLayout.minWidth), min(Double(FileTreeLayout.maxWidth), next))
+            }
+            ProblemsPanel(
+                store: DiagnosticsStore.shared,
+                onOpenDiagnostic: { diagnostic in
+                    guard let project = activeProject else { return }
+                    activateWorkspace()
+                    appState.openFile(diagnostic.filePath, projectID: project.id)
+                    activeEditorState?.navigate(to: .init(line: diagnostic.line, column: diagnostic.column))
+                },
+                onClose: { problemsPanelVisible = false }
+            )
+            .frame(width: CGFloat(fileTreePanelWidth))
+        }
+    }
+
     @ViewBuilder
     private var toastOverlay: some View {
         if let toast = ToastState.shared.message {
@@ -602,6 +676,20 @@ struct MainWindow: View {
             .allowsHitTesting(ToastState.shared.actionTitle != nil)
             .accessibilityLabel(toast)
             .accessibilityAddTraits(.isStaticText)
+        }
+    }
+
+    @ViewBuilder
+    private var commandPaletteOverlay: some View {
+        if showCommandPalette {
+            CommandPaletteOverlay(
+                onSelect: { command in
+                    showCommandPalette = false
+                    performCommand(command)
+                },
+                onDismiss: { showCommandPalette = false }
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -1056,6 +1144,18 @@ struct MainWindow: View {
         return true
     }
 
+    private func performCommand(_ command: AppCommand) {
+        let dispatcher = AppCommandDispatcher(
+            shortcutDispatcher: shortcutDispatcher,
+            activeProject: activeProject
+        ) { project in
+            openVCS(for: project)
+        }
+        if dispatcher.perform(command), command.id.exitsParentAgentHome {
+            activateWorkspace()
+        }
+    }
+
     private var activeProjectHasSplitWorkspace: Bool {
         guard let project = activeProject,
               let root = appState.workspaceRoot(for: project.id)
@@ -1238,9 +1338,35 @@ struct MainWindow: View {
         fileTreePanelVisible = isShowing
         if isShowing {
             vcsPanelVisible = false
+            globalSearchPanelVisible = false
+            problemsPanelVisible = false
             hideBrowserPanel()
             agentInstructionPanelVisible = false
         }
+    }
+
+    private func toggleGlobalSearchPanel() {
+        guard activeProject != nil else {
+            globalSearchPanelVisible = false
+            return
+        }
+
+        activateWorkspace()
+        let isShowing = !globalSearchPanelVisible
+        globalSearchPanelVisible = isShowing
+        if isShowing {
+            vcsPanelVisible = false
+            fileTreePanelVisible = false
+            problemsPanelVisible = false
+            hideBrowserPanel()
+            agentInstructionPanelVisible = false
+        }
+    }
+
+    private func toggleProblemsPanel() {
+        guard let projectID = appState.activeProjectID else { return }
+        appState.openProblemsTab(projectID: projectID)
+        activateWorkspace()
     }
 
     private func toggleAgentInstructionPanel() {
@@ -1519,6 +1645,7 @@ private extension ShortcutAction {
     var exitsParentAgentHome: Bool {
         switch self {
         case .ask,
+             .commandPalette,
              .agentCommandCenter,
              .toggleSidebar,
              .toggleThemePicker,
@@ -1534,6 +1661,8 @@ private extension ShortcutAction {
              .switchWorktree,
              .openVCSTab,
              .toggleFileTree,
+             .toggleGlobalSearch,
+             .toggleProblemsPanel,
              .newTab,
              .closeTab,
              .renameTab,
@@ -1567,10 +1696,11 @@ private extension ShortcutAction {
              .selectProject7,
              .selectProject8,
              .selectProject9,
-               .findInTerminal,
-               .goToSymbol,
-               .goToLine,
-               .inlineEdit,
+             .findInTerminal,
+             .replaceInEditor,
+             .goToSymbol,
+             .goToLine,
+             .inlineEdit,
               .saveFile:
             true
         }

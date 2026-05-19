@@ -36,7 +36,7 @@ final class TabArea: Identifiable {
     }
 
     func snapshot() -> TabAreaSnapshot {
-        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .codeGraph && $0.kind != .browser }
+        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .problems && $0.kind != .codeGraph && $0.kind != .browser }
         let activeIndex = persistedTabs.firstIndex(where: { $0.id == activeTabID })
         return TabAreaSnapshot(
             id: id,

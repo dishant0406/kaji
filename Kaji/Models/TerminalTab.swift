@@ -8,6 +8,7 @@ final class TerminalTab: Identifiable {
         case vcs
         case editor
         case diffViewer
+        case problems
         case parentAgent
         case codeGraph
         case browser
@@ -18,6 +19,7 @@ final class TerminalTab: Identifiable {
         case vcs(VCSTabState)
         case editor(EditorTabState)
         case diffViewer(DiffViewerTabState)
+        case problems(ProblemsTabState)
         case parentAgent(ParentAgentTabState)
         case codeGraph(KajiCodeGraphTabState)
         case browser(BrowserPaneState)
@@ -28,6 +30,7 @@ final class TerminalTab: Identifiable {
             case .vcs: .vcs
             case .editor: .editor
             case .diffViewer: .diffViewer
+            case .problems: .problems
             case .parentAgent: .parentAgent
             case .codeGraph: .codeGraph
             case .browser: .browser
@@ -70,6 +73,7 @@ final class TerminalTab: Identifiable {
             case let .vcs(state): state.projectPath
             case let .editor(state): state.projectPath
             case let .diffViewer(state): state.projectPath
+            case let .problems(state): state.projectPath
             case let .parentAgent(state): state.projectPath
             case let .codeGraph(state): state.projectPath
             case let .browser(state): state.projectPath
@@ -98,6 +102,8 @@ final class TerminalTab: Identifiable {
             return state.displayTitle
         case let .diffViewer(state):
             return state.displayTitle
+        case .problems:
+            return "Problems"
         case .parentAgent:
             return "Kaji"
         case .codeGraph:
@@ -121,6 +127,10 @@ final class TerminalTab: Identifiable {
 
     init(diffViewerState: DiffViewerTabState) {
         content = .diffViewer(diffViewerState)
+    }
+
+    init(problemsState: ProblemsTabState) {
+        content = .problems(problemsState)
     }
 
     init(parentAgentState: ParentAgentTabState) {
@@ -152,6 +162,8 @@ final class TerminalTab: Identifiable {
             }
         case .diffViewer:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
+        case .problems:
+            content = .problems(ProblemsTabState(projectPath: snapshot.projectPath))
         case .parentAgent:
             content = .parentAgent(ParentAgentTabState(projectPath: snapshot.projectPath))
         case .codeGraph:

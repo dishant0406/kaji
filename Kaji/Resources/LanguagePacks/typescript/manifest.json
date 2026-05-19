@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "id": "typescript",
+  "name": "TypeScript",
+  "extensions": [
+    "ts",
+    "tsx",
+    "mts",
+    "cts"
+  ],
+  "filenames": [],
+  "configuration": {
+    "comments": {
+      "lineComment": "//",
+      "blockComment": [
+        "/*",
+        "*/"
+      ]
+    },
+    "brackets": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ]
+    ],
+    "autoClosingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ],
+      [
+        "`",
+        "`"
+      ]
+    ],
+    "surroundingPairs": [
+      [
+        "{",
+        "}"
+      ],
+      [
+        "[",
+        "]"
+      ],
+      [
+        "(",
+        ")"
+      ],
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "'",
+        "'"
+      ],
+      [
+        "`",
+        "`"
+      ]
+    ],
+    "indentationRules": {
+      "increaseIndentPattern": "^.*(\\{|\\[|\\().*$",
+      "decreaseIndentPattern": "^\\s*(\\}|\\]|\\)).*$",
+      "indentNextLinePattern": null,
+      "unIndentedLinePattern": null
+    },
+    "folding": null
+  },
+  "syntax": {
+    "engine": "builtInTokenizer",
+    "builtInTokenizer": {
+      "grammarID": "typescript"
+    }
+  },
+  "lsp": {
+    "serverID": "typescript-language-server",
+    "command": "typescript-language-server",
+    "arguments": [
+      "--stdio"
+    ],
+    "installHint": "npm install -g typescript typescript-language-server",
+    "installCommand": "npm install -g typescript typescript-language-server"
+  },
+  "snippets": [],
+  "formatter": null
+}

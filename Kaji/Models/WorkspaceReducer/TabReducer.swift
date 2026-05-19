@@ -185,6 +185,13 @@ enum TabReducer {
         }
     }
 
+    static func createProblemsTab(projectID: UUID, areaID _: UUID?, state: inout WorkspaceState) {
+        _ = appendWorkspaceTab(projectID: projectID, state: &state) { path in
+            let area = TabArea(projectPath: path, existingTab: TerminalTab(problemsState: ProblemsTabState(projectPath: path)))
+            return WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        }
+    }
+
     static func selectTab(projectID: UUID, areaID _: UUID?, tabID: UUID, state: inout WorkspaceState) {
         guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
               let workspace = state.workspaces[key]
