@@ -19,6 +19,7 @@ enum DebugFileLog {
     }
 
     static func log(_ category: String, _ message: String) {
+        guard shouldLog(category) else { return }
         startIfNeeded()
         let timestamp = Self.timestamp()
         let thread = Thread.isMainThread ? "main" : "background"
@@ -42,6 +43,16 @@ enum DebugFileLog {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: Date())
+    }
+
+    private static func shouldLog(_ category: String) -> Bool {
+        if ProcessInfo.processInfo.environment["KAJI_EDITOR_DEBUG_LOGS"] == "1" { return true }
+        return ![
+            "EditorDraw",
+            "EditorViewport",
+            "EditorSyntax",
+            "EditorDecorations",
+        ].contains(category)
     }
 
     private static func installCrashHandlers() {

@@ -8,7 +8,7 @@ struct EditorSearchBar: View {
     let onReplaceAll: () -> Void
     let onClose: () -> Void
 
-    @FocusState private var isFieldFocused: Bool
+    @FocusState private var focusedField: EditorSearchFocusedField?
 
     private var displayText: String {
         guard !state.searchNeedle.isEmpty else { return "" }
@@ -43,7 +43,9 @@ struct EditorSearchBar: View {
 
             Rectangle().fill(KajiTheme.border).frame(height: 1)
         }
-        .deferFocus($isFieldFocused, on: state.searchFocusVersion)
+        .onChange(of: state.searchFocusVersion) { _, _ in focusedField = .search }
+        .onChange(of: state.replaceFocusVersion) { _, _ in focusedField = .replace }
+        .onAppear { focusedField = state.replaceVisible ? .replace : .search }
         .onKeyPress(.escape) {
             onClose()
             return .handled
@@ -61,8 +63,16 @@ struct EditorSearchBar: View {
                     .textFieldStyle(.plain)
                     .kajiFont(size: 12)
                     .foregroundStyle(KajiTheme.fg)
-                    .focused($isFieldFocused)
+                    .focused($focusedField, equals: .search)
                     .onSubmit { onNext() }
+                    .onKeyPress(.return, phases: .down) { press in
+                        if press.modifiers.contains(.shift) {
+                            onPrevious()
+                        } else {
+                            onNext()
+                        }
+                        return .handled
+                    }
 
                 if !displayText.isEmpty {
                     Text(displayText)
@@ -124,6 +134,7 @@ struct EditorSearchBar: View {
                     .textFieldStyle(.plain)
                     .kajiFont(size: 12)
                     .foregroundStyle(KajiTheme.fg)
+                    .focused($focusedField, equals: .replace)
                     .onSubmit(onReplace)
             }
             .padding(.horizontal, 8)
@@ -144,6 +155,11 @@ struct EditorSearchBar: View {
                 .disabled(state.searchMatchCount == 0)
         }
     }
+}
+
+private enum EditorSearchFocusedField: Hashable {
+    case search
+    case replace
 }
 
 private struct EditorSearchButtonStyle: ButtonStyle {

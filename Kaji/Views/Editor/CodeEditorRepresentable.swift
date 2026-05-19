@@ -170,6 +170,7 @@ final class ViewportContainerView: NSView {
     var activeGlobalLine = 0
     var lineStartOffsets: [Int] = [0]
     var matchingBracketLocalRanges: [NSRange] = []
+    var diagnostics: [EditorDiagnostic] = []
 
     override func draw(_ dirtyRect: NSRect) {
         DebugFileLog.log(
@@ -181,6 +182,7 @@ final class ViewportContainerView: NSView {
         drawIndentGuides(dirtyRect)
         drawWhitespace(dirtyRect)
         drawBracketHighlights(dirtyRect)
+        drawDiagnosticGutterMarkers(dirtyRect)
         drawGutter(dirtyRect)
         drawFoldControls(dirtyRect)
         DebugFileLog.log("EditorDraw", "draw completed dirty=\(Self.describe(dirtyRect))")
@@ -265,7 +267,7 @@ final class ViewportContainerView: NSView {
         GhosttyService.shared.foregroundColor.withAlphaComponent(0.08).setFill()
         NSRect(x: CodeEditorMetrics.gutterWidth - 1, y: dirtyRect.minY, width: 1, height: dirtyRect.height).fill()
 
-        let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        guard let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular) as NSFont? else { return }
         let inactive = GhosttyService.shared.foregroundColor.withAlphaComponent(0.38)
         let active = GhosttyService.shared.foregroundColor.withAlphaComponent(0.78)
         let paragraph = NSMutableParagraphStyle()
@@ -291,6 +293,29 @@ final class ViewportContainerView: NSView {
                 height: viewport.estimatedLineHeight
             )
             string.draw(in: rect, withAttributes: attrs)
+        }
+    }
+
+    private func drawDiagnosticGutterMarkers(_ dirtyRect: NSRect) {
+        guard editorAppearance.showsLineNumbers, let viewport, !diagnostics.isEmpty else { return }
+        for diagnostic in diagnostics {
+            let line = diagnostic.line - 1
+            guard viewport.isLineInViewport(line) else { continue }
+            guard let localLine = viewport.viewportLine(forBackingStoreLine: line) else { continue }
+            let y = CGFloat(localLine) * viewport.estimatedLineHeight
+            let rect = NSRect(x: 6, y: y + 5, width: 6, height: 6)
+            guard dirtyRect.intersects(rect) else { continue }
+            diagnosticMarkerColor(diagnostic.severity).setFill()
+            NSBezierPath(ovalIn: rect).fill()
+        }
+    }
+
+    private func diagnosticMarkerColor(_ severity: EditorDiagnosticSeverity) -> NSColor {
+        switch severity {
+        case .error: .systemRed
+        case .warning: .systemYellow
+        case .information: .systemBlue
+        case .hint: GhosttyService.shared.foregroundColor.withAlphaComponent(0.5)
         }
     }
 
@@ -489,6 +514,7 @@ struct CodeEditorView: NSViewRepresentable {
     let lineNavigationVersion: Int
     let inlineEditRequestVersion: Int
     let inlineEditApplyVersion: Int
+    let lspChangeVersion: Int
     let onFocus: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -503,6 +529,7 @@ struct CodeEditorView: NSViewRepresentable {
 
         let textStorage = NSTextStorage()
         let layoutManager = CodeEditorLayoutManager()
+        layoutManager.allowsNonContiguousLayout = true
         textStorage.addLayoutManager(layoutManager)
 
         let textContainer = NSTextContainer(containerSize: NSSize(
@@ -721,6 +748,11 @@ struct CodeEditorView: NSViewRepresentable {
             coordinator.lastInlineEditApplyVersion = inlineEditApplyVersion
             coordinator.applyInlineEditProposal()
         }
+
+        if coordinator.lastLSPChangeVersion != lspChangeVersion {
+            coordinator.lastLSPChangeVersion = lspChangeVersion
+            coordinator.scheduleLSPChange()
+        }
     }
 
     // MARK: - Shared helpers
@@ -900,6 +932,7 @@ struct CodeEditorView: NSViewRepresentable {
         var lastLineNavigationVersion = 0
         var lastInlineEditRequestVersion = 0
         var lastInlineEditApplyVersion = 0
+        var lastLSPChangeVersion = 0
         var lastSyncedBackingStoreVersion = -1
         fileprivate var lastAppearance = CodeEditorAppearanceSnapshot(settings: EditorSettings.shared)
         var wasIncrementalLoading = false
@@ -911,6 +944,7 @@ struct CodeEditorView: NSViewRepresentable {
         private static let undoCommandSelector = #selector(CodeEditorTextView.undo(_:))
         private static let redoCommandSelector = #selector(CodeEditorTextView.redo(_:))
         private static let previewRefreshDebounceNanos: UInt64 = 500_000_000
+        private static let lspChangeDebounceNanos: UInt64 = 180_000_000
         private static let indentCommandSelector = #selector(NSResponder.insertTab(_:))
         private static let outdentCommandSelector = #selector(NSResponder.insertBacktab(_:))
         private static let newlineCommandSelector = #selector(NSResponder.insertNewline(_:))
@@ -941,6 +975,11 @@ struct CodeEditorView: NSViewRepresentable {
         private var lastRefreshDurationMs: Double = 0
         private var lastHighlightDurationMs: Double = 0
         private var previewRefreshTask: Task<Void, Never>?
+        private var lspChangeTask: Task<Void, Never>?
+        private var pendingScrollRefreshTask: Task<Void, Never>?
+        private var lastDiagnosticFingerprint = ""
+        private var lastDiagnosticViewportRange: Range<Int> = 0 ..< 0
+        private var isScrollDrivenRefresh = false
         private var pendingCascadeReapplyGeneration: UInt64 = 0
         private let filePathForLogging: String
 
@@ -955,6 +994,8 @@ struct CodeEditorView: NSViewRepresentable {
         deinit {
             DebugFileLog.log("EditorCoordinator", "deinit filePath=\(filePathForLogging)")
             previewRefreshTask?.cancel()
+            lspChangeTask?.cancel()
+            pendingScrollRefreshTask?.cancel()
             NotificationCenter.default.removeObserver(self)
         }
 
@@ -1009,6 +1050,7 @@ struct CodeEditorView: NSViewRepresentable {
             containerView?.lineStartOffsets = lineStartOffsets
             containerView?.matchingBracketLocalRanges = matchingBracketRanges()
             containerView?.foldRegions = state.foldRegions()
+            containerView?.diagnostics = DiagnosticsStore.shared.diagnostics(for: state.filePath)
             containerView?.collapsedFoldRegionIDs = state.collapsedFoldRegionIDs
             containerView?.onToggleFold = { [weak self] region in
                 self?.toggleFold(region)
@@ -1154,7 +1196,7 @@ struct CodeEditorView: NSViewRepresentable {
 
             let previousRange = viewport.viewportStartLine ..< viewport.viewportEndLine
 
-            let savedCursor = globalCursorFromLocalLocation(textView.selectedRange().location)
+            let savedCursor = isScrollDrivenRefresh ? nil : globalCursorFromLocalLocation(textView.selectedRange().location)
             let savedSelectionLength = textView.selectedRange().length
 
             let newRange = viewport.computeViewport(scrollY: scrollY, visibleHeight: visibleHeight)
@@ -1198,18 +1240,22 @@ struct CodeEditorView: NSViewRepresentable {
             let font = typography.nsFont(size: AppTypographySettings.defaultFontSize)
             if let storage = textView.textStorage, storage.length > 0 {
                 let fullRange = NSRange(location: 0, length: storage.length)
-                storage.beginEditing()
-                storage.addAttribute(.font, value: font, range: fullRange)
-                storage.addAttribute(
-                    .paragraphStyle,
-                    value: CodeEditorView.paragraphStyle(
-                        tabInterval: CodeEditorView.tabInterval(for: lastAppearance.tabSize)
-                    ),
-                    range: fullRange
-                )
-                storage.endEditing()
-                DebugFileLog.log("EditorViewport", "refreshViewport applied attributes storageLength=\(storage.length) filePath=\(state.filePath)")
-                applySyntaxHighlights(storage: storage, viewport: viewport)
+                if shouldReloadText || force {
+                    storage.beginEditing()
+                    storage.addAttribute(.font, value: font, range: fullRange)
+                    storage.addAttribute(
+                        .paragraphStyle,
+                        value: CodeEditorView.paragraphStyle(
+                            tabInterval: CodeEditorView.tabInterval(for: lastAppearance.tabSize)
+                        ),
+                        range: fullRange
+                    )
+                    storage.endEditing()
+                    DebugFileLog.log("EditorViewport", "refreshViewport applied attributes storageLength=\(storage.length) filePath=\(state.filePath)")
+                    applySyntaxHighlights(storage: storage, viewport: viewport)
+                } else {
+                    refreshDiagnosticsIfNeeded()
+                }
             }
 
             updateViewportFrames(
@@ -1221,6 +1267,10 @@ struct CodeEditorView: NSViewRepresentable {
             )
 
             CATransaction.commit()
+            if isScrollDrivenRefresh, scrollView.contentView.bounds.origin.y != scrollY {
+                scrollView.contentView.setBoundsOrigin(NSPoint(x: scrollView.contentView.bounds.origin.x, y: scrollY))
+                scrollView.reflectScrolledClipView(scrollView.contentView)
+            }
             refreshEditorDecorations()
             DebugFileLog.log("EditorViewport", "refreshViewport committed textFrame=\(textView.frame) container=\(containerView?.frame.debugDescription ?? "nil") filePath=\(state.filePath)")
 
@@ -1237,6 +1287,7 @@ struct CodeEditorView: NSViewRepresentable {
             }
 
             isUpdating = false
+            applyDiagnosticHighlights()
             applySearchHighlights()
             DebugFileLog.log("EditorViewport", "refreshViewport completed filePath=\(state.filePath)")
         }
@@ -1282,7 +1333,65 @@ struct CodeEditorView: NSViewRepresentable {
                     forCharacterRange: NSRange(location: span.range.location, length: clampedLength)
                 )
             }
+            refreshDiagnosticsIfNeeded(force: true)
             DebugFileLog.log("EditorSyntax", "applySyntaxHighlights completed spans=\(spans.count) filePath=\(state.filePath)")
+        }
+
+        func refreshDiagnosticsIfNeeded(force: Bool = false) {
+            guard let viewport = viewportState else { return }
+            let diagnostics = DiagnosticsStore.shared.diagnostics(for: state.filePath)
+            let fingerprint = diagnostics.map { "\($0.id)|\($0.line)|\($0.column)|\($0.severity.rawValue)" }.joined(separator: "\n")
+            let viewportRange = viewport.viewportStartLine ..< viewport.viewportEndLine
+            guard force || fingerprint != lastDiagnosticFingerprint || viewportRange != lastDiagnosticViewportRange else { return }
+            lastDiagnosticFingerprint = fingerprint
+            lastDiagnosticViewportRange = viewportRange
+            applyDiagnosticHighlights(diagnostics: diagnostics)
+        }
+
+        func applyDiagnosticHighlights(diagnostics: [EditorDiagnostic]? = nil) {
+            guard let textView, let layoutManager = textView.layoutManager, let viewport = viewportState else { return }
+            let storageLength = textView.textStorage?.length ?? 0
+            clearAppliedDiagnosticHighlights(layoutManager: layoutManager, storageLength: storageLength)
+            guard storageLength > 0 else { return }
+            let diagnostics = diagnostics ?? DiagnosticsStore.shared.diagnostics(for: state.filePath)
+            var nextRanges: [NSRange] = []
+            for diagnostic in diagnostics {
+                let globalLine = diagnostic.line - 1
+                guard let localLine = viewport.viewportLine(forBackingStoreLine: globalLine) else { continue }
+                let localCharOffset = charOffsetForLocalLine(localLine)
+                let lineRange = (textView.string as NSString).lineRange(for: NSRange(location: min(localCharOffset, storageLength), length: 0))
+                let lineLength = max(0, lineRange.length - (NSMaxRange(lineRange) < storageLength ? 1 : 0))
+                let columnOffset = min(max(0, diagnostic.column - 1), lineLength)
+                let length = max(1, min(max(1, lineLength - columnOffset), 24))
+                let range = NSRange(location: localCharOffset + columnOffset, length: length)
+                guard NSMaxRange(range) <= storageLength else { continue }
+                nextRanges.append(range)
+                layoutManager.addTemporaryAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, forCharacterRange: range)
+                layoutManager.addTemporaryAttribute(.underlineColor, value: diagnosticColor(diagnostic.severity), forCharacterRange: range)
+            }
+            appliedDiagnosticRanges = nextRanges
+            textView.needsDisplay = true
+            containerView?.diagnostics = diagnostics
+            containerView?.needsDisplay = true
+        }
+
+        private var appliedDiagnosticRanges: [NSRange] = []
+
+        private func clearAppliedDiagnosticHighlights(layoutManager: NSLayoutManager, storageLength: Int) {
+            for range in appliedDiagnosticRanges where NSMaxRange(range) <= storageLength {
+                layoutManager.removeTemporaryAttribute(.underlineStyle, forCharacterRange: range)
+                layoutManager.removeTemporaryAttribute(.underlineColor, forCharacterRange: range)
+            }
+            appliedDiagnosticRanges.removeAll(keepingCapacity: true)
+        }
+
+        private func diagnosticColor(_ severity: EditorDiagnosticSeverity) -> NSColor {
+            switch severity {
+            case .error: NSColor.systemRed
+            case .warning: NSColor.systemYellow
+            case .information: NSColor.systemBlue
+            case .hint: GhosttyService.shared.foregroundColor.withAlphaComponent(0.55)
+            }
         }
 
         func invalidateSyntaxHighlightsFromLine(_ line: Int) {
@@ -1333,6 +1442,7 @@ struct CodeEditorView: NSViewRepresentable {
                 DebugFileLog.log("EditorSyntax", "incremental cascade scheduled filePath=\(state.filePath)")
                 scheduleCascadeReapply()
             }
+            refreshDiagnosticsIfNeeded()
             DebugFileLog.log("EditorSyntax", "incremental completed filePath=\(state.filePath)")
         }
 
@@ -1666,47 +1776,47 @@ struct CodeEditorView: NSViewRepresentable {
             let currentIndex = max(0, state.searchCurrentIndex - 1)
             guard currentIndex < viewportSearchMatches.count else { return }
             let match = viewportSearchMatches[currentIndex]
-            let line = store.line(at: match.lineIndex)
-            let nsLine = line as NSString
-            let newLine = nsLine.replacingCharacters(in: match.range, with: replacement)
-            _ = store.replaceLines(in: match.lineIndex ..< match.lineIndex + 1, with: [newLine])
+            let nextMatch = store.replaceFirstMatch(
+                match,
+                with: replacement,
+                needle: needle,
+                caseSensitive: caseSensitive,
+                useRegex: useRegex
+            )
             state.backingStoreVersion += 1
             lastSyncedBackingStoreVersion = state.backingStoreVersion
             state.markModified()
+            state.notifyLanguageServerChanged()
+            scheduleLSPChange()
             invalidateSyntaxHighlightsFromLine(match.lineIndex)
             invalidateRenderedViewportText()
             scheduleMarkdownPreviewRefresh(immediate: true)
             performSearchViewport(needle, caseSensitive: caseSensitive, useRegex: useRegex)
+            if let nextMatch,
+               let nextIndex = viewportSearchMatches.firstIndex(where: { $0.lineIndex == nextMatch.lineIndex && $0.range == nextMatch.range })
+            {
+                state.searchCurrentIndex = nextIndex + 1
+                scrollToSearchMatch(at: nextIndex)
+            }
             refreshViewport(force: true)
         }
 
         func replaceAllViewport(with replacement: String, needle: String, caseSensitive: Bool, useRegex: Bool) {
             guard let store = state.backingStore, !needle.isEmpty, !viewportSearchMatches.isEmpty else { return }
             clearViewportHistory()
-            var grouped: [Int: [NSRange]] = [:]
-            for match in viewportSearchMatches {
-                grouped[match.lineIndex, default: []].append(match.range)
-            }
-            var earliestInvalidation = Int.max
-            for lineIndex in grouped.keys.sorted().reversed() {
-                guard let lineRanges = grouped[lineIndex] else { continue }
-                let ranges = lineRanges.sorted { $0.location > $1.location }
-                var nsLine = store.line(at: lineIndex) as NSString
-                for range in ranges {
-                    nsLine = nsLine.replacingCharacters(in: range, with: replacement) as NSString
-                }
-                _ = store.replaceLines(in: lineIndex ..< lineIndex + 1, with: [nsLine as String])
-                earliestInvalidation = min(earliestInvalidation, lineIndex)
-            }
-            if earliestInvalidation != Int.max {
+            let earliestInvalidation = store.replaceAllMatches(viewportSearchMatches, with: replacement)
+            if let earliestInvalidation {
                 invalidateSyntaxHighlightsFromLine(earliestInvalidation)
             }
             state.backingStoreVersion += 1
             lastSyncedBackingStoreVersion = state.backingStoreVersion
             state.markModified()
+            state.notifyLanguageServerChanged()
             invalidateRenderedViewportText()
             scheduleMarkdownPreviewRefresh(immediate: true)
             performSearchViewport(needle, caseSensitive: caseSensitive, useRegex: useRegex)
+            viewportState?.rebuildVisualLines(collapsedRegions: state.foldRegions().filter { state.isFoldRegionCollapsed($0) })
+            updateContainerHeight()
             refreshViewport(force: true)
         }
 
@@ -1715,6 +1825,11 @@ struct CodeEditorView: NSViewRepresentable {
                   let viewport = viewportState, let scrollView, let textView
             else { return }
             let match = viewportSearchMatches[index]
+            if state.unfoldRegions(containing: match.lineIndex) {
+                viewport.rebuildVisualLines(collapsedRegions: state.foldRegions().filter { state.isFoldRegionCollapsed($0) })
+                invalidateRenderedViewportText()
+                updateContainerHeight()
+            }
             let targetScrollY = viewport.scrollY(forLine: match.lineIndex)
             let visibleHeight = scrollView.contentView.bounds.height
             let centeredY = max(0, targetScrollY - visibleHeight / 2)
@@ -1877,7 +1992,7 @@ struct CodeEditorView: NSViewRepresentable {
                 updateMarkdownPreviewSyncPointFromEditorScroll()
             }
             if !isEditingViewport {
-                refreshViewport(force: false)
+                scheduleViewportRefresh()
             }
         }
 
@@ -1893,7 +2008,23 @@ struct CodeEditorView: NSViewRepresentable {
             }
             updateMarkdownEditorScrollMetrics()
             if !isEditingViewport {
-                refreshViewport(force: false)
+                scheduleViewportRefresh()
+            }
+        }
+
+        private func scheduleViewportRefresh() {
+            pendingScrollRefreshTask?.cancel()
+            let targetScrollY = scrollView?.contentView.bounds.origin.y
+            pendingScrollRefreshTask = Task { @MainActor [weak self] in
+                await Task.yield()
+                guard !Task.isCancelled, let self, !self.isEditingViewport else { return }
+                if let targetScrollY, let scrollView = self.scrollView, abs(scrollView.contentView.bounds.origin.y - targetScrollY) > 0.5 {
+                    self.scheduleViewportRefresh()
+                    return
+                }
+                self.isScrollDrivenRefresh = true
+                defer { self.isScrollDrivenRefresh = false }
+                self.refreshViewport(force: false)
             }
         }
 
@@ -2020,6 +2151,22 @@ struct CodeEditorView: NSViewRepresentable {
             previewRefreshTask = task
         }
 
+        func scheduleLSPChange() {
+            lspChangeTask?.cancel()
+            let version = state.lspChangeVersion
+            lspChangeTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: Self.lspChangeDebounceNanos)
+                guard !Task.isCancelled, let self else { return }
+                guard self.state.lspChangeVersion == version else { return }
+                guard let text = self.state.backingStore?.fullText() else { return }
+                LanguageServerManager.shared.didChange(
+                    filePath: self.state.filePath,
+                    projectPath: self.state.projectPath,
+                    text: text
+                )
+            }
+        }
+
         private func handleTextDidChangeViewport(_ textView: NSTextView) {
             guard let viewport = viewportState, let scrollView else { return }
             let pendingEdit = pendingViewportEdit
@@ -2050,6 +2197,7 @@ struct CodeEditorView: NSViewRepresentable {
             state.backingStoreVersion += 1
             lastSyncedBackingStoreVersion = state.backingStoreVersion
             state.markModified()
+            state.notifyLanguageServerChanged()
 
             isEditingViewport = true
             defer { isEditingViewport = false }
@@ -2125,7 +2273,11 @@ struct CodeEditorView: NSViewRepresentable {
                         newLineCount: pendingEdit.newLines.count
                     )
                 } else {
-                    reapplySyntaxHighlights()
+                    applyIncrementalSyntaxHighlights(
+                        startLine: max(0, lineNumber(atCharacterLocation: cursorLocation) - 1),
+                        oldLineCount: 1,
+                        newLineCount: 1
+                    )
                 }
             }
         }
@@ -2193,6 +2345,7 @@ struct CodeEditorView: NSViewRepresentable {
             state.backingStoreVersion += 1
             lastSyncedBackingStoreVersion = state.backingStoreVersion
             state.markModified()
+            state.notifyLanguageServerChanged()
             invalidateRenderedViewportText()
             scheduleMarkdownPreviewRefresh(immediate: true)
             appendViewportRedo(group)
@@ -2227,6 +2380,7 @@ struct CodeEditorView: NSViewRepresentable {
             state.backingStoreVersion += 1
             lastSyncedBackingStoreVersion = state.backingStoreVersion
             state.markModified()
+            state.notifyLanguageServerChanged()
             invalidateRenderedViewportText()
             scheduleMarkdownPreviewRefresh(immediate: true)
             appendViewportUndo(group)

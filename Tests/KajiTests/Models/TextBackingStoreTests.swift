@@ -207,4 +207,29 @@ struct TextBackingStoreTests {
         #expect(matches.count == 3)
         #expect(matches.allSatisfy { $0.lineIndex == 0 })
     }
+
+    @Test("replaceFirstMatch returns next match after replacement")
+    func replaceFirstMatchReturnsNext() {
+        let store = TextBackingStore()
+        store.loadFromText("foo foo\nfoo")
+        let first = store.search(needle: "foo", caseSensitive: true, useRegex: false)[0]
+
+        let next = store.replaceFirstMatch(first, with: "bar", needle: "foo", caseSensitive: true, useRegex: false)
+
+        #expect(store.fullText() == "bar foo\nfoo")
+        #expect(next?.lineIndex == 0)
+        #expect(next?.range.location == 4)
+    }
+
+    @Test("replaceAllMatches replaces grouped matches")
+    func replaceAllMatches() {
+        let store = TextBackingStore()
+        store.loadFromText("foo foo\nnope\nfoo")
+        let matches = store.search(needle: "foo", caseSensitive: true, useRegex: false)
+
+        let earliest = store.replaceAllMatches(matches, with: "bar")
+
+        #expect(earliest == 0)
+        #expect(store.fullText() == "bar bar\nnope\nbar")
+    }
 }

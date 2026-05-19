@@ -6,18 +6,18 @@ enum SyntaxEngineRegistry {
         guard let definition = LanguageRegistry.shared.definition(forFile: filePath),
               let syntax = definition.syntax
         else {
-            return fallbackHighlighter(forFile: filePath)
+            return nil
         }
 
         switch syntax.engine {
         case .builtInTokenizer:
             guard let grammarID = syntax.builtInTokenizer?.grammarID,
                   let grammar = SyntaxLanguageRegistry.grammar(forLanguageID: grammarID)
-            else { return fallbackHighlighter(forFile: filePath) }
+            else { return nil }
             return SyntaxHighlighter(grammar: grammar)
         case .tokenizer:
             guard let grammar = LanguagePackGrammarBuilder.grammar(for: definition) else {
-                return fallbackHighlighter(forFile: filePath)
+                return nil
             }
             return SyntaxHighlighter(grammar: grammar)
         case .treeSitter:
@@ -27,7 +27,7 @@ enum SyntaxEngineRegistry {
             if let grammar = LanguagePackGrammarBuilder.grammar(for: definition) {
                 return SyntaxHighlighter(grammar: grammar)
             }
-            return fallbackHighlighter(forFile: filePath)
+            return nil
         case .textMate:
             return nil
         case .none:
@@ -35,8 +35,4 @@ enum SyntaxEngineRegistry {
         }
     }
 
-    private static func fallbackHighlighter(forFile filePath: String) -> SyntaxHighlighter? {
-        guard let grammar = SyntaxLanguageRegistry.grammar(forFile: filePath) else { return nil }
-        return SyntaxHighlighter(grammar: grammar)
-    }
 }

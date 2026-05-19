@@ -14,6 +14,7 @@ struct EditorStatusBar: View {
             }
             statusItem("Spaces: \(settings.tabSize)")
             statusItem(state.languageDisplayName)
+            diagnosticsStatus
         }
         .padding(.horizontal, 10)
         .frame(height: 24)
@@ -37,5 +38,18 @@ struct EditorStatusBar: View {
             .kajiFont(size: 11)
             .foregroundStyle(KajiTheme.fgMuted)
             .lineLimit(1)
+    }
+
+    private var diagnosticsStatus: some View {
+        let diagnostics = DiagnosticsStore.shared.diagnostics(for: state.filePath)
+        let errors = diagnostics.filter { $0.severity == .error }.count
+        let warnings = diagnostics.filter { $0.severity == .warning }.count
+        return HStack(spacing: 5) {
+            Text("E \(errors)")
+                .foregroundStyle(errors > 0 ? KajiTheme.diffRemoveFg : KajiTheme.fgDim)
+            Text("W \(warnings)")
+                .foregroundStyle(warnings > 0 ? KajiTheme.diffHunkFg : KajiTheme.fgDim)
+        }
+        .kajiFont(size: 11, design: .monospaced)
     }
 }

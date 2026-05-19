@@ -518,6 +518,7 @@ private struct TabCell: View {
         case .vcs: label += ", Source Control"
         case .editor: label += ", Editor"
         case .diffViewer: label += ", Diff Viewer"
+        case .problems: label += ", Problems"
         case .parentAgent: label += ", Kaji Agent"
         case .codeGraph: label += ", Code Graph"
         case .browser: label += ", Browser"
@@ -537,6 +538,8 @@ private struct TabCell: View {
             KajiIcon(systemName: "pencil.line", size: 12)
         } else if tab.kind == .diffViewer {
             KajiIcon(systemName: "rectangle.split.2x1", size: 11)
+        } else if tab.kind == .problems {
+            KajiIcon(systemName: "exclamationmark.triangle", size: 12)
         } else if tab.kind == .parentAgent {
             KajiIcon(systemName: "sparkles", size: 12)
         } else if tab.kind == .codeGraph {

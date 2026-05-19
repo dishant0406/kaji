@@ -194,6 +194,15 @@ private struct TabContentView: View {
             )
         case let .diffViewer(diffState):
             DiffViewerPane(state: diffState, focused: focused, onFocus: onFocus)
+        case .problems:
+            ProblemsPanel(
+                store: DiagnosticsStore.shared,
+                onOpenDiagnostic: { diagnostic in
+                    guard let project = activeProject else { return }
+                    appState.openFile(diagnostic.filePath, projectID: project.id)
+                },
+                onClose: onClosePane
+            )
         case .parentAgent:
             ParentAgentTabContent()
         case let .codeGraph(state):

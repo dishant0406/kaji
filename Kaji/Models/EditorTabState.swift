@@ -44,6 +44,7 @@ final class EditorTabState: Identifiable {
     private(set) var filePath: String
     var backingStoreVersion = 0
     var previewRefreshVersion = 0
+    var lspChangeVersion = 0
     var isLoading = false
     var isIncrementalLoading = false
     var isModified = false
@@ -55,6 +56,7 @@ final class EditorTabState: Identifiable {
     var cursorColumn: Int { cursorPosition.column }
     var searchVisible = false
     var searchFocusVersion = 0
+    var replaceFocusVersion = 0
     var editorFocusVersion = 0
     var searchNeedle = ""
     var searchMatchCount = 0
@@ -226,6 +228,17 @@ final class EditorTabState: Identifiable {
         }
     }
 
+    func unfoldRegions(containing line: Int) -> Bool {
+        let matching = foldRegions().filter { region in
+            collapsedFoldRegionIDs.contains(region.id) && line > region.startLine && line <= region.endLine
+        }
+        guard !matching.isEmpty else { return false }
+        for region in matching {
+            collapsedFoldRegionIDs.remove(region.id)
+        }
+        return true
+    }
+
     func symbols() -> [EditorSymbol] {
         guard let backingStore else { return [] }
         guard symbolsCacheVersion != backingStoreVersion else { return symbolsCache }
@@ -255,6 +268,20 @@ final class EditorTabState: Identifiable {
         lineNavigationRequest = request
         lineNavigationVersion += 1
         editorFocusVersion += 1
+    }
+
+    func showFind(prefillSelection: Bool = true) {
+        if prefillSelection, !currentSelection.isEmpty {
+            searchNeedle = currentSelection
+        }
+        searchVisible = true
+        searchFocusVersion += 1
+    }
+
+    func showReplace() {
+        showFind()
+        replaceVisible = true
+        replaceFocusVersion += 1
     }
 
     func requestInlineEdit() {
@@ -380,6 +407,9 @@ final class EditorTabState: Identifiable {
                         isModified = false
                         isLoading = false
                         isIncrementalLoading = hasMore
+                        if !hasMore {
+                            LanguageServerManager.shared.didOpen(filePath: path, projectPath: projectPath, text: store.fullText())
+                        }
                         DebugFileLog.log("EditorLoad", "initial chunk applied lineCount=\(store.lineCount) version=\(backingStoreVersion) path=\(path)")
                     case let .appended(text):
                         DebugFileLog.log("EditorLoad", "append chunk chars=\(text.count) path=\(path)")
@@ -408,6 +438,7 @@ final class EditorTabState: Identifiable {
                         if isIncrementalLoading {
                             isIncrementalLoading = false
                         }
+                        LanguageServerManager.shared.didOpen(filePath: path, projectPath: projectPath, text: backingStore?.fullText() ?? "")
                     }
                 }
 
@@ -571,6 +602,7 @@ final class EditorTabState: Identifiable {
         }
         do {
             try await Self.writeFile(text: textToSave, path: path)
+            LanguageServerManager.shared.didSave(filePath: path, projectPath: projectPath, text: textToSave)
             isSaving = false
             isModified = false
         } catch {
@@ -603,6 +635,16 @@ final class EditorTabState: Identifiable {
     func markModified() {
         guard !isModified else { return }
         isModified = true
+    }
+
+    func notifyLanguageServerChanged() {
+        lspChangeVersion += 1
+    }
+
+    func reloadFromDiskAfterExternalChange() {
+        guard !isModified else { return }
+        loadTask?.cancel()
+        performLoad()
     }
 
     func navigateSearch(_ direction: EditorSearchNavigationDirection) {

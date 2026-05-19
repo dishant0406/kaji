@@ -14,6 +14,8 @@ struct AppCommandRegistryTests {
     func editorCommands() {
         let actions = Set(AppCommandRegistry.editorCommands.map(\.id))
 
+        #expect(actions.contains(.findInTerminal))
+        #expect(actions.contains(.replaceInEditor))
         #expect(actions.contains(.saveFile))
         #expect(actions.contains(.goToSymbol))
         #expect(actions.contains(.goToLine))
@@ -26,5 +28,12 @@ struct AppCommandRegistryTests {
 
         #expect(results.prefix(2).map(\.id).contains(.goToLine))
         #expect(results.prefix(2).map(\.id).contains(.goToSymbol))
+    }
+
+    @Test("command palette command is searchable")
+    func commandPaletteCommand() {
+        let results = AppCommandRegistry.search("command palette")
+
+        #expect(results.first?.id == .commandPalette)
     }
 }
