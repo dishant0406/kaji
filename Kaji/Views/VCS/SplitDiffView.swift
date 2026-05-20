@@ -49,7 +49,9 @@ struct SplitDiffView: View {
                 onCommentRequest: onCommentRequest,
                 comments: comments
             )
-            .frame(width: numberColumnWidth + 1, height: height)
+            .frame(width: numberColumnWidth + 1 + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
+            .frame(width: numberColumnWidth + 1, height: height, alignment: .leading)
+            .zIndex(2)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 DiffContentBridge(
@@ -59,8 +61,10 @@ struct SplitDiffView: View {
                 .frame(height: height)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .zIndex(0)
 
             Rectangle().fill(KajiTheme.border).frame(width: 1)
+                .zIndex(1)
 
             DiffGutterBridge(
                 metadata: rightMeta,
@@ -70,7 +74,9 @@ struct SplitDiffView: View {
                 onCommentRequest: onCommentRequest,
                 comments: comments
             )
-            .frame(width: numberColumnWidth + 1, height: height)
+            .frame(width: numberColumnWidth + 1 + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
+            .frame(width: numberColumnWidth + 1, height: height, alignment: .leading)
+            .zIndex(2)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 DiffContentBridge(
@@ -80,6 +86,7 @@ struct SplitDiffView: View {
                 .frame(height: height)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .zIndex(0)
         }
         .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)

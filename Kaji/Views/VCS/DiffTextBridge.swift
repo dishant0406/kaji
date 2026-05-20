@@ -237,6 +237,10 @@ struct DiffGutterBridge: NSViewRepresentable {
         hasher.combine(gutterModeHash(mode))
         hasher.combine(columnWidth)
         hasher.combine(comments.count)
+        for comment in comments {
+            hasher.combine(comment.anchor)
+            hasher.combine(comment.text)
+        }
         hasher.combine(metadata.count)
         for line in metadata {
             hasher.combine(diffRowKindHash(line.kind))
@@ -253,6 +257,7 @@ struct DiffGutterBridge: NSViewRepresentable {
         view.onCommentRequest = onCommentRequest
         view.comments = comments
         view.columnWidth = columnWidth
+        view.interactiveWidth = interactiveWidth
         view.lineHeight = diffLineHeight
         view.cachedBorderColor = KajiTheme.nsBg.blended(
             withFraction: 0.12,
@@ -260,6 +265,11 @@ struct DiffGutterBridge: NSViewRepresentable {
         ) ?? .separatorColor
         view.cachedNumberColor = GhosttyService.shared.foregroundColor.withAlphaComponent(0.4)
         view.cachedNumberHoverColor = GhosttyService.shared.foregroundColor.withAlphaComponent(0.85)
+        view.cachedCommentBubbleBackgroundColor = KajiTheme.nsBg.blended(
+            withFraction: 0.94,
+            of: GhosttyService.shared.foregroundColor
+        ) ?? GhosttyService.shared.foregroundColor
+        view.cachedCommentBubbleTextColor = KajiTheme.nsBg
         view.cachedAddColor = KajiTheme.nsDiffAdd
         view.cachedRemoveColor = KajiTheme.nsDiffRemove
         view.numberFont = AppTypographySettings.shared.nsFont(size: 11)
@@ -267,6 +277,16 @@ struct DiffGutterBridge: NSViewRepresentable {
         view.invalidateIntrinsicContentSize()
         view.needsDisplay = true
         context.coordinator.configuredSignature = gutterSignature
+    }
+
+    private var interactiveWidth: CGFloat {
+        switch mode {
+        case .unified:
+            columnWidth * 2 + 2 + DiffGutterNSView.prefixColumnWidth
+        case .singleOld,
+             .singleNew:
+            columnWidth + 1
+        }
     }
 }
 
