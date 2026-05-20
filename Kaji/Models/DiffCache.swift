@@ -8,6 +8,11 @@ final class DiffCache {
         let additions: Int
         let deletions: Int
         let truncated: Bool
+        let fileLineCount: Int?
+
+        func replacingRows(_ rows: [DiffDisplayRow]) -> LoadedDiff {
+            LoadedDiff(rows: rows, additions: additions, deletions: deletions, truncated: truncated, fileLineCount: fileLineCount)
+        }
     }
 
     private(set) var diffsByPath: [String: LoadedDiff] = [:]

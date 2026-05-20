@@ -27,7 +27,10 @@ struct DiffViewerPane: View {
                         filePath: state.filePath,
                         mode: state.mode,
                         onLoadFull: { state.refresh(forceFull: true) },
-                        onViewMore: { state.vcs.expandDiffContext(filePath: state.filePath, direction: $0) },
+                        onViewMore: { hunkIndex, direction in
+                            state.vcs.expandDiffContext(filePath: state.filePath, hunkIndex: hunkIndex, direction: direction)
+                        },
+                        contextExpansion: { state.vcs.contextExpansion(filePath: state.filePath, hunkIndex: $0) },
                         onCommentRequest: { anchor, point in
                             commentDraft = DiffCommentDraftRequest(
                                 anchor: anchor,

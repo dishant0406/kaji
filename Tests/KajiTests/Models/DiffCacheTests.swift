@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct DiffCacheTests {
     private func makeDiff(additions: Int = 1, deletions: Int = 0, truncated: Bool = false) -> DiffCache.LoadedDiff {
-        DiffCache.LoadedDiff(rows: [], additions: additions, deletions: deletions, truncated: truncated)
+        DiffCache.LoadedDiff(rows: [], additions: additions, deletions: deletions, truncated: truncated, fileLineCount: nil)
     }
 
     @Test("store makes diff retrievable")

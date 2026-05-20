@@ -53,6 +53,7 @@ final class VCSTabState {
     var mode: ViewMode = .split
     var expandedFilePaths: Set<String> = []
     var diffContextLineCounts: [String: Int] = [:]
+    var hunkContextExpansions: [DiffHunkContextKey: DiffHunkContextExpansion] = [:]
     var isLoadingFiles = false
     var errorMessage: String?
     let diffCache = DiffCache()
@@ -374,9 +375,25 @@ final class VCSTabState {
         loadDiff(filePath: filePath, forceFull: true)
     }
 
-    func expandDiffContext(filePath: String, direction _: DiffContextExpansionDirection) {
-        diffContextLineCounts[filePath] = (diffContextLineCounts[filePath] ?? 3) + 10
+    func expandDiffContext(filePath: String, hunkIndex: Int, direction: DiffContextExpansionDirection) {
+        let key = DiffHunkContextKey(filePath: filePath, hunkIndex: hunkIndex)
+        var expansion = hunkContextExpansions[key] ?? DiffHunkContextExpansion()
+        switch direction {
+        case .above:
+            expansion.above += 20
+        case .below:
+            expansion.below += 20
+        }
+        hunkContextExpansions[key] = expansion
+        diffContextLineCounts[filePath] = hunkContextExpansions
+            .filter { $0.key.filePath == filePath }
+            .map { max($0.value.above, $0.value.below) }
+            .max() ?? 3
         loadDiff(filePath: filePath, forceFull: true)
+    }
+
+    func contextExpansion(filePath: String, hunkIndex: Int) -> DiffHunkContextExpansion {
+        hunkContextExpansions[DiffHunkContextKey(filePath: filePath, hunkIndex: hunkIndex)] ?? DiffHunkContextExpansion()
     }
 
     struct FileStats {

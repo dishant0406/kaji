@@ -1382,7 +1382,10 @@ private struct SectionSplitLayout: View {
             filePath: file.path,
             mode: state.mode,
             onLoadFull: { state.loadFullDiff(filePath: file.path) },
-            onViewMore: { state.expandDiffContext(filePath: file.path, direction: $0) }
+            onViewMore: { hunkIndex, direction in
+                state.expandDiffContext(filePath: file.path, hunkIndex: hunkIndex, direction: direction)
+            },
+            contextExpansion: { state.contextExpansion(filePath: file.path, hunkIndex: $0) }
         )
     }
 }

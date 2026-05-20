@@ -39,7 +39,8 @@ enum DiffLoader {
                         rows: result.rows,
                         additions: result.additions,
                         deletions: result.deletions,
-                        truncated: result.truncated
+                        truncated: result.truncated,
+                        fileLineCount: result.fileLineCount
                     ),
                     for: request.filePath,
                     pinnedPaths: request.pinnedPaths
