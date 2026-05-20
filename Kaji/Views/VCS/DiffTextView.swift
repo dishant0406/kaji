@@ -216,6 +216,7 @@ final class DiffContentNSView: NSView {
 
 final class DiffGutterNSView: NSView {
     static let prefixColumnWidth: CGFloat = 16
+    static let commentBubbleMaxWidth: CGFloat = 260
 
     private enum HoveredCell: Equatable {
         case old(lineIndex: Int)
@@ -224,15 +225,19 @@ final class DiffGutterNSView: NSView {
     }
 
     override var isFlipped: Bool { true }
+    override var wantsDefaultClipping: Bool { false }
 
     var lineMetadata: [DiffLineMetadata] = []
     var filePath: String = ""
     var mode: DiffGutterMode = .unified
     var columnWidth: CGFloat = 30
+    var interactiveWidth: CGFloat = 30
     var lineHeight: CGFloat = 20
     var cachedBorderColor: NSColor = .separatorColor
     var cachedNumberColor: NSColor = .secondaryLabelColor
     var cachedNumberHoverColor: NSColor = .labelColor
+    var cachedCommentBubbleBackgroundColor: NSColor = .labelColor
+    var cachedCommentBubbleTextColor: NSColor = .textBackgroundColor
     var cachedAddColor: NSColor = .systemGreen
     var cachedRemoveColor: NSColor = .systemRed
     var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
@@ -388,7 +393,12 @@ final class DiffGutterNSView: NSView {
 
     override var intrinsicContentSize: NSSize {
         let height = CGFloat(max(lineMetadata.count, 1)) * lineHeight
-        return NSSize(width: gutterWidth, height: height)
+        return NSSize(width: gutterWidth + Self.commentBubbleMaxWidth, height: height)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard point.x <= interactiveWidth else { return nil }
+        return super.hitTest(point)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -450,7 +460,7 @@ final class DiffGutterNSView: NSView {
             }
 
             drawPrefix(meta.kind, at: NSRect(x: prefixX, y: textY, width: Self.prefixColumnWidth, height: lineHeight))
-            drawHoveredCommentBubble(for: meta, atY: y, x: totalWidth - 12)
+            drawHoveredCommentBubble(for: meta, lineIndex: index, atY: y, x: interactiveWidth)
         }
     }
 
@@ -474,33 +484,37 @@ final class DiffGutterNSView: NSView {
                 attributes: numberAttrs(highlighted: isHovered, commented: hasLineComment(side: side, lineNumber: num))
             )
             str.draw(in: NSRect(x: 0, y: textY, width: columnWidth - 4, height: lineHeight))
-            drawHoveredCommentBubble(for: meta, atY: y, x: totalWidth - 12)
+            drawHoveredCommentBubble(for: meta, lineIndex: index, atY: y, x: interactiveWidth)
         }
     }
 
-    private func drawHoveredCommentBubble(for meta: DiffLineMetadata, atY y: CGFloat, x: CGFloat) {
-        guard let comment = hoveredComment(for: meta) else { return }
+    private func drawHoveredCommentBubble(for meta: DiffLineMetadata, lineIndex: Int, atY y: CGFloat, x: CGFloat) {
+        guard let comment = hoveredComment(for: meta, lineIndex: lineIndex) else { return }
         let text = comment.text as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 10, weight: .medium),
-            .foregroundColor: NSColor.labelColor,
+            .foregroundColor: cachedCommentBubbleTextColor,
         ]
-        let maxWidth: CGFloat = 240
+        let maxWidth = Self.commentBubbleMaxWidth - 20
         let textRect = text.boundingRect(
             with: NSSize(width: maxWidth - 18, height: 80),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             attributes: attrs
         )
-        let expandedWidth = min(max(textRect.width + 18, 52), maxWidth)
+        let expandedWidth = min(max(ceil(textRect.width) + 18, 52), maxWidth)
         let expandedHeight = min(max(textRect.height + 8, lineHeight - 4), 88)
-        let progress = max(commentHoverProgress, 0.18)
-        let width = 18 + (expandedWidth - 18) * progress
-        let height = (lineHeight - 4) + (expandedHeight - (lineHeight - 4)) * progress
+        let progress = commentHoverProgress
+        guard progress > 0 else { return }
+        let width = expandedWidth
+        let height = expandedHeight
         let rect = NSRect(x: x + 4, y: y + 2, width: width, height: height)
-        KajiTheme.nsBg.blended(withFraction: 0.18, of: cachedNumberHoverColor)?.setFill()
+        cachedCommentBubbleBackgroundColor.setFill()
         NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8).fill()
         if progress > 0.72 {
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8).addClip()
             text.draw(with: rect.insetBy(dx: 8, dy: 4), options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attrs)
+            NSGraphicsContext.restoreGraphicsState()
         }
     }
 
@@ -520,18 +534,21 @@ final class DiffGutterNSView: NSView {
         }
     }
 
-    private func hoveredComment(for meta: DiffLineMetadata) -> DiffComment? {
+    private func hoveredComment(for meta: DiffLineMetadata, lineIndex: Int) -> DiffComment? {
         guard let hoveredCell else { return nil }
         return comments.first { comment in
             switch comment.anchor {
             case let .line(path, side, lineNumber):
                 guard path == filePath else { return false }
                 switch hoveredCell {
-                case .old:
+                case let .old(hoveredLineIndex):
+                    guard hoveredLineIndex == lineIndex else { return false }
                     return side == .old && meta.oldLineNumber == lineNumber
-                case .new:
+                case let .new(hoveredLineIndex):
+                    guard hoveredLineIndex == lineIndex else { return false }
                     return side == .new && meta.newLineNumber == lineNumber
-                case .single:
+                case let .single(hoveredLineIndex):
+                    guard hoveredLineIndex == lineIndex else { return false }
                     return side == (mode == .singleOld ? .old : .new) &&
                         (side == .old ? meta.oldLineNumber == lineNumber : meta.newLineNumber == lineNumber)
                 }

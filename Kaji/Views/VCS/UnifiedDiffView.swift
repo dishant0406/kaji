@@ -50,7 +50,9 @@ struct UnifiedDiffView: View {
                 onCommentRequest: onCommentRequest,
                 comments: comments
             )
-            .frame(width: gutterWidth, height: height)
+            .frame(width: gutterWidth + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
+            .frame(width: gutterWidth, height: height, alignment: .leading)
+            .zIndex(2)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 DiffContentBridge(
@@ -60,6 +62,7 @@ struct UnifiedDiffView: View {
                 .frame(height: height)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .zIndex(0)
         }
         .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)
