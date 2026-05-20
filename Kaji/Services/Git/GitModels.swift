@@ -52,6 +52,24 @@ struct GitStatusFile: Identifiable, Hashable {
         }
     }
 
+    var paletteStatusText: String {
+        if xStatus == "?", yStatus == "?" {
+            return "U"
+        }
+        return statusText
+    }
+
+    var statSummaryText: String {
+        if isBinary { return "Binary" }
+        let additionsText = additions.map { "+\($0)" }
+        let deletionsText = deletions.map { "-\($0)" }
+        return [additionsText, deletionsText].compactMap(\.self).joined(separator: " ")
+    }
+
+    var paletteAnnotationText: String {
+        [paletteStatusText, statSummaryText].filter { !$0.isEmpty }.joined(separator: " ")
+    }
+
     var stagedStatusText: String {
         String(xStatus)
     }

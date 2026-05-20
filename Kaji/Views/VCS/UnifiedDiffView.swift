@@ -3,6 +3,8 @@ import SwiftUI
 struct UnifiedDiffView: View {
     let rows: [DiffDisplayRow]
     let filePath: String
+    var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
+    var comments: [DiffComment] = []
     var suppressLeadingTopBorder: Bool = false
 
     private var chunks: [DiffChunk] {
@@ -40,8 +42,15 @@ struct UnifiedDiffView: View {
         let height = CGFloat(blockRows.count) * diffLineHeight
         let metadata = buildDiffMetadata(from: blockRows)
         return HStack(alignment: .top, spacing: 0) {
-            DiffGutterBridge(metadata: metadata, filePath: filePath, mode: .unified, columnWidth: numberColumnWidth)
-                .frame(width: gutterWidth, height: height)
+            DiffGutterBridge(
+                metadata: metadata,
+                filePath: filePath,
+                mode: .unified,
+                columnWidth: numberColumnWidth,
+                onCommentRequest: onCommentRequest,
+                comments: comments
+            )
+            .frame(width: gutterWidth, height: height)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 DiffContentBridge(

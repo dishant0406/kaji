@@ -54,11 +54,16 @@ let package = Package(
             path: "GhosttyKit",
             publicHeadersPath: "."
         ),
+        .target(
+            name: "SwiftyDiff",
+            path: "Vendor/SwiftyDiff/Sources/SwiftyDiff"
+        ),
         .executableTarget(
             name: "Kaji",
             dependencies: [
                 "CEFBridge",
                 "GhosttyKit",
+                "SwiftyDiff",
                 .product(name: "MarkdownUI", package: "swift-markdown-ui"),
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "SwiftTreeSitter", package: "swift-tree-sitter"),

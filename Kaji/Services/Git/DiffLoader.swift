@@ -9,6 +9,7 @@ enum DiffLoader {
         let filePath: String
         let hints: GitRepositoryService.DiffHints
         let forceFull: Bool
+        let contextLineCount: Int
         let pinnedPaths: Set<String>
     }
 
@@ -25,6 +26,7 @@ enum DiffLoader {
                     repoPath: request.repoPath,
                     filePath: request.filePath,
                     lineLimit: lineLimit,
+                    contextLineCount: request.contextLineCount,
                     hints: request.hints
                 )
                 guard !Task.isCancelled else { return }

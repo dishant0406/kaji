@@ -118,6 +118,7 @@ enum AskInlineAnnotations {
         case .mode:
             AskSessionMode.resolveAnnotation(value) != nil
         case .skill,
+             .diff,
              .task,
              .taskAdd,
              .taskEdit,

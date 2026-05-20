@@ -474,6 +474,7 @@ struct GitRepositoryService {
         repoPath: String,
         filePath: String,
         lineLimit: Int?,
+        contextLineCount: Int = 3,
         hints: DiffHints = .unknown
     ) async throws -> PatchAndCompareResult {
         let signpostID = GitSignpost.begin("patchAndCompare", filePath)
@@ -487,14 +488,27 @@ struct GitRepositoryService {
             return try await resolveAndDiff(
                 repoPath: repoPath,
                 filePath: filePath,
-                lineLimit: lineLimit
+                lineLimit: lineLimit,
+                contextLineCount: contextLineCount
             )
         }
+
+        let contextArgument = "--unified=\(max(contextLineCount, 0))"
 
         async let stagedTask: GitProcessResult? = hints.hasStaged
             ? GitProcessRunner.runGit(
                 repoPath: repoPath,
-                arguments: ["-c", "core.quotepath=false", "diff", "--cached", "--no-color", "--no-ext-diff", "--", filePath],
+                arguments: [
+                    "-c",
+                    "core.quotepath=false",
+                    "diff",
+                    "--cached",
+                    contextArgument,
+                    "--no-color",
+                    "--no-ext-diff",
+                    "--",
+                    filePath,
+                ],
                 lineLimit: lineLimit
             )
             : nil
@@ -502,7 +516,7 @@ struct GitRepositoryService {
         async let unstagedTask: GitProcessResult? = hints.hasUnstaged
             ? GitProcessRunner.runGit(
                 repoPath: repoPath,
-                arguments: ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--", filePath],
+                arguments: ["-c", "core.quotepath=false", "diff", contextArgument, "--no-color", "--no-ext-diff", "--", filePath],
                 lineLimit: lineLimit
             )
             : nil
@@ -540,9 +554,9 @@ struct GitRepositoryService {
 
     private static func parsePatchOffMain(_ patch: String, truncated: Bool) async -> PatchAndCompareResult {
         await GitProcessRunner.offMain {
-            let parsed = GitDiffParser.parseRows(patch)
+            let parsed = SwiftyDiffAdapter.parseRows(patch)
             return PatchAndCompareResult(
-                rows: GitDiffParser.collapseContextRows(parsed.rows),
+                rows: parsed.rows,
                 truncated: truncated,
                 additions: parsed.additions,
                 deletions: parsed.deletions
@@ -553,8 +567,10 @@ struct GitRepositoryService {
     private func resolveAndDiff(
         repoPath: String,
         filePath: String,
-        lineLimit: Int?
+        lineLimit: Int?,
+        contextLineCount: Int
     ) async throws -> PatchAndCompareResult {
+        let contextArgument = "--unified=\(max(contextLineCount, 0))"
         let statusResult = try await GitProcessRunner.runGit(
             repoPath: repoPath,
             arguments: ["-c", "core.quotepath=false", "status", "--porcelain=1", "-z", "--", filePath]
@@ -567,12 +583,12 @@ struct GitRepositoryService {
 
         async let stagedTask = GitProcessRunner.runGit(
             repoPath: repoPath,
-            arguments: ["-c", "core.quotepath=false", "diff", "--cached", "--no-color", "--no-ext-diff", "--", filePath],
+            arguments: ["-c", "core.quotepath=false", "diff", "--cached", contextArgument, "--no-color", "--no-ext-diff", "--", filePath],
             lineLimit: lineLimit
         )
         async let unstagedTask = GitProcessRunner.runGit(
             repoPath: repoPath,
-            arguments: ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--", filePath],
+            arguments: ["-c", "core.quotepath=false", "diff", contextArgument, "--no-color", "--no-ext-diff", "--", filePath],
             lineLimit: lineLimit
         )
 
@@ -642,7 +658,7 @@ struct GitRepositoryService {
         }
 
         return PatchAndCompareResult(
-            rows: GitDiffParser.collapseContextRows(rows),
+            rows: rows,
             truncated: truncated,
             additions: effectiveLines,
             deletions: 0
@@ -714,6 +730,19 @@ struct GitRepositoryService {
             throw GitError.commandFailed(
                 cleanResult.stderr.isEmpty ? "Failed to clean untracked files." : cleanResult.stderr
             )
+        }
+    }
+
+    func stashFiles(repoPath: String, paths: [String]) async throws {
+        for path in paths {
+            try validatePath(repoPath: repoPath, relativePath: path)
+        }
+        let result = try await GitProcessRunner.runGit(
+            repoPath: repoPath,
+            arguments: ["stash", "push", "--include-untracked", "--"] + paths
+        )
+        guard result.status == 0 else {
+            throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to stash files." : result.stderr)
         }
     }
 

@@ -147,7 +147,7 @@ private struct KajiPopoverPresenter<PopoverContent: View>: NSViewRepresentable {
     }
 }
 
-private struct KajiPopoverSurface<Content: View>: View {
+struct KajiPopoverSurface<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {

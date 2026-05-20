@@ -3,6 +3,8 @@ import SwiftUI
 struct SplitDiffView: View {
     let rows: [DiffDisplayRow]
     let filePath: String
+    var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
+    var comments: [DiffComment] = []
     var suppressLeadingTopBorder: Bool = false
 
     private var chunks: [SplitDiffChunk] {
@@ -39,8 +41,15 @@ struct SplitDiffView: View {
         let rightMeta = buildDiffMetadata(from: rightRows)
 
         return HStack(alignment: .top, spacing: 0) {
-            DiffGutterBridge(metadata: leftMeta, filePath: filePath, mode: .singleOld, columnWidth: numberColumnWidth)
-                .frame(width: numberColumnWidth + 1, height: height)
+            DiffGutterBridge(
+                metadata: leftMeta,
+                filePath: filePath,
+                mode: .singleOld,
+                columnWidth: numberColumnWidth,
+                onCommentRequest: onCommentRequest,
+                comments: comments
+            )
+            .frame(width: numberColumnWidth + 1, height: height)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 DiffContentBridge(
@@ -53,8 +62,15 @@ struct SplitDiffView: View {
 
             Rectangle().fill(KajiTheme.border).frame(width: 1)
 
-            DiffGutterBridge(metadata: rightMeta, filePath: filePath, mode: .singleNew, columnWidth: numberColumnWidth)
-                .frame(width: numberColumnWidth + 1, height: height)
+            DiffGutterBridge(
+                metadata: rightMeta,
+                filePath: filePath,
+                mode: .singleNew,
+                columnWidth: numberColumnWidth,
+                onCommentRequest: onCommentRequest,
+                comments: comments
+            )
+            .frame(width: numberColumnWidth + 1, height: height)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 DiffContentBridge(

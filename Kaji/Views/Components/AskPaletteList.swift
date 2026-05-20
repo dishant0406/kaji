@@ -128,6 +128,9 @@ private struct AskPaletteRow: View {
             "at"
         case .directory:
             "folder"
+        case .diffFile,
+             .openDiffSummary:
+            "file.diff"
         case .attach:
             "paperclip"
         case .runScript,

@@ -12,6 +12,7 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
     case taskEdit = "te"
     case taskDelete = "td"
     case projectAdd = "pa"
+    case diff
     case attach
     case execute = "x"
     case executeAdd = "xa"
@@ -48,6 +49,8 @@ enum AskAnnotationKey: String, CaseIterable, Hashable {
             "Task Delete"
         case .projectAdd:
             "Project Add"
+        case .diff:
+            "Diff"
         case .attach:
             "Attach"
         case .execute:

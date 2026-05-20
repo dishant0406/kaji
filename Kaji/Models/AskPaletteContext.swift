@@ -19,6 +19,7 @@ struct AskPaletteContext {
     let bookmarkFolders: [String]
     let mentionOptions: [AskMentionOption]
     let directoryOptions: [AskDirectoryOption]
+    let diffFiles: [DiffPaletteFile]
     let projectName: String
     let worktreeName: String
     let sleepPreventionIsEnabled: Bool
@@ -45,6 +46,7 @@ struct AskPaletteContext {
         bookmarkFolders: [String] = [],
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
+        diffFiles: [DiffPaletteFile] = [],
         projectName: String,
         worktreeName: String,
         sleepPreventionIsEnabled: Bool = false,
@@ -70,6 +72,7 @@ struct AskPaletteContext {
         self.bookmarkFolders = bookmarkFolders
         self.mentionOptions = mentionOptions
         self.directoryOptions = directoryOptions
+        self.diffFiles = diffFiles
         self.projectName = projectName
         self.worktreeName = worktreeName
         self.sleepPreventionIsEnabled = sleepPreventionIsEnabled

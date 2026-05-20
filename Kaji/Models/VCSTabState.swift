@@ -50,8 +50,9 @@ final class VCSTabState {
 
     let projectPath: String
     var files: [GitStatusFile] = []
-    var mode: ViewMode = .unified
+    var mode: ViewMode = .split
     var expandedFilePaths: Set<String> = []
+    var diffContextLineCounts: [String: Int] = [:]
     var isLoadingFiles = false
     var errorMessage: String?
     let diffCache = DiffCache()
@@ -139,8 +140,10 @@ final class VCSTabState {
     private(set) var hasCompletedInitialLoad = false
     @ObservationIgnored private static let commitsPerPage = 100
 
-    init(projectPath: String) {
+    init(projectPath: String, files: [GitStatusFile] = []) {
         self.projectPath = projectPath
+        self.files = files
+        hasCompletedInitialLoad = !files.isEmpty
         startWatching()
         observeRemoteChanges()
     }
@@ -371,6 +374,11 @@ final class VCSTabState {
         loadDiff(filePath: filePath, forceFull: true)
     }
 
+    func expandDiffContext(filePath: String, direction _: DiffContextExpansionDirection) {
+        diffContextLineCounts[filePath] = (diffContextLineCounts[filePath] ?? 3) + 10
+        loadDiff(filePath: filePath, forceFull: true)
+    }
+
     struct FileStats {
         let additions: Int?
         let deletions: Int?
@@ -479,6 +487,12 @@ final class VCSTabState {
             } else {
                 try await self.git.discardFiles(repoPath: self.projectPath, paths: [path], untrackedPaths: [])
             }
+        }
+    }
+
+    func stashFile(_ path: String) {
+        performGitOperation {
+            try await self.git.stashFiles(repoPath: self.projectPath, paths: [path])
         }
     }
 
@@ -993,6 +1007,7 @@ final class VCSTabState {
                 filePath: filePath,
                 hints: diffHints(for: filePath),
                 forceFull: forceFull,
+                contextLineCount: diffContextLineCounts[filePath] ?? 3,
                 pinnedPaths: expandedFilePaths
             ),
             cache: diffCache,
@@ -1008,6 +1023,28 @@ final class VCSTabState {
         loadDiff(filePath: filePath, forceFull: forceFull)
     }
 
+    func ensureDiffsLoaded(files targetFiles: [GitStatusFile], forceFull: Bool = false) {
+        let pinnedPaths = Set(targetFiles.map(\.path))
+        for file in targetFiles {
+            if !forceFull, diffCache.hasDiff(for: file.path) {
+                diffCache.touch(file.path)
+                continue
+            }
+            DiffLoader.load(
+                DiffLoader.Request(
+                    repoPath: projectPath,
+                    filePath: file.path,
+                    hints: diffHints(for: file.path),
+                    forceFull: forceFull,
+                    contextLineCount: diffContextLineCounts[file.path] ?? 3,
+                    pinnedPaths: pinnedPaths
+                ),
+                cache: diffCache,
+                git: git
+            )
+        }
+    }
+
     func loadDiffWithHints(
         filePath: String,
         hints: GitRepositoryService.DiffHints,
@@ -1019,6 +1056,7 @@ final class VCSTabState {
                 filePath: filePath,
                 hints: hints,
                 forceFull: forceFull,
+                contextLineCount: diffContextLineCounts[filePath] ?? 3,
                 pinnedPaths: expandedFilePaths.union([filePath])
             ),
             cache: diffCache,

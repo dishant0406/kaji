@@ -1381,7 +1381,8 @@ private struct SectionSplitLayout: View {
             diff: state.diffCache.diff(for: file.path),
             filePath: file.path,
             mode: state.mode,
-            onLoadFull: { state.loadFullDiff(filePath: file.path) }
+            onLoadFull: { state.loadFullDiff(filePath: file.path) },
+            onViewMore: { state.expandDiffContext(filePath: file.path, direction: $0) }
         )
     }
 }

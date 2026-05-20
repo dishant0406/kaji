@@ -7,6 +7,9 @@ struct DiffBodyView: View {
     let filePath: String
     let mode: VCSTabState.ViewMode
     let onLoadFull: (() -> Void)?
+    var onViewMore: ((DiffContextExpansionDirection) -> Void)?
+    var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
+    var comments: [DiffComment] = []
     var suppressLeadingTopBorder: Bool = false
 
     var body: some View {
@@ -23,6 +26,11 @@ struct DiffBodyView: View {
                     .padding(12)
             } else if let diff {
                 VStack(spacing: 0) {
+                    if let onViewMore {
+                        viewMoreButton(position: "above") { onViewMore(.above) }
+                        Rectangle().fill(KajiTheme.border).frame(height: 1)
+                    }
+
                     if diff.truncated, let onLoadFull {
                         truncatedBanner(onLoadFull: onLoadFull)
                         Rectangle().fill(KajiTheme.border).frame(height: 1)
@@ -33,14 +41,23 @@ struct DiffBodyView: View {
                         UnifiedDiffView(
                             rows: diff.rows,
                             filePath: filePath,
+                            onCommentRequest: onCommentRequest,
+                            comments: comments,
                             suppressLeadingTopBorder: suppressLeadingTopBorder && !diff.truncated
                         )
                     case .split:
                         SplitDiffView(
                             rows: diff.rows,
                             filePath: filePath,
+                            onCommentRequest: onCommentRequest,
+                            comments: comments,
                             suppressLeadingTopBorder: suppressLeadingTopBorder && !diff.truncated
                         )
+                    }
+
+                    if let onViewMore {
+                        Rectangle().fill(KajiTheme.border).frame(height: 1)
+                        viewMoreButton(position: "below") { onViewMore(.below) }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,5 +85,18 @@ struct DiffBodyView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+    }
+
+    private func viewMoreButton(position: String, action: @escaping () -> Void) -> some View {
+        HStack {
+            Spacer(minLength: 0)
+            Button("View more \(position)", action: action)
+                .buttonStyle(.plain)
+                .kajiFont(size: 11, weight: .semibold)
+                .foregroundStyle(KajiTheme.accent)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 7)
+        .background(KajiTheme.bg)
     }
 }

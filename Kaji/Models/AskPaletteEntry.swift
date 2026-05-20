@@ -22,6 +22,8 @@ enum AskPaletteAction: Hashable {
     case deleteTaskRecipe(AskTaskRecipe)
     case mention(AskMentionOption)
     case directory(AskDirectoryOption)
+    case diffFile(DiffPaletteFile)
+    case openDiffSummary(projectID: UUID, worktreeID: UUID, worktreePath: String)
     case attach
     case runScript(KajiKitScript)
     case openScriptForm(KajiKitScript?)
@@ -82,6 +84,10 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "mention:\(option.id)"
         case let .directory(option):
             "directory:\(option.path)"
+        case let .diffFile(file):
+            "diff-file:\(file.id)"
+        case let .openDiffSummary(projectID, worktreeID, worktreePath):
+            "diff-summary:\(projectID.uuidString):\(worktreeID.uuidString):\(worktreePath)"
         case .attach:
             "attach"
         case let .runScript(script):
