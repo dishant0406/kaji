@@ -106,7 +106,7 @@ func buildSplitDiffChunks(from rows: [DiffDisplayRow]) -> [SplitDiffChunk] {
     var rightRows: [DiffDisplayRow] = []
 
     for paired in paired {
-        if paired.kind == .hunk || paired.kind == .collapsed {
+        if paired.kind == .collapsed {
             if !leftRows.isEmpty || !rightRows.isEmpty {
                 padToEqualLength(&leftRows, &rightRows)
                 chunks.append(.codeBlock(leftRows: leftRows, rightRows: rightRows))
@@ -114,8 +114,7 @@ func buildSplitDiffChunks(from rows: [DiffDisplayRow]) -> [SplitDiffChunk] {
                 rightRows = []
             }
             let rawText = paired.left?.text ?? paired.right?.text ?? ""
-            let label = paired.kind == .hunk ? hunkLabel(rawText) : rawText
-            chunks.append(.divider(text: label))
+            chunks.append(.divider(text: rawText))
         } else {
             leftRows.append(paired.left ?? emptyRow(kind: .context))
             rightRows.append(paired.right ?? emptyRow(kind: .context))

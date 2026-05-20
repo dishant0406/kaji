@@ -13,13 +13,12 @@ func buildDiffChunks(from rows: [DiffDisplayRow]) -> [DiffChunk] {
     var currentRows: [DiffDisplayRow] = []
 
     for row in rows {
-        if row.kind == .hunk || row.kind == .collapsed {
+        if row.kind == .collapsed {
             if !currentRows.isEmpty {
                 chunks.append(.codeBlock(rows: currentRows))
                 currentRows = []
             }
-            let label = row.kind == .hunk ? hunkLabel(row.text) : row.text
-            chunks.append(.divider(text: label))
+            chunks.append(.divider(text: row.text))
         } else {
             currentRows.append(row)
         }

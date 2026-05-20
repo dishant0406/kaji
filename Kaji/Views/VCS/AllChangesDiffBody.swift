@@ -7,7 +7,8 @@ struct AllChangesDiffBody: View {
 
     var body: some View {
         LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-            ForEach(Array(state.files.enumerated()), id: \.element.id) { index, file in
+            ForEach(Array(state.files.enumerated()), id: \.element.path) { index, file in
+                let currentFile = state.vcs.file(for: file.path) ?? file
                 Section {
                     if !state.isCollapsed(file.path) {
                         DiffBodyView(
@@ -29,8 +30,8 @@ struct AllChangesDiffBody: View {
                             get: { state.isCollapsed(file.path) },
                             set: { state.setCollapsed($0, filePath: file.path) }
                         ),
-                        file: file,
-                        stats: state.vcs.displayedStats(for: file),
+                        file: currentFile,
+                        stats: state.vcs.displayedStats(for: currentFile),
                         suppressLeadingTopBorder: index == 0,
                         onStage: { state.vcs.stageFile(file.path) },
                         onUnstage: { state.vcs.unstageFile(file.path) },
@@ -89,6 +90,11 @@ private struct GithubDiffFileHeader: View {
         .padding(.horizontal, 12)
         .frame(height: 40)
         .background(KajiTheme.secondaryBackground)
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(headerAccent)
+                .frame(width: 3)
+        }
         .overlay(alignment: .top) {
             if !suppressLeadingTopBorder {
                 Rectangle().fill(KajiTheme.border).frame(height: 1)
@@ -97,6 +103,22 @@ private struct GithubDiffFileHeader: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(KajiTheme.border).frame(height: 1)
         }
+    }
+
+    private var headerAccent: Color {
+        if file.xStatus == "?", file.yStatus == "?" {
+            return KajiTheme.accent
+        }
+        if file.xStatus == "D" || file.yStatus == "D" {
+            return KajiTheme.diffRemoveFg
+        }
+        if file.xStatus == "A" || file.yStatus == "A" || file.isStaged {
+            return KajiTheme.diffAddFg
+        }
+        if file.isUnstaged {
+            return KajiTheme.diffHunkFg
+        }
+        return KajiTheme.borderStrong
     }
 
     private var commentButton: some View {

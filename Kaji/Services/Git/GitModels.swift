@@ -17,6 +17,10 @@ struct GitStatusFile: Identifiable, Hashable {
 
     var id: String { path }
 
+    var stageIdentity: String {
+        "\(path):\(xStatus):\(yStatus):\(additions ?? -1):\(deletions ?? -1):\(isBinary)"
+    }
+
     var isStaged: Bool {
         let staged: Set<Character> = ["A", "M", "D", "R", "C"]
         return staged.contains(xStatus)

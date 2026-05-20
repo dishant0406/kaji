@@ -43,6 +43,13 @@ final class DiffCache {
         errorsByPath[filePath] = nil
     }
 
+    func reload(_ filePath: String) {
+        loadingPaths.insert(filePath)
+        errorsByPath[filePath] = nil
+        tasks[filePath]?.cancel()
+        tasks.removeValue(forKey: filePath)
+    }
+
     func store(_ diff: LoadedDiff, for filePath: String, pinnedPaths: Set<String>) {
         diffsByPath[filePath] = diff
         touch(filePath)

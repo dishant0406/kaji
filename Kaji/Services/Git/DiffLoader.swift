@@ -18,7 +18,11 @@ enum DiffLoader {
         cache: DiffCache,
         git: GitRepositoryService = GitRepositoryService()
     ) {
-        cache.markLoading(request.filePath)
+        if cache.hasDiff(for: request.filePath) {
+            cache.reload(request.filePath)
+        } else {
+            cache.markLoading(request.filePath)
+        }
         let lineLimit = request.forceFull ? nil : previewLineLimit
         let task = Task { @MainActor in
             do {
