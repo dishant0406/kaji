@@ -10,6 +10,13 @@ struct DiffCacheTests {
         DiffCache.LoadedDiff(rows: [], additions: additions, deletions: deletions, truncated: truncated, fileLineCount: nil)
     }
 
+    private func makeDiff(rowCount: Int) -> DiffCache.LoadedDiff {
+        let rows = (0 ..< rowCount).map { index in
+            DiffDisplayRow(kind: .context, oldLineNumber: index + 1, newLineNumber: index + 1, oldText: "", newText: "", text: "")
+        }
+        return DiffCache.LoadedDiff(rows: rows, additions: 0, deletions: 0, truncated: false, fileLineCount: rowCount)
+    }
+
     @Test("store makes diff retrievable")
     func storeMakesDiffRetrievable() {
         let cache = DiffCache()
@@ -79,6 +86,15 @@ struct DiffCacheTests {
         #expect(cache.hasDiff(for: "a.swift"))
         #expect(cache.hasDiff(for: "b.swift"))
         #expect(cache.hasDiff(for: "c.swift"))
+    }
+
+    @Test("LRU evicts by cached row count")
+    func lruEvictsByRowCount() {
+        let cache = DiffCache(cap: 10, rowCap: 4)
+        cache.store(makeDiff(rowCount: 3), for: "a.swift", pinnedPaths: [])
+        cache.store(makeDiff(rowCount: 3), for: "b.swift", pinnedPaths: [])
+        #expect(!cache.hasDiff(for: "a.swift"))
+        #expect(cache.hasDiff(for: "b.swift"))
     }
 
     @Test("touch moves entry to newest in LRU")

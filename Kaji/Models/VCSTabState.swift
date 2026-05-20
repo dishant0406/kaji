@@ -1050,7 +1050,7 @@ final class VCSTabState {
         )
     }
 
-    private func loadDiff(filePath: String, forceFull: Bool) {
+    private func loadDiff(filePath: String, forceFull: Bool, pinnedPaths: Set<String>? = nil) {
         DiffLoader.load(
             DiffLoader.Request(
                 repoPath: projectPath,
@@ -1058,19 +1058,19 @@ final class VCSTabState {
                 hints: diffHints(for: filePath),
                 forceFull: forceFull,
                 contextLineCount: diffContextLineCounts[filePath] ?? 3,
-                pinnedPaths: expandedFilePaths
+                pinnedPaths: pinnedPaths ?? expandedFilePaths
             ),
             cache: diffCache,
             git: git
         )
     }
 
-    func ensureDiffLoaded(filePath: String, forceFull: Bool = false) {
+    func ensureDiffLoaded(filePath: String, forceFull: Bool = false, pinnedPaths: Set<String>? = nil) {
         if !forceFull, diffCache.hasDiff(for: filePath) {
             diffCache.touch(filePath)
             return
         }
-        loadDiff(filePath: filePath, forceFull: forceFull)
+        loadDiff(filePath: filePath, forceFull: forceFull, pinnedPaths: pinnedPaths)
     }
 
     func ensureDiffsLoaded(files targetFiles: [GitStatusFile], forceFull: Bool = false) {
