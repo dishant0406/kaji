@@ -3,6 +3,9 @@ import SwiftUI
 struct SplitDiffView: View {
     let rows: [DiffDisplayRow]
     let filePath: String
+    var onViewMore: ((Int, DiffContextExpansionDirection) -> Void)?
+    var contextExpansion: ((Int) -> DiffHunkContextExpansion)?
+    var fileLineCount: Int?
     var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
     var comments: [DiffComment] = []
     var suppressLeadingTopBorder: Bool = false
@@ -19,13 +22,15 @@ struct SplitDiffView: View {
         LazyVStack(spacing: 0) {
             ForEach(Array(chunks.enumerated()), id: \.offset) { index, chunk in
                 switch chunk {
-                case let .divider(text):
+                case let .divider(text, hunkIndex):
                     DiffSectionDivider(
                         text: text,
+                        hunkIndex: hunkIndex,
+                        onViewMore: onViewMore,
                         showsTopBorder: !(index == 0 && suppressLeadingTopBorder)
                     )
-                case let .codeBlock(leftRows, rightRows):
-                    splitCodeBlock(leftRows: leftRows, rightRows: rightRows)
+                case let .codeBlock(leftRows, rightRows, hunkIndex):
+                    splitCodeBlock(leftRows: leftRows, rightRows: rightRows, hunkIndex: hunkIndex)
                 }
             }
         }
@@ -34,69 +39,120 @@ struct SplitDiffView: View {
         .accessibilityLabel("Split diff, \(filePath)")
     }
 
-    private func splitCodeBlock(leftRows: [DiffDisplayRow], rightRows: [DiffDisplayRow]) -> some View {
+    private func splitCodeBlock(leftRows: [DiffDisplayRow], rightRows: [DiffDisplayRow], hunkIndex: Int?) -> some View {
         let lineCount = max(leftRows.count, rightRows.count)
         let height = CGFloat(lineCount) * diffLineHeight
         let leftMeta = buildDiffMetadata(from: leftRows)
         let rightMeta = buildDiffMetadata(from: rightRows)
 
-        return HStack(alignment: .top, spacing: 0) {
-            DiffGutterBridge(
-                metadata: leftMeta,
-                filePath: filePath,
-                mode: .singleOld,
-                columnWidth: numberColumnWidth,
-                onCommentRequest: onCommentRequest,
-                comments: comments
-            )
-            .frame(width: numberColumnWidth + 1 + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
-            .frame(width: numberColumnWidth + 1, height: height, alignment: .leading)
-            .zIndex(2)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                DiffContentBridge(
-                    rows: leftRows,
-                    backgroundSide: .left
+        return ZStack(alignment: .leading) {
+            HStack(alignment: .top, spacing: 0) {
+                DiffGutterBridge(
+                    metadata: leftMeta,
+                    filePath: filePath,
+                    mode: .singleOld,
+                    columnWidth: numberColumnWidth,
+                    onCommentRequest: onCommentRequest,
+                    comments: comments
                 )
-                .frame(height: height)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .zIndex(0)
+                .frame(width: numberColumnWidth + 1 + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
+                .frame(width: numberColumnWidth + 1, height: height, alignment: .leading)
+                .zIndex(2)
 
-            Rectangle().fill(KajiTheme.border).frame(width: 1)
-                .zIndex(1)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    DiffContentBridge(
+                        rows: leftRows,
+                        backgroundSide: .left
+                    )
+                    .frame(height: height)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .zIndex(0)
 
-            DiffGutterBridge(
-                metadata: rightMeta,
-                filePath: filePath,
-                mode: .singleNew,
-                columnWidth: numberColumnWidth,
-                onCommentRequest: onCommentRequest,
-                comments: comments
-            )
-            .frame(width: numberColumnWidth + 1 + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
-            .frame(width: numberColumnWidth + 1, height: height, alignment: .leading)
-            .zIndex(2)
+                Rectangle().fill(KajiTheme.border).frame(width: 1)
+                    .zIndex(1)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                DiffContentBridge(
-                    rows: rightRows,
-                    backgroundSide: .right
+                DiffGutterBridge(
+                    metadata: rightMeta,
+                    filePath: filePath,
+                    mode: .singleNew,
+                    columnWidth: numberColumnWidth,
+                    onCommentRequest: onCommentRequest,
+                    comments: comments
                 )
-                .frame(height: height)
+                .frame(width: numberColumnWidth + 1 + DiffGutterNSView.commentBubbleMaxWidth, height: height, alignment: .leading)
+                .frame(width: numberColumnWidth + 1, height: height, alignment: .leading)
+                .zIndex(2)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    DiffContentBridge(
+                        rows: rightRows,
+                        backgroundSide: .right
+                    )
+                    .frame(height: height)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .zIndex(0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .zIndex(0)
+
+            hunkControls(hunkIndex: hunkIndex)
         }
         .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()
     }
+
+    @ViewBuilder
+    private func hunkControls(hunkIndex: Int?) -> some View {
+        if let hunkIndex, let onViewMore {
+            VStack {
+                if canExpandAbove(hunkIndex: hunkIndex) {
+                    HunkContextButton(direction: .above, count: contextExpansion?(hunkIndex).above ?? 0) {
+                        onViewMore(hunkIndex, .above)
+                    }
+                }
+                Spacer(minLength: 0)
+                if canExpandBelow(hunkIndex: hunkIndex) {
+                    HunkContextButton(direction: .below, count: contextExpansion?(hunkIndex).below ?? 0) {
+                        onViewMore(hunkIndex, .below)
+                    }
+                }
+            }
+            .padding(.leading, 4)
+            .padding(.vertical, 2)
+            .frame(width: numberColumnWidth + 121, alignment: .leading)
+            .zIndex(3)
+        }
+    }
+
+    private func canExpandAbove(hunkIndex: Int) -> Bool {
+        guard let blockRows = rowsForHunk(hunkIndex), let firstLine = blockRows.compactMap(\.newLineNumber).min() else { return false }
+        return firstLine > 1
+    }
+
+    private func canExpandBelow(hunkIndex: Int) -> Bool {
+        guard let fileLineCount,
+              let blockRows = rowsForHunk(hunkIndex),
+              let lastLine = blockRows.compactMap(\.newLineNumber).max()
+        else { return true }
+        return lastLine < fileLineCount
+    }
+
+    private func rowsForHunk(_ hunkIndex: Int) -> [DiffDisplayRow]? {
+        var currentIndex = -1
+        var rowsForHunk: [DiffDisplayRow] = []
+        for row in rows {
+            if row.kind == .hunk { currentIndex += 1 }
+            if currentIndex == hunkIndex { rowsForHunk.append(row) }
+            if currentIndex > hunkIndex { break }
+        }
+        return rowsForHunk.isEmpty ? nil : rowsForHunk
+    }
 }
 
 enum SplitDiffChunk {
-    case divider(text: String)
-    case codeBlock(leftRows: [DiffDisplayRow], rightRows: [DiffDisplayRow])
+    case divider(text: String, hunkIndex: Int?)
+    case codeBlock(leftRows: [DiffDisplayRow], rightRows: [DiffDisplayRow], hunkIndex: Int?)
 }
 
 func buildSplitDiffChunks(from rows: [DiffDisplayRow]) -> [SplitDiffChunk] {
@@ -104,17 +160,28 @@ func buildSplitDiffChunks(from rows: [DiffDisplayRow]) -> [SplitDiffChunk] {
     var chunks: [SplitDiffChunk] = []
     var leftRows: [DiffDisplayRow] = []
     var rightRows: [DiffDisplayRow] = []
+    var currentHunkIndex: Int?
 
     for paired in paired {
-        if paired.kind == .collapsed {
+        if paired.kind == .hunk {
             if !leftRows.isEmpty || !rightRows.isEmpty {
                 padToEqualLength(&leftRows, &rightRows)
-                chunks.append(.codeBlock(leftRows: leftRows, rightRows: rightRows))
+                chunks.append(.codeBlock(leftRows: leftRows, rightRows: rightRows, hunkIndex: currentHunkIndex))
+                leftRows = []
+                rightRows = []
+            }
+            currentHunkIndex = paired.hunkIndex
+            leftRows.append(paired.left ?? emptyRow(kind: .context))
+            rightRows.append(paired.right ?? emptyRow(kind: .context))
+        } else if paired.kind == .collapsed {
+            if !leftRows.isEmpty || !rightRows.isEmpty {
+                padToEqualLength(&leftRows, &rightRows)
+                chunks.append(.codeBlock(leftRows: leftRows, rightRows: rightRows, hunkIndex: currentHunkIndex))
                 leftRows = []
                 rightRows = []
             }
             let rawText = paired.left?.text ?? paired.right?.text ?? ""
-            chunks.append(.divider(text: rawText))
+            chunks.append(.divider(text: rawText, hunkIndex: currentHunkIndex))
         } else {
             leftRows.append(paired.left ?? emptyRow(kind: .context))
             rightRows.append(paired.right ?? emptyRow(kind: .context))
@@ -123,7 +190,7 @@ func buildSplitDiffChunks(from rows: [DiffDisplayRow]) -> [SplitDiffChunk] {
 
     if !leftRows.isEmpty || !rightRows.isEmpty {
         padToEqualLength(&leftRows, &rightRows)
-        chunks.append(.codeBlock(leftRows: leftRows, rightRows: rightRows))
+        chunks.append(.codeBlock(leftRows: leftRows, rightRows: rightRows, hunkIndex: currentHunkIndex))
     }
 
     return chunks
@@ -158,27 +225,30 @@ struct SplitDiffPairedRow: Identifiable {
 
     let id = UUID()
     let kind: Kind
+    let hunkIndex: Int?
     let left: DiffDisplayRow?
     let right: DiffDisplayRow?
 
     static func pair(_ rows: [DiffDisplayRow]) -> [SplitDiffPairedRow] {
         var result: [SplitDiffPairedRow] = []
         var index = 0
+        var hunkIndex = 0
 
         while index < rows.count {
             let row = rows[index]
 
             switch row.kind {
             case .hunk:
-                result.append(SplitDiffPairedRow(kind: .hunk, left: row, right: nil))
+                result.append(SplitDiffPairedRow(kind: .hunk, hunkIndex: hunkIndex, left: row, right: nil))
+                hunkIndex += 1
                 index += 1
 
             case .collapsed:
-                result.append(SplitDiffPairedRow(kind: .collapsed, left: row, right: nil))
+                result.append(SplitDiffPairedRow(kind: .collapsed, hunkIndex: hunkIndex - 1, left: row, right: nil))
                 index += 1
 
             case .context:
-                result.append(SplitDiffPairedRow(kind: .content, left: row, right: row))
+                result.append(SplitDiffPairedRow(kind: .content, hunkIndex: hunkIndex - 1, left: row, right: row))
                 index += 1
 
             case .deletion:
@@ -196,13 +266,14 @@ struct SplitDiffPairedRow: Identifiable {
                 for i in 0 ..< maxCount {
                     result.append(SplitDiffPairedRow(
                         kind: .content,
+                        hunkIndex: hunkIndex - 1,
                         left: i < deletions.count ? deletions[i] : nil,
                         right: i < additions.count ? additions[i] : nil
                     ))
                 }
 
             case .addition:
-                result.append(SplitDiffPairedRow(kind: .content, left: nil, right: row))
+                result.append(SplitDiffPairedRow(kind: .content, hunkIndex: hunkIndex - 1, left: nil, right: row))
                 index += 1
             }
         }

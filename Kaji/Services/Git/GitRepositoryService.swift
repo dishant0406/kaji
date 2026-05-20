@@ -6,6 +6,25 @@ struct GitRepositoryService {
         let truncated: Bool
         let additions: Int
         let deletions: Int
+        let fileLineCount: Int?
+
+        init(rows: [DiffDisplayRow], truncated: Bool, additions: Int, deletions: Int, fileLineCount: Int? = nil) {
+            self.rows = rows
+            self.truncated = truncated
+            self.additions = additions
+            self.deletions = deletions
+            self.fileLineCount = fileLineCount
+        }
+
+        func withFileLineCount(_ fileLineCount: Int?) -> PatchAndCompareResult {
+            PatchAndCompareResult(
+                rows: rows,
+                truncated: truncated,
+                additions: additions,
+                deletions: deletions,
+                fileLineCount: fileLineCount
+            )
+        }
     }
 
     enum GitError: LocalizedError {
@@ -549,7 +568,8 @@ struct GitRepositoryService {
             combinedTruncated = unstagedTruncated
         }
 
-        return await Self.parsePatchOffMain(combinedPatch, truncated: combinedTruncated)
+        let parsed = await Self.parsePatchOffMain(combinedPatch, truncated: combinedTruncated)
+        return parsed.withFileLineCount(currentFileLineCount(repoPath: repoPath, filePath: filePath))
     }
 
     private static func parsePatchOffMain(_ patch: String, truncated: Bool) async -> PatchAndCompareResult {
@@ -562,6 +582,15 @@ struct GitRepositoryService {
                 deletions: parsed.deletions
             )
         }
+    }
+
+    private func currentFileLineCount(repoPath: String, filePath: String) -> Int? {
+        let fullPath = (repoPath as NSString).appendingPathComponent(filePath)
+        guard let data = FileManager.default.contents(atPath: fullPath),
+              let content = String(data: data, encoding: .utf8)
+        else { return nil }
+        if content.isEmpty { return 0 }
+        return content.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).count
     }
 
     private func resolveAndDiff(
@@ -615,7 +644,8 @@ struct GitRepositoryService {
             combinedTruncated = unstagedResult.truncated
         }
 
-        return await Self.parsePatchOffMain(combinedPatch, truncated: combinedTruncated)
+        let parsed = await Self.parsePatchOffMain(combinedPatch, truncated: combinedTruncated)
+        return parsed.withFileLineCount(currentFileLineCount(repoPath: repoPath, filePath: filePath))
     }
 
     private func untrackedOrNewFileDiff(repoPath: String, filePath: String, lineLimit: Int?) throws -> PatchAndCompareResult {
@@ -661,7 +691,8 @@ struct GitRepositoryService {
             rows: rows,
             truncated: truncated,
             additions: effectiveLines,
-            deletions: 0
+            deletions: 0,
+            fileLineCount: lines.count
         )
     }
 

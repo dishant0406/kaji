@@ -57,3 +57,13 @@ enum DiffContextExpansionDirection: Hashable {
     case above
     case below
 }
+
+struct DiffHunkContextKey: Hashable {
+    let filePath: String
+    let hunkIndex: Int
+}
+
+struct DiffHunkContextExpansion: Hashable {
+    var above = 0
+    var below = 0
+}

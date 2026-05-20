@@ -18,7 +18,10 @@ struct AllChangesDiffBody: View {
                             filePath: file.path,
                             mode: state.mode,
                             onLoadFull: { state.refresh(forceFull: true) },
-                            onViewMore: { state.vcs.expandDiffContext(filePath: file.path, direction: $0) },
+                            onViewMore: { hunkIndex, direction in
+                                state.vcs.expandDiffContext(filePath: file.path, hunkIndex: hunkIndex, direction: direction)
+                            },
+                            contextExpansion: { state.vcs.contextExpansion(filePath: file.path, hunkIndex: $0) },
                             onCommentRequest: onCommentRequest,
                             comments: state.comments(for: file.path),
                             suppressLeadingTopBorder: true

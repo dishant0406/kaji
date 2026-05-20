@@ -4,28 +4,38 @@ import SwiftUI
 let diffLineHeight: CGFloat = 20
 
 enum DiffChunk {
-    case divider(text: String)
-    case codeBlock(rows: [DiffDisplayRow])
+    case divider(text: String, hunkIndex: Int?)
+    case codeBlock(rows: [DiffDisplayRow], hunkIndex: Int?)
 }
 
 func buildDiffChunks(from rows: [DiffDisplayRow]) -> [DiffChunk] {
     var chunks: [DiffChunk] = []
     var currentRows: [DiffDisplayRow] = []
+    var currentHunkIndex: Int?
+    var nextHunkIndex = 0
 
     for row in rows {
-        if row.kind == .collapsed {
+        if row.kind == .hunk {
             if !currentRows.isEmpty {
-                chunks.append(.codeBlock(rows: currentRows))
+                chunks.append(.codeBlock(rows: currentRows, hunkIndex: currentHunkIndex))
                 currentRows = []
             }
-            chunks.append(.divider(text: row.text))
+            currentHunkIndex = nextHunkIndex
+            nextHunkIndex += 1
+            currentRows.append(row)
+        } else if row.kind == .collapsed {
+            if !currentRows.isEmpty {
+                chunks.append(.codeBlock(rows: currentRows, hunkIndex: currentHunkIndex))
+                currentRows = []
+            }
+            chunks.append(.divider(text: row.text, hunkIndex: currentHunkIndex))
         } else {
             currentRows.append(row)
         }
     }
 
     if !currentRows.isEmpty {
-        chunks.append(.codeBlock(rows: currentRows))
+        chunks.append(.codeBlock(rows: currentRows, hunkIndex: currentHunkIndex))
     }
 
     return chunks

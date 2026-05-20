@@ -3,6 +3,8 @@ import SwiftUI
 
 struct DiffSectionDivider: View {
     let text: String
+    var hunkIndex: Int?
+    var onViewMore: ((Int, DiffContextExpansionDirection) -> Void)?
     var showsTopBorder: Bool = true
 
     var body: some View {
