@@ -106,12 +106,16 @@ enum AskCommandDispatcher {
             return
         }
 
+        let previousTabIDs = Set(appState.workspaceTabs(for: project.id).map(\.id))
         let command = commandWithCompletionNotification(
             startupCommand(for: provider, prompt: prompt),
             provider: provider
         )
         guard !command.isEmpty else { return }
         appState.createStartupCommandTab(projectID: project.id, title: provider.title, command: command)
+        if let createdTab = appState.workspaceTabs(for: project.id).first(where: { !previousTabIDs.contains($0.id) }) {
+            appState.activateWorkspaceTab(createdTab.id, projectID: project.id)
+        }
     }
 
     static func commandWithCompletionNotification(_ command: String, provider: AskProvider) -> String {

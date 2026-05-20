@@ -840,7 +840,7 @@ final class AppState {
         return tab.root.findArea(id: areaID) != nil
     }
 
-    private func activateWorkspaceTab(_ workspaceTabID: UUID, projectID: UUID) {
+    func activateWorkspaceTab(_ workspaceTabID: UUID, projectID: UUID) {
         dispatch(.selectTab(projectID: projectID, areaID: UUID(), tabID: workspaceTabID))
     }
 

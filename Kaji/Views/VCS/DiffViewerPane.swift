@@ -67,6 +67,7 @@ private struct DiffCommentPromptBar: View {
 
     @State private var selectedSessionID: UUID?
     @State private var selectedProviderID = AskProvider.codex.rawValue
+    @State private var isSending = false
 
     private var project: Project? {
         projectStore.projects.first { $0.path == state.projectPath }
@@ -93,29 +94,30 @@ private struct DiffCommentPromptBar: View {
                 .kajiFont(size: 11, weight: .semibold)
                 .foregroundStyle(KajiTheme.fgMuted)
 
-            Picker("Session", selection: $selectedSessionID) {
-                Text("New session").tag(UUID?.none)
-                ForEach(sessions) { session in
-                    Text("\(session.providerTitle) - \(session.title)").tag(Optional(session.id))
-                }
-            }
-            .labelsHidden()
-            .frame(width: 220)
+            KajiSelect(
+                options: sessionOptions,
+                selection: $selectedSessionID,
+                placeholder: "Session",
+                width: 220,
+                variant: .filled
+            )
 
             if selectedSessionID == nil {
-                Picker("Agent", selection: $selectedProviderID) {
-                    ForEach(AskProvider.allCases.filter { $0 != .terminal }) { provider in
-                        Text(provider.title).tag(provider.rawValue)
-                    }
-                }
-                .labelsHidden()
-                .frame(width: 140)
+                KajiSelect(
+                    options: providerOptions,
+                    selection: $selectedProviderID,
+                    placeholder: "Agent",
+                    width: 140,
+                    variant: .filled
+                )
             }
 
-            Button("Send prompt") { sendPrompt() }
+            Button(isSending ? "Sending..." : "Send prompt") { sendPrompt() }
                 .buttonStyle(.plain)
                 .kajiFont(size: 11, weight: .semibold)
-                .foregroundStyle(KajiTheme.accent)
+                .foregroundStyle(isSending ? KajiTheme.fgDim : KajiTheme.accent)
+                .disabled(isSending)
+                .kajiPointer()
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
@@ -124,10 +126,29 @@ private struct DiffCommentPromptBar: View {
         .overlay(alignment: .top) { Rectangle().fill(KajiTheme.border).frame(height: 1) }
     }
 
+    private var sessionOptions: [KajiSelectOption<UUID?>] {
+        [KajiSelectOption(id: "new", title: "New session", value: nil)] + sessions.map { session in
+            KajiSelectOption(
+                id: session.id.uuidString,
+                title: "\(session.providerTitle) - \(session.title)",
+                value: Optional(session.id)
+            )
+        }
+    }
+
+    private var providerOptions: [KajiSelectOption<String>] {
+        AskProvider.allCases
+            .filter { $0 != .terminal }
+            .map { KajiSelectOption(id: $0.id, title: $0.title, value: $0.rawValue) }
+    }
+
     private func sendPrompt() {
+        guard !isSending else { return }
         guard let project, let worktree else { return }
         let prompt = state.commentPrompt
+        isSending = true
         Task { @MainActor in
+            defer { isSending = false }
             if let selectedSessionID, let session = sessions.first(where: { $0.id == selectedSessionID }) {
                 await AskCommandDispatcher.send(
                     AskDispatchRequest(

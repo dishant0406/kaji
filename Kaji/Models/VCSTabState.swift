@@ -289,7 +289,7 @@ final class VCSTabState {
                     }
                 }
 
-                let listChanged = files.map(\.path) != newFiles.map(\.path) || !changedPaths.isEmpty
+                let listChanged = files.map(\.stageIdentity) != newFiles.map(\.stageIdentity) || !changedPaths.isEmpty
                 if listChanged {
                     files = newFiles
                 }
@@ -392,6 +392,10 @@ final class VCSTabState {
         return FileStats(additions: file.additions, deletions: file.deletions, binary: file.isBinary)
     }
 
+    func file(for path: String) -> GitStatusFile? {
+        files.first { $0.path == path }
+    }
+
     func loadBranches() {
         loadBranchesTask?.cancel()
         isLoadingBranches = true
@@ -457,12 +461,14 @@ final class VCSTabState {
     func stageFile(_ path: String) {
         performGitOperation {
             try await self.git.stageFiles(repoPath: self.projectPath, paths: [path])
+            await self.reloadDiffAfterFileAction(path)
         }
     }
 
     func unstageFile(_ path: String) {
         performGitOperation {
             try await self.git.unstageFiles(repoPath: self.projectPath, paths: [path])
+            await self.reloadDiffAfterFileAction(path)
         }
     }
 
@@ -716,6 +722,29 @@ final class VCSTabState {
                 showStatus(errorText(error), isError: true)
             }
         }
+    }
+
+    private func reloadDiffAfterFileAction(_ path: String) async {
+        let refreshedFiles = await (try? git.changedFiles(repoPath: projectPath)) ?? files
+        if refreshedFiles.contains(where: { $0.path == path }) {
+            let pinnedPaths = expandedFilePaths.union([path])
+            files = refreshedFiles
+            DiffLoader.load(
+                DiffLoader.Request(
+                    repoPath: projectPath,
+                    filePath: path,
+                    hints: diffHints(for: path, files: refreshedFiles),
+                    forceFull: true,
+                    contextLineCount: diffContextLineCounts[path] ?? 3,
+                    pinnedPaths: pinnedPaths
+                ),
+                cache: diffCache,
+                git: git
+            )
+            return
+        }
+        diffCache.evict(path)
+        files = refreshedFiles
     }
 
     private func fetchPRInfo(branch: String, headSha: String?, forceFresh: Bool) {
@@ -986,7 +1015,11 @@ final class VCSTabState {
     }
 
     private func diffHints(for filePath: String) -> GitRepositoryService.DiffHints {
-        guard let file = files.first(where: { $0.path == filePath }) else {
+        diffHints(for: filePath, files: files)
+    }
+
+    private func diffHints(for filePath: String, files sourceFiles: [GitStatusFile]) -> GitRepositoryService.DiffHints {
+        guard let file = sourceFiles.first(where: { $0.path == filePath }) else {
             return .unknown
         }
         let untrackedOrNew = file.xStatus == "?" || (file.xStatus == "A" && file.yStatus == " ")
