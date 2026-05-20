@@ -10,7 +10,7 @@ struct AllChangesDiffBody: View {
             ForEach(Array(state.files.enumerated()), id: \.element.path) { index, file in
                 let currentFile = state.vcs.file(for: file.path) ?? file
                 Section {
-                    if !state.isCollapsed(file.path) {
+                    if !state.isCollapsed(file.path), state.shouldRenderDiffBody(filePath: file.path) {
                         DiffBodyView(
                             isLoading: state.vcs.diffCache.isLoading(file.path),
                             error: state.vcs.diffCache.error(for: file.path),
@@ -44,6 +44,8 @@ struct AllChangesDiffBody: View {
                         comments: state.comments(for: file.path).filter { if case .file = $0.anchor { true } else { false } }
                     )
                 }
+                .onAppear { state.fileDidAppear(file.path) }
+                .onDisappear { state.fileDidDisappear(file.path) }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

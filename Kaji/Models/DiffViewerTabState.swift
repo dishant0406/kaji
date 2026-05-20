@@ -13,6 +13,7 @@ final class DiffViewerTabState: Identifiable {
     var mode: VCSTabState.ViewMode
     var collapsedFilePaths: Set<String> = []
     var comments: [DiffComment] = []
+    var visibleFilePaths: Set<String> = []
 
     var displayTitle: String {
         if showsAllChanges { return "All Changes" }
@@ -43,7 +44,33 @@ final class DiffViewerTabState: Identifiable {
             collapsedFilePaths.insert(filePath)
         } else {
             collapsedFilePaths.remove(filePath)
+            ensureFileLoaded(filePath: filePath, forceFull: false)
         }
+    }
+
+    func fileDidAppear(_ filePath: String) {
+        visibleFilePaths.insert(filePath)
+        guard !isCollapsed(filePath) else { return }
+        ensureFileLoaded(filePath: filePath, forceFull: false)
+    }
+
+    func fileDidDisappear(_ filePath: String) {
+        visibleFilePaths.remove(filePath)
+    }
+
+    func shouldRenderDiffBody(filePath: String) -> Bool {
+        visibleFilePaths.contains(filePath)
+            || vcs.diffCache.hasDiff(for: filePath)
+            || vcs.diffCache.isLoading(filePath)
+            || vcs.diffCache.error(for: filePath) != nil
+    }
+
+    func ensureFileLoaded(filePath: String, forceFull: Bool) {
+        vcs.ensureDiffLoaded(
+            filePath: filePath,
+            forceFull: forceFull,
+            pinnedPaths: visibleFilePaths.union([filePath])
+        )
     }
 
     func saveComment(anchor: DiffCommentAnchor, text: String) {
@@ -74,7 +101,11 @@ final class DiffViewerTabState: Identifiable {
 
     private func loadIfNeeded(forceFull: Bool) {
         if showsAllChanges {
-            vcs.ensureDiffsLoaded(files: files, forceFull: forceFull)
+            let preloadFiles = files.prefix(3)
+            visibleFilePaths.formUnion(preloadFiles.map(\.path))
+            for file in preloadFiles {
+                ensureFileLoaded(filePath: file.path, forceFull: forceFull)
+            }
             return
         }
         if vcs.files.contains(where: { $0.path == filePath }) {

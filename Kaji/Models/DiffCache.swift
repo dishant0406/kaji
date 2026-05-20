@@ -22,9 +22,11 @@ final class DiffCache {
     @ObservationIgnored private var accessOrder: [String] = []
     @ObservationIgnored nonisolated(unsafe) private var tasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private let cap: Int
+    @ObservationIgnored private let rowCap: Int
 
-    init(cap: Int = 50) {
+    init(cap: Int = 50, rowCap: Int = 100_000) {
         self.cap = cap
+        self.rowCap = rowCap
     }
 
     func diff(for filePath: String) -> LoadedDiff? {
@@ -115,11 +117,20 @@ final class DiffCache {
     }
 
     private func enforceCap(pinnedPaths: Set<String>) {
-        while accessOrder.count > cap {
+        while accessOrder.count > cap || cachedRowCount > rowCap {
+            let previousCount = accessOrder.count
             let oldest = accessOrder.removeFirst()
-            if pinnedPaths.contains(oldest) { continue }
+            if pinnedPaths.contains(oldest) {
+                accessOrder.append(oldest)
+                if accessOrder.count == previousCount { break }
+                continue
+            }
             diffsByPath.removeValue(forKey: oldest)
             errorsByPath.removeValue(forKey: oldest)
         }
+    }
+
+    private var cachedRowCount: Int {
+        diffsByPath.values.reduce(0) { $0 + $1.rows.count }
     }
 }
