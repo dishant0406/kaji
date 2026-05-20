@@ -75,6 +75,7 @@
     { "token": ":h:", "detail": "Provider history" },
     { "token": ":s:", "detail": "Skill" },
     { "token": ":task:", "detail": "Run task recipe" },
+    { "token": ":diff:", "detail": "Open changed file diffs" },
     { "token": ":ta:", "detail": "Add task recipe" },
     { "token": ":te:", "detail": "Edit task recipe" },
     { "token": ":td:", "detail": "Delete task recipe" },

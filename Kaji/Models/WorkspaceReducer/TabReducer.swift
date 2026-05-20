@@ -175,11 +175,12 @@ enum TabReducer {
         state: inout WorkspaceState
     ) {
         _ = appendWorkspaceTab(projectID: projectID, state: &state) { path in
-            let vcs = VCSTabState(projectPath: path)
+            let vcs = VCSTabState(projectPath: path, files: request.files)
             let area = TabArea(projectPath: path, existingTab: TerminalTab(diffViewerState: DiffViewerTabState(
                 vcs: vcs,
                 filePath: request.filePath,
-                isStaged: request.isStaged
+                isStaged: request.isStaged,
+                files: request.files
             )))
             return WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
         }

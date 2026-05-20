@@ -105,7 +105,7 @@ final class TabArea: Identifiable {
     func createDiffViewerTab(vcs: VCSTabState, filePath: String, isStaged: Bool) {
         if let existing = tabs.first(where: { tab in
             guard let diff = tab.content.diffViewerState else { return false }
-            return diff.filePath == filePath && diff.isStaged == isStaged
+            return !diff.showsAllChanges && diff.filePath == filePath && diff.isStaged == isStaged
         }) {
             selectTab(existing.id)
             return

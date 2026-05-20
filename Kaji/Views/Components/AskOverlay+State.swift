@@ -28,6 +28,7 @@ extension AskOverlay {
             bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
+            diffFiles: diffFiles,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName,
             sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
@@ -55,6 +56,9 @@ extension AskOverlay {
         }
         if activeAnnotation?.key == .bookmarkFolder {
             return "No matching bookmark folders"
+        }
+        if activeAnnotation?.key == .diff {
+            return "No changed files"
         }
         if activeAnnotation != nil {
             return "No matching options"
@@ -219,6 +223,7 @@ extension AskOverlay {
         refreshHistoryOptions(parsed: parsed)
         refreshMentionOptions()
         refreshDirectoryOptions()
+        refreshDiffFiles()
         guard !isBookmarkFolderPickerVisible else {
             highlightedIndex = entries.isEmpty ? nil : 0
             return
@@ -272,6 +277,66 @@ extension AskOverlay {
             return
         }
         directoryOptions = AskDirectorySearchService.options(query: parsed.activeAnnotation?.value ?? "~")
+    }
+
+    func refreshDiffFiles() {
+        let parsed = AskInlineAnnotations.parse(fieldText)
+        guard parsed.activeAnnotation?.key == .diff,
+              let project = selectedProject,
+              let worktree = selectedWorktree
+        else {
+            diffFilesTask?.cancel()
+            diffFiles = []
+            return
+        }
+
+        diffFilesTask?.cancel()
+        let activeProjectID = project.id
+        let activeWorktreeID = worktree.id
+        let worktreePath = worktree.path
+        diffFilesTask = Task { @MainActor in
+            let result = await Task.detached(priority: .userInitiated) {
+                await (try? GitRepositoryService().changedFiles(repoPath: worktreePath)) ?? []
+            }.value
+            guard !Task.isCancelled else { return }
+            diffFiles = Self.diffPaletteFiles(
+                files: result,
+                projectID: activeProjectID,
+                worktreeID: activeWorktreeID,
+                worktreePath: worktreePath
+            )
+            highlightedIndex = entries.isEmpty ? nil : min(highlightedIndex ?? 0, entries.count - 1)
+        }
+    }
+
+    static func diffPaletteFiles(
+        files: [GitStatusFile],
+        projectID: UUID,
+        worktreeID: UUID,
+        worktreePath: String
+    ) -> [DiffPaletteFile] {
+        files.flatMap { file in
+            var result: [DiffPaletteFile] = []
+            if file.isStaged {
+                result.append(DiffPaletteFile(
+                    projectID: projectID,
+                    worktreeID: worktreeID,
+                    worktreePath: worktreePath,
+                    file: file,
+                    isStaged: true
+                ))
+            }
+            if file.isUnstaged {
+                result.append(DiffPaletteFile(
+                    projectID: projectID,
+                    worktreeID: worktreeID,
+                    worktreePath: worktreePath,
+                    file: file,
+                    isStaged: false
+                ))
+            }
+            return result
+        }
     }
 
     func refreshHistoryOptions(parsed: AskParsedInput? = nil) {

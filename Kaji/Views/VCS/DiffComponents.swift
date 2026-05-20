@@ -85,7 +85,7 @@ struct DiffRenderTheme: @unchecked Sendable {
             deletionBackground: KajiTheme.nsDiffRemove.withAlphaComponent(0.16),
             hunkBackground: KajiTheme.nsDiffHunk.withAlphaComponent(0.1),
             collapsedBackground: KajiTheme.nsBg,
-            font: DiffMetrics.font
+            font: AppTypographySettings.shared.nsFont(size: 12)
         )
     }
 

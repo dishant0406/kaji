@@ -50,11 +50,42 @@ struct AskPaletteFeatureTests {
         #expect(entries.first?.action == .attach)
     }
 
+    @Test
+    func diffAnnotationShowsSummaryAndChangedFiles() {
+        let projectID = UUID()
+        let worktreeID = UUID()
+        let changed = GitStatusFile(
+            path: "Kaji/App.swift",
+            oldPath: nil,
+            xStatus: "M",
+            yStatus: " ",
+            additions: 2,
+            deletions: 1,
+            isBinary: false
+        )
+        let diffFile = DiffPaletteFile(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: "/repo",
+            file: changed,
+            isStaged: true
+        )
+
+        let entries = AskPaletteEntries.build(context(fieldText: ":diff:", diffFiles: [diffFile]))
+
+        #expect(entries.count == 2)
+        #expect(entries[0].action == .openDiffSummary(projectID: projectID, worktreeID: worktreeID, worktreePath: "/repo"))
+        #expect(entries[1].action == .diffFile(diffFile))
+        #expect(entries[1].detail == "Staged • +2 -1")
+        #expect(entries[1].annotation == "M +2 -1")
+    }
+
     private func context(
         fieldText: String,
         taskRecipes: [AskTaskRecipe] = [],
         mentionOptions: [AskMentionOption] = [],
-        directoryOptions: [AskDirectoryOption] = []
+        directoryOptions: [AskDirectoryOption] = [],
+        diffFiles: [DiffPaletteFile] = []
     ) -> AskPaletteContext {
         AskPaletteContext(
             fieldText: fieldText,
@@ -69,6 +100,7 @@ struct AskPaletteFeatureTests {
             taskRecipes: taskRecipes,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
+            diffFiles: diffFiles,
             projectName: "muxy",
             worktreeName: "main"
         )

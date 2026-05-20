@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 struct DiffLineMetadata {
     let kind: DiffDisplayRow.Kind
@@ -92,13 +93,16 @@ func buildLineBackgrounds(
 
 @MainActor
 enum DiffMetrics {
-    static let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-    static let glyphAdvance: CGFloat = {
+    static var font: NSFont {
+        AppTypographySettings.shared.nsFont(size: 12)
+    }
+
+    static var glyphAdvance: CGFloat {
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
         let sample = NSAttributedString(string: "M", attributes: attrs)
         let size = sample.size()
         return size.width > 0 ? size.width : 7.2
-    }()
+    }
 
     static let horizontalPadding: CGFloat = 12
 
@@ -231,10 +235,13 @@ final class DiffGutterNSView: NSView {
     var cachedNumberHoverColor: NSColor = .labelColor
     var cachedAddColor: NSColor = .systemGreen
     var cachedRemoveColor: NSColor = .systemRed
+    var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
+    var comments: [DiffComment] = []
+    private var commentHoverProgress: CGFloat = 0
     private var trackingArea: NSTrackingArea?
     private var hoveredCell: HoveredCell?
-    private let numberFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
-    private let prefixFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .medium)
+    var numberFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+    var prefixFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .medium)
     private let numberParagraphStyle: NSParagraphStyle = {
         let style = NSMutableParagraphStyle()
         style.alignment = .right
@@ -287,7 +294,7 @@ final class DiffGutterNSView: NSView {
         let cell = cellAtPoint(point)
         if cell != hoveredCell {
             hoveredCell = cell
-            needsDisplay = true
+            animateCommentBubbleIfNeeded()
         }
         if cell != nil {
             NSCursor.pointingHand.set()
@@ -299,6 +306,7 @@ final class DiffGutterNSView: NSView {
     override func mouseExited(with _: NSEvent) {
         if hoveredCell != nil {
             hoveredCell = nil
+            commentHoverProgress = 0
             needsDisplay = true
         }
         NSCursor.arrow.set()
@@ -309,6 +317,14 @@ final class DiffGutterNSView: NSView {
         guard let cell = cellAtPoint(point),
               let lineNumber = lineNumberForCell(cell)
         else { return }
+        let side = sideForCell(cell)
+        if let onCommentRequest, let side, let window {
+            onCommentRequest(
+                .line(path: filePath, side: side, lineNumber: lineNumber),
+                window.convertPoint(toScreen: event.locationInWindow)
+            )
+            return
+        }
         let reference = "\(filePath):\(lineNumber)"
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(reference, forType: .string)
@@ -351,6 +367,17 @@ final class DiffGutterNSView: NSView {
         }
     }
 
+    private func sideForCell(_ cell: HoveredCell) -> DiffLineSide? {
+        switch cell {
+        case .old:
+            .old
+        case .new:
+            .new
+        case .single:
+            mode == .singleOld ? .old : .new
+        }
+    }
+
     var gutterWidth: CGFloat {
         switch mode {
         case .unified: columnWidth * 2 + 2 + Self.prefixColumnWidth
@@ -379,10 +406,10 @@ final class DiffGutterNSView: NSView {
         }
     }
 
-    private func numberAttrs(highlighted: Bool) -> [NSAttributedString.Key: Any] {
+    private func numberAttrs(highlighted: Bool, commented: Bool = false) -> [NSAttributedString.Key: Any] {
         [
-            .font: numberFont,
-            .foregroundColor: highlighted ? cachedNumberHoverColor : cachedNumberColor,
+            .font: commented ? NSFontManager.shared.convert(numberFont, toHaveTrait: .boldFontMask) : numberFont,
+            .foregroundColor: commented || highlighted ? cachedNumberHoverColor : cachedNumberColor,
             .paragraphStyle: numberParagraphStyle,
         ]
     }
@@ -407,16 +434,23 @@ final class DiffGutterNSView: NSView {
 
             if let old = meta.oldLineNumber {
                 let isHovered = hoveredCell == .old(lineIndex: index)
-                let str = NSAttributedString(string: "\(old)", attributes: numberAttrs(highlighted: isHovered))
+                let str = NSAttributedString(
+                    string: "\(old)",
+                    attributes: numberAttrs(highlighted: isHovered, commented: hasLineComment(side: .old, lineNumber: old))
+                )
                 str.draw(in: NSRect(x: col1X, y: textY, width: columnWidth - 4, height: lineHeight))
             }
             if let new = meta.newLineNumber {
                 let isHovered = hoveredCell == .new(lineIndex: index)
-                let str = NSAttributedString(string: "\(new)", attributes: numberAttrs(highlighted: isHovered))
+                let str = NSAttributedString(
+                    string: "\(new)",
+                    attributes: numberAttrs(highlighted: isHovered, commented: hasLineComment(side: .new, lineNumber: new))
+                )
                 str.draw(in: NSRect(x: col2X, y: textY, width: columnWidth - 4, height: lineHeight))
             }
 
             drawPrefix(meta.kind, at: NSRect(x: prefixX, y: textY, width: Self.prefixColumnWidth, height: lineHeight))
+            drawHoveredCommentBubble(for: meta, atY: y, x: totalWidth - 12)
         }
     }
 
@@ -434,8 +468,85 @@ final class DiffGutterNSView: NSView {
             guard let num = meta[keyPath: keyPath] else { continue }
             let isHovered = hoveredCell == .single(lineIndex: index)
             let textY = y + (lineHeight - numberFont.ascender + numberFont.descender) / 2
-            let str = NSAttributedString(string: "\(num)", attributes: numberAttrs(highlighted: isHovered))
+            let side: DiffLineSide = mode == .singleOld ? .old : .new
+            let str = NSAttributedString(
+                string: "\(num)",
+                attributes: numberAttrs(highlighted: isHovered, commented: hasLineComment(side: side, lineNumber: num))
+            )
             str.draw(in: NSRect(x: 0, y: textY, width: columnWidth - 4, height: lineHeight))
+            drawHoveredCommentBubble(for: meta, atY: y, x: totalWidth - 12)
+        }
+    }
+
+    private func drawHoveredCommentBubble(for meta: DiffLineMetadata, atY y: CGFloat, x: CGFloat) {
+        guard let comment = hoveredComment(for: meta) else { return }
+        let text = comment.text as NSString
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 10, weight: .medium),
+            .foregroundColor: NSColor.labelColor,
+        ]
+        let maxWidth: CGFloat = 240
+        let textRect = text.boundingRect(
+            with: NSSize(width: maxWidth - 18, height: 80),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: attrs
+        )
+        let expandedWidth = min(max(textRect.width + 18, 52), maxWidth)
+        let expandedHeight = min(max(textRect.height + 8, lineHeight - 4), 88)
+        let progress = max(commentHoverProgress, 0.18)
+        let width = 18 + (expandedWidth - 18) * progress
+        let height = (lineHeight - 4) + (expandedHeight - (lineHeight - 4)) * progress
+        let rect = NSRect(x: x + 4, y: y + 2, width: width, height: height)
+        KajiTheme.nsBg.blended(withFraction: 0.18, of: cachedNumberHoverColor)?.setFill()
+        NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8).fill()
+        if progress > 0.72 {
+            text.draw(with: rect.insetBy(dx: 8, dy: 4), options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: attrs)
+        }
+    }
+
+    private func animateCommentBubbleIfNeeded() {
+        commentHoverProgress = 0
+        needsDisplay = true
+        guard let hoveredCell, let lineNumber = lineNumberForCell(hoveredCell), let side = sideForCell(hoveredCell), hasLineComment(
+            side: side,
+            lineNumber: lineNumber
+        )
+        else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.14
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            commentHoverProgress = 1
+            animator().needsDisplay = true
+        }
+    }
+
+    private func hoveredComment(for meta: DiffLineMetadata) -> DiffComment? {
+        guard let hoveredCell else { return nil }
+        return comments.first { comment in
+            switch comment.anchor {
+            case let .line(path, side, lineNumber):
+                guard path == filePath else { return false }
+                switch hoveredCell {
+                case .old:
+                    return side == .old && meta.oldLineNumber == lineNumber
+                case .new:
+                    return side == .new && meta.newLineNumber == lineNumber
+                case .single:
+                    return side == (mode == .singleOld ? .old : .new) &&
+                        (side == .old ? meta.oldLineNumber == lineNumber : meta.newLineNumber == lineNumber)
+                }
+            case .file:
+                return false
+            }
+        }
+    }
+
+    private func hasLineComment(side: DiffLineSide, lineNumber: Int) -> Bool {
+        comments.contains { comment in
+            if case let .line(path, commentSide, commentLineNumber) = comment.anchor {
+                return path == filePath && commentSide == side && commentLineNumber == lineNumber
+            }
+            return false
         }
     }
 

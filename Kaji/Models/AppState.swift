@@ -18,6 +18,14 @@ final class AppState {
         let vcs: VCSTabState
         let filePath: String
         let isStaged: Bool
+        let files: [GitStatusFile]
+
+        init(vcs: VCSTabState, filePath: String = "", isStaged: Bool = false, files: [GitStatusFile] = []) {
+            self.vcs = vcs
+            self.filePath = filePath
+            self.isStaged = isStaged
+            self.files = files
+        }
     }
 
     struct CodeGraphTabRequest {
@@ -394,7 +402,7 @@ final class AppState {
         for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
             area.tabs.contains(where: { tab in
                 guard let diff = tab.content.diffViewerState else { return false }
-                return diff.filePath == filePath && diff.isStaged == isStaged
+                return !diff.showsAllChanges && diff.filePath == filePath && diff.isStaged == isStaged
             })
         }) {
             activateWorkspaceTab(workspaceTab.id, projectID: projectID)
@@ -407,11 +415,22 @@ final class AppState {
         ))
     }
 
+    func openAllChangesDiffViewer(vcs: VCSTabState, projectID: UUID) {
+        dispatch(.createDiffViewerTab(
+            projectID: projectID,
+            areaID: nil,
+            request: DiffViewerRequest(vcs: vcs, files: vcs.files)
+        ))
+    }
+
     private func openFileInExternalEditor(_ filePath: String, projectID: UUID, command: String) {
         for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
             area.tabs.contains(where: { $0.content.pane?.externalEditorFilePath == filePath })
         }) {
-            DebugFileLog.log("FileOpen", "activating existing external editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
+            DebugFileLog.log(
+                "FileOpen",
+                "activating existing external editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)"
+            )
             activateWorkspaceTab(workspaceTab.id, projectID: projectID)
             return
         }

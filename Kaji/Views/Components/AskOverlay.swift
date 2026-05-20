@@ -45,6 +45,8 @@ struct AskOverlay: View {
     @State var pendingBookmarkCandidates: [AgentSessionBookmarkCandidate] = []
     @State var isBookmarkFolderPickerVisible = false
     @State var prefillState = AskPrefillState.shared
+    @State var diffFiles: [DiffPaletteFile] = []
+    @State var diffFilesTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -108,6 +110,7 @@ struct AskOverlay: View {
         .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })
         .onAppear(perform: configureDefaults)
         .onAppear(perform: applyPrefillIfNeeded)
+        .onDisappear { diffFilesTask?.cancel() }
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
         .onChange(of: projectID) { _, _ in
             syncWorktreeSelection()

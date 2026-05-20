@@ -20,6 +20,7 @@ enum AskPaletteEntries {
         let bookmarks: [AgentSessionBookmark]
         let bookmarkFolders: [String]
         let directoryOptions: [AskDirectoryOption]
+        let diffFiles: [DiffPaletteFile]
     }
 
     static func annotationEntries(_ annotation: AnnotationContext) -> [AskPaletteEntry] {
@@ -48,6 +49,8 @@ enum AskPaletteEntries {
             return filteredUserTasks(annotation.taskRecipes, query: annotation.active.value)
         case .projectAdd:
             return directoryEntries(annotation.directoryOptions)
+        case .diff:
+            return diffEntries(annotation.diffFiles, query: annotation.active.value)
         case .attach:
             return [.init(action: .attach, title: "Attach", detail: "Pick files, folders, or images", annotation: "Enter")]
         case .execute:
@@ -112,7 +115,8 @@ enum AskPaletteEntries {
                 scripts: context.scripts,
                 bookmarks: context.bookmarks,
                 bookmarkFolders: context.bookmarkFolders,
-                directoryOptions: context.directoryOptions
+                directoryOptions: context.directoryOptions,
+                diffFiles: context.diffFiles
             ))
         }
 
@@ -349,6 +353,38 @@ enum AskPaletteEntries {
 
     private static func directoryEntries(_ options: [AskDirectoryOption]) -> [AskPaletteEntry] {
         options.map { .init(action: .directory($0), title: $0.title, detail: $0.detail, annotation: "Shift Enter") }
+    }
+
+    private static func diffEntries(_ files: [DiffPaletteFile], query: String) -> [AskPaletteEntry] {
+        guard let first = files.first else { return [] }
+        let filtered = files.filter { file in
+            query.isEmpty || file.file.path.localizedCaseInsensitiveContains(query)
+        }
+        let summary = AskPaletteEntry(
+            action: .openDiffSummary(
+                projectID: first.projectID,
+                worktreeID: first.worktreeID,
+                worktreePath: first.worktreePath
+            ),
+            title: "Open all changes",
+            detail: "GitHub-style diff viewer for \(files.count) changed file\(files.count == 1 ? "" : "s")",
+            annotation: "Enter"
+        )
+        let entries = filtered.map { file in
+            AskPaletteEntry(
+                action: .diffFile(file),
+                title: file.file.path,
+                detail: diffEntryDetail(file),
+                annotation: file.file.paletteAnnotationText
+            )
+        }
+        return query.isEmpty ? [summary] + entries : entries
+    }
+
+    private static func diffEntryDetail(_ file: DiffPaletteFile) -> String {
+        let stats = file.file.statSummaryText
+        guard !stats.isEmpty else { return file.sectionTitle }
+        return "\(file.sectionTitle) • \(stats)"
     }
 
     private static func filteredSkills(_ options: [AskSkillOption], query: String) -> [AskPaletteEntry] {

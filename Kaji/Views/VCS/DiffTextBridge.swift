@@ -208,6 +208,8 @@ struct DiffGutterBridge: NSViewRepresentable {
     let filePath: String
     let mode: DiffGutterMode
     let columnWidth: CGFloat
+    var onCommentRequest: ((DiffCommentAnchor, CGPoint) -> Void)?
+    var comments: [DiffComment] = []
 
     final class Coordinator {
         var configuredSignature = Int.min
@@ -234,6 +236,7 @@ struct DiffGutterBridge: NSViewRepresentable {
         hasher.combine(filePath)
         hasher.combine(gutterModeHash(mode))
         hasher.combine(columnWidth)
+        hasher.combine(comments.count)
         hasher.combine(metadata.count)
         for line in metadata {
             hasher.combine(diffRowKindHash(line.kind))
@@ -247,6 +250,8 @@ struct DiffGutterBridge: NSViewRepresentable {
         view.lineMetadata = metadata
         view.filePath = filePath
         view.mode = mode
+        view.onCommentRequest = onCommentRequest
+        view.comments = comments
         view.columnWidth = columnWidth
         view.lineHeight = diffLineHeight
         view.cachedBorderColor = KajiTheme.nsBg.blended(
@@ -257,6 +262,8 @@ struct DiffGutterBridge: NSViewRepresentable {
         view.cachedNumberHoverColor = GhosttyService.shared.foregroundColor.withAlphaComponent(0.85)
         view.cachedAddColor = KajiTheme.nsDiffAdd
         view.cachedRemoveColor = KajiTheme.nsDiffRemove
+        view.numberFont = AppTypographySettings.shared.nsFont(size: 11)
+        view.prefixFont = AppTypographySettings.shared.nsFont(size: 12)
         view.invalidateIntrinsicContentSize()
         view.needsDisplay = true
         context.coordinator.configuredSignature = gutterSignature

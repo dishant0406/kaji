@@ -143,7 +143,8 @@ extension AskOverlay {
             confirmHighlight()
         case .taskEdit,
              .taskDelete,
-             .projectAdd:
+             .projectAdd,
+             .diff:
             confirmHighlight()
         case .project,
              .worktree,
@@ -234,6 +235,10 @@ extension AskOverlay {
             applyMention(option)
         case let .directory(directory):
             fieldText = "\(AskAnnotationKey.projectAdd.token)\(directory.path)/"
+        case let .diffFile(file):
+            openDiffFile(file)
+        case let .openDiffSummary(projectID, worktreeID, worktreePath):
+            openDiffSummary(projectID: projectID, worktreeID: worktreeID, worktreePath: worktreePath)
         case .attach:
             attachments.append(contentsOf: AskAttachmentLoader.openPanel())
         case let .runScript(script):
@@ -514,6 +519,34 @@ extension AskOverlay {
         onDismiss()
     }
 
+    func openDiffFile(_ diffFile: DiffPaletteFile) {
+        guard let project = projectStore.projects.first(where: { $0.id == diffFile.projectID }) else { return }
+        guard let worktree = worktreeStore.worktree(projectID: diffFile.projectID, worktreeID: diffFile.worktreeID) else { return }
+        appState.selectProject(project, worktree: worktree)
+        appState.openDiffViewer(
+            vcs: VCSTabState(projectPath: diffFile.worktreePath, files: [diffFile.file]),
+            filePath: diffFile.file.path,
+            isStaged: diffFile.isStaged,
+            projectID: diffFile.projectID
+        )
+        onDismiss()
+    }
+
+    func openDiffSummary(projectID: UUID, worktreeID: UUID, worktreePath: String) {
+        guard let project = projectStore.projects.first(where: { $0.id == projectID }) else { return }
+        guard let worktree = worktreeStore.worktree(projectID: projectID, worktreeID: worktreeID) else { return }
+        let files = Dictionary(grouping: diffFiles, by: { $0.file.path })
+            .compactMap { $0.value.first?.file }
+            .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+        guard !files.isEmpty else { return }
+        appState.selectProject(project, worktree: worktree)
+        appState.openAllChangesDiffViewer(
+            vcs: VCSTabState(projectPath: worktreePath, files: files),
+            projectID: projectID
+        )
+        onDismiss()
+    }
+
     func promptWithAttachments(_ base: String) -> String {
         guard !attachments.isEmpty else { return base }
         let paths = attachments.map { "- \($0.url.path)" }.joined(separator: "\n")
@@ -603,6 +636,8 @@ extension AskOverlay {
              .toggleBatteryLidCloseSleepPrevention,
              .mention,
              .directory,
+             .diffFile,
+             .openDiffSummary,
              .attach,
              .session,
              .launchProvider,
@@ -668,6 +703,7 @@ extension AskOverlay {
              .taskEdit,
              .taskDelete,
              .projectAdd,
+             .diff,
              .attach,
              .execute,
              .executeAdd,
@@ -795,6 +831,7 @@ extension AskOverlay {
              .taskEdit,
              .taskDelete,
              .projectAdd,
+             .diff,
              .attach,
              .execute,
              .executeAdd,
