@@ -35,7 +35,16 @@ struct ParentAgentTimelineView: View {
                     proxy.scrollTo(last.id, anchor: .bottom)
                 }
             }
+            .onChange(of: liveTailSignature) {
+                guard let last = task.timeline.last, !last.isComplete else { return }
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
         }
+    }
+
+    private var liveTailSignature: Int {
+        guard let last = task.timeline.last, !last.isComplete else { return 0 }
+        return last.detail.count / 600
     }
 
     @ViewBuilder

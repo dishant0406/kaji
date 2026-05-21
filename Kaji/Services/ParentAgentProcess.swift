@@ -9,6 +9,7 @@ final class ParentAgentProcess {
     private var outputBuffer = Data()
     private var configurationSignature: String?
     private var processID: UUID?
+    private var launchStartDate: Date?
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     var environmentOverrides: [String: String] = [:]
@@ -35,6 +36,7 @@ final class ParentAgentProcess {
     }
 
     private func startIfNeeded() throws {
+        let start = Date()
         var environment = ParentAgentSettingsStore.shared.launchEnvironment()
         environment.merge(environmentOverrides) { _, new in new }
         let signature = Self.configurationSignature(for: environment)
@@ -45,6 +47,7 @@ final class ParentAgentProcess {
         guard let launch = Self.launch else {
             throw ParentAgentProcessError.scriptMissing
         }
+        DebugFileLog.log("ParentAgent", "launch starting args=\(launch.arguments.first ?? "")")
 
         let inputPipe = Pipe()
         let outputPipe = Pipe()
@@ -74,12 +77,14 @@ final class ParentAgentProcess {
             Task { @MainActor in self?.onError?(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
         }
         try process.run()
+        launchStartDate = start
         self.process = process
         self.inputPipe = inputPipe
         self.outputPipe = outputPipe
         self.errorPipe = errorPipe
         self.processID = processID
         configurationSignature = signature
+        DebugFileLog.log("ParentAgent", "launch completed duration=\(Date().timeIntervalSince(start))")
     }
 
     private func cleanupProcess(id: UUID? = nil) {
@@ -94,6 +99,7 @@ final class ParentAgentProcess {
         outputBuffer = Data()
         configurationSignature = nil
         processID = nil
+        launchStartDate = nil
     }
 
     private static func configurationSignature(for environment: [String: String]) -> String {
@@ -116,7 +122,11 @@ final class ParentAgentProcess {
             outputBuffer.removeSubrange(...newline)
             guard !line.isEmpty else { continue }
             do {
-                try onMessage?(decoder.decode(ParentAgentEnvelope.self, from: Data(line)))
+                let message = try decoder.decode(ParentAgentEnvelope.self, from: Data(line))
+                if message.type == "heartbeat", let launchStartDate {
+                    DebugFileLog.log("ParentAgent", "heartbeat received duration=\(Date().timeIntervalSince(launchStartDate))")
+                }
+                onMessage?(message)
             } catch {
                 onError?(error.localizedDescription)
             }
@@ -124,7 +134,7 @@ final class ParentAgentProcess {
     }
 
     private static var launch: ParentAgentLaunch? {
-        guard ParentAgentSettingsStore.shared.readiness.isReady else { return nil }
+        guard ParentAgentSettingsStore.shared.isEnabled else { return nil }
         if let source = ParentAgentRuntimeLocator.sourceLaunch() {
             return source
         }

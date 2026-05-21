@@ -1,6 +1,9 @@
 import Foundation
 
 enum ParentAgentRuntimeLocator {
+    private static let cache = ParentAgentRuntimeLocatorCache()
+    private static let nodeLookupTTL: TimeInterval = 30
+
     static func sourceLaunch() -> ParentAgentLaunch? {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let runtimeRoot = root.appending(path: "KajiParentAgentRuntime")
@@ -42,10 +45,19 @@ enum ParentAgentRuntimeLocator {
     }
 
     static func nodeExecutablePath() -> String? {
+        if let cached = cache.nodeExecutablePath(ttl: nodeLookupTTL) { return cached }
         guard let path = AIProviderExecutableLocator.resolvePath(for: "node"),
               nodeVersion(at: path).supportsParentAgentRuntime
-        else { return nil }
+        else {
+            cache.updateNodeExecutablePath(nil)
+            return nil
+        }
+        cache.updateNodeExecutablePath(path)
         return path
+    }
+
+    static func clearCache() {
+        cache.clear()
     }
 
     private static func nodeVersion(at path: String) -> ParentAgentNodeVersion {
@@ -89,6 +101,36 @@ enum ParentAgentRuntimeLocator {
         let url = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
             .appending(path: "Kaji/Resources/pi/oauth-login.mjs")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+}
+
+private final class ParentAgentRuntimeLocatorCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cachedNodeExecutablePath: String?
+    private var cachedNodeLookupDate: Date?
+
+    func nodeExecutablePath(ttl: TimeInterval) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let cachedNodeExecutablePath,
+              let cachedNodeLookupDate,
+              Date().timeIntervalSince(cachedNodeLookupDate) < ttl
+        else { return nil }
+        return cachedNodeExecutablePath
+    }
+
+    func updateNodeExecutablePath(_ path: String?) {
+        lock.lock()
+        cachedNodeExecutablePath = path
+        cachedNodeLookupDate = Date()
+        lock.unlock()
+    }
+
+    func clear() {
+        lock.lock()
+        cachedNodeExecutablePath = nil
+        cachedNodeLookupDate = nil
+        lock.unlock()
     }
 }
 

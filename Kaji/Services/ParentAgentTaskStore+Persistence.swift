@@ -15,6 +15,12 @@ extension ParentAgentTaskStore {
     }
 
     func save() {
+        pendingStreamingSave?.cancel()
+        pendingStreamingSave = nil
+        saveNow()
+    }
+
+    func saveNow() {
         trimForMemory()
         try? persistence.save(tasks: tasks, activeTaskID: activeTaskID)
     }
