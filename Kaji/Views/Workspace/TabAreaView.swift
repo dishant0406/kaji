@@ -110,7 +110,7 @@ struct TabAreaView: View {
             }
         }
         .background {
-            if paneDragCoordinator.activeDrag != nil {
+            if paneDragCoordinator.activeDrag != nil || dragCoordinator.activeDrag != nil {
                 GeometryReader { geo in
                     Color.clear.preference(
                         key: AreaFramePreferenceKey.self,

@@ -24,6 +24,15 @@ struct CommandKReference: Identifiable, Equatable {
     var id: String { token }
 }
 
+struct LocalShortcutReference: Identifiable, Equatable {
+    let keys: String
+    let name: String
+    let category: String
+    let context: String
+
+    var id: String { "\(category):\(keys):\(name):\(context)" }
+}
+
 enum ShortcutReferenceCatalog {
     private static let payload = loadPayload()
     private static let definitionsByAction = Dictionary(uniqueKeysWithValues: payload.shortcuts.map { ($0.action, $0) })
@@ -56,6 +65,10 @@ enum ShortcutReferenceCatalog {
         payload.commandK
     }
 
+    static var localShortcuts: [LocalShortcutReference] {
+        payload.localShortcuts
+    }
+
     static var defaultBindings: [KeyBinding] {
         definitions.map { KeyBinding(action: $0.action, combo: $0.defaultCombo) }
     }
@@ -84,6 +97,7 @@ enum ShortcutReferenceCatalog {
 private struct ShortcutReferencePayload: Decodable {
     let categories: [String]
     let shortcuts: [ShortcutDefinition]
+    let localShortcuts: [LocalShortcutReference]
     let commandK: [CommandKReference]
 }
 
@@ -107,6 +121,8 @@ extension ShortcutDefinition: Decodable {
 }
 
 extension CommandKReference: Decodable {}
+
+extension LocalShortcutReference: Decodable {}
 
 private struct ShortcutDefaultCombo: Decodable {
     let key: String

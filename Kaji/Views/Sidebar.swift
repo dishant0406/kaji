@@ -16,7 +16,7 @@ struct Sidebar: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
-    @State private var dragState = ProjectDragState()
+    @State private var isReordering = false
     @State private var expanded = UserDefaults.standard.bool(forKey: "kaji.sidebarExpanded")
     let parentAgentSelected: Bool
     let parentAgentEnabled: Bool
@@ -69,43 +69,15 @@ struct Sidebar: View {
     private var projectList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: expanded ? 4 : 6) {
-                ForEach(Array(projectStore.projects.enumerated()), id: \.element.id) { index, project in
-                    Group {
-                        if expanded {
-                            ExpandedProjectRow(
-                                project: project,
-                                shortcutIndex: index < 9 ? index + 1 : nil,
-                                isAnyDragging: dragState.draggedID != nil,
-                                onSelect: { select(project) },
-                                onRemove: { remove(project) },
-                                onRename: { projectStore.rename(id: project.id, to: $0) },
-                                onSetLogo: { projectStore.setLogo(id: project.id, to: $0) },
-                                onSetIconColor: { projectStore.setIconColor(id: project.id, to: $0) }
-                            )
-                        } else {
-                            ProjectRow(
-                                project: project,
-                                shortcutIndex: index < 9 ? index + 1 : nil,
-                                isAnyDragging: dragState.draggedID != nil,
-                                onSelect: { select(project) },
-                                onRemove: { remove(project) },
-                                onRename: { projectStore.rename(id: project.id, to: $0) },
-                                onSetLogo: { projectStore.setLogo(id: project.id, to: $0) },
-                                onSetIconColor: { projectStore.setIconColor(id: project.id, to: $0) }
-                            )
-                        }
-                    }
-                    .background {
-                        if dragState.draggedID != nil {
-                            GeometryReader { geo in
-                                Color.clear.preference(
-                                    key: UUIDFramePreferenceKey<SidebarFrameTag>.self,
-                                    value: [project.id: geo.frame(in: .named("sidebar"))]
-                                )
-                            }
-                        }
-                    }
-                    .gesture(projectDragGesture(for: project))
+                ReorderableVStack(projectStore.projects, onMove: { source, destination in
+                    projectStore.reorder(
+                        fromOffsets: IndexSet(integer: source),
+                        toOffset: destination
+                    )
+                }, onDragStateChange: { dragging in
+                    isReordering = dragging
+                }) { project, isDragged in
+                    projectRow(project, isDragged: isDragged)
                 }
                 addButton
                 if parentAgentEnabled {
@@ -114,12 +86,40 @@ struct Sidebar: View {
             }
             .padding(.horizontal, expanded ? 10 : 8)
             .padding(.vertical, 6)
-            .onPreferenceChange(UUIDFramePreferenceKey<SidebarFrameTag>.self) { frames in
-                guard dragState.draggedID != nil else { return }
-                dragState.frames = frames
-            }
         }
         .coordinateSpace(name: "sidebar")
+    }
+
+    @ViewBuilder
+    private func projectRow(_ project: Project, isDragged: Bool) -> some View {
+        let index = projectStore.projects.firstIndex(where: { $0.id == project.id }) ?? 0
+        Group {
+            if expanded {
+                ExpandedProjectRow(
+                    project: project,
+                    shortcutIndex: index < 9 ? index + 1 : nil,
+                    isAnyDragging: isReordering,
+                    onSelect: { select(project) },
+                    onRemove: { remove(project) },
+                    onRename: { projectStore.rename(id: project.id, to: $0) },
+                    onSetLogo: { projectStore.setLogo(id: project.id, to: $0) },
+                    onSetIconColor: { projectStore.setIconColor(id: project.id, to: $0) }
+                )
+            } else {
+                ProjectRow(
+                    project: project,
+                    shortcutIndex: index < 9 ? index + 1 : nil,
+                    isAnyDragging: isReordering,
+                    onSelect: { select(project) },
+                    onRemove: { remove(project) },
+                    onRename: { projectStore.rename(id: project.id, to: $0) },
+                    onSetLogo: { projectStore.setLogo(id: project.id, to: $0) },
+                    onSetIconColor: { projectStore.setIconColor(id: project.id, to: $0) }
+                )
+            }
+        }
+        .opacity(isDragged ? 0.92 : 1)
+        .padding(.bottom, expanded ? 4 : 6)
     }
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {
@@ -132,24 +132,6 @@ struct Sidebar: View {
         }
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
         .help("Kaji")
-    }
-
-    private func projectDragGesture(for project: Project) -> some Gesture {
-        DragGesture(minimumDistance: 6, coordinateSpace: .named("sidebar"))
-            .onChanged { value in
-                if dragState.draggedID == nil {
-                    dragState.draggedID = project.id
-                    dragState.lastReorderTargetID = nil
-                }
-                reorderIfNeeded(at: value.location)
-            }
-            .onEnded { _ in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    dragState.draggedID = nil
-                    dragState.frames = [:]
-                    dragState.lastReorderTargetID = nil
-                }
-            }
     }
 
     private func select(_ project: Project) {
@@ -174,39 +156,6 @@ struct Sidebar: View {
         worktreeStore.removeProject(project.id)
     }
 
-    private func reorderIfNeeded(at location: CGPoint) {
-        guard let draggedID = dragState.draggedID else { return }
-        var hoveredTargetID: UUID?
-
-        for (id, frame) in dragState.frames where id != draggedID {
-            guard frame.contains(location) else { continue }
-            hoveredTargetID = id
-            guard dragState.lastReorderTargetID != id else { return }
-
-            guard let sourceIndex = projectStore.projects.firstIndex(where: { $0.id == draggedID }),
-                  let destIndex = projectStore.projects.firstIndex(where: { $0.id == id })
-            else { return }
-
-            dragState.lastReorderTargetID = id
-            let offset = destIndex > sourceIndex ? destIndex + 1 : destIndex
-            withAnimation(.easeInOut(duration: 0.15)) {
-                projectStore.reorder(
-                    fromOffsets: IndexSet(integer: sourceIndex), toOffset: offset
-                )
-            }
-            return
-        }
-
-        if hoveredTargetID == nil {
-            dragState.lastReorderTargetID = nil
-        }
-    }
-}
-
-private struct ProjectDragState {
-    var draggedID: UUID?
-    var frames: [UUID: CGRect] = [:]
-    var lastReorderTargetID: UUID?
 }
 
 struct SidebarFooter: View {

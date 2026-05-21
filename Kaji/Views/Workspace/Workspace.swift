@@ -5,6 +5,7 @@ struct TerminalArea: View {
     let worktreeKey: WorktreeKey
     let isActiveProject: Bool
     @Environment(AppState.self) private var appState
+    @Environment(TabDragCoordinator.self) private var dragCoordinator
     @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
 
     private var root: SplitNode? {
@@ -67,8 +68,17 @@ struct TerminalArea: View {
             }
             .environment(\.activeWorktreeKey, worktreeKey)
             .onPreferenceChange(AreaFramePreferenceKey.self) { frames in
-                guard isActiveProject, paneDragCoordinator.activeDrag != nil else { return }
-                paneDragCoordinator.setAreaFrames(frames, forProject: project.id)
+                guard isActiveProject else { return }
+                if paneDragCoordinator.activeDrag != nil {
+                    paneDragCoordinator.setAreaFrames(frames, forProject: project.id)
+                }
+                if dragCoordinator.activeDrag != nil {
+                    dragCoordinator.setAreaFrames(frames, forProject: project.id)
+                }
+            }
+            .onPreferenceChange(TabStripFramePreferenceKey.self) { frames in
+                guard isActiveProject, dragCoordinator.activeDrag != nil else { return }
+                dragCoordinator.setStripFrames(frames, forProject: project.id)
             }
         }
     }
