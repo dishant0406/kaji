@@ -16,6 +16,7 @@ final class KajiCodeGraphTabState {
     var isLoading = false
     var versions: [KajiCodeGraphVersionEntry] = []
     var activeVersionID: String?
+    @ObservationIgnored private var loadTask: Task<Void, Never>?
 
     init(projectID: UUID, worktreeID: UUID, projectPath: String, graphURL: URL) {
         self.projectID = projectID
@@ -23,6 +24,10 @@ final class KajiCodeGraphTabState {
         self.projectPath = projectPath
         self.latestGraphURL = graphURL
         self.activeGraphURL = graphURL
+    }
+
+    deinit {
+        loadTask?.cancel()
     }
 
     var filteredNodes: [KajiCodeGraphNode] {
@@ -43,23 +48,29 @@ final class KajiCodeGraphTabState {
     }
 
     func load() {
+        loadTask?.cancel()
         isLoading = true
         errorMessage = nil
         refreshVersions()
         let url = activeGraphURL
-        Task {
+        loadTask = Task { [weak self] in
             do {
                 let loaded = try await KajiCodeGraphDocumentLoader.loadOffMain(url: url)
+                guard !Task.isCancelled, let self else { return }
                 document = loaded
                 errorMessage = nil
                 if selectedNodeID == nil || loaded.nodeByID[selectedNodeID ?? ""] == nil {
                     selectedNodeID = loaded.nodes.max(by: { $0.degree < $1.degree })?.id
                 }
+                isLoading = false
+                loadTask = nil
             } catch {
+                guard !Task.isCancelled, let self else { return }
                 document = nil
                 errorMessage = error.localizedDescription
+                isLoading = false
+                loadTask = nil
             }
-            isLoading = false
         }
     }
 

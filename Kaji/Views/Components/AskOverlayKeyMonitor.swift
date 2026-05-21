@@ -43,6 +43,13 @@ final class AskOverlayKeyMonitorView: NSView {
     var onPaste: (() -> Bool)?
     private var keyMonitor: Any?
 
+    deinit {
+        MainActor.assumeIsolated {
+            removeKeyMonitor()
+            clearCallbacks()
+        }
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window == nil {
@@ -91,5 +98,15 @@ final class AskOverlayKeyMonitorView: NSView {
         guard let keyMonitor else { return }
         NSEvent.removeMonitor(keyMonitor)
         self.keyMonitor = nil
+    }
+
+    private func clearCallbacks() {
+        onSubmit = nil
+        onShiftSubmit = nil
+        onSpace = nil
+        onEscape = nil
+        onArrowUp = nil
+        onArrowDown = nil
+        onPaste = nil
     }
 }

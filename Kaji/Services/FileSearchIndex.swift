@@ -4,6 +4,7 @@ actor FileSearchIndex {
     private struct CacheEntry {
         let files: [FileSearchResult]
         let loadedAt: Date
+        let accessedAt: Date
 
         func isFresh(cacheLifetime: TimeInterval) -> Bool {
             loadedAt.timeIntervalSinceNow >= -cacheLifetime
@@ -12,14 +13,34 @@ actor FileSearchIndex {
 
     private var cache: [String: CacheEntry] = [:]
     private var warmTasks: [String: Task<[FileSearchResult], Never>] = [:]
-    private let cacheLifetime: TimeInterval = 300
+    private let cacheLifetime: TimeInterval
+    private let maxCachedProjects: Int
+    private let maxFilesPerProject: Int
+
+    init(cacheLifetime: TimeInterval = 300, maxCachedProjects: Int = 8, maxFilesPerProject: Int = 20000) {
+        self.cacheLifetime = cacheLifetime
+        self.maxCachedProjects = max(1, maxCachedProjects)
+        self.maxFilesPerProject = max(1, maxFilesPerProject)
+    }
+
+    deinit {
+        warmTasks.values.forEach { $0.cancel() }
+    }
 
     func cachedFiles(in projectPath: String) -> [FileSearchResult]? {
-        cache[projectPath]?.files
+        pruneExpiredCache()
+        guard let entry = cache[projectPath], entry.isFresh(cacheLifetime: cacheLifetime) else {
+            cache.removeValue(forKey: projectPath)
+            return nil
+        }
+        touch(projectPath, entry: entry)
+        return entry.files
     }
 
     func files(in projectPath: String) async -> [FileSearchResult] {
+        pruneExpiredCache()
         if let entry = cache[projectPath], entry.isFresh(cacheLifetime: cacheLifetime) {
+            touch(projectPath, entry: entry)
             return entry.files
         }
 
@@ -35,7 +56,9 @@ actor FileSearchIndex {
     }
 
     func warm(projectPath: String) async {
+        pruneExpiredCache()
         if let entry = cache[projectPath], entry.isFresh(cacheLifetime: cacheLifetime) {
+            touch(projectPath, entry: entry)
             return
         }
 
@@ -48,12 +71,30 @@ actor FileSearchIndex {
     }
 
     private func startWarmTask(for projectPath: String) async -> [FileSearchResult] {
-        let task = Task { await FileSearchScanner.scanAll(in: projectPath) }
+        let task = Task { await FileSearchScanner.scanAll(in: projectPath, limit: maxFilesPerProject) }
         warmTasks[projectPath] = task
         let files = await task.value
-        cache[projectPath] = CacheEntry(files: files, loadedAt: Date())
+        let now = Date()
+        cache[projectPath] = CacheEntry(files: files, loadedAt: now, accessedAt: now)
         warmTasks[projectPath] = nil
+        enforceCacheLimit()
         return files
+    }
+
+    private func touch(_ projectPath: String, entry: CacheEntry) {
+        cache[projectPath] = CacheEntry(files: entry.files, loadedAt: entry.loadedAt, accessedAt: Date())
+    }
+
+    private func pruneExpiredCache() {
+        cache = cache.filter { $0.value.isFresh(cacheLifetime: cacheLifetime) }
+    }
+
+    private func enforceCacheLimit() {
+        guard cache.count > maxCachedProjects else { return }
+        let keep = Set(cache.sorted { lhs, rhs in
+            lhs.value.accessedAt > rhs.value.accessedAt
+        }.prefix(maxCachedProjects).map(\.key))
+        cache = cache.filter { keep.contains($0.key) }
     }
 }
 
@@ -68,14 +109,14 @@ private enum FileSearchScanner {
     private static let rgURL = URL(fileURLWithPath: "/opt/homebrew/bin/rg")
     private static let findURL = URL(fileURLWithPath: "/usr/bin/find")
 
-    static func scanAll(in projectPath: String) async -> [FileSearchResult] {
+    static func scanAll(in projectPath: String, limit: Int) async -> [FileSearchResult] {
         if FileManager.default.isExecutableFile(atPath: rgURL.path) {
-            return await runRipgrep(in: projectPath, glob: nil, limit: nil)
+            return await runRipgrep(in: projectPath, glob: nil, limit: limit)
         }
         return await runFind(
             arguments: fullArguments(projectPath: projectPath),
             projectPath: projectPath,
-            limit: nil
+            limit: limit
         )
     }
 

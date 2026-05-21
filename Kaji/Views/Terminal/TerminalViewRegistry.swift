@@ -29,6 +29,13 @@ final class TerminalViewRegistry {
         view.tearDown()
     }
 
+    func removeAll() {
+        let retainedViews = views
+        views.removeAll()
+        paneIDs.removeAll()
+        retainedViews.values.forEach { $0.tearDown() }
+    }
+
     func needsConfirmQuit(for paneID: UUID) -> Bool {
         views[paneID]?.needsConfirmQuit() ?? false
     }

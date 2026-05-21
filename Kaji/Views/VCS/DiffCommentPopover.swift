@@ -85,6 +85,10 @@ struct DiffCommentWindowPopover: NSViewRepresentable {
         context.coordinator.update(request)
     }
 
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.cleanup()
+    }
+
     @MainActor
     final class Coordinator: NSObject, NSPopoverDelegate {
         @Binding private var request: DiffCommentDraftRequest?
@@ -158,6 +162,17 @@ struct DiffCommentWindowPopover: NSViewRepresentable {
             closingPopover?.delegate = nil
             closingPopover?.performClose(nil)
             isClosing = false
+        }
+
+        func cleanup() {
+            close()
+            hostView = nil
+        }
+
+        deinit {
+            MainActor.assumeIsolated {
+                cleanup()
+            }
         }
 
         func popoverDidClose(_ notification: Notification) {

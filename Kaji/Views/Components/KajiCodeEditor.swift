@@ -72,6 +72,13 @@ struct KajiCodeEditor: NSViewRepresentable {
         scrollView.verticalRulerView?.needsDisplay = true
     }
 
+    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+        coordinator.textView?.delegate = nil
+        coordinator.textView = nil
+        scrollView.documentView = nil
+        scrollView.verticalRulerView = nil
+    }
+
     @MainActor
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: KajiCodeEditor

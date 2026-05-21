@@ -67,6 +67,13 @@ final class GhosttyService {
         self.config = cfg
     }
 
+    func shutdown() {
+        if let app { ghostty_app_free(app) }
+        if let config { ghostty_config_free(config) }
+        app = nil
+        config = nil
+    }
+
     var backgroundColor: NSColor {
         configColor("background")
             ?? themeFileColor(\.background)

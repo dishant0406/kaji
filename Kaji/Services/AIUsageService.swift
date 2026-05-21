@@ -243,6 +243,10 @@ final class AIUsageService {
 
     private init() {}
 
+    deinit {
+        refreshTask?.cancel()
+    }
+
     private struct ProviderRuntimePreferences {
         let trackedProviderIDs: Set<String>
         let enabledByProviderID: [String: Bool]

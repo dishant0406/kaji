@@ -12,19 +12,20 @@ struct NativeBrowserSurface: NSViewRepresentable {
 
     func makeNSView(context _: Context) -> NativeBrowserSurfaceView {
         let view = NativeBrowserSurfaceView()
-        controller.attach(
-            surface: view,
-            page: page,
-            projectPath: projectPath,
-            isActive: isActive,
-            deviceProfile: deviceProfile,
-            callbacks: callbacks
-        )
+        controller.attach(attachment(for: view))
         return view
     }
 
     func updateNSView(_ view: NativeBrowserSurfaceView, context _: Context) {
-        controller.attach(
+        controller.attach(attachment(for: view))
+    }
+
+    static func dismantleNSView(_ view: NativeBrowserSurfaceView, coordinator _: ()) {
+        view.controller?.detach(surface: view)
+    }
+
+    private func attachment(for view: NativeBrowserSurfaceView) -> BrowserWebControllerAttachment {
+        BrowserWebControllerAttachment(
             surface: view,
             page: page,
             projectPath: projectPath,

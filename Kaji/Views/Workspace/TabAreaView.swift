@@ -211,7 +211,6 @@ private struct TabContentView: View {
             BrowserPane(
                 state: state,
                 sessionID: worktreeKey?.worktreeID.uuidString,
-                controllers: BrowserControllerRegistry(),
                 closeOnDisappear: true,
                 managesBrowserControl: true,
                 onClosePane: onClosePane

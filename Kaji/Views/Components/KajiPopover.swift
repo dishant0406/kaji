@@ -80,6 +80,10 @@ private struct KajiPopoverPresenter<PopoverContent: View>: NSViewRepresentable {
         )
     }
 
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.cleanup()
+    }
+
     @MainActor
     final class Coordinator: NSObject, NSPopoverDelegate {
         @Binding private var isPresented: Bool
@@ -140,8 +144,23 @@ private struct KajiPopoverPresenter<PopoverContent: View>: NSViewRepresentable {
         }
 
         func popoverDidClose(_ notification: Notification) {
-            DispatchQueue.main.async {
-                self.isPresented = false
+            DispatchQueue.main.async { [weak self] in
+                self?.isPresented = false
+            }
+        }
+
+        func cleanup() {
+            popover.delegate = nil
+            if popover.isShown {
+                popover.performClose(nil)
+            }
+            popover.contentViewController = nil
+            hostingController = nil
+        }
+
+        deinit {
+            MainActor.assumeIsolated {
+                cleanup()
             }
         }
     }

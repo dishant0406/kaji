@@ -289,6 +289,12 @@ private final class ScrollWheelNSView: NSView {
         fatalError("init(coder:) is not supported")
     }
 
+    deinit {
+        MainActor.assumeIsolated {
+            removeMonitor()
+        }
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil, monitor == nil {
@@ -307,17 +313,19 @@ private final class ScrollWheelNSView: NSView {
                 self.onScroll(delta)
                 return nil
             }
-        } else if window == nil, let monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
+        } else if window == nil {
+            removeMonitor()
         }
     }
 
     override func removeFromSuperview() {
-        if let monitor {
-            NSEvent.removeMonitor(monitor)
-            self.monitor = nil
-        }
+        removeMonitor()
         super.removeFromSuperview()
+    }
+
+    private func removeMonitor() {
+        guard let monitor else { return }
+        NSEvent.removeMonitor(monitor)
+        self.monitor = nil
     }
 }

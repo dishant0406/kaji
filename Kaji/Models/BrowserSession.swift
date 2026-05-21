@@ -4,13 +4,16 @@ import Foundation
 final class BrowserSession {
     let key: WorktreeKey
     let state: BrowserPaneState
-    let controllers = BrowserControllerRegistry()
     private(set) var lastUsedAt = Date()
     private var closeHandler: (() -> Void)?
 
     init(key: WorktreeKey, state: BrowserPaneState) {
         self.key = key
         self.state = state
+    }
+
+    var controllers: BrowserControllerRegistry {
+        state.controllers
     }
 
     func touch() {

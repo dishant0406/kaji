@@ -7,6 +7,7 @@ final class ChildAgentFeedStore {
 
     private(set) var feeds: [UUID: ChildAgentFeed] = [:]
     private let maxEntries = 24
+    private let maxFeeds = 80
 
     private init() {}
 
@@ -28,6 +29,7 @@ final class ChildAgentFeedStore {
         }
         feed.updatedAt = Date()
         feeds[runID] = feed
+        pruneFeeds()
     }
 
     func recentText(runID: UUID, limit: Int = 6) -> [String] {
@@ -51,5 +53,11 @@ final class ChildAgentFeedStore {
             .suffix(lineLimit)
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func pruneFeeds() {
+        guard feeds.count > maxFeeds else { return }
+        let keep = Set(feeds.values.sorted { $0.updatedAt > $1.updatedAt }.prefix(maxFeeds).map(\.id))
+        feeds = feeds.filter { keep.contains($0.key) }
     }
 }

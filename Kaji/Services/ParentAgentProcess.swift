@@ -4,8 +4,11 @@ import Foundation
 final class ParentAgentProcess {
     private var process: Process?
     private var inputPipe: Pipe?
+    private var outputPipe: Pipe?
+    private var errorPipe: Pipe?
     private var outputBuffer = Data()
     private var configurationSignature: String?
+    private var processID: UUID?
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     var environmentOverrides: [String: String] = [:]
@@ -28,10 +31,7 @@ final class ParentAgentProcess {
 
     func stop() {
         process?.terminate()
-        process = nil
-        inputPipe = nil
-        outputBuffer = Data()
-        configurationSignature = nil
+        cleanupProcess()
     }
 
     private func startIfNeeded() throws {
@@ -50,6 +50,7 @@ final class ParentAgentProcess {
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         let process = Process()
+        let processID = UUID()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = launch.arguments
         process.currentDirectoryURL = launch.directory
@@ -57,6 +58,11 @@ final class ParentAgentProcess {
         process.standardInput = inputPipe
         process.standardOutput = outputPipe
         process.standardError = errorPipe
+        process.terminationHandler = { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.cleanupProcess(id: processID)
+            }
+        }
         outputPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
@@ -70,7 +76,24 @@ final class ParentAgentProcess {
         try process.run()
         self.process = process
         self.inputPipe = inputPipe
+        self.outputPipe = outputPipe
+        self.errorPipe = errorPipe
+        self.processID = processID
         configurationSignature = signature
+    }
+
+    private func cleanupProcess(id: UUID? = nil) {
+        if let id, processID != id { return }
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        errorPipe?.fileHandleForReading.readabilityHandler = nil
+        process?.terminationHandler = nil
+        process = nil
+        inputPipe = nil
+        outputPipe = nil
+        errorPipe = nil
+        outputBuffer = Data()
+        configurationSignature = nil
+        processID = nil
     }
 
     private static func configurationSignature(for environment: [String: String]) -> String {

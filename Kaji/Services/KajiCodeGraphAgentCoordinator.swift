@@ -31,6 +31,11 @@ final class KajiCodeGraphAgentCoordinator {
     var selectedSessionID: UUID?
     var sessions: [KajiCodeGraphAgentSession] = []
     var visibleKeys: Set<String> = []
+    private let maxSessions: Int
+
+    init(maxSessions: Int = 8) {
+        self.maxSessions = max(1, maxSessions)
+    }
 
     func start(
         request: KajiCodeGraphRunRequest,
@@ -40,10 +45,7 @@ final class KajiCodeGraphAgentCoordinator {
         worktreeStore: WorktreeStore
     ) throws -> KajiCodeGraphAgentSession {
         let session = try makeSession(request: request, projectStore: projectStore)
-        sessions.removeAll { $0.key == session.key }
-        sessions.insert(session, at: 0)
-        selectedSessionID = session.id
-        visibleKeys.insert(session.key)
+        retain(session)
         session.store.clearActiveTask()
         session.controller.submit(
             prompt: prompt,
@@ -101,6 +103,29 @@ final class KajiCodeGraphAgentCoordinator {
             return session
         }
         return sessions.first
+    }
+
+    func retain(_ session: KajiCodeGraphAgentSession) {
+        let replaced = sessions.filter { $0.key == session.key && $0.id != session.id }
+        replaced.forEach { $0.controller.stop() }
+        sessions.removeAll { $0.key == session.key }
+        sessions.insert(session, at: 0)
+        selectedSessionID = session.id
+        visibleKeys.insert(session.key)
+        pruneSessions()
+    }
+
+    private func pruneSessions() {
+        guard sessions.count > maxSessions else { return }
+        let evicted = Array(sessions.dropFirst(maxSessions))
+        sessions = Array(sessions.prefix(maxSessions))
+        for session in evicted {
+            session.controller.stop()
+            visibleKeys.remove(session.key)
+            if selectedSessionID == session.id {
+                selectedSessionID = sessions.first?.id
+            }
+        }
     }
 
     private func makeSession(

@@ -29,31 +29,78 @@ enum FileSearchProcessRunner {
                 outputPathsAreRelative: request.outputPathsAreRelative
             )
             let handle = pipe.fileHandleForReading
+            let context = FileSearchRunContext(
+                process: process,
+                handle: handle,
+                parser: parser,
+                continuation: continuation
+            )
 
-            handle.readabilityHandler = { stream in
+            handle.readabilityHandler = { [context] stream in
                 let data = stream.availableData
                 if data.isEmpty { return }
                 guard let chunk = String(data: data, encoding: .utf8) else { return }
-                if parser.append(chunk: chunk), process.isRunning {
-                    process.terminate()
+                if context.parser.append(chunk: chunk), context.process?.isRunning == true {
+                    context.process?.terminate()
                 }
             }
 
-            process.terminationHandler = { _ in
-                handle.readabilityHandler = nil
-                if let data = try? handle.readToEnd(), let chunk = String(data: data, encoding: .utf8) {
-                    _ = parser.append(chunk: chunk)
-                }
-                continuation.resume(returning: parser.take())
+            process.terminationHandler = { [context] _ in
+                context.finish()
             }
 
             do {
                 try process.run()
             } catch {
-                handle.readabilityHandler = nil
-                continuation.resume(returning: [])
+                context.complete([])
             }
         }
+    }
+}
+
+private final class FileSearchRunContext: @unchecked Sendable {
+    var process: Process?
+    let parser: FileSearchResultParser
+    private let continuation: CheckedContinuation<[FileSearchResult], Never>
+    private let lock = NSLock()
+    private var handle: FileHandle?
+    private var didComplete = false
+
+    init(
+        process: Process,
+        handle: FileHandle,
+        parser: FileSearchResultParser,
+        continuation: CheckedContinuation<[FileSearchResult], Never>
+    ) {
+        self.process = process
+        self.handle = handle
+        self.parser = parser
+        self.continuation = continuation
+    }
+
+    func finish() {
+        if let handle, let data = try? handle.readToEnd(), let chunk = String(data: data, encoding: .utf8) {
+            _ = parser.append(chunk: chunk)
+        }
+        complete(parser.take())
+    }
+
+    func complete(_ result: [FileSearchResult]) {
+        lock.lock()
+        guard !didComplete else {
+            lock.unlock()
+            return
+        }
+        didComplete = true
+        let handle = handle
+        let process = process
+        self.handle = nil
+        self.process = nil
+        lock.unlock()
+
+        handle?.readabilityHandler = nil
+        process?.terminationHandler = nil
+        continuation.resume(returning: result)
     }
 }
 

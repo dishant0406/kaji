@@ -183,6 +183,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemWakeCoordinator.shared.stop()
         CodexSessionMonitor.shared.stop()
         ProviderEventReceiver.shared.stop()
+        LanguageServerManager.shared.stopAll()
+        ParentAgentController.shared.stop()
+        KajiBrowserControlBroker.shared.stop()
+        TerminalViewRegistry.shared.removeAll()
+        GhosttyService.shared.shutdown()
         DebugFileLog.log("Lifecycle", "applicationWillTerminate completed")
     }
 

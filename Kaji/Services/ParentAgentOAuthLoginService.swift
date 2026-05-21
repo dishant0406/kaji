@@ -14,8 +14,11 @@ final class ParentAgentOAuthLoginService {
 
     private var process: Process?
     private var inputPipe: Pipe?
+    private var outputPipe: Pipe?
+    private var errorPipe: Pipe?
     private var outputBuffer = Data()
     private var pendingPromptID: String?
+    private var processID: UUID?
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
@@ -37,6 +40,7 @@ final class ParentAgentOAuthLoginService {
             let outputPipe = Pipe()
             let errorPipe = Pipe()
             let process = Process()
+            let processID = UUID()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             process.arguments = launch.arguments
             process.currentDirectoryURL = launch.directory
@@ -47,8 +51,8 @@ final class ParentAgentOAuthLoginService {
             process.standardOutput = outputPipe
             process.standardError = errorPipe
             process.terminationHandler = { [weak self] _ in
-                Task { @MainActor in
-                    self?.isRunning = false
+                Task { @MainActor [weak self] in
+                    self?.cleanupProcess(id: processID)
                     ParentAgentSettingsStore.shared.refreshAuthStatus()
                 }
             }
@@ -65,6 +69,9 @@ final class ParentAgentOAuthLoginService {
             try process.run()
             self.process = process
             self.inputPipe = inputPipe
+            self.outputPipe = outputPipe
+            self.errorPipe = errorPipe
+            self.processID = processID
         } catch {
             statusMessage = error.localizedDescription
             isRunning = false
@@ -126,6 +133,27 @@ final class ParentAgentOAuthLoginService {
         } catch {
             statusMessage = error.localizedDescription
         }
+    }
+
+    func stop() {
+        process?.terminate()
+        cleanupProcess()
+    }
+
+    private func cleanupProcess(id: UUID? = nil) {
+        if let id, processID != id { return }
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        errorPipe?.fileHandleForReading.readabilityHandler = nil
+        process?.terminationHandler = nil
+        process = nil
+        inputPipe = nil
+        outputPipe = nil
+        errorPipe = nil
+        outputBuffer = Data()
+        pendingPromptID = nil
+        processID = nil
+        promptMessage = nil
+        isRunning = false
     }
 
     private func launchConfiguration(providerID: String) throws -> ParentAgentOAuthLaunch {

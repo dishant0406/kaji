@@ -22,6 +22,13 @@ final class ParentAgentController {
         }
     }
 
+    deinit {
+        MainActor.assumeIsolated {
+            mutationTail?.cancel()
+            process.stop()
+        }
+    }
+
     func submit(
         prompt: String,
         attachments: [AskAttachment] = [],
@@ -144,9 +151,9 @@ final class ParentAgentController {
         case "kaji.open_split":
             openTerminal(message, toolID: id, split: true)
         case "kaji.spawn_agent":
-            enqueueMutation { await self.spawnAgent(message, toolID: id) }
+            enqueueMutation { controller in await controller.spawnAgent(message, toolID: id) }
         case "kaji.send_prompt":
-            enqueueMutation { await self.sendPrompt(message, toolID: id) }
+            enqueueMutation { controller in await controller.sendPrompt(message, toolID: id) }
         case "kaji.get_agent_status",
              "kaji.observe_agents":
             observeAgents(message, toolID: id)
@@ -161,7 +168,7 @@ final class ParentAgentController {
         case "kaji.resume_agent":
             resumeAgent(message, toolID: id)
         case "kaji.create_worktree":
-            enqueueMutation { await self.createWorktree(message, toolID: id) }
+            enqueueMutation { controller in await controller.createWorktree(message, toolID: id) }
         case "kaji.get_changed_files":
             Task { await getChangedFiles(message, toolID: id) }
         case "kaji.open_diff":
@@ -173,11 +180,12 @@ final class ParentAgentController {
         }
     }
 
-    func enqueueMutation(_ operation: @escaping @MainActor () async -> Void) {
+    func enqueueMutation(_ operation: @escaping @MainActor (ParentAgentController) async -> Void) {
         let previous = mutationTail
-        let next = Task { @MainActor in
+        let next = Task { @MainActor [weak self] in
             await previous?.value
-            await operation()
+            guard !Task.isCancelled, let self else { return }
+            await operation(self)
         }
         mutationTail = next
     }

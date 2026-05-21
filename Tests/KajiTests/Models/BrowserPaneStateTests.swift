@@ -19,6 +19,17 @@ struct BrowserPaneStateTests {
         #expect(state.url == "https://example.com")
     }
 
+    @Test("state owns one stable controller registry")
+    func stateOwnsStableControllerRegistry() {
+        let state = BrowserPaneState(projectPath: "/tmp/test")
+        let pageID = state.selectedPageID
+
+        let first = state.controllers.controller(for: pageID)
+        let second = state.controllers.controller(for: pageID)
+
+        #expect(first === second)
+    }
+
     @Test("closePage keeps one reusable page")
     func closePageKeepsOneReusablePage() throws {
         let state = BrowserPaneState(projectPath: "/tmp/test", url: "https://example.com")

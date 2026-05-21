@@ -6,9 +6,17 @@ final class DiagnosticsStore {
     static let shared = DiagnosticsStore()
 
     private var diagnosticsByPath: [String: [EditorDiagnostic]] = [:]
+    private var diagnosticFileOrder: [String] = []
+    @ObservationIgnored private let maxFileCount: Int
+    @ObservationIgnored private let maxDiagnosticsPerFile: Int
+
+    init(maxFileCount: Int = 200, maxDiagnosticsPerFile: Int = 200) {
+        self.maxFileCount = maxFileCount
+        self.maxDiagnosticsPerFile = maxDiagnosticsPerFile
+    }
 
     var allDiagnostics: [EditorDiagnostic] {
-        diagnosticsByPath.values.flatMap { $0 }.sorted(by: Self.sortDiagnostics)
+        diagnosticsByPath.values.flatMap(\.self).sorted(by: Self.sortDiagnostics)
     }
 
     var groups: [EditorDiagnosticFileGroup] {
@@ -23,23 +31,43 @@ final class DiagnosticsStore {
         }
     }
 
-    var errorCount: Int { allDiagnostics.filter { $0.severity == .error }.count }
-    var warningCount: Int { allDiagnostics.filter { $0.severity == .warning }.count }
+    var errorCount: Int { allDiagnostics.count { $0.severity == .error } }
+    var warningCount: Int { allDiagnostics.count { $0.severity == .warning } }
 
     func diagnostics(for filePath: String) -> [EditorDiagnostic] {
         diagnosticsByPath[filePath] ?? []
     }
 
     func setDiagnostics(_ diagnostics: [EditorDiagnostic], for filePath: String) {
-        diagnosticsByPath[filePath] = diagnostics.sorted(by: Self.sortDiagnostics)
+        guard !diagnostics.isEmpty else {
+            clearDiagnostics(for: filePath)
+            return
+        }
+        diagnosticsByPath[filePath] = Array(diagnostics.sorted(by: Self.sortDiagnostics).prefix(maxDiagnosticsPerFile))
+        touch(filePath)
+        pruneIfNeeded()
     }
 
     func clearDiagnostics(for filePath: String) {
         diagnosticsByPath[filePath] = nil
+        diagnosticFileOrder.removeAll { $0 == filePath }
     }
 
     func clearAll() {
         diagnosticsByPath = [:]
+        diagnosticFileOrder = []
+    }
+
+    private func touch(_ filePath: String) {
+        diagnosticFileOrder.removeAll { $0 == filePath }
+        diagnosticFileOrder.append(filePath)
+    }
+
+    private func pruneIfNeeded() {
+        while diagnosticFileOrder.count > maxFileCount {
+            let removed = diagnosticFileOrder.removeFirst()
+            diagnosticsByPath[removed] = nil
+        }
     }
 
     private static func sortDiagnostics(_ lhs: EditorDiagnostic, _ rhs: EditorDiagnostic) -> Bool {

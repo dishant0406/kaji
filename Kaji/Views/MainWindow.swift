@@ -376,7 +376,9 @@ struct MainWindow: View {
     }
 
     private var overlayActive: Bool {
-        showCommandPalette || showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showGoToSymbol || showGoToLine || showSettings || showMCPControlPanel ||
+        showCommandPalette || showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showGoToSymbol ||
+            showGoToLine ||
+            showSettings || showMCPControlPanel ||
             showCreateThemeModal || createWorktreeProjectID != nil || projectLogoCropRequest != nil
     }
 
@@ -520,7 +522,7 @@ struct MainWindow: View {
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
         } else if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let state = activeBrowserState, let key = activeWorktreeKey {
-            browserSidePanel(state: state, session: browserSessions[key], sessionID: key.worktreeID.uuidString)
+            browserSidePanel(state: state, sessionID: key.worktreeID.uuidString)
         }
     }
 
@@ -547,7 +549,7 @@ struct MainWindow: View {
         }
     }
 
-    private func browserSidePanel(state: BrowserPaneState, session: BrowserSession?, sessionID: String) -> some View {
+    private func browserSidePanel(state: BrowserPaneState, sessionID: String) -> some View {
         HStack(spacing: 0) {
             sidePanelResizeHandle { delta in
                 let next = browserPanelWidth - Double(delta)
@@ -559,13 +561,12 @@ struct MainWindow: View {
             BrowserPane(
                 state: state,
                 sessionID: sessionID,
-                controllers: session?.controllers ?? BrowserControllerRegistry(),
                 closeOnDisappear: false,
                 managesBrowserControl: false,
                 onClosePane: { hideBrowserPanel() }
             )
-                .frame(width: CGFloat(browserPanelWidth))
-                .clipped()
+            .frame(width: CGFloat(browserPanelWidth))
+            .clipped()
         }
     }
 
@@ -1181,7 +1182,7 @@ struct MainWindow: View {
 
     private var activeBrowserState: BrowserPaneState? {
         guard let project = activeProject,
-               let key = appState.activeWorktreeKey(for: project.id)
+              let key = appState.activeWorktreeKey(for: project.id)
         else { return nil }
         return browserSessions[key]?.state
     }
@@ -1702,7 +1703,7 @@ private extension ShortcutAction {
              .goToSymbol,
              .goToLine,
              .inlineEdit,
-              .saveFile:
+             .saveFile:
             true
         }
     }
@@ -1750,6 +1751,13 @@ private final class ShortcutInterceptingView: NSView {
     var onMouseBack: (() -> Void)?
     var onMouseForward: (() -> Void)?
     private var mouseMonitor: Any?
+
+    deinit {
+        MainActor.assumeIsolated {
+            removeMouseMonitor()
+            clearCallbacks()
+        }
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -1821,5 +1829,11 @@ private final class ShortcutInterceptingView: NSView {
         guard let mouseMonitor else { return }
         NSEvent.removeMonitor(mouseMonitor)
         self.mouseMonitor = nil
+    }
+
+    private func clearCallbacks() {
+        onShortcut = nil
+        onMouseBack = nil
+        onMouseForward = nil
     }
 }

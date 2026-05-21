@@ -31,4 +31,15 @@ struct BrowserSessionTests {
 
         #expect(session.lastUsedAt > original)
     }
+
+    @Test("page summary is capped")
+    func pageSummaryIsCapped() {
+        let page = BrowserPageState(pageSummary: String(repeating: "a", count: 130_000))
+
+        #expect(page.pageSummary.count == 120_000)
+
+        page.pageSummary = String(repeating: "b", count: 130_000)
+
+        #expect(page.pageSummary.count == 120_000)
+    }
 }
