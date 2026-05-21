@@ -9,6 +9,14 @@
 namespace {
 std::vector<CefRefPtr<KajiCEFClient>> closing_clients;
 
+void DispatchToMain(void (^block)(void)) {
+  if ([NSThread isMainThread]) {
+    block();
+    return;
+  }
+  dispatch_async(dispatch_get_main_queue(), block);
+}
+
 void ReleaseClosingClient(KajiCEFClient* client) {
   closing_clients.erase(
       std::remove_if(closing_clients.begin(), closing_clients.end(), [client](const CefRefPtr<KajiCEFClient>& item) {
@@ -77,7 +85,7 @@ bool KajiCEFClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   std::string urlValue(target_url);
   NSString* nsURL = urlValue.empty() ? @"about:blank" : [NSString stringWithUTF8String:urlValue.c_str()];
   KajiCEFBrowserView* owner = owner_;
-  dispatch_async(dispatch_get_main_queue(), ^{
+  DispatchToMain(^{
     if (owner.popupRequested) {
       owner.popupRequested(nsURL ?: @"about:blank");
     }
@@ -101,7 +109,7 @@ void KajiCEFClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString
   NSString* nsTitle = [NSString stringWithUTF8String:titleValue.c_str()] ?: @"Browser";
   NSString* nsURL = [NSString stringWithUTF8String:urlValue.c_str()] ?: @"";
   KajiCEFBrowserView* owner = owner_;
-  dispatch_async(dispatch_get_main_queue(), ^{
+  DispatchToMain(^{
     if (owner.pageChanged) {
       owner.pageChanged(nsURL, nsTitle);
     }
@@ -118,7 +126,7 @@ void KajiCEFClient::OnAddressChange(CefRefPtr<CefBrowser> browser, CefRefPtr<Cef
   NSString* nsURL = [NSString stringWithUTF8String:urlValue.c_str()] ?: @"";
   NSString* nsTitle = [NSString stringWithUTF8String:titleValue.c_str()] ?: @"Browser";
   KajiCEFBrowserView* owner = owner_;
-  dispatch_async(dispatch_get_main_queue(), ^{
+  DispatchToMain(^{
     if (owner.pageChanged) {
       owner.pageChanged(nsURL, nsTitle);
     }

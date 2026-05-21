@@ -3,9 +3,11 @@
 #import <AppKit/AppKit.h>
 #include <algorithm>
 #include <climits>
+#include <dispatch/dispatch.h>
 #include "include/cef_app.h"
 
 static NSTimer* kajiCEFPumpTimer = nil;
+static dispatch_source_t kajiCEFAsyncPump = nil;
 static bool kajiCEFIsPumping = false;
 static bool kajiCEFNeedsPump = false;
 static constexpr int64_t kajiCEFMaxDelay = 1000 / 30;
@@ -34,6 +36,19 @@ static void kajiCEFSetTimer(int64_t delay_ms) {
   [runLoop addTimer:kajiCEFPumpTimer forMode:NSEventTrackingRunLoopMode];
 }
 
+static void kajiCEFDispatchPerformWork() {
+  if (kajiCEFAsyncPump) {
+    dispatch_source_merge_data(kajiCEFAsyncPump, 1);
+    return;
+  }
+  kajiCEFAsyncPump = dispatch_source_create(DISPATCH_SOURCE_TYPE_DATA_OR, 0, 0, dispatch_get_main_queue());
+  dispatch_source_set_event_handler(kajiCEFAsyncPump, ^{
+    kajiCEFPerformWork();
+  });
+  dispatch_resume(kajiCEFAsyncPump);
+  dispatch_source_merge_data(kajiCEFAsyncPump, 1);
+}
+
 static void kajiCEFDispatchSchedule(int64_t delay_ms) {
   dispatch_async(dispatch_get_main_queue(), ^{
     kajiCEFHandleSchedule(delay_ms);
@@ -46,7 +61,7 @@ static void kajiCEFHandleSchedule(int64_t delay_ms) {
   }
   kajiCEFKillTimer();
   if (delay_ms <= 0) {
-    kajiCEFPerformWork();
+    kajiCEFDispatchPerformWork();
     return;
   }
   kajiCEFSetTimer(std::min(delay_ms, kajiCEFMaxDelay));
