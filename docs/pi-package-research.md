@@ -4,7 +4,7 @@
 
 Pi now has a real package ecosystem. The official catalog at `https://pi.dev/packages` lists thousands of extensions, skills, prompt templates, and themes installable with `pi install npm:<package>` or git/package sources.
 
-Kaji should not blindly install Pi packages into the parent agent yet. Kaji's Parent Agent currently uses a custom vendored Pi runtime (`Vendor/pi-mono/packages/kaji-agent`) rather than the full Pi TUI extension loader. Most packages are therefore either:
+Kaji should not blindly install Pi packages into the parent agent yet. Kaji's Parent Agent uses a Kaji-owned runtime (`KajiParentAgentRuntime`) that imports selected Pi npm packages rather than the full Pi TUI extension loader. Most packages are therefore either:
 
 - Ideas to port into native Kaji tools and UI.
 - Packages that require explicit extension-loader support in Kaji's parent runtime.
@@ -168,9 +168,9 @@ Create a curated Kaji-recommended package set:
 ## Sources
 
 - Official package catalog: `https://pi.dev/packages`
-- Pi extension docs: `Vendor/pi-mono/packages/coding-agent/docs/extensions.md`
-- Pi package docs: `Vendor/pi-mono/packages/coding-agent/docs/packages.md`
-- Pi examples: `Vendor/pi-mono/packages/coding-agent/examples/extensions/README.md`
+- Pi extension docs: upstream `pi-mono/packages/coding-agent/docs/extensions.md`
+- Pi package docs: upstream `pi-mono/packages/coding-agent/docs/packages.md`
+- Pi examples: upstream `pi-mono/packages/coding-agent/examples/extensions/README.md`
 - `pi-subagents`: `https://pi.dev/packages/pi-subagents`
 - `pi-web-access`: `https://pi.dev/packages/pi-web-access`
 - `pi-lens`: `https://pi.dev/packages/pi-lens`
