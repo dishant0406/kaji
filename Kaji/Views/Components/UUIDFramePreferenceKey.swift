@@ -7,6 +7,4 @@ struct UUIDFramePreferenceKey<Tag>: PreferenceKey {
     }
 }
 
-enum SidebarFrameTag {}
 enum AreaFrameTag {}
-enum TabFrameTag {}

@@ -15,6 +15,7 @@ struct PaneTabStrip: View {
     let activeTabID: UUID?
     let isFocused: Bool
     var isWindowTitleBar: Bool = false
+    var allowsExternalDrops = true
     var showVCSButton = true
     var showSettingsButton = true
     let projectID: UUID
@@ -31,7 +32,7 @@ struct PaneTabStrip: View {
     let onReorderTab: (IndexSet, Int) -> Void
     @Environment(TabDragCoordinator.self) private var dragCoordinator
     @State private var notificationStore = NotificationStore.shared
-    @State private var dragState = TabDragState()
+    @State private var isReordering = false
     private let addButtonWidth: CGFloat = 30
 
     static func snapshots(from tabs: [TerminalTab]) -> [TabSnapshot] {
@@ -105,20 +106,7 @@ struct PaneTabStrip: View {
             }
         }
         .frame(height: 36)
-        .background {
-            if dragCoordinator.activeDrag != nil {
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: TabStripFramePreferenceKey.self,
-                        value: [areaID: geo.frame(in: .named(DragCoordinateSpace.mainWindow))]
-                    )
-                }
-            }
-        }
-        .onPreferenceChange(TabFramePreferenceKey.self) { frames in
-            guard dragState.draggedID != nil else { return }
-            dragState.frames = frames
-        }
+        .background(tabStripFrameReader)
     }
 
     private func tabRow(availableWidth: CGFloat) -> some View {
@@ -130,13 +118,25 @@ struct PaneTabStrip: View {
         let perTabWidth = max(TabCell.minWidth, min(TabCell.maxWidth, perTabIdeal))
 
         return HStack(spacing: 0) {
-            ForEach(Array(tabs.enumerated()), id: \.element.id) { index, tab in
+            ReorderableHStack(tabs, onMove: { source, destination in
+                onReorderTab(
+                    IndexSet(integer: source),
+                    destination
+                )
+            }, onDragStateChange: { dragging in
+                isReordering = dragging
+            }, externalCoordinateSpaceName: DragCoordinateSpace.mainWindow, onExternalDragChanged: { tab, value in
+                handleExternalDragChanged(tab: tab, value: value)
+            }, onExternalDragEnded: { tab, value in
+                handleExternalDragEnded(tab: tab, value: value)
+            }) { tab, isDragged in
+                let index = tabs.firstIndex(where: { $0.id == tab.id }) ?? 0
                 TabCell(
                     tab: tab,
                     active: tab.id == activeTabID,
                     paneFocused: isFocused,
                     hasUnread: notificationStore.hasUnread(tabID: tab.id),
-                    isAnyDragging: dragState.draggedID != nil,
+                    isAnyDragging: isReordering,
                     shortcutIndex: index < 9 ? index + 1 : nil,
                     onSelect: { onSelectTab(tab.id) },
                     onClose: { onCloseTab(tab.id) },
@@ -147,33 +147,7 @@ struct PaneTabStrip: View {
                     onSetColorID: { onSetColorID(tab.id, $0) }
                 )
                 .frame(width: perTabWidth)
-                .background {
-                    if dragState.draggedID != nil {
-                        GeometryReader { geo in
-                            Color.clear.preference(
-                                key: TabFramePreferenceKey.self,
-                                value: [tab.id: geo.frame(in: .named(DragCoordinateSpace.mainWindow))]
-                            )
-                        }
-                    }
-                }
-                .gesture(
-                    DragGesture(minimumDistance: 0, coordinateSpace: .named(DragCoordinateSpace.mainWindow))
-                        .onChanged { value in
-                            handleDragChanged(
-                                tab: tab,
-                                globalLocation: value.location,
-                                dragStartGlobalLocation: value.startLocation
-                            )
-                        }
-                        .onEnded { value in
-                            handleDragEnded(
-                                tab: tab,
-                                globalLocation: value.location,
-                                dragStartGlobalLocation: value.startLocation
-                            )
-                        }
-                )
+                .opacity(isDragged ? 0.92 : 1)
             }
 
             TabAddButton(action: onCreateTab)
@@ -193,84 +167,30 @@ struct PaneTabStrip: View {
         "\(name) (\(KeyBindingStore.shared.combo(for: action).displayString))"
     }
 
-    private static let dragActivationDistance: CGFloat = 4
-
-    private func handleDragChanged(
-        tab: TabSnapshot,
-        globalLocation: CGPoint,
-        dragStartGlobalLocation: CGPoint
-    ) {
-        if !dragState.didSelect {
-            dragState.didSelect = true
-            onSelectTab(tab.id)
+    private var tabStripFrameReader: some View {
+        GeometryReader { geo in
+            Color.clear.preference(
+                key: TabStripFramePreferenceKey.self,
+                value: [areaID: geo.frame(in: .named(DragCoordinateSpace.mainWindow))]
+            )
         }
-
-        let dx = globalLocation.x - dragStartGlobalLocation.x
-        let dy = globalLocation.y - dragStartGlobalLocation.y
-        let distance = (dx * dx + dy * dy).squareRoot()
-
-        if dragState.draggedID == nil {
-            guard distance >= Self.dragActivationDistance else { return }
-            dragState.draggedID = tab.id
-            dragState.lastReorderTargetID = nil
-            dragCoordinator.beginDrag(tabID: tab.id, sourceAreaID: areaID, projectID: projectID)
-        }
-
-        dragCoordinator.updatePosition(globalLocation)
-        reorderIfNeeded(at: globalLocation)
     }
 
-    private func handleDragEnded(
-        tab: TabSnapshot,
-        globalLocation: CGPoint,
-        dragStartGlobalLocation: CGPoint
-    ) {
-        if !dragState.didSelect {
-            onSelectTab(tab.id)
+    private func handleExternalDragChanged(tab: TabSnapshot, value: DragGesture.Value) {
+        guard allowsExternalDrops else { return }
+        if dragCoordinator.activeDrag == nil {
+            dragCoordinator.beginDrag(tabID: tab.id, sourceAreaID: areaID, projectID: projectID)
         }
+        dragCoordinator.updatePosition(value.location)
+    }
+
+    private func handleExternalDragEnded(tab _: TabSnapshot, value: DragGesture.Value) {
+        guard allowsExternalDrops else { return }
+        dragCoordinator.updatePosition(value.location)
         if let result = dragCoordinator.endDrag() {
             onDropAction(result)
         }
-        dragState.draggedID = nil
-        dragState.frames = [:]
-        dragState.lastReorderTargetID = nil
-        dragState.didSelect = false
     }
-
-    private func reorderIfNeeded(at location: CGPoint) {
-        guard let draggedID = dragState.draggedID else { return }
-        guard dragCoordinator.hoveredAreaID == areaID, dragCoordinator.hoveredZone == .center else {
-            dragState.lastReorderTargetID = nil
-            return
-        }
-        var hoveredTargetID: UUID?
-
-        for (id, frame) in dragState.frames where id != draggedID {
-            guard frame.contains(location) else { continue }
-            hoveredTargetID = id
-            guard dragState.lastReorderTargetID != id else { return }
-
-            guard let sourceIndex = tabs.firstIndex(where: { $0.id == draggedID }),
-                  let destIndex = tabs.firstIndex(where: { $0.id == id })
-            else { return }
-
-            dragState.lastReorderTargetID = id
-            let offset = destIndex > sourceIndex ? destIndex + 1 : destIndex
-            onReorderTab(IndexSet(integer: sourceIndex), offset)
-            return
-        }
-
-        if hoveredTargetID == nil {
-            dragState.lastReorderTargetID = nil
-        }
-    }
-}
-
-private struct TabDragState {
-    var draggedID: UUID?
-    var frames: [UUID: CGRect] = [:]
-    var lastReorderTargetID: UUID?
-    var didSelect = false
 }
 
 private struct TabAddButton: View {
@@ -299,8 +219,6 @@ private struct TabAddButton: View {
         .accessibilityLabel("New Tab")
     }
 }
-
-private typealias TabFramePreferenceKey = UUIDFramePreferenceKey<TabFrameTag>
 
 private struct TabWidthPreferenceKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
@@ -441,6 +359,10 @@ private struct TabCell: View {
                     .strokeBorder(KajiTheme.border.opacity(active || hovered ? 0.75 : 0.35), lineWidth: 1)
             }
             .contentShape(Rectangle())
+            .onTapGesture {
+                guard !isAnyDragging else { return }
+                onSelect()
+            }
             .onHover { hovering in
                 guard !isAnyDragging else { return }
                 hovered = hovering

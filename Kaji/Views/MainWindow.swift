@@ -897,6 +897,7 @@ struct MainWindow: View {
                 activeTabID: workspace.activeTabID,
                 isFocused: true,
                 isWindowTitleBar: false,
+                allowsExternalDrops: false,
                 showVCSButton: false,
                 showSettingsButton: false,
                 projectID: project.id,

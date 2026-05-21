@@ -7,6 +7,8 @@
     "Navigation",
     "Terminal",
     "Editor",
+    "File Tree",
+    "Ask & Prompts",
     "App"
   ],
   "shortcuts": [
@@ -67,6 +69,36 @@
     { "action": "toggleFooterTerminal", "displayName": "Toggle Footer Terminal", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "t", "command": true } },
     { "action": "toggleAIUsage", "displayName": "Toggle AI Usage", "category": "App", "scope": "mainWindow", "defaultCombo": { "key": "l", "command": true } }
   ],
+  "localShortcuts": [
+    { "keys": "Esc", "name": "Close search / cancel popover", "category": "Navigation", "context": "Search bars, popovers, shortcut recording" },
+    { "keys": "Enter", "name": "Confirm active action", "category": "Navigation", "context": "Alerts, forms, file tree, editor search" },
+    { "keys": "Shift+Enter", "name": "Previous search result / alternate submit", "category": "Navigation", "context": "Editor search, Ask overlay" },
+    { "keys": "↑ / ↓", "name": "Move selection", "category": "Navigation", "context": "Ask overlay lists" },
+    { "keys": "Space", "name": "Toggle highlighted item", "category": "Navigation", "context": "Ask overlay multi-select entries" },
+    { "keys": "Cmd+Tab", "name": "Attach from clipboard", "category": "Ask & Prompts", "context": "Ask overlay and parent agent prompt" },
+    { "keys": "Cmd+Enter", "name": "Submit alternate action", "category": "Ask & Prompts", "context": "Reusable Kaji text area" },
+    { "keys": "Shift+Enter", "name": "Save comment", "category": "Ask & Prompts", "context": "Diff comment popover" },
+    { "keys": "Enter", "name": "Rename selected file", "category": "File Tree", "context": "Focused file tree" },
+    { "keys": "Delete", "name": "Move selected files to trash", "category": "File Tree", "context": "Focused file tree" },
+    { "keys": "Cmd+Delete", "name": "Move selected files to trash", "category": "File Tree", "context": "Focused file tree" },
+    { "keys": "Cmd+C", "name": "Copy selected files", "category": "File Tree", "context": "Focused file tree" },
+    { "keys": "Cmd+X", "name": "Cut selected files", "category": "File Tree", "context": "Focused file tree" },
+    { "keys": "Cmd+V", "name": "Paste files", "category": "File Tree", "context": "Focused file tree" },
+    { "keys": "Cmd+D", "name": "Select next occurrence", "category": "Editor", "context": "Code editor" },
+    { "keys": "Cmd+L", "name": "Select current line", "category": "Editor", "context": "Code editor" },
+    { "keys": "Cmd+Shift+D", "name": "Duplicate line or selection", "category": "Editor", "context": "Code editor" },
+    { "keys": "Option+Shift+↑", "name": "Duplicate line above", "category": "Editor", "context": "Code editor" },
+    { "keys": "Option+Shift+↓", "name": "Duplicate line below", "category": "Editor", "context": "Code editor" },
+    { "keys": "Cmd+/", "name": "Toggle line comment", "category": "Editor", "context": "Code editor" },
+    { "keys": "Cmd+Option+↑", "name": "Move line up", "category": "Editor", "context": "Code editor" },
+    { "keys": "Cmd+Option+↓", "name": "Move line down", "category": "Editor", "context": "Code editor" },
+    { "keys": "Cmd+G", "name": "Generate inline edit", "category": "Editor", "context": "Inline edit footer" },
+    { "keys": "Cmd+X", "name": "Cut", "category": "App", "context": "Text fields and standard edit menu" },
+    { "keys": "Cmd+C", "name": "Copy", "category": "App", "context": "Text fields and standard edit menu" },
+    { "keys": "Cmd+V", "name": "Paste", "category": "App", "context": "Text fields and standard edit menu" },
+    { "keys": "Cmd+A", "name": "Select all", "category": "App", "context": "Text fields and standard edit menu" },
+    { "keys": "Cmd+,", "name": "Settings", "category": "App", "context": "App menu" }
+  ],
   "commandK": [
     { "token": ":p:", "detail": "Project" },
     { "token": ":wt:", "detail": "Worktree" },
@@ -90,6 +122,8 @@
     { "token": "/worktree", "detail": "Worktree picker" },
     { "token": "/provider", "detail": "Provider picker" },
     { "token": "/session", "detail": "Session mode picker" },
-    { "token": "/sleep", "detail": "Toggle sleep prevention" }
+    { "token": "/bookmark", "detail": "Bookmark visible sessions" },
+    { "token": "/sleep", "detail": "Toggle sleep prevention" },
+    { "token": "/lid", "detail": "Toggle battery lid sleep" }
   ]
 }

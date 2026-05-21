@@ -18,7 +18,13 @@ struct ShortcutReferencePopover: View {
                     if !filteredKeyboardGroups.isEmpty {
                         keyboardSection
                     }
-                    if !filteredKeyboardGroups.isEmpty, !filteredCommandKReferences.isEmpty {
+                    if !filteredKeyboardGroups.isEmpty, !filteredLocalShortcuts.isEmpty {
+                        Divider().overlay(KajiTheme.border.opacity(0.8))
+                    }
+                    if !filteredLocalShortcuts.isEmpty {
+                        localShortcutsSection
+                    }
+                    if !filteredKeyboardGroups.isEmpty || !filteredLocalShortcuts.isEmpty, !filteredCommandKReferences.isEmpty {
                         Divider().overlay(KajiTheme.border.opacity(0.8))
                     }
                     if !filteredCommandKReferences.isEmpty {
@@ -71,6 +77,35 @@ struct ShortcutReferencePopover: View {
         }
     }
 
+    private var localShortcutsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Contextual")
+            ForEach(filteredLocalGroups, id: \.key) { category, shortcuts in
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(category)
+                        .kajiFont(size: 10, weight: .semibold)
+                        .foregroundStyle(KajiTheme.fgDim)
+                    ForEach(shortcuts) { shortcut in
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(shortcut.name)
+                                    .kajiFont(size: 11)
+                                    .foregroundStyle(KajiTheme.fgMuted)
+                                    .lineLimit(1)
+                                Text(shortcut.context)
+                                    .kajiFont(size: 10)
+                                    .foregroundStyle(KajiTheme.fgDim)
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: 10)
+                            ShortcutBadge(label: shortcut.keys, compact: true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
             .kajiFont(size: 10, weight: .semibold)
@@ -99,6 +134,22 @@ struct ShortcutReferencePopover: View {
             $0.token.localizedCaseInsensitiveContains(query) ||
                 $0.detail.localizedCaseInsensitiveContains(query)
         }
+    }
+
+    private var filteredLocalShortcuts: [LocalShortcutReference] {
+        let query = normalizedSearch
+        guard !query.isEmpty else { return ShortcutReferenceCatalog.localShortcuts }
+        return ShortcutReferenceCatalog.localShortcuts.filter {
+            $0.keys.localizedCaseInsensitiveContains(query) ||
+                $0.name.localizedCaseInsensitiveContains(query) ||
+                $0.category.localizedCaseInsensitiveContains(query) ||
+                $0.context.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private var filteredLocalGroups: [(key: String, value: [LocalShortcutReference])] {
+        Dictionary(grouping: filteredLocalShortcuts, by: \.category)
+            .sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }
     }
 
     private var normalizedSearch: String {
