@@ -52,8 +52,10 @@ final class BrowserWebController {
 
     func detach(surface: NativeBrowserSurfaceView) {
         guard self.surface === surface else { return }
-        if let browserView, surface.contains(browserView: browserView) {
-            browserView.removeFromSuperview()
+        surface.controller = nil
+        if let browserView {
+            activeState = false
+            browserView.setActive(false)
         }
         self.surface = nil
     }
