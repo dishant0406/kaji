@@ -17,6 +17,12 @@ final class KajiKitScriptRunner {
     private(set) var output = ""
     private(set) var plan: KajiKitScriptRunPlan?
 
+    deinit {
+        MainActor.assumeIsolated {
+            stop()
+        }
+    }
+
     var isRunning: Bool {
         if case .running = status { return true }
         return false
@@ -60,6 +66,7 @@ final class KajiKitScriptRunner {
 
     func stop() {
         outputPipe?.fileHandleForReading.readabilityHandler = nil
+        process?.terminationHandler = nil
         if process?.isRunning == true {
             process?.terminate()
         }
@@ -69,6 +76,7 @@ final class KajiKitScriptRunner {
 
     private func finish(code: Int32) {
         outputPipe?.fileHandleForReading.readabilityHandler = nil
+        process?.terminationHandler = nil
         process = nil
         outputPipe = nil
         status = code == 0 ? .succeeded(code) : .failed(code)

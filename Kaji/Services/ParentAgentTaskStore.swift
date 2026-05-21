@@ -8,6 +8,11 @@ final class ParentAgentTaskStore {
     var tasks: [ParentAgentTask] = []
     var activeTaskID: UUID?
     let persistence: ParentAgentTaskPersistence
+    private let maxTasks = 40
+    private let maxTimelineItems = 160
+    private let maxTimelineDetailLength = 30000
+    private let maxChildRunIDs = 80
+    private let maxSpawnFingerprints = 200
 
     init(persistence: ParentAgentTaskPersistence = ParentAgentTaskPersistence()) {
         self.persistence = persistence
@@ -199,6 +204,28 @@ final class ParentAgentTaskStore {
     private func finishStreamingAssistant(index: Int) {
         guard let itemIndex = tasks[index].timeline.lastIndex(where: { $0.kind == .assistant && !$0.isComplete }) else { return }
         tasks[index].timeline[itemIndex].isComplete = true
+    }
+
+    func trimForMemory() {
+        for index in tasks.indices {
+            tasks[index].timeline = tasks[index].timeline.map(trimmedTimelineItem)
+            tasks[index].timeline = Array(tasks[index].timeline.suffix(maxTimelineItems))
+            tasks[index].childRunIDs = Array(tasks[index].childRunIDs.suffix(maxChildRunIDs))
+            tasks[index].spawnFingerprints = Array(tasks[index].spawnFingerprints.suffix(maxSpawnFingerprints))
+        }
+        guard tasks.count > maxTasks else { return }
+        var keepIDs = Set(tasks.sorted { $0.updatedAt > $1.updatedAt }.prefix(maxTasks).map(\.id))
+        if let activeTaskID {
+            keepIDs.insert(activeTaskID)
+        }
+        tasks = tasks.filter { keepIDs.contains($0.id) }
+    }
+
+    private func trimmedTimelineItem(_ item: ParentAgentTimelineItem) -> ParentAgentTimelineItem {
+        var item = item
+        guard item.detail.count > maxTimelineDetailLength else { return item }
+        item.detail = String(item.detail.prefix(maxTimelineDetailLength))
+        return item
     }
 }
 

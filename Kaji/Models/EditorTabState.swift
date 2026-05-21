@@ -107,6 +107,7 @@ final class EditorTabState: Identifiable {
     @ObservationIgnored private var foldRegionsCacheVersion: Int = -1
     @ObservationIgnored private var symbolsCache: [EditorSymbol] = []
     @ObservationIgnored private var symbolsCacheVersion: Int = -1
+    @ObservationIgnored private var languageServerOpenFilePath: String?
     var collapsedFoldRegionIDs: Set<String> = []
     var symbolNavigationRequest: EditorSymbol?
     var symbolNavigationVersion = 0
@@ -185,6 +186,7 @@ final class EditorTabState: Identifiable {
 
     func updateFilePath(_ newPath: String) {
         guard filePath != newPath else { return }
+        closeLanguageServerDocument()
         filePath = newPath
         syntaxHighlighter = Self.makeSyntaxHighlighter(for: newPath)
         refreshReadOnlyStatus()
@@ -332,9 +334,29 @@ final class EditorTabState: Identifiable {
         SyntaxEngineRegistry.highlighter(forFile: filePath)
     }
 
+    private func syncLanguageServerDocument(filePath: String, text: String) {
+        if languageServerOpenFilePath == filePath {
+            LanguageServerManager.shared.didChange(filePath: filePath, projectPath: projectPath, text: text)
+            return
+        }
+        closeLanguageServerDocument()
+        LanguageServerManager.shared.didOpen(filePath: filePath, projectPath: projectPath, text: text)
+        languageServerOpenFilePath = filePath
+    }
+
+    private func closeLanguageServerDocument() {
+        guard let filePath = languageServerOpenFilePath else { return }
+        LanguageServerManager.shared.didClose(filePath: filePath, projectPath: projectPath)
+        DiagnosticsStore.shared.clearDiagnostics(for: filePath)
+        languageServerOpenFilePath = nil
+    }
+
     deinit {
         DebugFileLog.log("EditorState", "deinit filePath=\(filePathForLogging)")
         loadTask?.cancel()
+        MainActor.assumeIsolated {
+            closeLanguageServerDocument()
+        }
     }
 
     func loadFile() {
@@ -408,15 +430,21 @@ final class EditorTabState: Identifiable {
                         isLoading = false
                         isIncrementalLoading = hasMore
                         if !hasMore {
-                            LanguageServerManager.shared.didOpen(filePath: path, projectPath: projectPath, text: store.fullText())
+                            syncLanguageServerDocument(filePath: path, text: store.fullText())
                         }
-                        DebugFileLog.log("EditorLoad", "initial chunk applied lineCount=\(store.lineCount) version=\(backingStoreVersion) path=\(path)")
+                        DebugFileLog.log(
+                            "EditorLoad",
+                            "initial chunk applied lineCount=\(store.lineCount) version=\(backingStoreVersion) path=\(path)"
+                        )
                     case let .appended(text):
                         DebugFileLog.log("EditorLoad", "append chunk chars=\(text.count) path=\(path)")
                         if let backingStore {
                             backingStore.appendText(text)
                             backingStoreVersion += 1
-                            DebugFileLog.log("EditorLoad", "append applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)")
+                            DebugFileLog.log(
+                                "EditorLoad",
+                                "append applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)"
+                            )
                         }
                         if isLoading {
                             isLoading = false
@@ -429,7 +457,10 @@ final class EditorTabState: Identifiable {
                         if let backingStore {
                             backingStore.finishLoading()
                             backingStoreVersion += 1
-                            DebugFileLog.log("EditorLoad", "finish applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)")
+                            DebugFileLog.log(
+                                "EditorLoad",
+                                "finish applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)"
+                            )
                         }
                         refreshReadOnlyStatus()
                         if isLoading {
@@ -438,7 +469,7 @@ final class EditorTabState: Identifiable {
                         if isIncrementalLoading {
                             isIncrementalLoading = false
                         }
-                        LanguageServerManager.shared.didOpen(filePath: path, projectPath: projectPath, text: backingStore?.fullText() ?? "")
+                        syncLanguageServerDocument(filePath: path, text: backingStore?.fullText() ?? "")
                     }
                 }
 

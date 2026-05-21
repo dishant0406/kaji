@@ -56,6 +56,44 @@ struct FileSearchServiceTests {
         #expect(hiddenResults.contains { $0.absolutePath == hiddenFileURL.path })
     }
 
+    @Test("index evicts least recently used project caches")
+    func indexEvictsLeastRecentlyUsedProjectCaches() async throws {
+        let roots = try (0 ..< 3).map { index in
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            try Data().write(to: url.appendingPathComponent("file-\(index).swift"))
+            return url
+        }
+        defer { roots.forEach { try? FileManager.default.removeItem(at: $0) } }
+
+        let index = FileSearchIndex(cacheLifetime: 300, maxCachedProjects: 2, maxFilesPerProject: 100)
+
+        await index.warm(projectPath: roots[0].path)
+        await index.warm(projectPath: roots[1].path)
+        _ = await index.cachedFiles(in: roots[0].path)
+        await index.warm(projectPath: roots[2].path)
+
+        #expect(await index.cachedFiles(in: roots[0].path) != nil)
+        #expect(await index.cachedFiles(in: roots[1].path) == nil)
+        #expect(await index.cachedFiles(in: roots[2].path) != nil)
+    }
+
+    @Test("index caps files cached per project")
+    func indexCapsFilesCachedPerProject() async throws {
+        let rootURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: rootURL) }
+
+        for index in 0 ..< 6 {
+            try Data().write(to: rootURL.appendingPathComponent("file-\(index).swift"))
+        }
+
+        let index = FileSearchIndex(cacheLifetime: 300, maxCachedProjects: 2, maxFilesPerProject: 3)
+        let files = await index.files(in: rootURL.path)
+
+        #expect(files.count <= 3)
+    }
+
     private func makeResult(_ relativePath: String) -> FileSearchResult {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         return FileSearchResult(

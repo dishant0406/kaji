@@ -53,6 +53,9 @@ final class FileTreeState {
     }
 
     deinit {
+        refreshTask?.cancel()
+        statusTask?.cancel()
+        watcher = nil
         if let observer = remoteChangeObserver {
             NotificationCenter.default.removeObserver(observer)
         }

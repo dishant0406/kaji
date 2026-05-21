@@ -142,6 +142,8 @@
     _client->CloseBrowser();
     _client = nullptr;
   }
+  self.pageChanged = nil;
+  self.popupRequested = nil;
   _created = NO;
   if (self.superview) {
     [self removeFromSuperview];

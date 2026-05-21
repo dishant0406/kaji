@@ -6,6 +6,7 @@ final class BrowserPaneState {
     static let defaultURL = "https://www.google.com"
 
     let projectPath: String
+    let controllers = BrowserControllerRegistry()
     var pages: [BrowserPageState]
     var selectedPageID: UUID
     var selectedDeviceProfileID: String
@@ -37,7 +38,12 @@ final class BrowserPaneState {
         selectedDeviceProfileID = BrowserDeviceProfiles.desktopID
     }
 
-    init(projectPath: String, pages: [BrowserPageState], selectedPageID: UUID?, selectedDeviceProfileID: String = BrowserDeviceProfiles.desktopID) {
+    init(
+        projectPath: String,
+        pages: [BrowserPageState],
+        selectedPageID: UUID?,
+        selectedDeviceProfileID: String = BrowserDeviceProfiles.desktopID
+    ) {
         self.projectPath = projectPath
         let restoredPages = pages.isEmpty ? [BrowserPageState()] : pages
         self.pages = restoredPages
@@ -45,6 +51,12 @@ final class BrowserPaneState {
             restoredPages.contains { $0.id == id } ? id : nil
         } ?? restoredPages[0].id
         self.selectedDeviceProfileID = BrowserDeviceProfiles.profile(for: selectedDeviceProfileID).id
+    }
+
+    deinit {
+        MainActor.assumeIsolated {
+            controllers.closeAll()
+        }
     }
 
     @discardableResult

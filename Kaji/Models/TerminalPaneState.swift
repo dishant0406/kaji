@@ -29,6 +29,10 @@ final class TerminalPaneState: Identifiable {
         self.externalEditorFilePath = externalEditorFilePath
     }
 
+    deinit {
+        titleDebounceTask?.cancel()
+    }
+
     func setTitle(_ newTitle: String) {
         titleDebounceTask?.cancel()
         titleDebounceTask = Task { @MainActor [weak self] in

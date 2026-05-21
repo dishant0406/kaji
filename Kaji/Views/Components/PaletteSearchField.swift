@@ -53,6 +53,15 @@ struct PaletteSearchField: NSViewRepresentable {
         }
     }
 
+    static func dismantleNSView(_ nsView: NSTextField, coordinator: Coordinator) {
+        nsView.delegate = nil
+        if let field = nsView as? PaletteNSTextField {
+            field.onEscape = nil
+            field.onPaste = nil
+            field.onSpace = nil
+        }
+    }
+
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: PaletteSearchField
 

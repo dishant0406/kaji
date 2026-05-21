@@ -51,6 +51,13 @@ struct ParentAgentPromptTextView: NSViewRepresentable {
         }
     }
 
+    static func dismantleNSView(_ view: ParentAgentPromptContainerView, coordinator: Coordinator) {
+        view.textView.delegate = nil
+        view.textView.onSubmit = nil
+        view.textView.onAttach = nil
+        coordinator.view = nil
+    }
+
     @MainActor
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: ParentAgentPromptTextView

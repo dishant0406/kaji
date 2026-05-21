@@ -3,7 +3,6 @@ import SwiftUI
 struct BrowserPane: View {
     @Bindable var state: BrowserPaneState
     let sessionID: String?
-    let controllers: BrowserControllerRegistry
     let closeOnDisappear: Bool
     let managesBrowserControl: Bool
     let onClosePane: () -> Void
@@ -13,7 +12,7 @@ struct BrowserPane: View {
 
     private var selectedPage: BrowserPageState? { state.selectedPage }
     private var selectedController: BrowserWebController? {
-        selectedPage.map { controllers.controller(for: $0.id) }
+        selectedPage.map { state.controllers.controller(for: $0.id) }
     }
 
     var body: some View {
@@ -48,9 +47,9 @@ struct BrowserPane: View {
             if managesBrowserControl {
                 unregisterBrowserControl()
             }
-            controllers.setActive(false)
+            state.controllers.setActive(false)
             if closeOnDisappear {
-                controllers.closeAll()
+                state.controllers.closeAll()
             }
         }
         .onChange(of: state.url) { _, newValue in
@@ -97,7 +96,7 @@ struct BrowserPane: View {
             IconButton(symbol: "plus", accessibilityLabel: "New browser tab") {
                 let page = state.openPage()
                 pendingURL = page.url
-                controllers.controller(for: page.id).ensureStarted(url: page.url)
+                state.controllers.controller(for: page.id).ensureStarted(url: page.url)
             }
             .fixedSize()
             .help("New tab")
@@ -124,7 +123,7 @@ struct BrowserPane: View {
         ZStack {
             ForEach(state.pages) { page in
                 NativeBrowserSurface(
-                    controller: controllers.controller(for: page.id),
+                    controller: state.controllers.controller(for: page.id),
                     page: page,
                     projectPath: state.projectPath,
                     isActive: page.id == state.selectedPageID,
@@ -150,7 +149,7 @@ struct BrowserPane: View {
         KajiBrowserControlRegistry.shared.register(
             sessionID: sessionID,
             state: state,
-            controllers: controllers,
+            controllers: state.controllers,
             close: onClosePane
         )
         KajiBrowserControlBroker.shared.updateSession(sessionID)
@@ -163,13 +162,13 @@ struct BrowserPane: View {
 
     private func closeBrowserPage(_ pageID: UUID) {
         guard state.pages.count > 1 else {
-            controllers.closeAll()
+            state.controllers.closeAll()
             onClosePane()
             return
         }
         state.closePage(id: pageID)
         pendingURL = state.url
-        controllers.removeController(for: pageID)
+        state.controllers.removeController(for: pageID)
     }
 
     private func pageChanged(pageID: UUID, url: String) {
@@ -181,7 +180,7 @@ struct BrowserPane: View {
     private func popupRequested(pageID _: UUID, url: String) {
         let page = state.openPage(url: url.isEmpty ? "about:blank" : url)
         pendingURL = page.url
-        controllers.controller(for: page.id).ensureStarted(url: page.url)
+        state.controllers.controller(for: page.id).ensureStarted(url: page.url)
     }
 
     private func readPage() async {
@@ -194,5 +193,4 @@ struct BrowserPane: View {
             state.pageSummary = error.localizedDescription
         }
     }
-
 }

@@ -19,21 +19,16 @@ final class BrowserWebController {
 
     var isReady: Bool { browserView != nil }
 
-    func attach(
-        surface: NativeBrowserSurfaceView,
-        page: BrowserPageState,
-        projectPath: String,
-        isActive: Bool,
-        deviceProfile: BrowserDeviceProfile,
-        callbacks: BrowserSurfaceCallbacks
-    ) {
+    func attach(_ attachment: BrowserWebControllerAttachment) {
+        let surface = attachment.surface
+        let page = attachment.page
         self.surface = surface
         self.page = page
-        self.projectPath = projectPath
-        self.deviceProfile = deviceProfile
+        projectPath = attachment.projectPath
+        deviceProfile = attachment.deviceProfile
         surface.applyDeviceProfile(deviceProfile)
-        pageChanged = callbacks.pageChanged
-        popupRequested = callbacks.popupRequested
+        pageChanged = attachment.callbacks.pageChanged
+        popupRequested = attachment.callbacks.popupRequested
         surface.controller = self
         if startURL.isEmpty {
             startURL = page.url
@@ -42,17 +37,25 @@ final class BrowserWebController {
             if !surface.contains(browserView: browserView) {
                 surface.install(browserView: browserView)
             }
-            if isActive {
+            if attachment.isActive {
                 applyDeviceProfile(deviceProfile)
             }
-            updateActiveState(isActive, browserView: browserView)
+            updateActiveState(attachment.isActive, browserView: browserView)
             return
         }
-        guard isActive else {
+        guard attachment.isActive else {
             surface.show(status: "")
             return
         }
         ensureStarted(url: page.url)
+    }
+
+    func detach(surface: NativeBrowserSurfaceView) {
+        guard self.surface === surface else { return }
+        if let browserView, surface.contains(browserView: browserView) {
+            browserView.removeFromSuperview()
+        }
+        self.surface = nil
     }
 
     func navigate(to rawURL: String) {
@@ -122,6 +125,8 @@ final class BrowserWebController {
         startTask?.cancel()
         startTask = nil
         startURL = ""
+        browserView?.pageChanged = nil
+        browserView?.popupRequested = nil
         browserView?.closeBrowser()
         browserView = nil
         surface = nil

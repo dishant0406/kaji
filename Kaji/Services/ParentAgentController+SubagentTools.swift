@@ -11,7 +11,9 @@ extension ParentAgentController {
              "send",
              "stop",
              "replace":
-            enqueueMutation { await self.handleMutatingSubagent(message, toolID: toolID, action: action) }
+            enqueueMutation { controller in
+                await controller.handleMutatingSubagent(message, toolID: toolID, action: action)
+            }
         case "jump":
             jumpToAgent(message, toolID: toolID)
         case "status",

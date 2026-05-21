@@ -111,6 +111,32 @@ struct ParentAgentTaskStoreAssignmentTests {
         #expect(updated.lastEvent == "OpenCode needs permission: Allow once")
     }
 
+    @Test("store bounds retained task history")
+    func storeBoundsRetainedTaskHistory() {
+        let store = makeStore()
+
+        for index in 0 ..< 60 {
+            _ = store.start(prompt: "task \(index)")
+        }
+
+        #expect(store.tasks.count <= 40)
+    }
+
+    @Test("store bounds timeline and detail retention")
+    func storeBoundsTimelineAndDetailRetention() throws {
+        let store = makeStore()
+        let task = store.start(prompt: "long task")
+        let detail = String(repeating: "x", count: 40_000)
+
+        for index in 0 ..< 200 {
+            store.append(taskID: task.id, kind: .event, title: "event \(index)", detail: detail)
+        }
+
+        let updated = try #require(store.tasks.first { $0.id == task.id })
+        #expect(updated.timeline.count <= 160)
+        #expect(updated.timeline.allSatisfy { $0.detail.count <= 30_000 })
+    }
+
     private func makeStore() -> ParentAgentTaskStore {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)

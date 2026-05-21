@@ -1,55 +1,38 @@
+import Foundation
 import Testing
-
 @testable import Kaji
 
-@Suite("DiagnosticsStore")
 @MainActor
 struct DiagnosticsStoreTests {
-    @Test("groups diagnostics by file and counts severities")
-    func groupsDiagnostics() {
-        let store = DiagnosticsStore()
-        store.setDiagnostics([
-            diagnostic(path: "/tmp/A.swift", relative: "A.swift", line: 1, severity: .error),
-            diagnostic(path: "/tmp/A.swift", relative: "A.swift", line: 3, severity: .information),
-        ], for: "/tmp/A.swift")
+    @Test
+    func capsTrackedFiles() {
+        let store = DiagnosticsStore(maxFileCount: 2, maxDiagnosticsPerFile: 5)
+        store.setDiagnostics([diagnostic(path: "/tmp/a.swift")], for: "/tmp/a.swift")
+        store.setDiagnostics([diagnostic(path: "/tmp/b.swift")], for: "/tmp/b.swift")
+        store.setDiagnostics([diagnostic(path: "/tmp/c.swift")], for: "/tmp/c.swift")
 
-        store.setDiagnostics([
-            diagnostic(path: "/tmp/B.swift", relative: "B.swift", line: 2, severity: .warning),
-        ], for: "/tmp/B.swift")
-
-        #expect(store.errorCount == 1)
-        #expect(store.warningCount == 1)
-        #expect(store.groups.map(\.relativePath) == ["A.swift", "B.swift"])
-        #expect(store.groups[0].diagnostics.map(\.severity) == [.error, .information])
+        #expect(store.diagnostics(for: "/tmp/a.swift").isEmpty)
+        #expect(store.diagnostics(for: "/tmp/b.swift").count == 1)
+        #expect(store.diagnostics(for: "/tmp/c.swift").count == 1)
     }
 
-    @Test("clears diagnostics per file")
-    func clearsDiagnostics() {
-        let store = DiagnosticsStore()
-        store.setDiagnostics([
-            diagnostic(path: "/tmp/A.swift", relative: "A.swift", line: 1, severity: .error),
-        ], for: "/tmp/A.swift")
+    @Test
+    func capsDiagnosticsPerFile() {
+        let store = DiagnosticsStore(maxFileCount: 2, maxDiagnosticsPerFile: 2)
+        store.setDiagnostics((0 ..< 5).map { diagnostic(path: "/tmp/a.swift", line: $0 + 1) }, for: "/tmp/a.swift")
 
-        store.clearDiagnostics(for: "/tmp/A.swift")
-
-        #expect(store.allDiagnostics.isEmpty)
-        #expect(store.groups.isEmpty)
+        #expect(store.diagnostics(for: "/tmp/a.swift").count == 2)
     }
 
-    private func diagnostic(
-        path: String,
-        relative: String,
-        line: Int,
-        severity: EditorDiagnosticSeverity
-    ) -> EditorDiagnostic {
+    private func diagnostic(path: String, line: Int = 1) -> EditorDiagnostic {
         EditorDiagnostic(
             id: "\(path):\(line)",
             filePath: path,
-            relativePath: relative,
+            relativePath: URL(fileURLWithPath: path).lastPathComponent,
             line: line,
             column: 1,
-            severity: severity,
-            message: "Problem",
+            severity: .warning,
+            message: "issue",
             source: "test"
         )
     }

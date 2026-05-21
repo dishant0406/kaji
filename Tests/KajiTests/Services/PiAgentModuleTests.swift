@@ -6,8 +6,8 @@ struct PiAgentModuleTests {
     @Test
     @MainActor
     func startupCommandUsesProviderModelAndPrompt() {
-        let command = AskCommandDispatcher.startupCommand(
-            for: .pi,
+        let command = PiAgentModule().startupCommand(
+            baseCommand: "pi",
             prompt: "fix tests",
             model: "openai/gpt-5.4"
         )

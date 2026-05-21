@@ -17,6 +17,16 @@ final class LanguageServerManager {
         client(for: definition, projectPath: projectPath).didSave(filePath: filePath, text: text)
     }
 
+    func didClose(filePath: String, projectPath: String) {
+        guard let definition = LanguageRegistry.shared.definition(forFile: filePath), definition.lsp != nil else { return }
+        let key = clientKey(for: definition, projectPath: projectPath)
+        guard let client = clients[key] else { return }
+        client.didClose(filePath: filePath)
+        if !client.hasOpenDocuments {
+            clients[key] = nil
+        }
+    }
+
     func didChange(filePath: String, projectPath: String, text: String) {
         guard let definition = LanguageRegistry.shared.definition(forFile: filePath), definition.lsp != nil else { return }
         client(for: definition, projectPath: projectPath).didChange(filePath: filePath, text: text)
@@ -28,10 +38,14 @@ final class LanguageServerManager {
     }
 
     private func client(for definition: LanguageDefinition, projectPath: String) -> LanguageServerClient {
-        let key = "\(projectPath)::\(definition.id)"
+        let key = clientKey(for: definition, projectPath: projectPath)
         if let client = clients[key] { return client }
         let client = LanguageServerClient(definition: definition, projectPath: projectPath)
         clients[key] = client
         return client
+    }
+
+    private func clientKey(for definition: LanguageDefinition, projectPath: String) -> String {
+        "\(projectPath)::\(definition.id)"
     }
 }

@@ -2,18 +2,31 @@ import Foundation
 
 @MainActor
 final class LanguageServerClient {
+    private struct PendingMessage {
+        let id: Int?
+        let method: String
+        let params: JSONValue
+    }
+
     let definition: LanguageDefinition
     let projectPath: String
 
     private var process: Process?
     private var stdin: FileHandle?
+    private var outputPipe: Pipe?
+    private var errorPipe: Pipe?
     private var buffer = Data()
     private var requestID = 0
     private var documentVersions: [String: Int] = [:]
+    private var openDocumentCounts: [String: Int] = [:]
     private var isInitialized = false
-    private var pendingMessages: [(id: Int?, method: String, params: JSONValue)] = []
+    private var pendingMessages: [PendingMessage] = []
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
+
+    var hasOpenDocuments: Bool {
+        !openDocumentCounts.isEmpty
+    }
 
     init(definition: LanguageDefinition, projectPath: String) {
         self.definition = definition
@@ -40,6 +53,8 @@ final class LanguageServerClient {
         process.standardOutput = output
         process.standardError = Pipe()
         stdin = input.fileHandleForWriting
+        outputPipe = output
+        errorPipe = process.standardError as? Pipe
 
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -60,11 +75,17 @@ final class LanguageServerClient {
     }
 
     func stop() {
-        process?.standardOutput = nil
+        outputPipe?.fileHandleForReading.readabilityHandler = nil
+        errorPipe?.fileHandleForReading.readabilityHandler = nil
+        process?.terminationHandler = nil
         process?.terminate()
         process = nil
         stdin = nil
+        outputPipe = nil
+        errorPipe = nil
         buffer = Data()
+        documentVersions = [:]
+        openDocumentCounts = [:]
         isInitialized = false
         pendingMessages = []
     }
@@ -72,6 +93,12 @@ final class LanguageServerClient {
     func didOpen(filePath: String, text: String) {
         start()
         guard process != nil else { return }
+        let currentCount = openDocumentCounts[filePath] ?? 0
+        openDocumentCounts[filePath] = currentCount + 1
+        guard currentCount == 0 else {
+            didChange(filePath: filePath, text: text)
+            return
+        }
         enqueueOrSend(method: "textDocument/didOpen", params: .object([
             "textDocument": .object([
                 "uri": .string(URL(fileURLWithPath: filePath).absoluteString),
@@ -79,6 +106,23 @@ final class LanguageServerClient {
                 "version": .number(Double(nextVersion(for: filePath))),
                 "text": .string(text),
             ]),
+        ]))
+    }
+
+    func didClose(filePath: String) {
+        guard let count = openDocumentCounts[filePath] else { return }
+        if count > 1 {
+            openDocumentCounts[filePath] = count - 1
+            return
+        }
+        openDocumentCounts.removeValue(forKey: filePath)
+        documentVersions.removeValue(forKey: filePath)
+        guard !openDocumentCounts.isEmpty else {
+            stop()
+            return
+        }
+        enqueueOrSend(method: "textDocument/didClose", params: .object([
+            "textDocument": .object(["uri": .string(URL(fileURLWithPath: filePath).absoluteString)]),
         ]))
     }
 
@@ -166,7 +210,7 @@ final class LanguageServerClient {
 
     private func enqueueOrSend(id: Int? = nil, method: String, params: JSONValue) {
         guard isInitialized else {
-            pendingMessages.append((id, method, params))
+            pendingMessages.append(PendingMessage(id: id, method: method, params: params))
             return
         }
         send(id: id, method: method, params: params)

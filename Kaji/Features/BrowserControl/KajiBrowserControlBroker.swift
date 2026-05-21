@@ -84,6 +84,17 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
         lock.withLock { stateStorage }
     }
 
+    func stop() {
+        let listener = lock.withLock { () -> NWListener? in
+            let listener = self.listener
+            self.listener = nil
+            self.stateStorage = nil
+            return listener
+        }
+        listener?.cancel()
+        KajiBrowserSessionEnvironmentStore.remove()
+    }
+
     private func handle(_ connection: NWConnection) {
         connection.start(queue: queue)
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, _, _ in

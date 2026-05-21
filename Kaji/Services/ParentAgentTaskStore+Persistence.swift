@@ -15,6 +15,7 @@ extension ParentAgentTaskStore {
     }
 
     func save() {
+        trimForMemory()
         try? persistence.save(tasks: tasks, activeTaskID: activeTaskID)
     }
 
