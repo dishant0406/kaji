@@ -67,10 +67,7 @@ struct ParentAgentTimelineRow: View {
                 ParentAgentMarkdownText(content: item.detail, color: KajiTheme.fgMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text(item.detail)
-                    .kajiFont(size: 13)
-                    .foregroundStyle(KajiTheme.fgMuted)
-                    .textSelection(.enabled)
+                ParentAgentStreamingText(content: item.detail, color: KajiTheme.fgMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

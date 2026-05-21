@@ -137,6 +137,27 @@ struct ParentAgentTaskStoreAssignmentTests {
         #expect(updated.timeline.allSatisfy { $0.detail.count <= 30_000 })
     }
 
+    @Test("streaming deltas are not persisted until flushed")
+    func streamingDeltasAreDebounced() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("json")
+        let persistence = ParentAgentTaskPersistence(store: CodableFileStore(fileURL: url))
+        let store = ParentAgentTaskStore(persistence: persistence, streamingSaveInterval: .seconds(60))
+        let task = store.start(prompt: "stream")
+
+        store.appendAssistantDelta(taskID: task.id, text: "hello")
+        store.appendAssistantDelta(taskID: task.id, text: " world")
+
+        let beforeFlush = try #require(persistence.load()?.tasks.first { $0.id == task.id })
+        #expect(beforeFlush.timeline.count == 1)
+
+        store.flushStreamingSave()
+
+        let afterFlush = try #require(persistence.load()?.tasks.first { $0.id == task.id })
+        #expect(afterFlush.timeline.last?.detail == "hello world")
+    }
+
     private func makeStore() -> ParentAgentTaskStore {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)

@@ -13,9 +13,15 @@ final class ParentAgentTaskStore {
     private let maxTimelineDetailLength = 30000
     private let maxChildRunIDs = 80
     private let maxSpawnFingerprints = 200
+    private let streamingSaveInterval: Duration
+    var pendingStreamingSave: Task<Void, Never>?
 
-    init(persistence: ParentAgentTaskPersistence = ParentAgentTaskPersistence()) {
+    init(
+        persistence: ParentAgentTaskPersistence = ParentAgentTaskPersistence(),
+        streamingSaveInterval: Duration = .milliseconds(750)
+    ) {
         self.persistence = persistence
+        self.streamingSaveInterval = streamingSaveInterval
         load()
     }
 
@@ -102,7 +108,7 @@ final class ParentAgentTaskStore {
         ))
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
-        save()
+        scheduleStreamingSave()
     }
 
     func registerSpawn(taskID: UUID, fingerprint: String) {
@@ -124,7 +130,23 @@ final class ParentAgentTaskStore {
         }
         tasks[index].status = .running
         tasks[index].updatedAt = Date()
+        scheduleStreamingSave()
+    }
+
+    func flushStreamingSave() {
+        guard pendingStreamingSave != nil else { return }
         save()
+    }
+
+    private func scheduleStreamingSave() {
+        guard pendingStreamingSave == nil else { return }
+        pendingStreamingSave = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: streamingSaveInterval)
+            guard !Task.isCancelled else { return }
+            pendingStreamingSave = nil
+            saveNow()
+        }
     }
 
     func appendThinkingDelta(taskID: UUID, text: String) {
