@@ -21,6 +21,5 @@ appcast*.xml
 .playwright-mcp/
 /kaji-markdown-remote-image-urlcache
 /External/pi-mono
-/Vendor/pi-mono/node_modules
-/Vendor/pi-mono/packages/*/node_modules
-/Vendor/pi-mono/packages/*/dist
+/KajiParentAgentRuntime/node_modules
+/KajiParentAgentRuntime/dist

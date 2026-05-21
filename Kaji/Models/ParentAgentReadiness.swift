@@ -24,7 +24,7 @@ enum ParentAgentReadiness: Equatable {
         case .disabled:
             "Enable the parent agent to use Kaji's native orchestrator."
         case .missingNode:
-            "Install Node.js, then restart Kaji. Recommended: brew install node"
+            "Install Node.js 22.19 or newer, then restart Kaji. Recommended: brew install node"
         case .missingRuntime:
             "The Kaji parent-agent runtime was not found."
         case .ready:

@@ -63,7 +63,7 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 
 ### Parent Agent And Providers
 
-- Kaji includes a native Parent Agent surface backed by a bundled Pi runtime.
+- Kaji includes a native Parent Agent surface backed by a bundled Kaji runtime that uses Pi npm packages.
 - The Parent Agent can plan work, choose provider/model options, spawn child agents, send follow-up prompts, observe runs, stop/resume agents, and jump back to live panes.
 - It can create isolated git worktrees for subagents, collect changed files, open native diffs, and start verification while Kaji remains the source of truth for projects, worktrees, pane IDs, permissions, and UI state.
 - Kaji also supports Pi as a normal coding provider alongside Codex, Claude Code, and OpenCode.
@@ -169,9 +169,9 @@ scripts/checks.sh --fix   # Format, lint, and build
 ```text
 Kaji/                       SwiftUI macOS app target
 KajiHookClient/             Native provider hook helper
+KajiParentAgentRuntime/      TypeScript Parent Agent runtime using Pi packages
 GhosttyKit/                  C module exposing ghostty.h
 GhosttyKit.xcframework/      Built libghostty artifact from dishant0406/ghostty
-Vendor/pi-mono/              Vendored Pi runtime used by Kaji's Parent Agent
 Tests/KajiTests/            Swift Testing suite
 docs/                        Architecture, release, and integration docs
 scripts/                     Setup, checks, packaging, and release scripts

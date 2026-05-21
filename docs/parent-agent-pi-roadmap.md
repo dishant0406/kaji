@@ -4,7 +4,7 @@
 
 Kaji should become a native macOS command center where the user describes coding work once, then Kaji plans, launches, supervises, verifies, and summarizes local AI-agent execution across projects and worktrees.
 
-The parent agent is powered by a customized Pi fork, but Kaji remains the authority for UI, projects, worktrees, panes, provider terminals, permissions, verification, and local state.
+The parent agent is powered by a Kaji-owned runtime that imports Pi through pinned npm packages, while Kaji remains the authority for UI, projects, worktrees, panes, provider terminals, permissions, verification, and local state.
 
 ## Core Architecture
 
@@ -17,24 +17,23 @@ ParentAgentProcess.swift
         |
 JSONL over stdin/stdout
         |
-Forked Pi packages/kaji-agent
+KajiParentAgentRuntime
         |
-Pi runtime + Kaji tool definitions
+Pi npm packages + Kaji tool definitions
         |
 Kaji native APIs + terminal coding providers
 ```
 
-No sockets for Kaji-to-Pi communication. Kaji launches Pi as a child process, writes JSONL requests to stdin, reads JSONL events from stdout, and treats stderr as logs only.
+No sockets for Kaji-to-runtime communication. Kaji launches the parent runtime as a child process, writes JSONL requests to stdin, reads JSONL events from stdout, and treats stderr as logs only.
 
 ## Runtime Strategy
 
-- Vendor Pi source into `Vendor/pi-mono` so Kaji and its parent-agent runtime live in one repo.
-- Add `Vendor/pi-mono/packages/kaji-agent` for Kaji-specific orchestration.
-- Reuse Pi provider and `@mariozechner/pi-agent-core` packages where useful.
+- Keep Kaji-specific orchestration in `KajiParentAgentRuntime`.
+- Reuse Pi provider, OAuth, and agent-loop code through pinned `@earendil-works/pi-ai` and `@earendil-works/pi-agent-core` npm packages.
 - Avoid Pi TUI as the main UI; Kaji's UI is native SwiftUI.
 - Bundle the built Pi engine into Kaji app resources as `Kaji/Resources/pi/kaji-agent.mjs` and `Kaji/Resources/pi/oauth-login.mjs`.
 - Build bundled runtime files with `scripts/build-parent-agent.sh`; release builds call this before Swift release packaging.
-- Do not bundle Node.js. Kaji checks for user-installed Node and surfaces install guidance in Settings when it is missing.
+- Do not bundle Node.js. Kaji checks for user-installed Node 22.19+ and surfaces install guidance in Settings when it is missing.
 
 ## Protocol Contract
 
@@ -89,7 +88,7 @@ Hard stops for all profiles:
 
 Goal: Prove Kaji can own a forked Pi process and render parent-agent events natively.
 
-Scope: add `ParentAgentProcess`, Swift JSONL message types, `ParentAgentHome`, in-memory `ParentAgentTaskStore`, simple Pi `packages/kaji-agent` entrypoint, and support for `kaji.list_projects`, `kaji.get_active_context`, and `kaji.ask_user`.
+Scope: add `ParentAgentProcess`, Swift JSONL message types, `ParentAgentHome`, in-memory `ParentAgentTaskStore`, simple Kaji parent runtime entrypoint, and support for `kaji.list_projects`, `kaji.get_active_context`, and `kaji.ask_user`.
 
 Acceptance criteria: Kaji opens the parent screen on launch, submitting a prompt starts Pi if needed, Pi task events render in SwiftUI, Kaji can answer Pi tool calls, and Pi crash or malformed JSON becomes a recoverable task error.
 

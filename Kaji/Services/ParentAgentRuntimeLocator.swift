@@ -3,24 +3,24 @@ import Foundation
 enum ParentAgentRuntimeLocator {
     static func sourceLaunch() -> ParentAgentLaunch? {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let piRoot = root.appending(path: "Vendor/pi-mono")
-        let script = piRoot.appending(path: "packages/kaji-agent/src/main.ts")
-        let tsx = piRoot.appending(path: "node_modules/.bin/tsx")
+        let runtimeRoot = root.appending(path: "KajiParentAgentRuntime")
+        let script = runtimeRoot.appending(path: "src/main.ts")
+        let tsx = runtimeRoot.appending(path: "node_modules/.bin/tsx")
         guard FileManager.default.fileExists(atPath: script.path),
               FileManager.default.fileExists(atPath: tsx.path)
         else { return nil }
-        return ParentAgentLaunch(arguments: [tsx.path, script.path], directory: piRoot)
+        return ParentAgentLaunch(arguments: [tsx.path, script.path], directory: runtimeRoot)
     }
 
     static func sourceOAuthLaunch(providerID: String) -> ParentAgentLaunch? {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        let piRoot = root.appending(path: "Vendor/pi-mono")
-        let script = piRoot.appending(path: "packages/kaji-agent/src/oauth-login.ts")
-        let tsx = piRoot.appending(path: "node_modules/.bin/tsx")
+        let runtimeRoot = root.appending(path: "KajiParentAgentRuntime")
+        let script = runtimeRoot.appending(path: "src/oauth-login.ts")
+        let tsx = runtimeRoot.appending(path: "node_modules/.bin/tsx")
         guard FileManager.default.fileExists(atPath: script.path),
               FileManager.default.fileExists(atPath: tsx.path)
         else { return nil }
-        return ParentAgentLaunch(arguments: [tsx.path, script.path, providerID], directory: piRoot)
+        return ParentAgentLaunch(arguments: [tsx.path, script.path, providerID], directory: runtimeRoot)
     }
 
     static func bundledScriptURL() -> URL? {
@@ -42,7 +42,32 @@ enum ParentAgentRuntimeLocator {
     }
 
     static func nodeExecutablePath() -> String? {
-        AIProviderExecutableLocator.resolvePath(for: "node")
+        guard let path = AIProviderExecutableLocator.resolvePath(for: "node"),
+              nodeVersion(at: path).supportsParentAgentRuntime
+        else { return nil }
+        return path
+    }
+
+    private static func nodeVersion(at path: String) -> ParentAgentNodeVersion {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["--version"]
+
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+        } catch {
+            return ParentAgentNodeVersion()
+        }
+
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return ParentAgentNodeVersion() }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let value = String(data: data, encoding: .utf8) ?? ""
+        return ParentAgentNodeVersion(value)
     }
 
     private static func bundledResourceURL(named name: String) -> URL? {
@@ -70,4 +95,30 @@ enum ParentAgentRuntimeLocator {
 struct ParentAgentLaunch {
     let arguments: [String]
     let directory: URL?
+}
+
+private struct ParentAgentNodeVersion: Comparable {
+    let major: Int
+    let minor: Int
+    let patch: Int
+
+    init(_ value: String = "") {
+        let parts = value
+            .trimmingCharacters(in: CharacterSet(charactersIn: "v \n\t"))
+            .split(separator: ".")
+            .map { Int($0.prefix { $0.isNumber }) ?? 0 }
+        major = parts.indices.contains(0) ? parts[0] : 0
+        minor = parts.indices.contains(1) ? parts[1] : 0
+        patch = parts.indices.contains(2) ? parts[2] : 0
+    }
+
+    var supportsParentAgentRuntime: Bool {
+        self >= ParentAgentNodeVersion("22.19.0")
+    }
+
+    static func < (lhs: ParentAgentNodeVersion, rhs: ParentAgentNodeVersion) -> Bool {
+        if lhs.major != rhs.major { return lhs.major < rhs.major }
+        if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }
+        return lhs.patch < rhs.patch
+    }
 }

@@ -3,11 +3,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PI_ROOT="$PROJECT_ROOT/Vendor/pi-mono"
+RUNTIME_ROOT="$PROJECT_ROOT/KajiParentAgentRuntime"
 OUT_DIR="$PROJECT_ROOT/Kaji/Resources/pi"
 
-if [[ ! -d "$PI_ROOT" ]]; then
-    echo "Error: vendored Pi runtime not found at $PI_ROOT" >&2
+if [[ ! -d "$RUNTIME_ROOT" ]]; then
+    echo "Error: Kaji parent agent runtime not found at $RUNTIME_ROOT" >&2
     exit 1
 fi
 
@@ -16,34 +16,36 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ ! -d "$PI_ROOT/node_modules" ]]; then
+if [[ ! -d "$RUNTIME_ROOT/node_modules" ]]; then
     echo "==> Installing parent agent dependencies"
-    npm install --prefix "$PI_ROOT"
+    npm ci --prefix "$RUNTIME_ROOT"
 fi
 
-echo "==> Building Pi runtime packages"
-npm --prefix "$PI_ROOT/packages/ai" run build
-npm --prefix "$PI_ROOT/packages/agent" run build
+echo "==> Type-checking Kaji parent agent runtime"
+npm --prefix "$RUNTIME_ROOT" run check
 
 mkdir -p "$OUT_DIR"
 
 echo "==> Bundling Kaji parent agent runtime"
-"$PI_ROOT/node_modules/.bin/esbuild" \
-    "$PI_ROOT/packages/kaji-agent/src/main.ts" \
+"$RUNTIME_ROOT/node_modules/.bin/esbuild" \
+    "$RUNTIME_ROOT/src/main.ts" \
     --bundle \
     --platform=node \
     --format=esm \
-    --target=node20 \
+    --target=node22 \
     --outfile="$OUT_DIR/kaji-agent.mjs" \
     --banner:js='import { createRequire } from "module"; const require = createRequire(import.meta.url);'
 
-"$PI_ROOT/node_modules/.bin/esbuild" \
-    "$PI_ROOT/packages/kaji-agent/src/oauth-login.ts" \
+"$RUNTIME_ROOT/node_modules/.bin/esbuild" \
+    "$RUNTIME_ROOT/src/oauth-login.ts" \
     --bundle \
     --platform=node \
     --format=esm \
-    --target=node20 \
+    --target=node22 \
     --outfile="$OUT_DIR/oauth-login.mjs" \
     --banner:js='import { createRequire } from "module"; const require = createRequire(import.meta.url);'
+
+perl -pi -e 's/[ \t]+$//' "$OUT_DIR/kaji-agent.mjs" "$OUT_DIR/oauth-login.mjs"
+perl -pi -e 's#https://github\.com/colinhacks/zod/commit/[0-9a-f]{40}#https://github.com/colinhacks/zod/commit/<redacted>#g' "$OUT_DIR/kaji-agent.mjs" "$OUT_DIR/oauth-login.mjs"
 
 echo "==> Parent agent runtime ready in $OUT_DIR"

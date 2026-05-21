@@ -57,7 +57,10 @@ struct ParentAgentRuntimeContractTests {
 
     private func sourceRuntimeText() throws -> String {
         let url = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-            .appendingPathComponent("Vendor/pi-mono/packages/kaji-agent/src/main.ts")
-        return try String(contentsOf: url, encoding: .utf8)
+            .appendingPathComponent("KajiParentAgentRuntime/src")
+        let files = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "ts" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        return try files.map { try String(contentsOf: $0, encoding: .utf8) }.joined(separator: "\n")
     }
 }
