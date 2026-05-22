@@ -129,7 +129,6 @@ strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
 
 if [[ -d "$SPM_BUILD_DIR/Kaji_Kaji.bundle" ]]; then
     cp -R "$SPM_BUILD_DIR/Kaji_Kaji.bundle" "$APP_BUNDLE/Contents/Resources/Kaji_Kaji.bundle"
-    cp -R "$SPM_BUILD_DIR/Kaji_Kaji.bundle" "$APP_BUNDLE/Kaji_Kaji.bundle"
 fi
 
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
