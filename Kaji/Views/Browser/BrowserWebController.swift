@@ -157,6 +157,7 @@ final class BrowserWebController {
             surface?.install(browserView: browserView)
             applyDeviceProfile(deviceProfile)
             updateActiveState(true, browserView: browserView)
+            markStartupCompleteAfterStabilityDelay()
         } catch {
             surface?.show(status: error.localizedDescription)
         }
@@ -175,6 +176,14 @@ final class BrowserWebController {
 
     private func startRuntime() throws {
         _ = try KajiBrowserRuntimeCoordinator.shared.ensureStarted(projectPath: projectPath)
+    }
+
+    private func markStartupCompleteAfterStabilityDelay() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            guard !isClosed, browserView != nil else { return }
+            KajiBrowserRuntimeCoordinator.shared.markBrowserStartupComplete()
+        }
     }
 
     private func updatePage(url: String, title: String) {
