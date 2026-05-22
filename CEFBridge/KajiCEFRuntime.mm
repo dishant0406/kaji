@@ -53,7 +53,10 @@ static BOOL kajiCEFLibraryLoaded = NO;
   NSString* frameworkDirectory = [self frameworkDirectoryPathAtRootPath:rootPath];
   NSString* resourcesPath = [frameworkDirectory stringByAppendingPathComponent:@"Resources"];
   NSString* mainBundlePath = [self mainBundlePathForRootPath:rootPath];
+  NSString* logPath = [self logPathForProfilePath:profilePath];
   CefString(&settings.cache_path).FromString(std::string([profilePath UTF8String]));
+  CefString(&settings.log_file).FromString(std::string([logPath UTF8String]));
+  settings.log_severity = LOGSEVERITY_INFO;
   CefString(&settings.browser_subprocess_path).FromString(std::string([helperPath UTF8String]));
   CefString(&settings.framework_dir_path).FromString(std::string([frameworkDirectory UTF8String]));
   CefString(&settings.main_bundle_path).FromString(std::string([mainBundlePath UTF8String]));
@@ -112,6 +115,12 @@ static BOOL kajiCEFLibraryLoaded = NO;
     return bundlePath;
   }
   return [rootPath stringByAppendingPathComponent:@"../build/tests/cefsimple/Release/cefsimple.app"].stringByStandardizingPath;
+}
+
++ (NSString*)logPathForProfilePath:(NSString*)profilePath {
+  NSString* directory = [profilePath stringByAppendingPathComponent:@"Logs"];
+  [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:nil];
+  return [directory stringByAppendingPathComponent:@"cef.log"];
 }
 
 + (void)assignError:(NSError**)error message:(NSString*)message {

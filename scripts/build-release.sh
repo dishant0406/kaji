@@ -66,6 +66,42 @@ APP_BUNDLE="$BUILD_DIR/Kaji.app"
 DMG_NAME="Kaji-${VERSION}-${ARCH}.dmg"
 CEF_ROOT="$PROJECT_ROOT/.dev-support/cef-runtime/cef_binary"
 CEF_BUILD="$PROJECT_ROOT/.dev-support/cef-runtime/build/tests/cefsimple/Release"
+SIGNING_IDENTITY="${SIGN_IDENTITY:--}"
+
+sign_code() {
+    /usr/bin/codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$@"
+}
+
+sign_code_with_entitlements() {
+    /usr/bin/codesign --force --options runtime --entitlements "$PROJECT_ROOT/Kaji/Kaji.entitlements" --sign "$SIGNING_IDENTITY" "$@"
+}
+
+sign_sparkle() {
+    local sparkle_dir="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
+
+    echo "==> Signing Sparkle.framework"
+    sign_code --preserve-metadata=entitlements "$sparkle_dir/Versions/B/XPCServices/Installer.xpc"
+    sign_code --preserve-metadata=entitlements "$sparkle_dir/Versions/B/XPCServices/Downloader.xpc"
+    sign_code --preserve-metadata=entitlements "$sparkle_dir/Versions/B/Updater.app"
+    sign_code --preserve-metadata=entitlements "$sparkle_dir/Versions/B/Autoupdate"
+    sign_code "$sparkle_dir"
+}
+
+sign_cef_runtime() {
+    local framework_dir="$APP_BUNDLE/Contents/Frameworks/Chromium Embedded Framework.framework"
+
+    echo "==> Signing CEF runtime"
+    for library in "$framework_dir"/Libraries/*.dylib; do
+        [[ -f "$library" ]] || continue
+        sign_code "$library"
+    done
+    sign_code "$framework_dir"
+
+    for helper in "$APP_BUNDLE"/Contents/Frameworks/cefsimple\ Helper*.app; do
+        [[ -d "$helper" ]] || continue
+        sign_code_with_entitlements "$helper"
+    done
+}
 
 rm -rf "$APP_BUNDLE"
 
@@ -130,41 +166,14 @@ if [[ -n "$SPARKLE_PUBLIC_KEY" ]]; then
     fi
 fi
 
-if [[ -n "$SIGN_IDENTITY" ]]; then
-    SPARKLE_DIR="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
+sign_sparkle
+sign_cef_runtime
 
-    echo "==> Signing Sparkle.framework (inside-out)"
-    /usr/bin/codesign --force --options runtime --preserve-metadata=entitlements \
-        --sign "$SIGN_IDENTITY" \
-        "$SPARKLE_DIR/Versions/B/XPCServices/Installer.xpc"
+echo "==> Signing KajiHookClient"
+sign_code "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
 
-    /usr/bin/codesign --force --options runtime --preserve-metadata=entitlements \
-        --sign "$SIGN_IDENTITY" \
-        "$SPARKLE_DIR/Versions/B/XPCServices/Downloader.xpc"
-
-    /usr/bin/codesign --force --options runtime --preserve-metadata=entitlements \
-        --sign "$SIGN_IDENTITY" \
-        "$SPARKLE_DIR/Versions/B/Updater.app"
-
-    /usr/bin/codesign --force --options runtime --preserve-metadata=entitlements \
-        --sign "$SIGN_IDENTITY" \
-        "$SPARKLE_DIR/Versions/B/Autoupdate"
-
-    /usr/bin/codesign --force --options runtime \
-        --sign "$SIGN_IDENTITY" \
-        "$SPARKLE_DIR"
-
-    echo "==> Signing KajiHookClient"
-    /usr/bin/codesign --force --options runtime \
-        --sign "$SIGN_IDENTITY" \
-        "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
-
-    echo "==> Signing app bundle"
-    /usr/bin/codesign --force --options runtime \
-        --entitlements "$PROJECT_ROOT/Kaji/Kaji.entitlements" \
-        --sign "$SIGN_IDENTITY" \
-        "$APP_BUNDLE"
-fi
+echo "==> Signing app bundle"
+sign_code_with_entitlements "$APP_BUNDLE"
 
 
 echo "==> Validating bundled CEF runtime"
