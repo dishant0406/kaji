@@ -11,6 +11,7 @@ fail() {
 
 [[ -n "$APP_BUNDLE" ]] || fail "app bundle path is required"
 [[ -d "$APP_BUNDLE" ]] || fail "app bundle not found at $APP_BUNDLE"
+[[ ! -e "$APP_BUNDLE/Kaji_Kaji.bundle" ]] || fail "resource bundle must be inside Contents/Resources, not the app bundle root"
 
 FRAMEWORKS="$APP_BUNDLE/Contents/Frameworks"
 CEF_FRAMEWORK="$FRAMEWORKS/Chromium Embedded Framework.framework"
