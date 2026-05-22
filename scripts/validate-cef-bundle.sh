@@ -37,6 +37,13 @@ done
 [[ -x "$FRAMEWORKS/cefsimple Helper.app/Contents/MacOS/cefsimple Helper" ]] || fail "main CEF helper missing"
 [[ -x "$FRAMEWORKS/cefsimple Helper (Renderer).app/Contents/MacOS/cefsimple Helper (Renderer)" ]] || fail "renderer CEF helper missing"
 
+/usr/bin/codesign --verify --strict --verbose=2 "$CEF_FRAMEWORK" >/dev/null 2>&1 || fail "CEF framework code signature is invalid"
+for helper in "$FRAMEWORKS"/cefsimple\ Helper*.app; do
+    [[ -d "$helper" ]] || continue
+    /usr/bin/codesign --verify --strict --verbose=2 "$helper" >/dev/null 2>&1 || fail "CEF helper code signature is invalid at $helper"
+done
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE" >/dev/null 2>&1 || fail "app bundle code signature is invalid"
+
 if [[ -n "$ARCH" ]]; then
     file "$CEF_BINARY" | grep -q "$ARCH" || fail "CEF framework is not built for $ARCH"
     file "$FRAMEWORKS/cefsimple Helper.app/Contents/MacOS/cefsimple Helper" | grep -q "$ARCH" || fail "CEF helper is not built for $ARCH"
