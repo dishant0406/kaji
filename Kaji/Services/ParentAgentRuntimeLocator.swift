@@ -83,8 +83,8 @@ enum ParentAgentRuntimeLocator {
     }
 
     private static func bundledResourceURL(named name: String) -> URL? {
-        Bundle.module.url(forResource: name, withExtension: "mjs", subdirectory: "pi")
-            ?? Bundle.module.url(forResource: name, withExtension: "mjs")
+        Bundle.appResources.url(forResource: name, withExtension: "mjs", subdirectory: "pi")
+            ?? Bundle.appResources.url(forResource: name, withExtension: "mjs")
             ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "pi")
             ?? Bundle.main.url(forResource: name, withExtension: "mjs")
             ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "Kaji_Kaji.bundle/pi")

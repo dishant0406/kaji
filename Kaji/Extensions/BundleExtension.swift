@@ -4,13 +4,29 @@ extension Bundle {
     static let appResources: Bundle = {
         let bundleName = "Kaji_Kaji.bundle"
 
-        let candidates: [URL?] = [
+        var candidates: [URL?] = [
             Bundle.main.resourceURL?.appendingPathComponent(bundleName),
             Bundle.main.bundleURL.appendingPathComponent(bundleName),
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/\(bundleName)"),
+            Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent(bundleName),
+            Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent(bundleName),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Kaji/Resources", isDirectory: true),
         ]
 
+        candidates.append(contentsOf: Bundle.allBundles.flatMap { bundle in
+            [
+                bundle.resourceURL?.appendingPathComponent(bundleName),
+                bundle.bundleURL.appendingPathComponent(bundleName),
+                bundle.bundleURL.deletingLastPathComponent().appendingPathComponent(bundleName),
+            ]
+        })
+
+        var seen = Set<String>()
+
         for case let url? in candidates {
+            guard seen.insert(url.path).inserted else { continue }
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
             if let bundle = Bundle(url: url) {
                 return bundle
             }

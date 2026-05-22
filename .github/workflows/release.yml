@@ -81,7 +81,8 @@ jobs:
           chmod +x scripts/build-parent-agent.sh scripts/build-release.sh scripts/create-icns.sh
           scripts/build-release.sh \
             --arch "$ARCH" \
-            --version "${{ steps.validate.outputs.version }}"
+            --version "${{ steps.validate.outputs.version }}" \
+            --smoke-launch
 
       - name: Verify and checksum DMG
         id: dmg

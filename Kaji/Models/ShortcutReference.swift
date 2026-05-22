@@ -81,7 +81,7 @@ enum ShortcutReferenceCatalog {
     }
 
     private static func loadPayload() -> ShortcutReferencePayload {
-        guard let url = Bundle.module.url(forResource: "shortcuts", withExtension: "json") else {
+        guard let url = Bundle.appResources.url(forResource: "shortcuts", withExtension: "json") else {
             fatalError("Missing shortcuts.json")
         }
 

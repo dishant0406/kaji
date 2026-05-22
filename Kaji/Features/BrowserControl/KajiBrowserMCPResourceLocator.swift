@@ -43,10 +43,10 @@ enum KajiBrowserMCPResourceLocator {
     }
 
     private static func appendBundleCandidates(to urls: inout [URL]) {
-        if let url = Bundle.module.url(forResource: "kaji-browser-mcp", withExtension: "js") {
+        if let url = Bundle.appResources.url(forResource: "kaji-browser-mcp", withExtension: "js") {
             urls.append(url)
         }
-        if let url = Bundle.module.url(
+        if let url = Bundle.appResources.url(
             forResource: "kaji-browser-mcp",
             withExtension: "js",
             subdirectory: "CodingAgents/Browser"
@@ -65,7 +65,7 @@ enum KajiBrowserMCPResourceLocator {
         if let projectRoot {
             urls.append(projectRoot.appendingPathComponent("Kaji/Resources/CodingAgents/Browser/kaji-browser", isDirectory: true))
         }
-        if let url = Bundle.module.url(forResource: "kaji-browser", withExtension: nil, subdirectory: "CodingAgents/Browser") {
+        if let url = Bundle.appResources.url(forResource: "kaji-browser", withExtension: nil, subdirectory: "CodingAgents/Browser") {
             urls.append(url)
         }
         if let resourceURL = Bundle.main.resourceURL {
@@ -81,10 +81,10 @@ enum KajiBrowserMCPResourceLocator {
     private static func supportFileCandidates(name: String, fileManager: FileManager, projectRoot: URL?) -> [URL] {
         var urls = supportCandidates(fileManager: fileManager, projectRoot: projectRoot).map { $0.appendingPathComponent(name) }
         let basename = URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent
-        if let url = Bundle.module.url(forResource: basename, withExtension: "js") {
+        if let url = Bundle.appResources.url(forResource: basename, withExtension: "js") {
             urls.append(url)
         }
-        if let url = Bundle.module.url(forResource: basename, withExtension: "js", subdirectory: "CodingAgents/Browser/kaji-browser") {
+        if let url = Bundle.appResources.url(forResource: basename, withExtension: "js", subdirectory: "CodingAgents/Browser/kaji-browser") {
             urls.append(url)
         }
         if let resourceURL = Bundle.main.resourceURL {

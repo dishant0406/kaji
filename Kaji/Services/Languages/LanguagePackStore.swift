@@ -28,7 +28,6 @@ enum LanguagePackStore {
     private static func bundledLanguagePacksURL() -> URL? {
         let candidates: [URL?] = [
             Bundle.appResources.url(forResource: "LanguagePacks", withExtension: nil),
-            Bundle.module.url(forResource: "LanguagePacks", withExtension: nil),
             Bundle.main.resourceURL?.appendingPathComponent("Kaji_Kaji.bundle/LanguagePacks", isDirectory: true),
             Bundle.main.resourceURL?.appendingPathComponent("LanguagePacks", isDirectory: true),
         ]
