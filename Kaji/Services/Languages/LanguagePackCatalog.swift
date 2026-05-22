@@ -56,7 +56,6 @@ enum LanguagePackCatalog {
     private static func catalogRootURL() -> URL? {
         let candidates: [URL?] = [
             Bundle.appResources.url(forResource: "LanguagePackRegistry", withExtension: nil),
-            Bundle.module.url(forResource: "LanguagePackRegistry", withExtension: nil),
             Bundle.main.resourceURL?.appendingPathComponent("Kaji_Kaji.bundle/LanguagePackRegistry", isDirectory: true),
             Bundle.main.resourceURL?.appendingPathComponent("LanguagePackRegistry", isDirectory: true),
         ]

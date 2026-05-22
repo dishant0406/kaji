@@ -133,8 +133,8 @@ struct KajiCodeGraphInstaller {
     }
 
     static var bundledAdapterURL: URL? {
-        Bundle.module.url(forResource: "kajicodegraph_runner", withExtension: "py") ??
-            Bundle.module.url(
+        Bundle.appResources.url(forResource: "kajicodegraph_runner", withExtension: "py") ??
+            Bundle.appResources.url(
                 forResource: "kajicodegraph_runner",
                 withExtension: "py",
                 subdirectory: "kajicodegraph"

@@ -70,7 +70,7 @@ struct ParentAgentTabButton: View {
     }
 
     private static var logoImage: NSImage? {
-        Bundle.module.url(
+        Bundle.appResources.url(
             forResource: "icon_512",
             withExtension: "png",
             subdirectory: "Assets.xcassets/AppIcon.appiconset"
