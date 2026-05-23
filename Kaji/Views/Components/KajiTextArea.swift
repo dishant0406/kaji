@@ -7,6 +7,7 @@ struct KajiTextArea: View {
     var maxHeight: CGFloat?
     var monospaced = false
     var onSubmit: (() -> Void)?
+    var onShiftEnter: (() -> Void)?
     var onCommandEnter: (() -> Void)?
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
     @FocusState private var isFocused: Bool
@@ -30,6 +31,10 @@ struct KajiTextArea: View {
                 .padding(.vertical, 4)
                 .focused($isFocused)
                 .onKeyPress(.return, phases: .down) { keyPress in
+                    if keyPress.modifiers.contains(.shift), let onShiftEnter {
+                        onShiftEnter()
+                        return .handled
+                    }
                     if !keyPress.modifiers.contains(.shift), let onSubmit {
                         onSubmit()
                         return .handled

@@ -34,17 +34,14 @@ struct DiffCommentDraftPopoverContent: View {
             Text("Comment on \(anchor.summary)")
                 .kajiFont(size: 12, weight: .semibold)
                 .foregroundStyle(KajiTheme.fg)
-            TextEditor(text: $text)
-                .kajiFont(size: 12)
-                .frame(width: 360, height: 110)
-                .scrollContentBackground(.hidden)
-                .background(KajiTheme.surface)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(KajiTheme.border, lineWidth: 1))
-                .onKeyPress(.return, phases: .down) { press in
-                    guard press.modifiers.contains(.shift) else { return .ignored }
-                    onSave(text)
-                    return .handled
-                }
+            KajiTextArea(
+                placeholder: "Leave a comment",
+                text: $text,
+                minHeight: 110,
+                maxHeight: 110,
+                onShiftEnter: { onSave(text) }
+            )
+            .frame(width: 360, height: 110)
             HStack {
                 Spacer()
                 Button("Cancel", action: onCancel)
