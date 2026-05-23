@@ -7,6 +7,7 @@ final class TerminalTab: Identifiable {
         case terminal
         case vcs
         case editor
+        case filePreview
         case diffViewer
         case problems
         case parentAgent
@@ -18,6 +19,7 @@ final class TerminalTab: Identifiable {
         case terminal(TerminalPaneState)
         case vcs(VCSTabState)
         case editor(EditorTabState)
+        case filePreview(FilePreviewTabState)
         case diffViewer(DiffViewerTabState)
         case problems(ProblemsTabState)
         case parentAgent(ParentAgentTabState)
@@ -29,6 +31,7 @@ final class TerminalTab: Identifiable {
             case .terminal: .terminal
             case .vcs: .vcs
             case .editor: .editor
+            case .filePreview: .filePreview
             case .diffViewer: .diffViewer
             case .problems: .problems
             case .parentAgent: .parentAgent
@@ -52,6 +55,11 @@ final class TerminalTab: Identifiable {
             return state
         }
 
+        var filePreviewState: FilePreviewTabState? {
+            guard case let .filePreview(state) = self else { return nil }
+            return state
+        }
+
         var diffViewerState: DiffViewerTabState? {
             guard case let .diffViewer(state) = self else { return nil }
             return state
@@ -72,6 +80,7 @@ final class TerminalTab: Identifiable {
             case let .terminal(pane): pane.projectPath
             case let .vcs(state): state.projectPath
             case let .editor(state): state.projectPath
+            case let .filePreview(state): state.projectPath
             case let .diffViewer(state): state.projectPath
             case let .problems(state): state.projectPath
             case let .parentAgent(state): state.projectPath
@@ -100,6 +109,8 @@ final class TerminalTab: Identifiable {
             return "Git Diff"
         case let .editor(state):
             return state.displayTitle
+        case let .filePreview(state):
+            return state.displayTitle
         case let .diffViewer(state):
             return state.displayTitle
         case .problems:
@@ -123,6 +134,10 @@ final class TerminalTab: Identifiable {
 
     init(editorState: EditorTabState) {
         content = .editor(editorState)
+    }
+
+    init(filePreviewState: FilePreviewTabState) {
+        content = .filePreview(filePreviewState)
     }
 
     init(diffViewerState: DiffViewerTabState) {
@@ -160,6 +175,16 @@ final class TerminalTab: Identifiable {
             } else {
                 content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
             }
+        case .filePreview:
+            if let filePath = snapshot.filePath {
+                content = .filePreview(FilePreviewTabState(
+                    projectPath: snapshot.projectPath,
+                    filePath: filePath,
+                    kind: FilePreviewClassifier.previewKind(for: filePath) ?? .quickLook
+                ))
+            } else {
+                content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
+            }
         case .diffViewer:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         case .problems:
@@ -181,7 +206,7 @@ final class TerminalTab: Identifiable {
             isPinned: isPinned,
             projectPath: content.projectPath,
             paneTitle: content.pane?.title,
-            filePath: content.editorState?.filePath,
+            filePath: content.editorState?.filePath ?? content.filePreviewState?.filePath,
             browserURL: content.browserState?.url,
             browserPages: content.browserState?.pageSnapshots,
             selectedBrowserPageID: content.browserState?.selectedPageID,

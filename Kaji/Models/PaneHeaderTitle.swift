@@ -15,6 +15,8 @@ enum PaneHeaderTitle {
             return "Source Control"
         case let .editor(state):
             return state.displayTitle
+        case let .filePreview(state):
+            return state.displayTitle
         case let .diffViewer(state):
             return state.displayTitle
         case .problems:

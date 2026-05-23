@@ -55,6 +55,7 @@ final class AppState {
         case createCodeGraphTab(CodeGraphTabRequest)
         case createBrowserSplit(projectID: UUID)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
+        case createFilePreviewTab(projectID: UUID, areaID: UUID?, filePath: String, kind: FilePreviewKind)
         case createExternalEditorTab(projectID: UUID, areaID: UUID?, filePath: String, command: String)
         case createDiffViewerTab(projectID: UUID, areaID: UUID?, request: DiffViewerRequest)
         case createProblemsTab(projectID: UUID, areaID: UUID?)
@@ -335,7 +336,17 @@ final class AppState {
         let settings = EditorSettings.shared
         DebugFileLog.log(
             "FileOpen",
-            "settings loaded defaultEditor=\(settings.defaultEditor.rawValue) command=\(settings.externalEditorCommand) lineNumbers=\(settings.showsLineNumbers) activeLine=\(settings.highlightsActiveLine) indent=\(settings.showsIndentGuides) whitespace=\(settings.rendersWhitespace) brackets=\(settings.highlightsMatchingBrackets) tabSize=\(settings.tabSize) path=\(filePath)"
+            [
+                "settings loaded defaultEditor=\(settings.defaultEditor.rawValue)",
+                "command=\(settings.externalEditorCommand)",
+                "lineNumbers=\(settings.showsLineNumbers)",
+                "activeLine=\(settings.highlightsActiveLine)",
+                "indent=\(settings.showsIndentGuides)",
+                "whitespace=\(settings.rendersWhitespace)",
+                "brackets=\(settings.highlightsMatchingBrackets)",
+                "tabSize=\(settings.tabSize)",
+                "path=\(filePath)",
+            ].joined(separator: " ")
         )
         if settings.defaultEditor == .terminalCommand {
             DebugFileLog.log("FileOpen", "default editor is terminal command path=\(filePath)")
@@ -347,15 +358,23 @@ final class AppState {
                 return
             }
         }
-        DebugFileLog.log("FileOpen", "checking existing editor tabs path=\(filePath)")
+        DebugFileLog.log("FileOpen", "checking existing file tabs path=\(filePath)")
         for workspaceTab in workspaceTabs(for: projectID) {
             for area in workspaceTab.root.allAreas() {
-                guard let tab = area.tabs.first(where: { $0.content.editorState?.filePath == filePath }) else { continue }
-                DebugFileLog.log("FileOpen", "activating existing editor tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
+                guard let tab = area.tabs.first(where: {
+                    $0.content.editorState?.filePath == filePath || $0.content.filePreviewState?.filePath == filePath
+                })
+                else { continue }
+                DebugFileLog.log("FileOpen", "activating existing file tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
                 activateWorkspaceTab(workspaceTab.id, projectID: projectID)
                 dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tab.id))
                 return
             }
+        }
+        if let previewKind = FilePreviewClassifier.previewKind(for: filePath) {
+            DebugFileLog.log("FileOpen", "creating preview tab path=\(filePath) kind=\(previewKind.rawValue)")
+            dispatch(.createFilePreviewTab(projectID: projectID, areaID: nil, filePath: filePath, kind: previewKind))
+            return
         }
         DebugFileLog.log("FileOpen", "creating built-in editor tab path=\(filePath)")
         if let entry = LanguagePackCatalog.availableEntry(forFile: filePath), pendingLanguagePackInstall?.filePath != filePath {
@@ -371,12 +390,21 @@ final class AppState {
             for workspaceTab in workspace.tabs {
                 for area in workspaceTab.root.allAreas() {
                     for tab in area.tabs {
-                        guard let editorState = tab.content.editorState else { continue }
-                        let currentPath = editorState.filePath
-                        if currentPath == oldPath {
-                            editorState.updateFilePath(newPath)
-                        } else if currentPath.hasPrefix(oldPrefix) {
-                            editorState.updateFilePath(newPath + "/" + String(currentPath.dropFirst(oldPrefix.count)))
+                        if let editorState = tab.content.editorState {
+                            let currentPath = editorState.filePath
+                            if currentPath == oldPath {
+                                editorState.updateFilePath(newPath)
+                            } else if currentPath.hasPrefix(oldPrefix) {
+                                editorState.updateFilePath(newPath + "/" + String(currentPath.dropFirst(oldPrefix.count)))
+                            }
+                        }
+                        if let previewState = tab.content.filePreviewState {
+                            let previewPath = previewState.filePath
+                            if previewPath == oldPath {
+                                previewState.updateFilePath(newPath)
+                            } else if previewPath.hasPrefix(oldPrefix) {
+                                previewState.updateFilePath(newPath + "/" + String(previewPath.dropFirst(oldPrefix.count)))
+                            }
                         }
                     }
                 }
