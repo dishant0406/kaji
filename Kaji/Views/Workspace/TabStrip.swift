@@ -441,6 +441,7 @@ private struct TabCell: View {
         case .terminal: label += ", Terminal"
         case .vcs: label += ", Source Control"
         case .editor: label += ", Editor"
+        case .filePreview: label += ", File Preview"
         case .diffViewer: label += ", Diff Viewer"
         case .problems: label += ", Problems"
         case .parentAgent: label += ", Kaji Agent"
@@ -460,6 +461,8 @@ private struct TabCell: View {
             KajiIcon(systemName: "file.diff", size: 12)
         } else if tab.kind == .editor {
             KajiIcon(systemName: "pencil.line", size: 12)
+        } else if tab.kind == .filePreview {
+            KajiIcon(systemName: "eye", size: 12)
         } else if tab.kind == .diffViewer {
             KajiIcon(systemName: "rectangle.split.2x1", size: 11)
         } else if tab.kind == .problems {

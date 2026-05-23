@@ -29,6 +29,24 @@ struct WorkspaceSnapshotTests {
         #expect(decoded.filePath == "/tmp/test/main.swift")
     }
 
+    @Test("TerminalTabSnapshot Codable round-trip for file preview")
+    func filePreviewSnapshotRoundTrip() throws {
+        let snapshot = TerminalTabSnapshot(
+            kind: .filePreview,
+            customTitle: nil,
+            colorID: nil,
+            isPinned: false,
+            projectPath: testPath,
+            paneTitle: "Preview",
+            filePath: "/tmp/test/image.png"
+        )
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(TerminalTabSnapshot.self, from: data)
+
+        #expect(decoded.kind == .filePreview)
+        #expect(decoded.filePath == "/tmp/test/image.png")
+    }
+
     @Test("WorkspaceSnapshot Codable round-trip for workspace tabs")
     func workspaceSnapshotRoundTrip() throws {
         let areaID = UUID()

@@ -122,6 +122,15 @@ enum WorkspaceReducer {
         case let .createEditorTab(projectID, areaID, filePath):
             TabReducer.createEditorTab(projectID: projectID, areaID: areaID, filePath: filePath, state: &state)
 
+        case let .createFilePreviewTab(projectID, areaID, filePath, kind):
+            TabReducer.createFilePreviewTab(
+                projectID: projectID,
+                areaID: areaID,
+                filePath: filePath,
+                kind: kind,
+                state: &state
+            )
+
         case let .createExternalEditorTab(projectID, areaID, filePath, command):
             TabReducer.createExternalEditorTab(
                 projectID: projectID,

@@ -192,6 +192,8 @@ private struct TabContentView: View {
                 project: activeProject,
                 worktree: activeWorktree
             )
+        case let .filePreview(previewState):
+            FilePreviewPane(state: previewState, onFocus: onFocus)
         case let .diffViewer(diffState):
             DiffViewerPane(state: diffState, focused: focused, onFocus: onFocus)
         case .problems:

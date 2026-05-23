@@ -149,6 +149,24 @@ enum TabReducer {
         }
     }
 
+    static func createFilePreviewTab(
+        projectID: UUID,
+        areaID _: UUID?,
+        filePath: String,
+        kind: FilePreviewKind,
+        state: inout WorkspaceState
+    ) {
+        DebugFileLog.log("FilePreviewTab", "createFilePreviewTab projectID=\(projectID.uuidString) path=\(filePath)")
+        _ = appendWorkspaceTab(projectID: projectID, state: &state) { path in
+            let area = TabArea(projectPath: path, existingTab: TerminalTab(filePreviewState: FilePreviewTabState(
+                projectPath: path,
+                filePath: filePath,
+                kind: kind
+            )))
+            return WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        }
+    }
+
     static func createExternalEditorTab(
         projectID: UUID,
         areaID _: UUID?,
