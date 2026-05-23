@@ -106,6 +106,14 @@ struct AskPaletteFeatureTests {
     }
 
     @Test
+    func commitCommandStartsGuidedFlow() {
+        let entries = AskPaletteEntries.build(context(fieldText: ":commit"))
+
+        #expect(entries.first?.action == .gitCommitStart)
+        #expect(entries.first?.title == "Start commit")
+    }
+
+    @Test
     func bookmarkFolderSelectionMovesToBookmarkList() {
         let entries = AskPaletteEntries.build(context(
             fieldText: ":bf:Age",

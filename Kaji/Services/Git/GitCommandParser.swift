@@ -36,6 +36,8 @@ enum GitCommandParser {
                 ["switch"] + parsed
             case .checkout:
                 ["checkout"] + parsed
+            case .commit:
+                parsed.isEmpty ? ["commit"] : ["commit"] + parsed
             }
             return request(arguments: arguments)
         } catch {

@@ -29,6 +29,10 @@ enum AskPaletteAction: Hashable {
     case gitSwitchBranch(String)
     case gitCheckoutBranch(String)
     case gitCommitDiff(GitCommit, projectID: UUID, worktreeID: UUID, worktreePath: String)
+    case gitCommitStart
+    case gitCommitSelectAll
+    case gitCommitSelectFile(String, selected: Bool)
+    case gitCommitMessageMode(GitCommitMessageMode)
     case gitPreviewPlaceholder(String)
     case attach
     case runScript(KajiKitScript)
@@ -104,6 +108,14 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "git-checkout:\(branch)"
         case let .gitCommitDiff(commit, projectID, worktreeID, worktreePath):
             "git-commit-diff:\(projectID.uuidString):\(worktreeID.uuidString):\(worktreePath):\(commit.hash)"
+        case .gitCommitStart:
+            "git-commit-start"
+        case .gitCommitSelectAll:
+            "git-commit-all"
+        case let .gitCommitSelectFile(path, selected):
+            "git-commit-file:\(path):\(selected)"
+        case let .gitCommitMessageMode(mode):
+            "git-commit-mode:\(mode.rawValue)"
         case let .gitPreviewPlaceholder(text):
             "git-preview:\(text)"
         case .attach:

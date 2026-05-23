@@ -5,6 +5,7 @@ enum GitPaletteCommand: String, CaseIterable, Hashable {
     case branch
     case switchBranch = "switch"
     case checkout
+    case commit
 
     var trigger: String {
         ":\(rawValue)"
@@ -20,6 +21,8 @@ enum GitPaletteCommand: String, CaseIterable, Hashable {
             "Switch Branch"
         case .checkout:
             "Checkout"
+        case .commit:
+            "Commit"
         }
     }
 }

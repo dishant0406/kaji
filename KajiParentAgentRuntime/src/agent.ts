@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import {
 	Agent,
 	type AgentEvent,
+	type AgentTool,
 	type ThinkingLevel,
 } from "@earendil-works/pi-agent-core";
 import {
@@ -54,13 +55,19 @@ export function createAgent(model: Model<Api>, context: RuntimeContext, pendingT
 			systemPrompt: systemPrompt(),
 			model,
 			thinkingLevel: selectedThinking(),
-			tools: agentMode() === "kajicodegraph" ? graphTools() : kajiTools(context, pendingTools),
+			tools: runtimeTools(context, pendingTools),
 		},
 		getApiKey: (provider) => resolveApiKey(provider),
 		toolExecution: "sequential",
 	});
 	agent.subscribe((event) => handleAgentEvent(event, context));
 	return agent;
+}
+
+function runtimeTools(context: RuntimeContext, pendingTools: Map<string, PendingTool>): AgentTool[] {
+	if (agentMode() === "kajicodegraph") return graphTools();
+	if (agentMode() === "kajicommit") return [];
+	return kajiTools(context, pendingTools);
 }
 
 function attachmentSummary(attachments: ProtocolAttachment[]) {

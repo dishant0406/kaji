@@ -139,6 +139,11 @@ private struct AskPaletteRow: View {
             "arrow.triangle.branch"
         case .gitCommitDiff:
             "clock"
+        case .gitCommitStart,
+             .gitCommitSelectAll,
+             .gitCommitSelectFile,
+             .gitCommitMessageMode:
+            "checkmark.circle"
         case .gitPreviewPlaceholder:
             "terminal"
         case .attach:

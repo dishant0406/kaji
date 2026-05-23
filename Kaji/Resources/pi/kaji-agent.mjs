@@ -153062,6 +153062,7 @@ function kajiTools(context, pendingTools2) {
 // KajiParentAgentRuntime/src/prompts.ts
 function systemPrompt() {
   if (agentMode() === "kajicodegraph") return graphSystemPrompt();
+  if (agentMode() === "kajicommit") return commitSystemPrompt();
   return [
     "You are Kaji's parent agent.",
     "You control Kaji by calling Kaji tools, not by inventing shell commands.",
@@ -153083,6 +153084,16 @@ function systemPrompt() {
     "Use kaji_subagent terminalOutput when finalSummary is absent or you need to inspect what is visible in the child terminal.",
     "Do not claim a child agent is done until kaji_subagent action=result reports a completed assignment with a meaningful final summary, terminal output, or changed files.",
     "Be concise and honest about what has or has not been executed."
+  ].join("\n");
+}
+function commitSystemPrompt() {
+  return [
+    "You are Kaji's commit message agent.",
+    "Generate only the Git commit message for the selected changes.",
+    "Use the user prompt inventory and native draft as the complete context.",
+    "Do not mention Kaji, parent agents, orchestration, tools, or implementation details.",
+    "Do not call tools, ask questions, inspect files, stage changes, or commit.",
+    "Answer immediately with the final commit message text."
   ].join("\n");
 }
 function graphSystemPrompt() {
@@ -153136,13 +153147,18 @@ function createAgent(model, context, pendingTools2) {
       systemPrompt: systemPrompt(),
       model,
       thinkingLevel: selectedThinking(),
-      tools: agentMode() === "kajicodegraph" ? graphTools() : kajiTools(context, pendingTools2)
+      tools: runtimeTools(context, pendingTools2)
     },
     getApiKey: (provider) => resolveApiKey2(provider),
     toolExecution: "sequential"
   });
   agent.subscribe((event) => handleAgentEvent(event, context));
   return agent;
+}
+function runtimeTools(context, pendingTools2) {
+  if (agentMode() === "kajicodegraph") return graphTools();
+  if (agentMode() === "kajicommit") return [];
+  return kajiTools(context, pendingTools2);
 }
 function attachmentSummary(attachments) {
   if (attachments.length === 0) return "";
@@ -153217,7 +153233,13 @@ async function runPrompt(message) {
   const agent = sessions.get(context.sessionID) ?? createAgent(model, context, pendingTools);
   sessions.set(context.sessionID, agent);
   await agent.prompt({ role: "user", content: promptContent(message), timestamp: Date.now() });
-  send({ type: "final_response", taskID: message.taskID, message: "Parent agent turn completed." });
+  send({ type: "final_response", taskID: message.taskID, message: lastAssistantText(agent) });
+}
+function lastAssistantText(agent) {
+  const messages = [...agent.state.messages].reverse();
+  const assistant = messages.find((message) => message.role === "assistant");
+  if (!assistant) return "";
+  return assistant.content.filter((part) => part.type === "text").map((part) => part.text).join("").trim();
 }
 function handleToolResult(message) {
   if (!message.id) return;
