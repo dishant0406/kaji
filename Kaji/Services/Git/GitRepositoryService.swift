@@ -817,6 +817,14 @@ struct GitRepositoryService {
         GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
     }
 
+    func fetch(repoPath: String) async throws {
+        let result = try await GitProcessRunner.runGit(repoPath: repoPath, arguments: ["fetch"])
+        guard result.status == 0 else {
+            throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to fetch." : result.stderr)
+        }
+        GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath)
+    }
+
     func listBranches(repoPath: String) async throws -> [String] {
         let result = try await GitProcessRunner.runGit(
             repoPath: repoPath,
@@ -834,6 +842,15 @@ struct GitRepositoryService {
     private static let allowedBranchCharacters = CharacterSet.alphanumerics
         .union(CharacterSet(charactersIn: "._/-"))
 
+    static func normalizedBranchName(_ name: String) -> String? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty,
+              !trimmedName.hasPrefix("-"),
+              trimmedName.unicodeScalars.allSatisfy({ Self.allowedBranchCharacters.contains($0) })
+        else { return nil }
+        return trimmedName
+    }
+
     func switchBranch(repoPath: String, branch: String) async throws {
         guard !branch.isEmpty,
               branch.unicodeScalars.allSatisfy({ Self.allowedBranchCharacters.contains($0) })
@@ -847,11 +864,7 @@ struct GitRepositoryService {
     }
 
     func createAndSwitchBranch(repoPath: String, name: String) async throws {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty,
-              !trimmedName.hasPrefix("-"),
-              trimmedName.unicodeScalars.allSatisfy({ Self.allowedBranchCharacters.contains($0) })
-        else {
+        guard let trimmedName = Self.normalizedBranchName(name) else {
             throw GitError.commandFailed("Invalid branch name.")
         }
         let result = try await GitProcessRunner.runGit(repoPath: repoPath, arguments: ["switch", "-c", trimmedName])

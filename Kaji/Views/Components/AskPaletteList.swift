@@ -131,6 +131,12 @@ private struct AskPaletteRow: View {
         case .diffFile,
              .openDiffSummary:
             "file.diff"
+        case .gitCommand:
+            "terminal"
+        case .gitBranch,
+             .gitSwitchBranch,
+             .gitCheckoutBranch:
+            "arrow.triangle.branch"
         case .attach:
             "paperclip"
         case .runScript,

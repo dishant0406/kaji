@@ -24,6 +24,10 @@ enum AskPaletteAction: Hashable {
     case directory(AskDirectoryOption)
     case diffFile(DiffPaletteFile)
     case openDiffSummary(projectID: UUID, worktreeID: UUID, worktreePath: String)
+    case gitCommand(GitCommandRequest)
+    case gitBranch(name: String, isCurrent: Bool)
+    case gitSwitchBranch(String)
+    case gitCheckoutBranch(String)
     case attach
     case runScript(KajiKitScript)
     case openScriptForm(KajiKitScript?)
@@ -88,6 +92,14 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "diff-file:\(file.id)"
         case let .openDiffSummary(projectID, worktreeID, worktreePath):
             "diff-summary:\(projectID.uuidString):\(worktreeID.uuidString):\(worktreePath)"
+        case let .gitCommand(request):
+            "git-command:\(request.id)"
+        case let .gitBranch(name, isCurrent):
+            "git-branch:\(name):\(isCurrent)"
+        case let .gitSwitchBranch(branch):
+            "git-switch:\(branch)"
+        case let .gitCheckoutBranch(branch):
+            "git-checkout:\(branch)"
         case .attach:
             "attach"
         case let .runScript(script):

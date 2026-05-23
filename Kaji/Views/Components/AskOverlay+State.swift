@@ -29,6 +29,9 @@ extension AskOverlay {
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             diffFiles: diffFiles,
+            gitBranches: gitBranches,
+            currentGitBranch: currentGitBranch,
+            isLoadingGitBranches: isLoadingGitBranches,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName,
             sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
@@ -184,6 +187,9 @@ extension AskOverlay {
             }
             return "Enter applies. Shift Enter adds project for /add-project. Esc closes."
         }
+        if isGitCommandMode {
+            return "Enter runs in the active worktree. Esc closes."
+        }
         if isBookmarkFolderPickerVisible {
             return "Enter chooses an existing folder. Shift Enter creates/uses the typed folder. Esc closes."
         }
@@ -224,6 +230,7 @@ extension AskOverlay {
         refreshMentionOptions()
         refreshDirectoryOptions()
         refreshDiffFiles()
+        refreshGitBranches()
         guard !isBookmarkFolderPickerVisible else {
             highlightedIndex = entries.isEmpty ? nil : 0
             return

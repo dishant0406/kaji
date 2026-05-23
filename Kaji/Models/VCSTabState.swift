@@ -445,6 +445,7 @@ final class VCSTabState {
                 branchName = name
                 commits = []
                 showStatus("Switched to \(name)", isError: false)
+                notifyRepoDidChange()
                 performRefresh(incremental: false)
             } catch {
                 guard !Task.isCancelled else { return }
@@ -466,6 +467,7 @@ final class VCSTabState {
                 branchName = trimmed
                 commits = []
                 showStatus("Created and switched to \(trimmed)", isError: false)
+                notifyRepoDidChange()
                 loadBranches()
                 performRefresh(incremental: false)
             } catch {
@@ -1002,6 +1004,7 @@ final class VCSTabState {
             try await git.switchBranch(repoPath: projectPath, branch: name)
             branchName = name
             commits = []
+            notifyRepoDidChange()
             performRefresh(incremental: false)
         } catch {
             showStatus(errorText(error), isError: true)
@@ -1025,6 +1028,10 @@ final class VCSTabState {
         } else {
             ToastState.shared.show(message)
         }
+    }
+
+    private func notifyRepoDidChange() {
+        NotificationCenter.default.post(name: .vcsRepoDidChange, object: nil, userInfo: ["repoPath": projectPath])
     }
 
     private func errorText(_ error: Error) -> String {

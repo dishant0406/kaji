@@ -20,6 +20,9 @@ struct AskPaletteContext {
     let mentionOptions: [AskMentionOption]
     let directoryOptions: [AskDirectoryOption]
     let diffFiles: [DiffPaletteFile]
+    let gitBranches: [String]
+    let currentGitBranch: String?
+    let isLoadingGitBranches: Bool
     let projectName: String
     let worktreeName: String
     let sleepPreventionIsEnabled: Bool
@@ -47,6 +50,9 @@ struct AskPaletteContext {
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
         diffFiles: [DiffPaletteFile] = [],
+        gitBranches: [String] = [],
+        currentGitBranch: String? = nil,
+        isLoadingGitBranches: Bool = false,
         projectName: String,
         worktreeName: String,
         sleepPreventionIsEnabled: Bool = false,
@@ -73,6 +79,9 @@ struct AskPaletteContext {
         self.mentionOptions = mentionOptions
         self.directoryOptions = directoryOptions
         self.diffFiles = diffFiles
+        self.gitBranches = gitBranches
+        self.currentGitBranch = currentGitBranch
+        self.isLoadingGitBranches = isLoadingGitBranches
         self.projectName = projectName
         self.worktreeName = worktreeName
         self.sleepPreventionIsEnabled = sleepPreventionIsEnabled

@@ -75,12 +75,6 @@ struct PaneTabStrip: View {
 
             if showsTrailingActions {
                 HStack(spacing: 0) {
-                    if isWindowTitleBar, let version = UpdateService.shared.availableUpdateVersion {
-                        UpdateBadge(version: version) {
-                            UpdateService.shared.checkForUpdates()
-                        }
-                        .padding(.trailing, 4)
-                    }
                     if showVCSButton {
                         IconButton(symbol: "magnifyingglass", size: 12, accessibilityLabel: "Quick Open") {
                             NotificationCenter.default.post(name: .quickOpen, object: nil)
@@ -118,37 +112,45 @@ struct PaneTabStrip: View {
         let perTabWidth = max(TabCell.minWidth, min(TabCell.maxWidth, perTabIdeal))
 
         return HStack(spacing: 0) {
-            ReorderableHStack(tabs, onMove: { source, destination in
-                onReorderTab(
-                    IndexSet(integer: source),
-                    destination
-                )
-            }, onDragStateChange: { dragging in
-                isReordering = dragging
-            }, externalCoordinateSpaceName: DragCoordinateSpace.mainWindow, onExternalDragChanged: { tab, value in
-                handleExternalDragChanged(tab: tab, value: value)
-            }, onExternalDragEnded: { tab, value in
-                handleExternalDragEnded(tab: tab, value: value)
-            }) { tab, isDragged in
-                let index = tabs.firstIndex(where: { $0.id == tab.id }) ?? 0
-                TabCell(
-                    tab: tab,
-                    active: tab.id == activeTabID,
-                    paneFocused: isFocused,
-                    hasUnread: notificationStore.hasUnread(tabID: tab.id),
-                    isAnyDragging: isReordering,
-                    shortcutIndex: index < 9 ? index + 1 : nil,
-                    onSelect: { onSelectTab(tab.id) },
-                    onClose: { onCloseTab(tab.id) },
-                    onCreateLeft: { onCreateTabAdjacent(tab.id, .left) },
-                    onCreateRight: { onCreateTabAdjacent(tab.id, .right) },
-                    onTogglePin: { onTogglePin(tab.id) },
-                    onSetCustomTitle: { onSetCustomTitle(tab.id, $0) },
-                    onSetColorID: { onSetColorID(tab.id, $0) }
-                )
-                .frame(width: perTabWidth)
-                .opacity(isDragged ? 0.92 : 1)
-            }
+            ReorderableHStack(
+                tabs,
+                onMove: { source, destination in
+                    onReorderTab(
+                        IndexSet(integer: source),
+                        destination
+                    )
+                },
+                onDragStateChange: { dragging in
+                    isReordering = dragging
+                },
+                externalCoordinateSpaceName: DragCoordinateSpace.mainWindow,
+                onExternalDragChanged: { tab, value in
+                    handleExternalDragChanged(tab: tab, value: value)
+                },
+                onExternalDragEnded: { tab, value in
+                    handleExternalDragEnded(tab: tab, value: value)
+                },
+                content: { tab, isDragged in
+                    let index = tabs.firstIndex(where: { $0.id == tab.id }) ?? 0
+                    TabCell(
+                        tab: tab,
+                        active: tab.id == activeTabID,
+                        paneFocused: isFocused,
+                        hasUnread: notificationStore.hasUnread(tabID: tab.id),
+                        isAnyDragging: isReordering,
+                        shortcutIndex: index < 9 ? index + 1 : nil,
+                        onSelect: { onSelectTab(tab.id) },
+                        onClose: { onCloseTab(tab.id) },
+                        onCreateLeft: { onCreateTabAdjacent(tab.id, .left) },
+                        onCreateRight: { onCreateTabAdjacent(tab.id, .right) },
+                        onTogglePin: { onTogglePin(tab.id) },
+                        onSetCustomTitle: { onSetCustomTitle(tab.id, $0) },
+                        onSetColorID: { onSetColorID(tab.id, $0) }
+                    )
+                    .frame(width: perTabWidth)
+                    .opacity(isDragged ? 0.92 : 1)
+                }
+            )
 
             TabAddButton(action: onCreateTab)
                 .frame(width: addButtonWidth, height: 36, alignment: .center)
@@ -160,7 +162,7 @@ struct PaneTabStrip: View {
     }
 
     private var showsTrailingActions: Bool {
-        showVCSButton || showSettingsButton || (isWindowTitleBar && UpdateService.shared.availableUpdateVersion != nil)
+        showVCSButton || showSettingsButton
     }
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {

@@ -69,16 +69,21 @@ struct Sidebar: View {
     private var projectList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: expanded ? 4 : 6) {
-                ReorderableVStack(projectStore.projects, onMove: { source, destination in
-                    projectStore.reorder(
-                        fromOffsets: IndexSet(integer: source),
-                        toOffset: destination
-                    )
-                }, onDragStateChange: { dragging in
-                    isReordering = dragging
-                }) { project, isDragged in
-                    projectRow(project, isDragged: isDragged)
-                }
+                ReorderableVStack(
+                    projectStore.projects,
+                    onMove: { source, destination in
+                        projectStore.reorder(
+                            fromOffsets: IndexSet(integer: source),
+                            toOffset: destination
+                        )
+                    },
+                    onDragStateChange: { dragging in
+                        isReordering = dragging
+                    },
+                    content: { project, isDragged in
+                        projectRow(project, isDragged: isDragged)
+                    }
+                )
                 addButton
                 if parentAgentEnabled {
                     parentAgentButton
@@ -154,138 +159,5 @@ struct Sidebar: View {
         appState.removeProject(project.id)
         projectStore.remove(id: project.id)
         worktreeStore.removeProject(project.id)
-    }
-
-}
-
-struct SidebarFooter: View {
-    var expanded: Bool = false
-    @Environment(AppState.self) private var appState
-    @Environment(ProjectStore.self) private var projectStore
-    @Environment(WorktreeStore.self) private var worktreeStore
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
-    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
-    @State private var showThemePicker = false
-    @State private var showNotifications = false
-    @State private var showAgents = false
-    @State private var runStore = AgentRunStore.shared
-    @State private var notificationStore = NotificationStore.shared
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if expanded {
-                expandedFooter
-            } else {
-                collapsedFooter
-            }
-        }
-        .coordinateSpace(name: "sidebar-footer")
-        .onReceive(NotificationCenter.default.publisher(for: .toggleThemePicker)) { _ in
-            showThemePicker.toggle()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .toggleNotificationPanel)) { _ in
-            showNotifications.toggle()
-        }
-    }
-
-    private func postToggleSidebar() {
-        NotificationCenter.default.post(name: .toggleSidebar, object: nil)
-    }
-
-    private var sidebarToggleLabel: String {
-        expanded ? "Collapse Sidebar" : "Expand Sidebar"
-    }
-
-    private var notificationBellIcon: String {
-        notificationStore.unreadCount > 0 ? "bell.badge" : "bell"
-    }
-
-    private var agentItems: [AgentMissionControlItem] {
-        _ = notificationStore.readStateVersion
-        return AgentRunMissionControlSnapshotBuilder.items(
-            runs: runStore.runs,
-            notifications: notificationStore.notifications,
-            projects: projectStore.projects,
-            worktrees: worktreeStore.worktrees
-        )
-    }
-
-    private var agentsButton: some View {
-        AgentMissionControlButton(items: agentItems, expanded: expanded) { showAgents.toggle() }
-            .help("Agents")
-            .kajiPopover(isPresented: $showAgents, preferredEdge: .top) {
-                AgentMissionControlPanel(onDismiss: { showAgents = false })
-            }
-    }
-
-    private var collapsedFooter: some View {
-        VStack(spacing: 6) {
-            agentsButton
-            IconButton(symbol: notificationBellIcon, accessibilityLabel: "Notifications") { showNotifications.toggle() }
-                .help("Notifications")
-                .kajiPopover(isPresented: $showNotifications, preferredEdge: .top) {
-                    NotificationPanel(onDismiss: { showNotifications = false })
-                }
-            IconButton(symbol: "paintbrush", accessibilityLabel: "Theme Picker") { showThemePicker.toggle() }
-                .help("Theme Picker (\(KeyBindingStore.shared.combo(for: .toggleThemePicker).displayString))")
-                .kajiPopover(isPresented: $showThemePicker, preferredEdge: .top) {
-                    ThemePicker(
-                        onRequestCreate: {
-                            showThemePicker = false
-                            NotificationCenter.default.post(name: .requestCreateThemeModal, object: nil)
-                        },
-                        onDismiss: { showThemePicker = false }
-                    )
-                }
-            SidebarToggleButton(expanded: expanded, accessibilityLabel: sidebarToggleLabel) { postToggleSidebar() }
-                .help("\(sidebarToggleLabel) (\(KeyBindingStore.shared.combo(for: .toggleSidebar).displayString))")
-        }
-        .padding(.top, 10)
-        .padding(.bottom, 2)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(KajiTheme.border)
-                .frame(height: 1)
-        }
-    }
-
-    private var expandedFooter: some View {
-        HStack(spacing: 6) {
-            SidebarToggleButton(expanded: expanded, accessibilityLabel: sidebarToggleLabel) { postToggleSidebar() }
-                .help("\(sidebarToggleLabel) (\(KeyBindingStore.shared.combo(for: .toggleSidebar).displayString))")
-
-            Spacer()
-
-            agentsButton
-            IconButton(symbol: notificationBellIcon, accessibilityLabel: "Notifications") { showNotifications.toggle() }
-                .help("Notifications")
-                .kajiPopover(isPresented: $showNotifications, preferredEdge: .top) {
-                    NotificationPanel(onDismiss: { showNotifications = false })
-                }
-            IconButton(symbol: "paintbrush", accessibilityLabel: "Theme Picker") { showThemePicker.toggle() }
-                .help("Theme Picker (\(KeyBindingStore.shared.combo(for: .toggleThemePicker).displayString))")
-                .kajiPopover(isPresented: $showThemePicker, preferredEdge: .top) {
-                    ThemePicker(
-                        onRequestCreate: {
-                            showThemePicker = false
-                            NotificationCenter.default.post(name: .requestCreateThemeModal, object: nil)
-                        },
-                        onDismiss: { showThemePicker = false }
-                    )
-                }
-        }
-        .padding(.horizontal, 10)
-        .frame(height: KajiLayout.footerBarHeight)
-        .background(
-            SidebarBackgroundSurface(
-                transparencyEnabled: sidebarTransparencyEnabled,
-                transparencyAmount: interfaceTransparencyAmount
-            )
-        )
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(KajiTheme.border)
-                .frame(height: 1)
-        }
     }
 }

@@ -14,6 +14,7 @@ enum AskSubmitPolicy {
     static func shouldApplyHighlightedEntry(key: AskAnnotationKey) -> Bool {
         switch key {
         case .bookmark,
+             .bookmarkFolder,
              .diff:
             true
         case .project,
@@ -31,8 +32,7 @@ enum AskSubmitPolicy {
              .execute,
              .executeAdd,
              .executeEdit,
-             .executeDelete,
-             .bookmarkFolder:
+             .executeDelete:
             false
         }
     }

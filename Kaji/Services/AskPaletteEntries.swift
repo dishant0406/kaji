@@ -102,6 +102,9 @@ enum AskPaletteEntries {
         if AskMentionParser.activeMention(in: context.fieldText) != nil {
             return mentionEntries(context.mentionOptions)
         }
+        if let gitState = GitCommandParser.state(for: context.fieldText) {
+            return AskGitPaletteEntries.build(state: gitState, context: context)
+        }
         if let active = parsed.activeAnnotation {
             return annotationEntries(.init(
                 active: active,

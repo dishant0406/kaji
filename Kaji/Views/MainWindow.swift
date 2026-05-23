@@ -966,13 +966,9 @@ struct MainWindow: View {
 
     private var topBarActions: some View {
         HStack(spacing: 0) {
-            if let version = UpdateService.shared.availableUpdateVersion {
-                UpdateBadge(version: version) {
-                    UpdateService.shared.checkForUpdates()
-                }
-                .padding(.trailing, 4)
-            }
             if let project = activeProject {
+                TopBarBranchPicker()
+                    .padding(.trailing, 4)
                 FileDiffIconButton {
                     openVCS(for: project)
                 }
