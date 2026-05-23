@@ -43,6 +43,36 @@ struct MarkdownSyncCoordinatorTests {
         #expect(echo.isEmpty)
     }
 
+    @Test("suppresses delayed preview echo near the issued target")
+    @MainActor
+    func suppressDelayedPreviewEcho() {
+        var time: TimeInterval = 0
+        let coordinator = MarkdownSyncCoordinator(now: { time })
+        let map = makeMap()
+
+        let firstOutput = coordinator.editorDidScroll(scrollY: 100, map: map)
+        let echoTarget = firstOutput.requestPreviewScrollTop ?? 0
+
+        time = 0.8
+        let echo = coordinator.previewDidScroll(scrollTop: echoTarget + 1, map: map)
+        #expect(echo.isEmpty)
+    }
+
+    @Test("accepts delayed preview movement beyond the issued target")
+    @MainActor
+    func acceptsDelayedPreviewMovement() {
+        var time: TimeInterval = 0
+        let coordinator = MarkdownSyncCoordinator(now: { time })
+        let map = makeMap()
+
+        let firstOutput = coordinator.editorDidScroll(scrollY: 100, map: map)
+        let echoTarget = firstOutput.requestPreviewScrollTop ?? 0
+
+        time = 0.8
+        let movement = coordinator.previewDidScroll(scrollTop: echoTarget + 24, map: map)
+        #expect(movement.requestEditorScrollY != nil)
+    }
+
     @Test("accepts later preview update outside suppression window")
     @MainActor
     func acceptsAfterWindow() {
@@ -66,6 +96,26 @@ struct MarkdownSyncCoordinatorTests {
         _ = coordinator.editorDidScroll(scrollY: 50, map: map)
         let output = coordinator.reissueAfterRelayout(map: map)
         #expect(output.requestPreviewScrollTop != nil)
+    }
+
+    @Test("relayout does not reissue stale editor target while preview is actively scrolling")
+    @MainActor
+    func relayoutDoesNotFightActivePreviewScroll() {
+        var time: TimeInterval = 0
+        let coordinator = MarkdownSyncCoordinator(now: { time })
+        let map = makeMap()
+
+        let firstOutput = coordinator.editorDidScroll(scrollY: 100, map: map)
+        let echoTarget = firstOutput.requestPreviewScrollTop ?? 0
+
+        time = 0.05
+        _ = coordinator.previewDidScroll(scrollTop: echoTarget, map: map)
+        let activeRelayout = coordinator.reissueAfterRelayout(map: map)
+        #expect(activeRelayout.isEmpty)
+
+        time = 0.5
+        let laterRelayout = coordinator.reissueAfterRelayout(map: map)
+        #expect(laterRelayout.requestPreviewScrollTop != nil)
     }
 
     private func makeMap() -> MarkdownSyncMap {

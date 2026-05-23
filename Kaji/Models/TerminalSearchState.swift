@@ -1,9 +1,10 @@
-import Combine
 import Foundation
 
 @MainActor
 @Observable
 final class TerminalSearchState {
+    typealias Delay = (Duration) async -> Void
+
     var needle: String = ""
     var total: Int?
     var selected: Int?
@@ -16,30 +17,54 @@ final class TerminalSearchState {
         return "\(selected) of \(total)"
     }
 
-    private var needleCancellable: AnyCancellable?
-    private var needleSubject = PassthroughSubject<String, Never>()
+    private let delay: Delay
+    private var publishTask: Task<Void, Never>?
+    private var lastPushedNeedle: String?
+    private var sendNeedle: ((String) -> Void)?
+
+    init(delay: @escaping Delay = TerminalSearchState.sleep) {
+        self.delay = delay
+    }
 
     func startPublishing(send: @escaping (String) -> Void) {
-        needleCancellable = needleSubject
-            .removeDuplicates()
-            .map { needle -> AnyPublisher<String, Never> in
-                if needle.isEmpty {
-                    return Just(needle).eraseToAnyPublisher()
-                }
-                let delay = needle.count >= 3 ? 120 : 300
-                return Just(needle)
-                    .delay(for: .milliseconds(delay), scheduler: DispatchQueue.main)
-                    .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .sink { send($0) }
+        publishTask?.cancel()
+        publishTask = nil
+        lastPushedNeedle = nil
+        sendNeedle = send
     }
 
     func pushNeedle() {
-        needleSubject.send(needle)
+        let nextNeedle = needle
+        guard nextNeedle != lastPushedNeedle else { return }
+
+        lastPushedNeedle = nextNeedle
+        publishTask?.cancel()
+
+        guard !nextNeedle.isEmpty else {
+            sendNeedle?(nextNeedle)
+            return
+        }
+
+        let delay = publishDelay(for: nextNeedle)
+        publishTask = Task { [delay, nextNeedle] in
+            await self.delay(delay)
+            guard !Task.isCancelled else { return }
+            self.sendNeedle?(nextNeedle)
+        }
     }
 
     func stopPublishing() {
-        needleCancellable = nil
+        publishTask?.cancel()
+        publishTask = nil
+        sendNeedle = nil
+        lastPushedNeedle = nil
+    }
+
+    private func publishDelay(for needle: String) -> Duration {
+        needle.count >= 3 ? .milliseconds(120) : .milliseconds(300)
+    }
+
+    private static func sleep(for duration: Duration) async {
+        try? await Task.sleep(for: duration)
     }
 }

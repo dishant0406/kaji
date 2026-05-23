@@ -87,8 +87,8 @@ final class EditorTabState: Identifiable {
 
     var markdownPreviewScrollRequestVersion: Int = 0
     var markdownPreviewScrollRequest: CGFloat?
-    var markdownEditorScrollRequestVersion: Int = 0
-    var markdownEditorScrollRequestY: CGFloat?
+    @ObservationIgnored var markdownEditorScrollRequestVersion: Int = 0
+    @ObservationIgnored var markdownEditorScrollRequestY: CGFloat?
 
     @ObservationIgnored var markdownEditorScrollY: CGFloat = 0
     @ObservationIgnored var markdownEditorViewportHeight: CGFloat = 0
@@ -310,9 +310,12 @@ final class EditorTabState: Identifiable {
             markdownPreviewScrollRequestVersion += 1
         }
         if let scrollY = output.requestEditorScrollY {
-            markdownScrollDriver = .preview
+            if markdownScrollDriver != .preview {
+                markdownScrollDriver = .preview
+            }
             markdownEditorScrollRequestY = scrollY
             markdownEditorScrollRequestVersion += 1
+            MarkdownEditorScrollBus.publish(tabID: id, scrollY: scrollY)
         }
     }
 

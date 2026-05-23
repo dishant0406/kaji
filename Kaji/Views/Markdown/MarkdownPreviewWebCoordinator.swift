@@ -1,25 +1,37 @@
 import AppKit
 import WebKit
 
-final class MarkdownPreviewWebCoordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
-    let schemeHandler = MarkdownPreviewSchemeHandler(resourceRoot: MarkdownPreviewResourceLoader.resourceRoot)
-    weak var webView: WKWebView?
-    private let onMetrics: (MarkdownPreviewMetrics) -> Void
-    private let onScroll: (CGFloat) -> Void
-    private var ready = false
-    private var pendingPayload: MarkdownPreviewPayload?
-    private var lastPayload: MarkdownPreviewPayload?
-    private var lastScrollRequestVersion = 0
+final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, MarkdownPreviewMessageTarget {
+    static let messageNames = ["markdownShellReady", "markdownReady", "markdownMetrics", "markdownScroll"]
 
-    init(onMetrics: @escaping (MarkdownPreviewMetrics) -> Void, onScroll: @escaping (CGFloat) -> Void) {
-        self.onMetrics = onMetrics
-        self.onScroll = onScroll
+    let schemeHandler: MarkdownPreviewURLSchemeHandler
+    private let userContentController: WKUserContentController
+    private var proxies: [MarkdownPreviewMessageProxy] = []
+    private weak var webView: WKWebView?
+    private var ready = false
+    private var lastPayload: MarkdownPreviewPayload?
+    private var pendingPayload: MarkdownPreviewPayload?
+    private var lastScrollRequestVersion = 0
+    var onReady: () -> Void = {}
+    var onMetrics: (MarkdownPreviewMetrics) -> Void = { _ in }
+    var onScroll: (CGFloat) -> Void = { _ in }
+
+    init(userContentController: WKUserContentController, schemeHandler: MarkdownPreviewURLSchemeHandler) {
+        self.userContentController = userContentController
+        self.schemeHandler = schemeHandler
+        super.init()
+        installHandlers()
     }
 
-    func installHandlers(on controller: WKUserContentController) {
-        for item in ["markdownShellReady", "markdownReady", "markdownMetrics", "markdownScroll"] {
-            controller.add(self, name: item)
-        }
+    func bind(webView: WKWebView) {
+        self.webView = webView
+        webView.navigationDelegate = self
+    }
+
+    func resetForReuse() {
+        lastPayload = nil
+        pendingPayload = nil
+        lastScrollRequestVersion = 0
     }
 
     func update(payload: MarkdownPreviewPayload, scrollRequestVersion: Int, scrollRequest: CGFloat?) {
@@ -34,14 +46,14 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKScriptMessageHandler, WKN
         evaluate("window.KajiMarkdownPreview&&window.KajiMarkdownPreview.scrollTo(\(scrollRequest));")
     }
 
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    func receiveMarkdownPreviewMessage(_ message: WKScriptMessage) {
         switch message.name {
         case "markdownShellReady":
             ready = true
-            if let pendingPayload {
-                self.pendingPayload = nil
-                render(pendingPayload)
-            }
+            pendingPayload.map(render)
+            pendingPayload = nil
+        case "markdownReady":
+            onReady()
         case "markdownMetrics":
             decode(message.body, as: MarkdownPreviewMetrics.self).map(onMetrics)
         case "markdownScroll":
@@ -58,7 +70,10 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKScriptMessageHandler, WKN
         decidePolicyFor action: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
-        guard action.targetFrame?.isMainFrame == true, let url = action.request.url, url.scheme?.hasPrefix("http") == true else {
+        guard action.targetFrame?.isMainFrame == true,
+              let url = action.request.url,
+              url.scheme?.hasPrefix("http") == true
+        else {
             decisionHandler(.allow)
             return
         }
@@ -66,14 +81,31 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKScriptMessageHandler, WKN
         decisionHandler(.cancel)
     }
 
+    func dispose() {
+        Self.messageNames.forEach(userContentController.removeScriptMessageHandler(forName:))
+        webView?.navigationDelegate = nil
+        webView?.stopLoading()
+        webView = nil
+        proxies.removeAll()
+        onReady = {}
+        onMetrics = { _ in }
+        onScroll = { _ in }
+    }
+
+    private func installHandlers() {
+        proxies = Self.messageNames.map { name in
+            let proxy = MarkdownPreviewMessageProxy(target: self)
+            userContentController.add(proxy, name: name)
+            return proxy
+        }
+    }
+
     private func render(_ payload: MarkdownPreviewPayload) {
         guard ready else {
             pendingPayload = payload
             return
         }
-        guard let data = try? JSONEncoder().encode(payload),
-              let json = String(data: data, encoding: .utf8)
-        else { return }
+        guard let json = MarkdownPreviewAssetStore.javaScriptLiteral(payload) else { return }
         evaluate("window.KajiMarkdownPreview.render(\(json));")
     }
 

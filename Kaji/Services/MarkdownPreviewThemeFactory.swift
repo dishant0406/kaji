@@ -1,9 +1,9 @@
 import AppKit
 import Foundation
 
-enum MarkdownPreviewThemeBuilder {
+enum MarkdownPreviewThemeFactory {
     @MainActor
-    static func current() -> MarkdownPreviewTheme {
+    static func theme() -> MarkdownPreviewTheme {
         MarkdownPreviewTheme(
             bg: hex(KajiTheme.nsBg),
             fg: hex(GhosttyService.shared.foregroundColor),
@@ -13,6 +13,15 @@ enum MarkdownPreviewThemeBuilder {
             border: hex(mix(KajiTheme.nsBg, GhosttyService.shared.foregroundColor, amount: 0.18)),
             accent: hex(GhosttyService.shared.accentColor),
             soft: hex(mix(KajiTheme.nsBg, GhosttyService.shared.accentColor, amount: 0.16))
+        )
+    }
+
+    @MainActor
+    static func typography(_ settings: AppTypographySettings) -> MarkdownPreviewTypography {
+        MarkdownPreviewTypography(
+            fontFamily: settings.fontFamily,
+            fontSize: settings.fontSize,
+            lineHeight: 1.58
         )
     }
 
