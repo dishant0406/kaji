@@ -16,6 +16,8 @@ struct ShortcutReferenceCatalogTests {
         #expect(tokens.contains(":h:"))
         #expect(tokens.contains(":t:"))
         #expect(tokens.contains(":pa:"))
+        #expect(tokens.contains(":git"))
+        #expect(tokens.contains(":switch"))
         #expect(tokens.contains("/session"))
         #expect(tokens.contains("/bookmark"))
         #expect(tokens.contains("/lid"))

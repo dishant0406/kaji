@@ -69,6 +69,11 @@ struct AskSubmitPolicyTests {
     }
 
     @Test
+    func bookmarkFolderAnnotationAppliesHighlightedEntry() {
+        #expect(AskSubmitPolicy.shouldApplyHighlightedEntry(key: .bookmarkFolder))
+    }
+
+    @Test
     func historyAnnotationDoesNotApplyHighlightedEntry() {
         #expect(!AskSubmitPolicy.shouldApplyHighlightedEntry(key: .history))
     }

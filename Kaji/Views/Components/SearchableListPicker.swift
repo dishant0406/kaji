@@ -5,6 +5,9 @@ struct SearchableListPicker<Item: Identifiable, RowContent: View>: View {
     let filterKey: (Item) -> String
     let placeholder: String
     let emptyLabel: String
+    let emptyActionTitle: ((String) -> String?)?
+    let emptyActionDetail: String?
+    let onEmptyAction: ((String) -> Void)?
     let onSelect: (Item) -> Void
     @ViewBuilder let row: (Item, Bool) -> RowContent
 
@@ -38,10 +41,7 @@ struct SearchableListPicker<Item: Identifiable, RowContent: View>: View {
             Divider().overlay(KajiTheme.border)
 
             if filteredItems.isEmpty {
-                Text(emptyLabel)
-                    .kajiFont(size: 12)
-                    .foregroundStyle(KajiTheme.fgMuted)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyContent
             } else {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: false) {
@@ -85,7 +85,58 @@ struct SearchableListPicker<Item: Identifiable, RowContent: View>: View {
 
     private func confirmSelection() {
         let list = filteredItems
-        guard let index = highlightedIndex, index < list.count else { return }
+        guard let index = highlightedIndex, index < list.count else {
+            confirmEmptyAction()
+            return
+        }
         onSelect(list[index])
+    }
+
+    @ViewBuilder
+    private var emptyContent: some View {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let title = emptyActionTitle?(query), !query.isEmpty {
+            Button {
+                onEmptyAction?(query)
+            } label: {
+                HStack(spacing: 10) {
+                    KajiIcon(systemName: "plus", size: 12)
+                        .foregroundStyle(KajiTheme.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .kajiFont(size: 12, weight: .medium)
+                            .foregroundStyle(KajiTheme.fg)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        if let emptyActionDetail {
+                            Text(emptyActionDetail)
+                                .kajiFont(size: 11)
+                                .foregroundStyle(KajiTheme.fgMuted)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 4)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(KajiTheme.surface, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
+            }
+            .buttonStyle(.plain)
+            .kajiPointer()
+            Spacer(minLength: 0)
+        } else {
+            Text(emptyLabel)
+                .kajiFont(size: 12)
+                .foregroundStyle(KajiTheme.fgMuted)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func confirmEmptyAction() {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, emptyActionTitle?(query) != nil else { return }
+        onEmptyAction?(query)
     }
 }

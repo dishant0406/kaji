@@ -80,12 +80,40 @@ struct AskPaletteFeatureTests {
         #expect(entries[1].annotation == "M +2 -1")
     }
 
+    @Test
+    func gitCommandShowsRunnableEntry() {
+        let entries = AskPaletteEntries.build(context(fieldText: ":git fetch"))
+
+        #expect(entries.first?.action == .gitCommand(GitCommandParser.request(command: .git, input: "fetch")))
+        #expect(entries.first?.title == "git fetch")
+    }
+
+    @Test
+    func switchCommandShowsFilteredBranches() {
+        let entries = AskPaletteEntries.build(context(fieldText: ":switch mai", gitBranches: ["main", "feature/test"]))
+
+        #expect(entries.count == 1)
+        #expect(entries.first?.action == .gitSwitchBranch("main"))
+    }
+
+    @Test
+    func bookmarkFolderSelectionMovesToBookmarkList() {
+        let entries = AskPaletteEntries.build(context(
+            fieldText: ":bf:Age",
+            bookmarkFolders: ["Agents"]
+        ))
+
+        #expect(entries.first?.action == .bookmarkFolderFilter("Agents"))
+    }
+
     private func context(
         fieldText: String,
         taskRecipes: [AskTaskRecipe] = [],
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
-        diffFiles: [DiffPaletteFile] = []
+        diffFiles: [DiffPaletteFile] = [],
+        bookmarkFolders: [String] = [],
+        gitBranches: [String] = []
     ) -> AskPaletteContext {
         AskPaletteContext(
             fieldText: fieldText,
@@ -98,9 +126,12 @@ struct AskPaletteFeatureTests {
             historyOptions: [],
             skillOptions: [],
             taskRecipes: taskRecipes,
+            bookmarkFolders: bookmarkFolders,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             diffFiles: diffFiles,
+            gitBranches: gitBranches,
+            currentGitBranch: "main",
             projectName: "muxy",
             worktreeName: "main"
         )

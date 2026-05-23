@@ -44,6 +44,14 @@ extension AskOverlay {
             confirmPendingScript()
             return
         }
+        if pendingGitCommand != nil {
+            confirmPendingGitCommand()
+            return
+        }
+        if GitCommandParser.state(for: latestFieldText) != nil {
+            confirmHighlight()
+            return
+        }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
         fieldText = latestFieldText
         prompt = parsed.prompt
@@ -216,7 +224,7 @@ extension AskOverlay {
         case let .savedBookmark(bookmark):
             resumeBookmark(bookmark)
         case let .bookmarkFolderFilter(folder):
-            applyAnnotationSelection(value: folder)
+            applyBookmarkFolderFilter(folder)
         case let .history(history):
             applyAnnotationSelection(value: history.sessionID)
         case let .skill(skill):
@@ -239,6 +247,15 @@ extension AskOverlay {
             openDiffFile(file)
         case let .openDiffSummary(projectID, worktreeID, worktreePath):
             openDiffSummary(projectID: projectID, worktreeID: worktreeID, worktreePath: worktreePath)
+        case let .gitCommand(request):
+            runGitCommand(request)
+        case let .gitBranch(name, _):
+            fieldText = "\(GitPaletteCommand.switchBranch.trigger) \(name)"
+            highlightedIndex = entries.isEmpty ? nil : 0
+        case let .gitSwitchBranch(branch):
+            runGitCommand(GitCommandParser.request(command: .switchBranch, input: branch))
+        case let .gitCheckoutBranch(branch):
+            runGitCommand(GitCommandParser.request(command: .checkout, input: branch))
         case .attach:
             attachments.append(contentsOf: AskAttachmentLoader.openPanel())
         case let .runScript(script):
@@ -307,6 +324,12 @@ extension AskOverlay {
         guard !pendingBookmarkCandidates.isEmpty else { return }
         bookmarkStore.save(pendingBookmarkCandidates, folderName: folderName)
         onDismiss()
+    }
+
+    func applyBookmarkFolderFilter(_ folder: String) {
+        fieldText = "\(AskAnnotationKey.bookmarkFolder.token)\(folder) \(AskAnnotationKey.bookmark.token)"
+        prompt = AskInlineAnnotations.parse(fieldText).prompt
+        highlightedIndex = entries.isEmpty ? nil : 0
     }
 
     func resumeBookmark(_ bookmark: AgentSessionBookmark) {
@@ -576,6 +599,9 @@ extension AskOverlay {
             bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
+            gitBranches: gitBranches,
+            currentGitBranch: currentGitBranch,
+            isLoadingGitBranches: isLoadingGitBranches,
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName,
             sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
@@ -629,6 +655,10 @@ extension AskOverlay {
              .bookmarkFolder,
              .createBookmarkFolder,
              .savedBookmark,
+             .gitCommand,
+             .gitBranch,
+             .gitSwitchBranch,
+             .gitCheckoutBranch,
              .runScript,
              .openScriptForm,
              .deleteScript,

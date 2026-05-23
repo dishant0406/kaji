@@ -22,11 +22,6 @@ struct AgentMissionControlButton: View {
                 HStack(spacing: 6) {
                     KajiIcon(systemName: iconName, size: 12)
                         .foregroundStyle(foreground)
-                    if expanded {
-                        Text("Agents")
-                            .kajiFont(size: 11, weight: .medium)
-                            .foregroundStyle(foreground)
-                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if !items.isEmpty {
@@ -38,7 +33,7 @@ struct AgentMissionControlButton: View {
                         .padding(1)
                 }
             }
-            .frame(width: expanded ? 78 : 28, height: 28)
+            .frame(width: 28, height: 28)
             .overlay {
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                     .strokeBorder(hovered || !items.isEmpty ? KajiTheme.border : .clear, lineWidth: 1)

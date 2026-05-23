@@ -65,6 +65,9 @@ struct KajiSelect<Value: Hashable>: View {
             filterKey: \.title,
             placeholder: placeholder ?? "Search",
             emptyLabel: "No options",
+            emptyActionTitle: nil,
+            emptyActionDetail: nil,
+            onEmptyAction: nil,
             onSelect: { item in
                 selection = item.value
                 isPresented = false

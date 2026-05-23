@@ -47,6 +47,12 @@ struct AskOverlay: View {
     @State var prefillState = AskPrefillState.shared
     @State var diffFiles: [DiffPaletteFile] = []
     @State var diffFilesTask: Task<Void, Never>?
+    @State var gitBranches: [String] = []
+    @State var currentGitBranch: String?
+    @State var isLoadingGitBranches = false
+    @State var gitBranchesTask: Task<Void, Never>?
+    @State var nativeCommandRunner = NativeCommandRunner()
+    @State var pendingGitCommand: GitCommandRequest?
 
     var body: some View {
         ZStack {
@@ -55,7 +61,19 @@ struct AskOverlay: View {
                 .onTapGesture { onDismiss() }
 
             VStack(spacing: 0) {
-                if scriptPlan != nil {
+                if nativeCommandRunner.plan != nil {
+                    NativeCommandRunnerView(
+                        runner: nativeCommandRunner,
+                        onStop: stopNativeCommandRun,
+                        onClose: finishNativeCommandRun
+                    )
+                } else if let pendingGitCommand {
+                    GitCommandConfirmationView(
+                        request: pendingGitCommand,
+                        onRun: confirmPendingGitCommand,
+                        onCancel: cancelPendingGitCommand
+                    )
+                } else if scriptPlan != nil {
                     KajiKitScriptRunnerView(runner: scriptRunner, onStop: stopScriptRun, onClose: finishScriptRun)
                 } else if isScriptFormVisible {
                     KajiKitScriptForm(draft: $scriptDraft, onSave: saveScriptForm, onCancel: closeScriptForm)
@@ -110,7 +128,10 @@ struct AskOverlay: View {
         .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })
         .onAppear(perform: configureDefaults)
         .onAppear(perform: applyPrefillIfNeeded)
-        .onDisappear { diffFilesTask?.cancel() }
+        .onDisappear {
+            diffFilesTask?.cancel()
+            gitBranchesTask?.cancel()
+        }
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
         .onChange(of: projectID) { _, _ in
             syncWorktreeSelection()
@@ -122,6 +143,7 @@ struct AskOverlay: View {
             refreshHistoryOptions()
         }
         .onChange(of: sessionMode) { _, _ in syncSessionSelection() }
+        .onChange(of: nativeCommandRunner.status) { _, status in handleNativeCommandStatus(status) }
         .background(
             AskOverlayKeyMonitor(
                 onSubmit: { handleSubmit(fieldText) },
@@ -136,11 +158,15 @@ struct AskOverlay: View {
     }
 
     private var modalWidth: CGFloat {
+        if nativeCommandRunner.plan != nil { return 780 }
+        if pendingGitCommand != nil { return 580 }
         if isScriptFormVisible || scriptPlan != nil { return 780 }
         return 580
     }
 
     private var modalHeight: CGFloat {
+        if nativeCommandRunner.plan != nil { return 520 }
+        if pendingGitCommand != nil { return 220 }
         if isScriptFormVisible { return 700 }
         if scriptPlan != nil { return 520 }
         return 420
@@ -148,7 +174,7 @@ struct AskOverlay: View {
 
     private var searchField: some View {
         HStack(spacing: 10) {
-            KajiIcon(systemName: isSlashMode ? "command" : "magnifyingglass", size: 12)
+            KajiIcon(systemName: isSlashMode || isGitCommandMode ? "command" : "magnifyingglass", size: 12)
                 .foregroundStyle(KajiTheme.fgDim)
                 .accessibilityHidden(true)
             IconButton(symbol: "paperclip", size: 12, accessibilityLabel: "Attach Image") {
@@ -156,7 +182,7 @@ struct AskOverlay: View {
             }
             PaletteSearchField(
                 text: $fieldText,
-                placeholder: isSlashMode ? "Type a command or option" : "Ask anything or type /",
+                placeholder: isSlashMode || isGitCommandMode ? "Type a command or option" : "Ask anything or type /",
                 fontSize: 14,
                 onSubmit: handleSubmit,
                 onSubmitText: handleSubmit,

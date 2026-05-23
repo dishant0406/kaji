@@ -27,7 +27,11 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
     let filterKey: (Item) -> String
     let searchPlaceholder: String
     let emptyLabel: String
+    let emptyActionTitle: ((String) -> String?)?
+    let emptyActionDetail: String?
     let footerActions: [PopoverFooterAction]
+    let height: CGFloat
+    let onEmptyAction: ((String) -> Void)?
     let onSelect: (Item) -> Void
     @ViewBuilder let row: (Item, Bool) -> RowContent
 
@@ -36,7 +40,11 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
         filterKey: @escaping (Item) -> String,
         searchPlaceholder: String,
         emptyLabel: String,
+        emptyActionTitle: ((String) -> String?)? = nil,
+        emptyActionDetail: String? = nil,
         footerActions: [PopoverFooterAction] = [],
+        height: CGFloat = 420,
+        onEmptyAction: ((String) -> Void)? = nil,
         onSelect: @escaping (Item) -> Void,
         @ViewBuilder row: @escaping (Item, Bool) -> RowContent
     ) {
@@ -44,7 +52,11 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
         self.filterKey = filterKey
         self.searchPlaceholder = searchPlaceholder
         self.emptyLabel = emptyLabel
+        self.emptyActionTitle = emptyActionTitle
+        self.emptyActionDetail = emptyActionDetail
         self.footerActions = footerActions
+        self.height = height
+        self.onEmptyAction = onEmptyAction
         self.onSelect = onSelect
         self.row = row
     }
@@ -56,6 +68,9 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
                 filterKey: filterKey,
                 placeholder: searchPlaceholder,
                 emptyLabel: emptyLabel,
+                emptyActionTitle: emptyActionTitle,
+                emptyActionDetail: emptyActionDetail,
+                onEmptyAction: onEmptyAction,
                 onSelect: onSelect,
                 row: row
             )
@@ -73,7 +88,7 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
                 }
             }
         }
-        .frame(width: 300, height: 420)
+        .frame(width: 300, height: height)
         .background(
             TranslucentSurface(
                 base: KajiTheme.tertiaryBackground,
