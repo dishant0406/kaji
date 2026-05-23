@@ -208,7 +208,7 @@ private struct DiffViewerBreadcrumb: View {
                 .stroke(KajiTheme.fgDim, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
                 .frame(width: 11, height: 11)
 
-            Text(state.showsAllChanges ? "All Changes" : state.filePath)
+            Text(state.showsAllChanges ? state.vcs.diffSource.displayTitle : state.filePath)
                 .kajiFont(size: 11)
                 .foregroundStyle(KajiTheme.fgMuted)
                 .lineLimit(1)

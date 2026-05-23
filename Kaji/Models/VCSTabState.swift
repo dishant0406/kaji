@@ -49,6 +49,7 @@ final class VCSTabState {
     }
 
     let projectPath: String
+    let diffSource: GitDiffSource
     var files: [GitStatusFile] = []
     var mode: ViewMode = .split
     var expandedFilePaths: Set<String> = []
@@ -141,9 +142,10 @@ final class VCSTabState {
     private(set) var hasCompletedInitialLoad = false
     @ObservationIgnored private static let commitsPerPage = 100
 
-    init(projectPath: String, files: [GitStatusFile] = []) {
+    init(projectPath: String, files: [GitStatusFile] = [], diffSource: GitDiffSource = .workingTree) {
         self.projectPath = projectPath
         self.files = files
+        self.diffSource = diffSource
         hasCompletedInitialLoad = !files.isEmpty
         startWatching()
         observeRemoteChanges()
@@ -752,6 +754,7 @@ final class VCSTabState {
                 DiffLoader.Request(
                     repoPath: projectPath,
                     filePath: path,
+                    source: diffSource,
                     hints: diffHints(for: path, files: refreshedFiles),
                     forceFull: true,
                     contextLineCount: diffContextLineCounts[path] ?? 3,
@@ -1062,6 +1065,7 @@ final class VCSTabState {
             DiffLoader.Request(
                 repoPath: projectPath,
                 filePath: filePath,
+                source: diffSource,
                 hints: diffHints(for: filePath),
                 forceFull: forceFull,
                 contextLineCount: diffContextLineCounts[filePath] ?? 3,
@@ -1091,6 +1095,7 @@ final class VCSTabState {
                 DiffLoader.Request(
                     repoPath: projectPath,
                     filePath: file.path,
+                    source: diffSource,
                     hints: diffHints(for: file.path),
                     forceFull: forceFull,
                     contextLineCount: diffContextLineCounts[file.path] ?? 3,
@@ -1111,6 +1116,7 @@ final class VCSTabState {
             DiffLoader.Request(
                 repoPath: projectPath,
                 filePath: filePath,
+                source: diffSource,
                 hints: hints,
                 forceFull: forceFull,
                 contextLineCount: diffContextLineCounts[filePath] ?? 3,

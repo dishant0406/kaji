@@ -16,7 +16,7 @@ final class DiffViewerTabState: Identifiable {
     var visibleFilePaths: Set<String> = []
 
     var displayTitle: String {
-        if showsAllChanges { return "All Changes" }
+        if showsAllChanges { return vcs.diffSource.displayTitle }
         return (filePath as NSString).lastPathComponent
     }
 

@@ -86,6 +86,15 @@ struct AskPaletteFeatureTests {
 
         #expect(entries.first?.action == .gitCommand(GitCommandParser.request(command: .git, input: "fetch")))
         #expect(entries.first?.title == "git fetch")
+        #expect(entries.first?.detail == "Run Git command")
+    }
+
+    @Test
+    func gitLogShowsPreviewDetail() {
+        let entries = AskPaletteEntries.build(context(fieldText: ":git log"))
+
+        #expect(entries.first?.action == .gitCommand(GitCommandParser.request(command: .git, input: "log")))
+        #expect(entries.first?.detail == "Preview below")
     }
 
     @Test
