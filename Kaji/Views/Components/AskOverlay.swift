@@ -51,6 +51,8 @@ struct AskOverlay: View {
     @State var currentGitBranch: String?
     @State var isLoadingGitBranches = false
     @State var gitBranchesTask: Task<Void, Never>?
+    @State var gitPreviewStatus = GitCommandPreviewStatus.idle
+    @State var gitPreviewTask: Task<Void, Never>?
     @State var nativeCommandRunner = NativeCommandRunner()
     @State var pendingGitCommand: GitCommandRequest?
 
@@ -131,13 +133,18 @@ struct AskOverlay: View {
         .onDisappear {
             diffFilesTask?.cancel()
             gitBranchesTask?.cancel()
+            gitPreviewTask?.cancel()
         }
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
         .onChange(of: projectID) { _, _ in
             syncWorktreeSelection()
             refreshHistoryOptions()
+            refreshGitCommandPreview()
         }
-        .onChange(of: worktreeID) { _, _ in refreshHistoryOptions() }
+        .onChange(of: worktreeID) { _, _ in
+            refreshHistoryOptions()
+            refreshGitCommandPreview()
+        }
         .onChange(of: provider) { _, _ in
             syncSessionSelection()
             refreshHistoryOptions()

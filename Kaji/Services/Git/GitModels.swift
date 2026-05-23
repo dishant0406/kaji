@@ -86,7 +86,7 @@ struct GitStatusFile: Identifiable, Hashable {
     }
 }
 
-struct GitCommit: Identifiable {
+struct GitCommit: Hashable, Identifiable {
     let hash: String
     let shortHash: String
     let subject: String
@@ -99,8 +99,8 @@ struct GitCommit: Identifiable {
     var isMerge: Bool { parentHashes.count > 1 }
 }
 
-struct GitRef {
-    enum Kind {
+struct GitRef: Hashable {
+    enum Kind: Hashable {
         case localBranch
         case remoteBranch
         case tag

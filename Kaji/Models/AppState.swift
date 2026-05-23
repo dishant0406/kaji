@@ -19,12 +19,20 @@ final class AppState {
         let filePath: String
         let isStaged: Bool
         let files: [GitStatusFile]
+        let source: GitDiffSource
 
-        init(vcs: VCSTabState, filePath: String = "", isStaged: Bool = false, files: [GitStatusFile] = []) {
+        init(
+            vcs: VCSTabState,
+            filePath: String = "",
+            isStaged: Bool = false,
+            files: [GitStatusFile] = [],
+            source: GitDiffSource = .workingTree
+        ) {
             self.vcs = vcs
             self.filePath = filePath
             self.isStaged = isStaged
             self.files = files
+            self.source = source
         }
     }
 
@@ -449,6 +457,27 @@ final class AppState {
             areaID: nil,
             request: DiffViewerRequest(vcs: vcs, files: vcs.files)
         ))
+    }
+
+    func openCommitDiffViewer(commit: GitCommit, projectID: UUID, worktreeID: UUID, worktreePath: String) {
+        dispatch(.selectWorktree(projectID: projectID, worktreeID: worktreeID, worktreePath: worktreePath))
+        Task { @MainActor in
+            let source = GitDiffSource.commit(hash: commit.hash, parentHash: commit.parentHashes.first)
+            let files = await Task.detached(priority: .userInitiated) {
+                await (try? GitRepositoryService().commitFiles(
+                    repoPath: worktreePath,
+                    hash: commit.hash,
+                    parentHash: commit.parentHashes.first
+                )) ?? []
+            }.value
+            guard !files.isEmpty else { return }
+            let vcs = VCSTabState(projectPath: worktreePath, files: files, diffSource: source)
+            dispatch(.createDiffViewerTab(
+                projectID: projectID,
+                areaID: nil,
+                request: DiffViewerRequest(vcs: vcs, files: files, source: source)
+            ))
+        }
     }
 
     private func openFileInExternalEditor(_ filePath: String, projectID: UUID, command: String) {

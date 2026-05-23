@@ -137,6 +137,10 @@ private struct AskPaletteRow: View {
              .gitSwitchBranch,
              .gitCheckoutBranch:
             "arrow.triangle.branch"
+        case .gitCommitDiff:
+            "clock"
+        case .gitPreviewPlaceholder:
+            "terminal"
         case .attach:
             "paperclip"
         case .runScript,

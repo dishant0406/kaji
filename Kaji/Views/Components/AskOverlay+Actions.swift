@@ -256,6 +256,11 @@ extension AskOverlay {
             runGitCommand(GitCommandParser.request(command: .switchBranch, input: branch))
         case let .gitCheckoutBranch(branch):
             runGitCommand(GitCommandParser.request(command: .checkout, input: branch))
+        case let .gitCommitDiff(commit, projectID, worktreeID, worktreePath):
+            appState.openCommitDiffViewer(commit: commit, projectID: projectID, worktreeID: worktreeID, worktreePath: worktreePath)
+            onDismiss()
+        case .gitPreviewPlaceholder:
+            return
         case .attach:
             attachments.append(contentsOf: AskAttachmentLoader.openPanel())
         case let .runScript(script):
@@ -659,6 +664,8 @@ extension AskOverlay {
              .gitBranch,
              .gitSwitchBranch,
              .gitCheckoutBranch,
+             .gitCommitDiff,
+             .gitPreviewPlaceholder,
              .runScript,
              .openScriptForm,
              .deleteScript,

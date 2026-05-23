@@ -60,9 +60,26 @@ enum AskGitPaletteEntries {
     }
 
     private static func gitCommandEntry(_ request: GitCommandRequest) -> AskPaletteEntry {
-        let detail = request.blockedMessage ?? request.confirmationMessage ?? "Run in the active worktree"
+        let descriptor = GitCommandCatalog.descriptor(for: request.arguments)
+        let detail = request.blockedMessage ?? request.confirmationMessage ?? detailText(descriptor)
         let annotation = request.blockedMessage == nil ? "Enter" : "Blocked"
         return .init(action: .gitCommand(request), title: request.displayCommand, detail: detail, annotation: annotation)
+    }
+
+    private static func detailText(_ descriptor: GitCommandDescriptor) -> String {
+        if descriptor.autoPreviews {
+            return "Preview below"
+        }
+        switch descriptor.effect {
+        case .readOnly:
+            return "Show command output"
+        case .mutating:
+            return "Run Git command"
+        case .destructive:
+            return "Run with confirmation when required"
+        case .interactive:
+            return "Needs a terminal"
+        }
     }
 
     private static func filteredGitBranches(_ branches: [String], query: String) -> [String] {

@@ -7,6 +7,7 @@ enum DiffLoader {
     struct Request {
         let repoPath: String
         let filePath: String
+        let source: GitDiffSource
         let hints: GitRepositoryService.DiffHints
         let forceFull: Bool
         let contextLineCount: Int
@@ -26,13 +27,23 @@ enum DiffLoader {
         let lineLimit = request.forceFull ? nil : previewLineLimit
         let task = Task { @MainActor in
             do {
-                let result = try await git.patchAndCompare(
-                    repoPath: request.repoPath,
-                    filePath: request.filePath,
-                    lineLimit: lineLimit,
-                    contextLineCount: request.contextLineCount,
-                    hints: request.hints
-                )
+                let result = if request.source.isWorkingTree {
+                    try await git.patchAndCompare(
+                        repoPath: request.repoPath,
+                        filePath: request.filePath,
+                        lineLimit: lineLimit,
+                        contextLineCount: request.contextLineCount,
+                        hints: request.hints
+                    )
+                } else {
+                    try await git.commitPatchAndCompare(
+                        repoPath: request.repoPath,
+                        filePath: request.filePath,
+                        source: request.source,
+                        lineLimit: lineLimit,
+                        contextLineCount: request.contextLineCount
+                    )
+                }
                 guard !Task.isCancelled else { return }
                 cache.store(
                     DiffCache.LoadedDiff(

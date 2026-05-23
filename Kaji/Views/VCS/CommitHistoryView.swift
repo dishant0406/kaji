@@ -3,6 +3,9 @@ import SwiftUI
 
 struct CommitHistoryView: View {
     @Bindable var state: VCSTabState
+    @Environment(AppState.self) private var appState
+    @Environment(ProjectStore.self) private var projectStore
+    @Environment(WorktreeStore.self) private var worktreeStore
     @State private var branchNameInput = ""
     @State private var tagNameInput = ""
     @State private var pendingBranchHash: String?
@@ -46,7 +49,8 @@ struct CommitHistoryView: View {
                     onCherryPick: { state.cherryPick($0) },
                     onRevert: { state.revert($0, subject: $1) },
                     onCreateBranch: { pendingBranchHash = $0 },
-                    onCreateTag: { pendingTagHash = $0 }
+                    onCreateTag: { pendingTagHash = $0 },
+                    onOpenDiff: openCommitDiff
                 )
             }
 
@@ -123,6 +127,15 @@ struct CommitHistoryView: View {
         tagNameInput = ""
         pendingTagHash = nil
     }
+
+    private func openCommitDiff(_ commit: GitCommit) {
+        let projectID = worktreeStore.projectID(forWorktreePath: state.projectPath)
+            ?? projectStore.projects.first { $0.path == state.projectPath }?.id
+        guard let projectID,
+              let worktree = worktreeStore.list(for: projectID).first(where: { $0.path == state.projectPath })
+        else { return }
+        appState.openCommitDiffViewer(commit: commit, projectID: projectID, worktreeID: worktree.id, worktreePath: state.projectPath)
+    }
 }
 
 private struct NamePrompt: Identifiable {
@@ -139,6 +152,7 @@ private struct CommitRow: View {
     let onRevert: (String, String) -> Void
     let onCreateBranch: (String) -> Void
     let onCreateTag: (String) -> Void
+    let onOpenDiff: (GitCommit) -> Void
     @State private var hovered = false
 
     private var dotColor: Color {
@@ -195,6 +209,7 @@ private struct CommitRow: View {
         .background(hovered ? KajiTheme.hover : .clear)
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
+        .onTapGesture { onOpenDiff(commit) }
         .contextMenu { contextMenuItems }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(commitAccessibilityLabel)

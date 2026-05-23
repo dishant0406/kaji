@@ -35,6 +35,7 @@ struct AllChangesDiffBody: View {
                         ),
                         file: currentFile,
                         stats: state.vcs.displayedStats(for: currentFile),
+                        isActionable: state.vcs.diffSource.isWorkingTree,
                         suppressLeadingTopBorder: index == 0,
                         onStage: { state.vcs.stageFile(file.path) },
                         onUnstage: { state.vcs.unstageFile(file.path) },
@@ -56,6 +57,7 @@ private struct GithubDiffFileHeader: View {
     @Binding var isCollapsed: Bool
     let file: GitStatusFile
     let stats: VCSTabState.FileStats
+    let isActionable: Bool
     let suppressLeadingTopBorder: Bool
     let onStage: () -> Void
     let onUnstage: () -> Void
@@ -90,7 +92,9 @@ private struct GithubDiffFileHeader: View {
             Spacer(minLength: 0)
             statsView
             commentButton
-            actionButtons
+            if isActionable {
+                actionButtons
+            }
         }
         .padding(.horizontal, 12)
         .frame(height: 40)

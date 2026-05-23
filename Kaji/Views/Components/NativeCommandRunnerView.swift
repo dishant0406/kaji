@@ -52,7 +52,7 @@ struct NativeCommandRunnerView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: true) {
                 Text(outputText)
-                    .font(.system(size: 12, design: .monospaced))
+                    .kajiFont(size: 12, design: .monospaced)
                     .foregroundStyle(KajiTheme.fgMuted)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -75,7 +75,7 @@ struct NativeCommandRunnerView: View {
         case .idle:
             "Ready"
         case .running:
-            "Running in \(runner.plan?.workingDirectory.path ?? "")"
+            "Running"
         case .succeeded:
             "Completed"
         case let .failed(code):

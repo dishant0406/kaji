@@ -9,6 +9,9 @@ extension AskOverlay {
         if isBookmarkFolderPickerVisible {
             return bookmarkFolderEntries
         }
+        if let gitPreviewEntries {
+            return gitPreviewEntries
+        }
         return AskPaletteEntries.build(.init(
             fieldText: fieldText,
             prompt: prompt,
@@ -188,7 +191,7 @@ extension AskOverlay {
             return "Enter applies. Shift Enter adds project for /add-project. Esc closes."
         }
         if isGitCommandMode {
-            return "Enter runs in the active worktree. Esc closes."
+            return "Previewed Git results open directly. Enter runs commands that are not previews. Esc closes."
         }
         if isBookmarkFolderPickerVisible {
             return "Enter chooses an existing folder. Shift Enter creates/uses the typed folder. Esc closes."
@@ -231,6 +234,7 @@ extension AskOverlay {
         refreshDirectoryOptions()
         refreshDiffFiles()
         refreshGitBranches()
+        refreshGitCommandPreview()
         guard !isBookmarkFolderPickerVisible else {
             highlightedIndex = entries.isEmpty ? nil : 0
             return
