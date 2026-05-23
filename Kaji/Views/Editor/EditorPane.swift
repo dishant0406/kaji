@@ -170,7 +170,7 @@ struct EditorPane: View {
             if shouldDelayMarkdownPreview {
                 markdownPreviewLoadingView
             } else {
-                NativeMarkdownView(content: renderedMarkdownContent, filePath: state.filePath)
+                AdvancedMarkdownPreviewView(state: state, content: renderedMarkdownContent)
             }
         }
         .background(KajiTheme.bg)

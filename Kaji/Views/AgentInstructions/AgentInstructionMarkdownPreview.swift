@@ -5,7 +5,7 @@ struct AgentInstructionMarkdownPreview: View {
 
     var body: some View {
         if let document {
-            NativeMarkdownView(content: document.content, filePath: document.path)
+            MarkdownDocumentPreviewView(content: document.content, filePath: document.path)
                 .background(KajiTheme.bg)
         } else {
             VStack(spacing: 8) {
