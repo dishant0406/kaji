@@ -1,31 +1,40 @@
-@font-face{font-family:KaTeX_AMS;src:url("kaji-preview-asset:///fonts/KaTeX_AMS-Regular.woff2") format("woff2");font-weight:400;font-style:normal}
-@font-face{font-family:KaTeX_Main;src:url("kaji-preview-asset:///fonts/KaTeX_Main-Regular.woff2") format("woff2");font-weight:400;font-style:normal}
-@font-face{font-family:KaTeX_Main;src:url("kaji-preview-asset:///fonts/KaTeX_Main-Bold.woff2") format("woff2");font-weight:700;font-style:normal}
-@font-face{font-family:KaTeX_Main;src:url("kaji-preview-asset:///fonts/KaTeX_Main-Italic.woff2") format("woff2");font-weight:400;font-style:italic}
-@font-face{font-family:KaTeX_Math;src:url("kaji-preview-asset:///fonts/KaTeX_Math-Italic.woff2") format("woff2");font-weight:400;font-style:italic}
-@font-face{font-family:KaTeX_Size1;src:url("kaji-preview-asset:///fonts/KaTeX_Size1-Regular.woff2") format("woff2")}
-@font-face{font-family:KaTeX_Size2;src:url("kaji-preview-asset:///fonts/KaTeX_Size2-Regular.woff2") format("woff2")}
-:root{color-scheme:dark;--bg:#0b0b0c;--fg:#f4f4f5;--muted:#a1a1aa;--dim:#71717a;--surface:#18181b;--border:#27272a;--accent:#7dd3fc;--soft:#102a36}
-html,body{min-height:100%;background:var(--bg);color:var(--fg);font:14px/1.58 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
-body{overflow-y:auto}
-#content{box-sizing:border-box;max-width:900px;margin:0 auto;padding:22px 28px 48px}
+@font-face{font-family:KaTeX_AMS;src:url("kaji-markdown://asset/fonts/KaTeX_AMS-Regular.woff2") format("woff2");font-weight:400;font-style:normal}
+@font-face{font-family:KaTeX_Main;src:url("kaji-markdown://asset/fonts/KaTeX_Main-Regular.woff2") format("woff2");font-weight:400;font-style:normal}
+@font-face{font-family:KaTeX_Main;src:url("kaji-markdown://asset/fonts/KaTeX_Main-Bold.woff2") format("woff2");font-weight:700;font-style:normal}
+@font-face{font-family:KaTeX_Main;src:url("kaji-markdown://asset/fonts/KaTeX_Main-Italic.woff2") format("woff2");font-weight:400;font-style:italic}
+@font-face{font-family:KaTeX_Math;src:url("kaji-markdown://asset/fonts/KaTeX_Math-Italic.woff2") format("woff2");font-weight:400;font-style:italic}
+@font-face{font-family:KaTeX_Size1;src:url("kaji-markdown://asset/fonts/KaTeX_Size1-Regular.woff2") format("woff2")}
+@font-face{font-family:KaTeX_Size2;src:url("kaji-markdown://asset/fonts/KaTeX_Size2-Regular.woff2") format("woff2")}
+:root{color-scheme:dark;--bg:#0b0b0c;--fg:#f4f4f5;--muted:#a1a1aa;--dim:#71717a;--surface:#18181b;--border:#27272a;--accent:#7dd3fc;--soft:#102a36;--font-family:"SF Mono",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;--font-size:15px;--line-height:1.58}
+html{min-height:100%;background:var(--bg)}
+body{min-height:100%;overflow-y:auto;background:var(--bg);color:var(--fg);font:var(--font-size)/var(--line-height) var(--font-family);text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+#content{box-sizing:border-box;max-width:920px;margin:0 auto;padding:22px 30px 52px;opacity:0;transition:opacity 50ms ease}
+#content.kaji-visible{opacity:1}
 .markdown-body>*:first-child{margin-top:0}
 .markdown-body>*:last-child{margin-bottom:0}
-h1,h2,h3,h4,h5,h6{line-height:1.25;font-weight:650;margin:24px 0 10px;color:var(--fg)}
+h1,h2,h3,h4,h5,h6{line-height:1.25;font-weight:650;margin:24px 0 10px;color:var(--fg);letter-spacing:0}
 h1{font-size:1.9em;border-bottom:1px solid var(--border);padding-bottom:8px}
 h2{font-size:1.45em;border-bottom:1px solid var(--border);padding-bottom:8px}
-h3{font-size:1.2em}h4{font-size:1.05em}h5{font-size:.95em}h6{font-size:.9em;color:var(--muted)}
+h3{font-size:1.2em}
+h4{font-size:1.05em}
+h5{font-size:.95em}
+h6{font-size:.9em;color:var(--muted)}
 p,ul,ol,blockquote,pre,table,.kaji-media,.mermaid{margin:0 0 14px}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+ul,ol{padding-left:1.45em}
+li+li{margin-top:4px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
 blockquote{border-left:4px solid var(--border);padding-left:14px;color:var(--muted)}
-code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.9em;background:var(--surface);border-radius:4px;padding:.12em .32em}
+code{font-family:var(--font-family);font-size:.9em;background:var(--surface);border-radius:4px;padding:.12em .32em}
 pre{overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
 pre code{background:transparent;padding:0;border-radius:0}
 table{width:100%;border-collapse:collapse;display:block;overflow:auto}
 th,td{border:1px solid var(--border);padding:6px 12px;vertical-align:top}
-th{font-weight:650}tr:nth-child(2n){background:var(--surface)}
+th{font-weight:650}
+tr:nth-child(2n){background:var(--surface)}
 img,video{max-width:100%;height:auto;border-radius:8px}
 video,audio{width:100%}
+hr{height:1px;border:0;background:var(--border);margin:22px 0}
 .mermaid{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;overflow:auto}
 .kaji-managed-block{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:14px;margin:0 0 14px}
 .kaji-managed-block>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;color:var(--fg);font-size:12px;font-weight:650}

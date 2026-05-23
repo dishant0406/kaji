@@ -107,11 +107,13 @@ struct EditorPane: View {
             case .code:
                 codeEditorContainer
             case .preview:
-                markdownPreviewContainer
+                markdownPreviewContainer(mode: .preview)
             case .split:
                 HSplitView {
                     codeEditorContainer
-                    markdownPreviewContainer
+                        .frame(minWidth: 320)
+                    markdownPreviewContainer(mode: .split)
+                        .frame(minWidth: 320)
                 }
             }
         } else {
@@ -165,12 +167,12 @@ struct EditorPane: View {
         }
     }
 
-    private var markdownPreviewContainer: some View {
+    private func markdownPreviewContainer(mode: EditorMarkdownViewMode) -> some View {
         Group {
             if shouldDelayMarkdownPreview {
                 markdownPreviewLoadingView
             } else {
-                AdvancedMarkdownPreviewView(state: state, content: renderedMarkdownContent)
+                AdvancedMarkdownPreviewView(state: state, content: renderedMarkdownContent, presentationMode: mode)
             }
         }
         .background(KajiTheme.bg)
