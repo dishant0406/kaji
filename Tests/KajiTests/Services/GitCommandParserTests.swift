@@ -49,4 +49,12 @@ struct GitCommandParserTests {
         #expect(request.arguments == ["checkout", "main"])
         #expect(request.displayCommand == "git checkout main")
     }
+
+    @Test
+    func parsesGuidedCommitCommand() {
+        let state = GitCommandParser.state(for: ":commit")
+
+        #expect(state?.command == .commit)
+        #expect(state?.filter == "")
+    }
 }

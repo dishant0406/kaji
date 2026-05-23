@@ -28,6 +28,9 @@ extension AskOverlay {
     }
 
     func handleSubmit(_ latestFieldText: String) {
+        if handleCommitSubmit() {
+            return
+        }
         if isBookmarkFolderPickerVisible {
             confirmHighlight()
             return
@@ -120,6 +123,9 @@ extension AskOverlay {
     }
 
     func handleShiftSubmit(_ latestFieldText: String) {
+        if handleCommitShiftSubmit() {
+            return
+        }
         if isBookmarkFolderPickerVisible {
             savePendingBookmarks(folderName: latestFieldText)
             return
@@ -194,6 +200,9 @@ extension AskOverlay {
     }
 
     func apply(_ entry: AskPaletteEntry) {
+        if applyCommitEntry(entry) {
+            return
+        }
         switch entry.action {
         case let .command(command):
             fieldText = "\(command.trigger) "
@@ -259,6 +268,11 @@ extension AskOverlay {
         case let .gitCommitDiff(commit, projectID, worktreeID, worktreePath):
             appState.openCommitDiffViewer(commit: commit, projectID: projectID, worktreeID: worktreeID, worktreePath: worktreePath)
             onDismiss()
+        case .gitCommitStart,
+             .gitCommitSelectAll,
+             .gitCommitSelectFile,
+             .gitCommitMessageMode:
+            return
         case .gitPreviewPlaceholder:
             return
         case .attach:
@@ -665,6 +679,10 @@ extension AskOverlay {
              .gitSwitchBranch,
              .gitCheckoutBranch,
              .gitCommitDiff,
+             .gitCommitStart,
+             .gitCommitSelectAll,
+             .gitCommitSelectFile,
+             .gitCommitMessageMode,
              .gitPreviewPlaceholder,
              .runScript,
              .openScriptForm,

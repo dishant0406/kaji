@@ -33,6 +33,15 @@ enum AskGitPaletteEntries {
             }
             guard !state.filter.isEmpty else { return branches }
             return [gitCommandEntry(GitCommandParser.request(command: .checkout, input: state.filter))] + branches
+        case .commit:
+            return [
+                AskPaletteEntry(
+                    action: .gitCommitStart,
+                    title: "Start commit",
+                    detail: "Select files and write or generate a commit message",
+                    annotation: "Enter"
+                ),
+            ]
         }
     }
 

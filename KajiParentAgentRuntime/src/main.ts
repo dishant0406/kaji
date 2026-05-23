@@ -1,5 +1,6 @@
 import readline from "node:readline";
-import type { Agent } from "@earendil-works/pi-agent-core";
+import type { Agent, AgentMessage } from "@earendil-works/pi-agent-core";
+import type { TextContent } from "@earendil-works/pi-ai";
 import { createAgent, promptContent, selectedModel } from "./agent.js";
 import { resolveApiKey } from "./auth.js";
 import type { PendingTool, ProtocolMessage, RuntimeContext } from "./protocol.js";
@@ -31,7 +32,18 @@ async function runPrompt(message: ProtocolMessage) {
 	const agent = sessions.get(context.sessionID) ?? createAgent(model, context, pendingTools);
 	sessions.set(context.sessionID, agent);
 	await agent.prompt({ role: "user", content: promptContent(message), timestamp: Date.now() });
-	send({ type: "final_response", taskID: message.taskID, message: "Parent agent turn completed." });
+	send({ type: "final_response", taskID: message.taskID, message: lastAssistantText(agent) });
+}
+
+function lastAssistantText(agent: Agent) {
+	const messages = [...agent.state.messages].reverse() as AgentMessage[];
+	const assistant = messages.find((message) => message.role === "assistant");
+	if (!assistant) return "";
+	return assistant.content
+		.filter((part): part is TextContent => part.type === "text")
+		.map((part) => part.text)
+		.join("")
+		.trim();
 }
 
 function handleToolResult(message: ProtocolMessage) {

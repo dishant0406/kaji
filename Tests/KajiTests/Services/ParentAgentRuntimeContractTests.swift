@@ -50,6 +50,18 @@ struct ParentAgentRuntimeContractTests {
         }
     }
 
+    @Test("runtime exposes dedicated commit-message mode")
+    func runtimeExposesCommitMessageMode() throws {
+        for text in [try bundledRuntimeText(), try sourceRuntimeText()] {
+            #expect(text.contains("kajicommit"))
+            #expect(text.contains("commitSystemPrompt"))
+            #expect(text.contains("lastAssistantText"))
+            #expect(text.contains("Do not mention Kaji, parent agents"))
+            #expect(text.contains("agentMode() === \"kajicommit\") return []"))
+            #expect(!text.contains("message: \"Parent agent turn completed.\""))
+        }
+    }
+
     private func bundledRuntimeText() throws -> String {
         let url = try #require(ParentAgentRuntimeLocator.bundledScriptURL())
         return try String(contentsOf: url, encoding: .utf8)

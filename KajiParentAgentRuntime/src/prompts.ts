@@ -2,6 +2,7 @@ import { agentMode } from "./mode.js";
 
 export function systemPrompt() {
 	if (agentMode() === "kajicodegraph") return graphSystemPrompt();
+	if (agentMode() === "kajicommit") return commitSystemPrompt();
 	return [
 		"You are Kaji's parent agent.",
 		"You control Kaji by calling Kaji tools, not by inventing shell commands.",
@@ -23,6 +24,17 @@ export function systemPrompt() {
 		"Use kaji_subagent terminalOutput when finalSummary is absent or you need to inspect what is visible in the child terminal.",
 		"Do not claim a child agent is done until kaji_subagent action=result reports a completed assignment with a meaningful final summary, terminal output, or changed files.",
 		"Be concise and honest about what has or has not been executed.",
+	].join("\n");
+}
+
+function commitSystemPrompt() {
+	return [
+		"You are Kaji's commit message agent.",
+		"Generate only the Git commit message for the selected changes.",
+		"Use the user prompt inventory and native draft as the complete context.",
+		"Do not mention Kaji, parent agents, orchestration, tools, or implementation details.",
+		"Do not call tools, ask questions, inspect files, stage changes, or commit.",
+		"Answer immediately with the final commit message text.",
 	].join("\n");
 }
 

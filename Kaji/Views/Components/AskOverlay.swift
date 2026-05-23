@@ -55,6 +55,10 @@ struct AskOverlay: View {
     @State var gitPreviewTask: Task<Void, Never>?
     @State var nativeCommandRunner = NativeCommandRunner()
     @State var pendingGitCommand: GitCommandRequest?
+    @State var commitFlow: GitCommitFlowState?
+    @State var commitFilesTask: Task<Void, Never>?
+    @State var commitGenerationTask: Task<Void, Never>?
+    @State var commitTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -80,8 +84,10 @@ struct AskOverlay: View {
                 } else if isScriptFormVisible {
                     KajiKitScriptForm(draft: $scriptDraft, onSave: saveScriptForm, onCancel: closeScriptForm)
                 } else {
-                    searchField
-                    Divider().overlay(KajiTheme.border.opacity(0.75))
+                    if shouldShowSearchField {
+                        searchField
+                        Divider().overlay(KajiTheme.border.opacity(0.75))
+                    }
                     targetSummary
                     Divider().overlay(KajiTheme.border.opacity(0.75))
                     if let pendingRiskyScript {
@@ -97,6 +103,14 @@ struct AskOverlay: View {
                             scope: $taskFormScope,
                             onSave: saveTaskForm,
                             onCancel: closeTaskForm
+                        )
+                    } else if let commitFlow, !commitFlow.showsSearchField {
+                        GitCommitFlowView(
+                            state: commitFlow,
+                            onMessageChange: updateCommitMessage,
+                            onCommit: commitSelectedFiles,
+                            onRegenerate: regenerateCommitMessage,
+                            onCancel: cancelCommitFlow
                         )
                     } else {
                         if !attachments.isEmpty {
@@ -134,6 +148,9 @@ struct AskOverlay: View {
             diffFilesTask?.cancel()
             gitBranchesTask?.cancel()
             gitPreviewTask?.cancel()
+            commitFilesTask?.cancel()
+            commitGenerationTask?.cancel()
+            commitTask?.cancel()
         }
         .onChange(of: fieldText) { _, newValue in handleFieldChange(newValue) }
         .onChange(of: projectID) { _, _ in
@@ -174,9 +191,14 @@ struct AskOverlay: View {
     private var modalHeight: CGFloat {
         if nativeCommandRunner.plan != nil { return 520 }
         if pendingGitCommand != nil { return 220 }
+        if let commitFlow, !commitFlow.showsSearchField { return 430 }
         if isScriptFormVisible { return 700 }
         if scriptPlan != nil { return 520 }
         return 420
+    }
+
+    private var shouldShowSearchField: Bool {
+        commitFlow?.showsSearchField ?? true
     }
 
     private var searchField: some View {
