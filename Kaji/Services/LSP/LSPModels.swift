@@ -52,7 +52,7 @@ enum JSONValue: Codable, Equatable {
         } else if let value = try? container.decode([JSONValue].self) {
             self = .array(value)
         } else {
-            self = .object(try container.decode([String: JSONValue].self))
+            self = try .object(container.decode([String: JSONValue].self))
         }
     }
 

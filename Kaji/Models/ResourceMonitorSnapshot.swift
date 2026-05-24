@@ -49,6 +49,7 @@ struct ResourceMonitorAppSnapshot: Identifiable, Equatable {
     let cpuPercent: Double?
     let memoryBytes: UInt64?
     let threadCount: Int?
+    let terminalDiagnostics: TerminalViewDiagnosticsSnapshot?
 }
 
 struct ResourceMonitorProjectSnapshot: Identifiable, Equatable {

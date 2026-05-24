@@ -101,7 +101,6 @@ struct SplitContainer: View {
             onMoveArea: onMoveArea
         )
     }
-
 }
 
 private struct SplitDividerHandle: NSViewRepresentable {

@@ -134,9 +134,9 @@ final class TreeSitterSyntaxHighlighter: SyntaxHighlighting {
         let normalized = name.split(separator: ".").first.map(String.init) ?? name
         return SyntaxScope.fromLanguagePack(normalized) ?? {
             switch normalized {
-            case "operator": return .op
-            case "property": return .variable
-            default: return .punctuation
+            case "operator": .op
+            case "property": .variable
+            default: .punctuation
             }
         }()
     }

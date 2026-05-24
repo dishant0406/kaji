@@ -19,6 +19,12 @@ final class GhosttyTerminalNSView: NSView {
     var isFocused: Bool = false
     var overlayActive: Bool = false
     private var isSurfaceVisible = true
+    private var appliedBackingSize: (width: UInt32, height: UInt32)?
+    private var appliedContentScale: Double?
+    private var appliedDisplayID: UInt32?
+    private var appliedFocus: Bool?
+    private var appliedVisibility: Bool?
+    private var appliedDarkColorScheme: Bool?
 
     var processExitHandled = false
 
@@ -33,7 +39,7 @@ final class GhosttyTerminalNSView: NSView {
     private var keyTextAccumulator: [String] = []
     private var currentKeyEvent: NSEvent?
     private var commandSelectorCalled = false
-    @MainActor private let scrollCoalescer = GhosttyScrollCoalescer()
+    private var promptClickMoveStartPoint: NSPoint?
 
     init(workingDirectory: String, command: String? = nil) {
         self.workingDirectory = workingDirectory
@@ -97,7 +103,8 @@ final class GhosttyTerminalNSView: NSView {
         var cStrings: [UnsafeMutablePointer<CChar>] = []
         defer { cStrings.forEach { free($0) } }
 
-        if let command, let loginWrapped = strdup(Self.loginShellCommand(command)) {
+        let launchCommand = command.map(Self.loginShellCommand) ?? GhosttyShellLaunchCommand.interactiveShell()
+        if let loginWrapped = strdup(launchCommand) {
             cStrings.append(loginWrapped)
             config.command = UnsafePointer(loginWrapped)
             config.wait_after_command = false
@@ -123,24 +130,18 @@ final class GhosttyTerminalNSView: NSView {
             }
         }
 
-        guard let surface else { return }
+        guard surface != nil else { return }
+
+        resetAppliedSurfaceState()
 
         let scale = Double(window?.backingScaleFactor ?? 2.0)
-        ghostty_surface_set_content_scale(surface, scale, scale)
+        applyContentScale(scale)
+        applySurfaceSize(backingSize)
 
-        ghostty_surface_set_size(surface, backingSize.width, backingSize.height)
-
-        let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        ghostty_surface_set_color_scheme(surface, isDark ? GHOSTTY_COLOR_SCHEME_DARK : GHOSTTY_COLOR_SCHEME_LIGHT)
-
-        if let screen = window?.screen ?? NSScreen.main,
-           let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32
-        {
-            ghostty_surface_set_display_id(surface, displayID)
-        }
-
-        ghostty_surface_set_occlusion(surface, isSurfaceVisible)
-        ghostty_surface_set_focus(surface, isFocused)
+        applyColorScheme()
+        applyDisplayID()
+        applySurfaceVisibility(isSurfaceVisible)
+        applyFocus(isFocused)
         flushInjectedCommandIfNeeded()
     }
 
@@ -149,6 +150,7 @@ final class GhosttyTerminalNSView: NSView {
             ghostty_surface_free(surface)
         }
         surface = nil
+        resetAppliedSurfaceState()
     }
 
     func tearDown() {
@@ -277,9 +279,7 @@ final class GhosttyTerminalNSView: NSView {
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        guard let surface else { return }
-        let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        ghostty_surface_set_color_scheme(surface, isDark ? GHOSTTY_COLOR_SCHEME_DARK : GHOSTTY_COLOR_SCHEME_LIGHT)
+        applyColorScheme()
     }
 
     private func updateMetalLayerSize(deferred: Bool) {
@@ -296,24 +296,78 @@ final class GhosttyTerminalNSView: NSView {
             return
         }
 
-        guard let surface, let window else { return }
+        guard surface != nil, let window else { return }
         layer?.contentsScale = window.backingScaleFactor
         layoutSubtreeIfNeeded()
 
         guard let backingSize = backingPixelSize() else { return }
 
         let scale = Double(window.backingScaleFactor)
-
-        ghostty_surface_set_content_scale(surface, scale, scale)
-
-        if let screen = window.screen,
-           let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32
-        {
-            ghostty_surface_set_display_id(surface, displayID)
-        }
-
-        ghostty_surface_set_size(surface, backingSize.width, backingSize.height)
+        applyContentScale(scale)
+        applyDisplayID()
+        applySurfaceSize(backingSize)
         flushInjectedCommandIfNeeded()
+    }
+
+    private func applyContentScale(_ scale: Double) {
+        guard let surface else { return }
+        guard appliedContentScale != scale else { return }
+        ghostty_surface_set_content_scale(surface, scale, scale)
+        appliedContentScale = scale
+    }
+
+    private func applySurfaceSize(_ size: (width: UInt32, height: UInt32)) {
+        guard let surface else { return }
+        if let appliedBackingSize,
+           appliedBackingSize.width == size.width,
+           appliedBackingSize.height == size.height
+        {
+            return
+        }
+        ghostty_surface_set_size(surface, size.width, size.height)
+        appliedBackingSize = size
+    }
+
+    private func applyColorScheme() {
+        guard let surface else { return }
+        let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        guard appliedDarkColorScheme != isDark else { return }
+        ghostty_surface_set_color_scheme(surface, isDark ? GHOSTTY_COLOR_SCHEME_DARK : GHOSTTY_COLOR_SCHEME_LIGHT)
+        appliedDarkColorScheme = isDark
+    }
+
+    private func applyDisplayID() {
+        guard let surface else { return }
+        guard let screen = window?.screen ?? NSScreen.main else { return }
+        guard let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32 else {
+            return
+        }
+        guard appliedDisplayID != displayID else { return }
+        ghostty_surface_set_display_id(surface, displayID)
+        appliedDisplayID = displayID
+    }
+
+    private func applyFocus(_ focused: Bool) {
+        guard let surface else { return }
+        guard appliedFocus != focused else { return }
+        ghostty_surface_set_focus(surface, focused)
+        appliedFocus = focused
+    }
+
+    private func applySurfaceVisibility(_ visible: Bool) {
+        guard let surface else { return }
+        guard appliedVisibility != visible else { return }
+        ghostty_surface_set_occlusion(surface, visible)
+        appliedVisibility = visible
+    }
+
+    private func resetAppliedSurfaceState() {
+        appliedBackingSize = nil
+        appliedContentScale = nil
+        appliedDisplayID = nil
+        appliedFocus = nil
+        appliedVisibility = nil
+        appliedDarkColorScheme = nil
     }
 
     private func backingPixelSize() -> (width: UInt32, height: UInt32)? {
@@ -342,19 +396,18 @@ final class GhosttyTerminalNSView: NSView {
     }
 
     func notifySurfaceFocused() {
-        guard let surface else { return }
-        ghostty_surface_set_focus(surface, true)
+        isFocused = true
+        applyFocus(true)
     }
 
     func notifySurfaceUnfocused() {
-        guard let surface else { return }
-        ghostty_surface_set_focus(surface, false)
+        isFocused = false
+        applyFocus(false)
     }
 
     func setSurfaceVisible(_ visible: Bool) {
         isSurfaceVisible = visible
-        guard let surface else { return }
-        ghostty_surface_set_occlusion(surface, visible)
+        applySurfaceVisibility(visible)
     }
 
     override var acceptsFirstResponder: Bool { !overlayActive }
@@ -362,7 +415,8 @@ final class GhosttyTerminalNSView: NSView {
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         if result {
-            ghostty_surface_set_focus(surface, true)
+            isFocused = true
+            applyFocus(true)
             DispatchQueue.main.async { [weak self] in
                 self?.onFocus?()
             }
@@ -373,7 +427,8 @@ final class GhosttyTerminalNSView: NSView {
     override func resignFirstResponder() -> Bool {
         let result = super.resignFirstResponder()
         if result {
-            ghostty_surface_set_focus(surface, false)
+            isFocused = false
+            applyFocus(false)
         }
         return result
     }
@@ -518,12 +573,21 @@ final class GhosttyTerminalNSView: NSView {
         let alreadyFirstResponder = window?.firstResponder === self
         window?.makeFirstResponder(self)
         if alreadyFirstResponder {
-            ghostty_surface_set_focus(surface, true)
+            isFocused = true
+            applyFocus(true)
             DispatchQueue.main.async { [weak self] in
                 self?.onFocus?()
             }
         }
         let pt = mousePoint(from: event)
+        if TerminalPromptClickMovePolicy.isCandidate(flags: event.modifierFlags),
+           !ghostty_surface_mouse_captured(surface)
+        {
+            promptClickMoveStartPoint = pt
+            ghostty_surface_mouse_pos(surface, pt.x, pt.y, modsFromEvent(event))
+            return
+        }
+        promptClickMoveStartPoint = nil
         ghostty_surface_mouse_pos(surface, pt.x, pt.y, modsFromEvent(event))
         _ = ghostty_surface_mouse_button(surface, GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_LEFT, modsFromEvent(event))
     }
@@ -531,11 +595,30 @@ final class GhosttyTerminalNSView: NSView {
     override func mouseUp(with event: NSEvent) {
         guard let surface else { return }
         let pt = mousePoint(from: event)
+        if promptClickMoveStartPoint != nil {
+            promptClickMoveStartPoint = nil
+            ghostty_surface_mouse_pos(surface, pt.x, pt.y, modsFromEvent(event))
+            if sendPromptClickMove(to: pt) {
+                return
+            }
+            _ = ghostty_surface_mouse_button(surface, GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, modsFromEvent(event))
+            return
+        }
+        promptClickMoveStartPoint = nil
         ghostty_surface_mouse_pos(surface, pt.x, pt.y, modsFromEvent(event))
         _ = ghostty_surface_mouse_button(surface, GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, modsFromEvent(event))
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if let start = promptClickMoveStartPoint {
+            let current = mousePoint(from: event)
+            if TerminalPromptClickMovePolicy.shouldSuppressDrag(start: start, current: current) {
+                return
+            }
+            promptClickMoveStartPoint = nil
+            ghostty_surface_mouse_pos(surface, start.x, start.y, modsFromEvent(event))
+            _ = ghostty_surface_mouse_button(surface, GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_LEFT, modsFromEvent(event))
+        }
         mouseMoved(with: event)
     }
 
@@ -576,6 +659,14 @@ final class GhosttyTerminalNSView: NSView {
     private func presentContextMenu(with event: NSEvent) {
         let menu = NSMenu(title: "Terminal")
 
+        if let action = selectedTerminalAction() {
+            let item = NSMenuItem(title: action.title, action: #selector(handleSelectedTerminalAction(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = action
+            menu.addItem(item)
+            menu.addItem(.separator())
+        }
+
         let paste = NSMenuItem(title: "Paste", action: #selector(handleContextPaste(_:)), keyEquivalent: "")
         paste.target = self
         paste.isEnabled = NSPasteboard.general.string(forType: .string).map { !$0.isEmpty } ?? false
@@ -591,6 +682,18 @@ final class GhosttyTerminalNSView: NSView {
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
 
+    private func selectedTerminalAction() -> TerminalSelectionAction? {
+        let settings = TerminalSettingsStore.shared.snapshot()
+        guard settings.linkPreviewsEnabled || settings.filePathActionsEnabled else { return nil }
+        guard let action = TerminalSelectionActionResolver.action(from: readSelectionText(), workingDirectory: workingDirectory) else {
+            return nil
+        }
+        if action.url.isFileURL {
+            return settings.filePathActionsEnabled ? action : nil
+        }
+        return settings.linkPreviewsEnabled ? action : nil
+    }
+
     private func contextSplitMenuItem(title: String, direction: SplitDirection, position: SplitPosition) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(handleContextSplit(_:)), keyEquivalent: "")
         item.target = self
@@ -603,6 +706,12 @@ final class GhosttyTerminalNSView: NSView {
         window?.makeFirstResponder(self)
         guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else { return }
         insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+    }
+
+    @objc
+    private func handleSelectedTerminalAction(_ sender: NSMenuItem) {
+        guard let action = sender.representedObject as? TerminalSelectionAction else { return }
+        TerminalSelectionActionResolver.open(action)
     }
 
     private func isPasteShortcut(_ event: NSEvent, flags: NSEvent.ModifierFlags) -> Bool {
@@ -640,25 +749,39 @@ final class GhosttyTerminalNSView: NSView {
     override func scrollWheel(with event: NSEvent) {
         guard surface != nil else { return }
         let precise = event.hasPreciseScrollingDeltas
-        if precise {
-            scrollCoalescer.push(
-                x: event.scrollingDeltaX,
-                y: event.scrollingDeltaY,
-                precise: true
-            ) { [weak self] x, y, precise in
-                self?.sendMouseScroll(x: x, y: y, precise: precise)
-            }
-            return
-        }
-
-        sendMouseScroll(x: event.scrollingDeltaX, y: event.scrollingDeltaY, precise: false)
+        let mods = GhosttyScrollModifiers(precision: precise, phase: event.momentumPhase)
+        sendMouseScroll(x: event.scrollingDeltaX, y: event.scrollingDeltaY, mods: mods.rawValue)
     }
 
-    private func sendMouseScroll(x: Double, y: Double, precise: Bool) {
+    private func sendMouseScroll(x: Double, y: Double, mods: ghostty_input_scroll_mods_t) {
         guard let surface else { return }
-        var mods: ghostty_input_scroll_mods_t = 0
-        if precise { mods |= 1 }
         ghostty_surface_mouse_scroll(surface, x, y, mods)
+    }
+
+    private func sendPromptClickMove(to point: NSPoint) -> Bool {
+        guard let movement = promptClickMovement(to: point) else { return false }
+        guard movement.count > 0 else { return true }
+        for _ in 0 ..< movement.count {
+            sendKeyPress(codepoint: 0, keycode: movement.keyCode)
+        }
+        return true
+    }
+
+    private func promptClickMovement(to point: NSPoint) -> TerminalPromptClickMovePolicy.Movement? {
+        guard let surface else { return nil }
+        let size = ghostty_surface_size(surface)
+        let scale = Double(window?.backingScaleFactor ?? 1)
+        let cellSize = CGSize(
+            width: Double(size.cell_width_px) / scale,
+            height: Double(size.cell_height_px) / scale
+        )
+        var x: Double = 0
+        var y: Double = 0
+        var width: Double = 0
+        var height: Double = 0
+        ghostty_surface_ime_point(surface, &x, &y, &width, &height)
+        let cursor = NSPoint(x: x, y: y - (height / 2))
+        return TerminalPromptClickMovePolicy.movement(target: point, cursor: cursor, cellSize: cellSize)
     }
 
     private func buildKeyEvent(from event: NSEvent, action: ghostty_input_action_e) -> ghostty_input_key_s {
@@ -674,21 +797,11 @@ final class GhosttyTerminalNSView: NSView {
     }
 
     private func consumedModsFromFlags(_ flags: NSEvent.ModifierFlags) -> ghostty_input_mods_e {
-        var mods = GHOSTTY_MODS_NONE.rawValue
-        if flags.contains(.shift) { mods |= GHOSTTY_MODS_SHIFT.rawValue }
-        if flags.contains(.option) { mods |= GHOSTTY_MODS_ALT.rawValue }
-        return ghostty_input_mods_e(rawValue: mods)
+        GhosttyModifierMapper.mods(from: flags.intersection([.shift, .option]))
     }
 
     private func modsFromEvent(_ event: NSEvent) -> ghostty_input_mods_e {
-        var mods = GHOSTTY_MODS_NONE.rawValue
-        let flags = event.modifierFlags
-        if flags.contains(.shift) { mods |= GHOSTTY_MODS_SHIFT.rawValue }
-        if flags.contains(.control) { mods |= GHOSTTY_MODS_CTRL.rawValue }
-        if flags.contains(.option) { mods |= GHOSTTY_MODS_ALT.rawValue }
-        if flags.contains(.command) { mods |= GHOSTTY_MODS_SUPER.rawValue }
-        if flags.contains(.capsLock) { mods |= GHOSTTY_MODS_CAPS.rawValue }
-        return ghostty_input_mods_e(rawValue: mods)
+        GhosttyModifierMapper.mods(from: event.modifierFlags)
     }
 
     private func isFlagPress(_ event: NSEvent) -> Bool {
@@ -816,20 +929,12 @@ final class GhosttyTerminalNSView: NSView {
         surface != nil
     }
 
-    static func loginShellCommand(_ command: String) -> String {
-        let shell = userShell()
-        let escaped = command.replacingOccurrences(of: "'", with: "'\\''")
-        return "\(shell) -l -i -c '\(escaped)'"
+    var isTerminalSurfaceVisible: Bool {
+        isSurfaceVisible
     }
 
-    private static func userShell() -> String {
-        if let shell = ProcessInfo.processInfo.environment["SHELL"], !shell.isEmpty {
-            return shell
-        }
-        guard let pw = getpwuid(getuid()), let shellPtr = pw.pointee.pw_shell else {
-            return "/bin/zsh"
-        }
-        return String(cString: shellPtr)
+    static func loginShellCommand(_ command: String) -> String {
+        GhosttyShellLaunchCommand.startupCommand(command)
     }
 
     enum SearchDirection: String {

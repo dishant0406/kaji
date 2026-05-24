@@ -34,5 +34,4 @@ enum SyntaxEngineRegistry {
             return nil
         }
     }
-
 }

@@ -173,7 +173,7 @@ struct TerminalBridge: NSViewRepresentable {
 
     private func registerInitialAgentSessionIfNeeded(context: Context) {
         guard let seed = state.agentSessionSeed,
-               !seed.sessionID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              !seed.sessionID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return }
         let seedKey = "\(seed.providerID):\(seed.sessionID):\(state.id.uuidString)"
         guard context.coordinator.registeredSeedKey != seedKey else { return }

@@ -42,8 +42,8 @@ struct EditorStatusBar: View {
 
     private var diagnosticsStatus: some View {
         let diagnostics = DiagnosticsStore.shared.diagnostics(for: state.filePath)
-        let errors = diagnostics.filter { $0.severity == .error }.count
-        let warnings = diagnostics.filter { $0.severity == .warning }.count
+        let errors = diagnostics.count(where: { $0.severity == .error })
+        let warnings = diagnostics.count(where: { $0.severity == .warning })
         return HStack(spacing: 5) {
             Text("E \(errors)")
                 .foregroundStyle(errors > 0 ? KajiTheme.diffRemoveFg : KajiTheme.fgDim)

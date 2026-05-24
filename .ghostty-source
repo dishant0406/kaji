@@ -1,2 +1,5 @@
-repo=dishant0406/ghostty
-ref=336805e5c5e7ddd759186ed234586d9b55334c0e
+repo=ghostty-org/ghostty
+ref=d5d8cef4d3834cc8999eb9344066b0960b033f2d
+zig=0.15.2
+optimize=ReleaseFast
+cpu=baseline

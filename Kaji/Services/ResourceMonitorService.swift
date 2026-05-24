@@ -119,7 +119,10 @@ final class ResourceMonitorService {
             processName: sample.processName,
             cpuPercent: cpuPercent,
             memoryBytes: max(sample.footprintBytes, sample.residentBytes),
-            threadCount: sample.threadCount
+            threadCount: sample.threadCount,
+            terminalDiagnostics: TerminalSettingsStore.shared.snapshot().telemetryEnabled
+                ? TerminalViewRegistry.shared.diagnosticsSnapshot()
+                : nil
         )
     }
 

@@ -1,6 +1,8 @@
 import SwiftUI
 
-struct ReorderableHStack<Data: RandomAccessCollection, Content: View>: View where Data.Element: Identifiable, Data.Index == Int, Data.Element.ID: Hashable {
+struct ReorderableHStack<Data: RandomAccessCollection, Content: View>: View where Data.Element: Identifiable, Data.Index == Int,
+    Data.Element.ID: Hashable
+{
     let data: Data
     let onMove: (Int, Int) -> Void
     var onDragStateChange: (Bool) -> Void = { _ in }
@@ -47,7 +49,9 @@ struct ReorderableHStack<Data: RandomAccessCollection, Content: View>: View wher
     }
 }
 
-struct ReorderableVStack<Data: RandomAccessCollection, Content: View>: View where Data.Element: Identifiable, Data.Index == Int, Data.Element.ID: Hashable {
+struct ReorderableVStack<Data: RandomAccessCollection, Content: View>: View where Data.Element: Identifiable, Data.Index == Int,
+    Data.Element.ID: Hashable
+{
     let data: Data
     let onMove: (Int, Int) -> Void
     var onDragStateChange: (Bool) -> Void = { _ in }

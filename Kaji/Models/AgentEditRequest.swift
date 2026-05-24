@@ -1,6 +1,6 @@
 import Foundation
 
-struct AgentEditRequest: Sendable {
+struct AgentEditRequest {
     let filePath: String
     let projectPath: String
     let selectedText: String
@@ -10,7 +10,7 @@ struct AgentEditRequest: Sendable {
     let model: String?
 }
 
-struct AgentEditResponse: Sendable {
+struct AgentEditResponse {
     let replacement: String
     let providerID: String
 }

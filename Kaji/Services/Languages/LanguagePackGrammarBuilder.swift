@@ -47,7 +47,7 @@ enum LanguagePackGrammarBuilder {
             close: blockComment[1],
             scope: .comment,
             nestable: false
-        )]
+        ),]
     }
 
     private static func keywordGroups(from groups: [LanguageSyntaxDefinition.KeywordGroup]) -> [SyntaxGrammar.KeywordGroup] {

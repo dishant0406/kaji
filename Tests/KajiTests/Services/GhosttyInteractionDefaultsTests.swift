@@ -12,9 +12,11 @@ struct GhosttyInteractionDefaultsTests {
 
         #expect(defaults == [
             "shell-integration = detect",
+            "shell-integration-features = cursor,no-sudo,title,path,ssh-env,ssh-terminfo",
             "cursor-style = bar",
-            "cursor-style-blink = true",
+            "cursor-style-blink = false",
             "cursor-click-to-move = true",
+            "macos-option-as-alt = true",
         ])
     }
 
@@ -25,6 +27,8 @@ struct GhosttyInteractionDefaultsTests {
             "cursor-style = block",
             "cursor-style-blink = false",
             "cursor-click-to-move = false",
+            "macos-option-as-alt = false",
+            "shell-integration-features = false",
         ])
 
         #expect(defaults.isEmpty)
@@ -38,8 +42,10 @@ struct GhosttyInteractionDefaultsTests {
 
         #expect(defaults == [
             "shell-integration = detect",
-            "cursor-style-blink = true",
+            "shell-integration-features = cursor,no-sudo,title,path,ssh-env,ssh-terminfo",
+            "cursor-style-blink = false",
             "cursor-click-to-move = true",
+            "macos-option-as-alt = true",
         ])
     }
 }

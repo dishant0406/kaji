@@ -1,6 +1,8 @@
 import SwiftUI
 
-struct ReorderableStackCore<Axis: ReorderableAxis, Data: RandomAccessCollection, Content: View>: View where Data.Element: Identifiable, Data.Index == Int, Data.Element.ID: Hashable {
+struct ReorderableStackCore<Axis: ReorderableAxis, Data: RandomAccessCollection, Content: View>: View where Data.Element: Identifiable,
+    Data.Index == Int, Data.Element.ID: Hashable
+{
     let data: Data
     let coordinateSpaceName: String
     let externalCoordinateSpaceName: String?
@@ -64,18 +66,18 @@ struct ReorderableStackCore<Axis: ReorderableAxis, Data: RandomAccessCollection,
             DragGesture(minimumDistance: 2, coordinateSpace: .named(coordinateSpaceName)),
             DragGesture(minimumDistance: 2, coordinateSpace: .named(externalCoordinateSpaceName ?? coordinateSpaceName))
         )
-            .onChanged { value in
-                guard let stackValue = value.first, let externalValue = value.second else { return }
-                handleDrag(stackValue, datum: datum)
-                onExternalDragChanged(datum, externalValue)
-            }
-            .onEnded { value in
-                guard let stackValue = value.first, let externalValue = value.second else { return }
-                handleDrag(stackValue, datum: datum)
-                onExternalDragChanged(datum, externalValue)
-                handleDrop()
-                onExternalDragEnded(datum, externalValue)
-            }
+        .onChanged { value in
+            guard let stackValue = value.first, let externalValue = value.second else { return }
+            handleDrag(stackValue, datum: datum)
+            onExternalDragChanged(datum, externalValue)
+        }
+        .onEnded { value in
+            guard let stackValue = value.first, let externalValue = value.second else { return }
+            handleDrag(stackValue, datum: datum)
+            onExternalDragChanged(datum, externalValue)
+            handleDrop()
+            onExternalDragEnded(datum, externalValue)
+        }
     }
 
     private func handleDrag(_ value: DragGesture.Value, datum: Data.Element) {
@@ -145,12 +147,12 @@ struct ReorderableStackCore<Axis: ReorderableAxis, Data: RandomAccessCollection,
         else { return 0 }
 
         if currentIndex > initialIndex {
-            return data[initialIndex..<currentIndex]
+            return data[initialIndex ..< currentIndex]
                 .map { frames[$0.id].map { Axis.position(in: $0).span } ?? 0 }
                 .reduce(0, -)
         }
         if currentIndex < initialIndex {
-            return data[(currentIndex + 1)...initialIndex]
+            return data[(currentIndex + 1) ... initialIndex]
                 .map { frames[$0.id].map { Axis.position(in: $0).span } ?? 0 }
                 .reduce(0, +)
         }

@@ -56,9 +56,23 @@ final class TerminalViewRegistry {
         views[paneID]?.visibleText()
     }
 
+    func diagnosticsSnapshot() -> TerminalViewDiagnosticsSnapshot {
+        TerminalViewDiagnosticsSnapshot(
+            retainedViewCount: views.count,
+            liveSurfaceCount: views.values.filter(\.hasLiveSurface).count,
+            visibleSurfaceCount: views.values.filter(\.isTerminalSurfaceVisible).count
+        )
+    }
+
     func paneID(for view: GhosttyTerminalNSView) -> UUID? {
         paneIDs[ObjectIdentifier(view)]
     }
 }
 
 extension TerminalViewRegistry: TerminalViewRemoving {}
+
+struct TerminalViewDiagnosticsSnapshot: Equatable {
+    let retainedViewCount: Int
+    let liveSurfaceCount: Int
+    let visibleSurfaceCount: Int
+}

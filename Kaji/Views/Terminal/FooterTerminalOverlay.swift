@@ -10,8 +10,8 @@ struct FooterTerminalOverlay: View {
     let onOpenMCPControlPanel: (() -> Void)?
     let onProcessExit: () -> Void
 
-    private let terminalHeight: CGFloat = 320
     private let headerHeight: CGFloat = 34
+    @State private var terminalSettings = TerminalSettingsStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,6 +51,13 @@ struct FooterTerminalOverlay: View {
         .overlay {
             RoundedRectangle(cornerRadius: 0).stroke(KajiTheme.border, lineWidth: 1)
         }
+    }
+
+    private var terminalHeight: CGFloat {
+        FooterTerminalSizing.height(
+            from: terminalSettings.snapshot().quickTerminalSize,
+            screenHeight: NSScreen.main?.visibleFrame.height
+        )
     }
 
     private func header(state: TerminalPaneState) -> some View {

@@ -88,6 +88,8 @@ struct SettingsView: View {
                 GeneralSettingsView()
             case .appearance:
                 AppearanceSettingsView()
+            case .terminal:
+                TerminalSettingsView()
             case .cli:
                 CLILauncherSettingsView()
             case .extensions:

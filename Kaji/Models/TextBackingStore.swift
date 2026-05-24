@@ -86,7 +86,8 @@ final class TextBackingStore {
         return search(needle: needle, caseSensitive: caseSensitive, useRegex: useRegex)
             .first { candidate in
                 candidate.lineIndex > match.lineIndex
-                    || candidate.lineIndex == match.lineIndex && candidate.range.location >= match.range.location + (replacement as NSString).length
+                    || candidate.lineIndex == match.lineIndex && candidate.range.location >= match.range
+                    .location + (replacement as NSString).length
             }
     }
 
