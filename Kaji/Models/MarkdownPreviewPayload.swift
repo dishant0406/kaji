@@ -4,6 +4,7 @@ import Foundation
 struct MarkdownPreviewPayload: Codable, Equatable {
     let content: String
     let baseURL: String?
+    let allowedRootURL: String?
     let allowRemoteImages: Bool
     let anchors: [MarkdownSyncAnchor]
     let theme: MarkdownPreviewTheme

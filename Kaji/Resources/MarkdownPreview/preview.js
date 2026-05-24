@@ -1,5 +1,5 @@
 (function(){
-let currentAnchors=[],usedAnchors=new Set(),anchorByID=new Map(),programmatic=false,programmaticTarget=null,programmaticTimer=null,renderGeneration=0;
+let currentAnchors=[],usedAnchors=new Set(),anchorByID=new Map(),programmatic=false,programmaticTarget=null,programmaticTimer=null,renderGeneration=0,currentPayload=null;
 const loadedScripts=new Map();
 const content=document.getElementById("content");
 const post=(name,body)=>window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers[name]&&window.webkit.messageHandlers[name].postMessage(body);
@@ -57,6 +57,15 @@ function prepareMedia(root,payload){
    if(url.protocol==="file:")el.setAttribute(attr,localURL(url));
   }
  });
+}
+function handleLinkClick(event){
+ const link=event.target.closest&&event.target.closest("a[href]");
+ if(!link||!content.contains(link))return;
+ const href=link.getAttribute("href")||"";
+ if(href.startsWith("#"))return;
+ event.preventDefault();
+ const url=resolvedURL(href,currentPayload&&currentPayload.baseURL);
+ post("markdownLinkClicked",{href,resolvedURL:url?url.href:null});
 }
 function nextMarker(source,start,kind){
  const regex=/<!--\s*(BEGIN|END)\s+([^>]+?)\s*-->/gi;
@@ -176,6 +185,7 @@ function scrollToTarget(y){
 }
 async function render(payload){
  const generation=++renderGeneration;
+ currentPayload=payload;
  currentAnchors=payload.anchors||[];
  anchorByID=new Map(currentAnchors.map(anchor=>[anchor.id,anchor]));
  usedAnchors=new Set();
@@ -194,6 +204,7 @@ async function render(payload){
  renderMermaid(generation).then(()=>{if(generation===renderGeneration)reportMetrics()});
 }
 window.KajiMarkdownPreview={render,scrollTo:scrollToTarget};
+content.addEventListener("click",handleLinkClick);
 window.addEventListener("scroll",()=>{if(!programmatic)post("markdownScroll",{scrollTop:window.scrollY})},{passive:true});
 window.addEventListener("resize",()=>setTimeout(reportMetrics,30));
 post("markdownShellReady",{});

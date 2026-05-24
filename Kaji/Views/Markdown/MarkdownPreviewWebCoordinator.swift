@@ -2,7 +2,13 @@ import AppKit
 import WebKit
 
 final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, MarkdownPreviewMessageTarget {
-    static let messageNames = ["markdownShellReady", "markdownReady", "markdownMetrics", "markdownScroll"]
+    static let messageNames = [
+        "markdownShellReady",
+        "markdownReady",
+        "markdownMetrics",
+        "markdownScroll",
+        "markdownLinkClicked",
+    ]
 
     let schemeHandler: MarkdownPreviewURLSchemeHandler
     private let userContentController: WKUserContentController
@@ -15,6 +21,7 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, Markd
     var onReady: () -> Void = {}
     var onMetrics: (MarkdownPreviewMetrics) -> Void = { _ in }
     var onScroll: (CGFloat) -> Void = { _ in }
+    var onLink: (MarkdownPreviewLinkRequest) -> Void = { _ in }
 
     init(userContentController: WKUserContentController, schemeHandler: MarkdownPreviewURLSchemeHandler) {
         self.userContentController = userContentController
@@ -35,7 +42,7 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, Markd
     }
 
     func update(payload: MarkdownPreviewPayload, scrollRequestVersion: Int, scrollRequest: CGFloat?) {
-        schemeHandler.allowedRoot = payload.baseURL.flatMap(URL.init(string:))?.standardizedFileURL
+        schemeHandler.allowedRoot = allowedRoot(for: payload)
         if payload != lastPayload {
             lastPayload = payload
             render(payload)
@@ -60,6 +67,8 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, Markd
             if let value = (message.body as? [String: Any])?["scrollTop"] as? Double {
                 onScroll(CGFloat(value))
             }
+        case "markdownLinkClicked":
+            decode(message.body, as: MarkdownPreviewLinkRequest.self).map(onLink)
         default:
             break
         }
@@ -70,14 +79,23 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, Markd
         decidePolicyFor action: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
-        guard action.targetFrame?.isMainFrame == true,
-              let url = action.request.url,
-              url.scheme?.hasPrefix("http") == true
-        else {
+        guard action.targetFrame?.isMainFrame == true, let url = action.request.url else {
             decisionHandler(.allow)
             return
         }
-        NSWorkspace.shared.open(url)
+        if url == MarkdownPreviewAssetStore.shellURL {
+            decisionHandler(.allow)
+            return
+        }
+        if action.navigationType == .linkActivated {
+            handleFallbackNavigation(url)
+            decisionHandler(.cancel)
+            return
+        }
+        guard url.scheme == MarkdownPreviewAssetStore.contentScheme else {
+            decisionHandler(.allow)
+            return
+        }
         decisionHandler(.cancel)
     }
 
@@ -90,6 +108,7 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, Markd
         onReady = {}
         onMetrics = { _ in }
         onScroll = { _ in }
+        onLink = { _ in }
     }
 
     private func installHandlers() {
@@ -111,6 +130,21 @@ final class MarkdownPreviewWebCoordinator: NSObject, WKNavigationDelegate, Markd
 
     private func evaluate(_ script: String) {
         webView?.evaluateJavaScript(script)
+    }
+
+    private func allowedRoot(for payload: MarkdownPreviewPayload) -> URL? {
+        (payload.allowedRootURL ?? payload.baseURL)
+            .flatMap(URL.init(string:))?
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+    }
+
+    private func handleFallbackNavigation(_ url: URL) {
+        if url.scheme?.hasPrefix("http") == true {
+            NSWorkspace.shared.open(url)
+            return
+        }
+        onLink(MarkdownPreviewLinkRequest(href: url.absoluteString, resolvedURL: url.absoluteString))
     }
 
     private func decode<T: Decodable>(_ value: Any, as type: T.Type) -> T? {

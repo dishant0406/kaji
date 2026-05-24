@@ -8,6 +8,7 @@ struct MarkdownPreviewRepresentable: NSViewRepresentable {
     let onMetrics: (MarkdownPreviewMetrics) -> Void
     let onScroll: (CGFloat) -> Void
     let onReady: () -> Void
+    let onLink: (MarkdownPreviewLinkRequest) -> Void
 
     func makeNSView(context: Context) -> MarkdownPreviewHostView {
         let hostView = MarkdownPreviewHostView()
@@ -52,6 +53,6 @@ struct MarkdownPreviewRepresentable: NSViewRepresentable {
     }
 
     private var callbacks: MarkdownPreviewCallbacks {
-        MarkdownPreviewCallbacks(onMetrics: onMetrics, onScroll: onScroll, onReady: onReady)
+        MarkdownPreviewCallbacks(onMetrics: onMetrics, onScroll: onScroll, onReady: onReady, onLink: onLink)
     }
 }

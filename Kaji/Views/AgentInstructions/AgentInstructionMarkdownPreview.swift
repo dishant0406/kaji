@@ -2,10 +2,11 @@ import SwiftUI
 
 struct AgentInstructionMarkdownPreview: View {
     let document: AgentInstructionDocument?
+    let projectPath: String
 
     var body: some View {
         if let document {
-            MarkdownDocumentPreviewView(content: document.content, filePath: document.path)
+            MarkdownDocumentPreviewView(content: document.content, filePath: document.path, allowedRootPath: projectPath)
                 .background(KajiTheme.bg)
         } else {
             VStack(spacing: 8) {
