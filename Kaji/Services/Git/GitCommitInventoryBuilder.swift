@@ -7,9 +7,32 @@ enum GitCommitInventoryBuilder {
         selectedPaths: Set<String>,
         includeSnippets: Bool = true
     ) async -> GitCommitInventory {
+        await build(
+            repoPath: repoPath,
+            files: files,
+            selectedPaths: selectedPaths,
+            snippetPolicy: includeSnippets ? GitCommitMessageContextLevel.medium.snippetPolicy : nil
+        )
+    }
+
+    static func build(
+        repoPath: String,
+        files: [GitStatusFile],
+        selectedPaths: Set<String>,
+        snippetPolicy: GitCommitSnippetPolicy?
+    ) async -> GitCommitInventory {
         let selected = files.filter { selectedPaths.contains($0.path) }
         let inventoryFiles = selected.map(inventoryFile)
-        let snippets = includeSnippets ? await diffSnippets(repoPath: repoPath, files: selected, inventoryFiles: inventoryFiles) : []
+        let snippets: [GitCommitDiffSnippet] = if let snippetPolicy {
+            await diffSnippets(
+                repoPath: repoPath,
+                files: selected,
+                inventoryFiles: inventoryFiles,
+                policy: snippetPolicy
+            )
+        } else {
+            []
+        }
         return GitCommitInventory(
             files: inventoryFiles,
             totalAdditions: inventoryFiles.reduce(0) { $0 + $1.additions },

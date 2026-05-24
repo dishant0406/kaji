@@ -42,6 +42,23 @@ struct GitCommitInventoryTests {
         #expect(GitCommitNativeDraft.summary(for: inventory).contains("2 files changed"))
     }
 
+    @Test
+    func fastPolicyDoesNotIncludeSnippets() async {
+        let files = [
+            file("Kaji/Services/Git/CommitMessage.swift", additions: 20, deletions: 1),
+        ]
+
+        let inventory = await GitCommitInventoryBuilder.build(
+            repoPath: "/tmp",
+            files: files,
+            selectedPaths: Set(files.map(\.path)),
+            snippetPolicy: GitCommitMessageContextLevel.fast.snippetPolicy
+        )
+
+        #expect(inventory.fileCount == 1)
+        #expect(inventory.snippets.isEmpty)
+    }
+
     private func file(_ path: String, additions: Int, deletions: Int) -> GitStatusFile {
         GitStatusFile(
             path: path,

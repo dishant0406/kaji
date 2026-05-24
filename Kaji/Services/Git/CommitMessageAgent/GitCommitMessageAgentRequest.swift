@@ -5,4 +5,5 @@ struct GitCommitMessageAgentRequest: Hashable {
     let repoPath: String
     let inventory: GitCommitInventory
     let nativeDraft: String
+    let settings: GitCommitMessageSettingsSnapshot
 }

@@ -4,20 +4,21 @@ extension GitCommitInventoryBuilder {
     static func diffSnippets(
         repoPath: String,
         files: [GitStatusFile],
-        inventoryFiles: [GitCommitInventoryFile]
+        inventoryFiles: [GitCommitInventoryFile],
+        policy: GitCommitSnippetPolicy
     ) async -> [GitCommitDiffSnippet] {
         let byPath = Dictionary(uniqueKeysWithValues: inventoryFiles.map { ($0.path, $0) })
         let candidates = files.filter { file in
             guard let inventory = byPath[file.path] else { return false }
-            return !inventory.isBinary && !inventory.isLowSignal && inventory.changeWeight <= 700
+            return !inventory.isBinary && !inventory.isLowSignal && inventory.changeWeight <= policy.maxChangeWeight
         }
         .sorted { lhs, rhs in
             (byPath[lhs.path]?.changeWeight ?? 0) > (byPath[rhs.path]?.changeWeight ?? 0)
         }
-        .prefix(8)
+        .prefix(policy.maxFiles)
 
         var snippets: [GitCommitDiffSnippet] = []
-        var remainingCharacters = 12000
+        var remainingCharacters = policy.maxCharacters
         let git = GitRepositoryService()
 
         for file in candidates where remainingCharacters > 0 {
@@ -29,12 +30,12 @@ extension GitCommitInventoryBuilder {
             guard let diff = try? await git.patchAndCompare(
                 repoPath: repoPath,
                 filePath: file.path,
-                lineLimit: 120,
-                contextLineCount: 1,
+                lineLimit: policy.lineLimit,
+                contextLineCount: policy.contextLineCount,
                 hints: hints
             )
             else { continue }
-            let text = diff.rows.prefix(80).map(\.text).joined(separator: "\n")
+            let text = diff.rows.prefix(policy.rowLimit).map(\.text).joined(separator: "\n")
             guard !text.isEmpty else { continue }
             let clipped = String(text.prefix(remainingCharacters))
             snippets.append(GitCommitDiffSnippet(
