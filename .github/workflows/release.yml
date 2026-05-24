@@ -57,18 +57,30 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 
-      - name: Install cached GhosttyKit
+      - name: Install GhosttyKit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download ghosttykit-cache \
+          EXPECTED_STAMP="$(cat .ghostty-source)"
+          CACHE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$CACHE_DIR"' EXIT
+          if gh release download ghosttykit-cache \
             --repo "$REPOSITORY_SLUG" \
             --pattern "GhosttyKit.xcframework.zip" \
-            --clobber
-          unzip -oq GhosttyKit.xcframework.zip
-          test -f .ghostty-source
-          grep -qx 'repo=dishant0406/ghostty' .ghostty-source
-          grep -qx 'ref=336805e5c5e7ddd759186ed234586d9b55334c0e' .ghostty-source
+            --dir "$CACHE_DIR" \
+            --clobber; then
+            unzip -oq "$CACHE_DIR/GhosttyKit.xcframework.zip" -d "$CACHE_DIR"
+            if [[ -d "$CACHE_DIR/GhosttyKit.xcframework" && -f "$CACHE_DIR/.ghostty-source" && "$(cat "$CACHE_DIR/.ghostty-source")" == "$EXPECTED_STAMP" ]]; then
+              rm -rf GhosttyKit.xcframework
+              cp -R "$CACHE_DIR/GhosttyKit.xcframework" GhosttyKit.xcframework
+              exit 0
+            fi
+            echo "Cached GhosttyKit does not match .ghostty-source; rebuilding from source"
+          else
+            echo "Cached GhosttyKit is unavailable; rebuilding from source"
+          fi
+          rm -rf GhosttyKit.xcframework
+          scripts/setup.sh
 
       - name: Resolve Swift packages
         run: swift package resolve

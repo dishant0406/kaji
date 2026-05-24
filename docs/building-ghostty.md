@@ -35,7 +35,7 @@ GHOSTTY_REF=d5d8cef4d3834cc8999eb9344066b0960b033f2d scripts/setup.sh
 You can also override the repo slug entirely:
 
 ```bash
-GHOSTTY_REPO=dishant0406/ghostty GHOSTTY_REF=336805e5c5e7ddd759186ed234586d9b55334c0e scripts/setup.sh
+GHOSTTY_REPO=ghostty-org/ghostty GHOSTTY_REF=d5d8cef4d3834cc8999eb9344066b0960b033f2d scripts/setup.sh
 ```
 
 If the stamp matches but you want to rebuild the xcframework anyway, set `GHOSTTY_FORCE_REBUILD=1`:
