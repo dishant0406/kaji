@@ -15,19 +15,24 @@ extension AskOverlay {
         commitGenerationTask?.cancel()
         commitFlow?.isGenerating = true
         commitFlow?.generationText = nil
+        let settings = GitCommitMessageSettingsStore.shared.snapshot()
         commitGenerationTask = Task { @MainActor in
             let inventory = await GitCommitInventoryBuilder.build(
                 repoPath: worktree.path,
                 files: flow.files,
                 selectedPaths: flow.selectedPaths,
-                includeSnippets: false
+                snippetPolicy: settings.contextLevel.snippetPolicy
             )
             guard !Task.isCancelled else { return }
-            refineCommitMessage(inventory: inventory, nativeDraft: nativeDraft)
+            refineCommitMessage(inventory: inventory, nativeDraft: nativeDraft, settings: settings)
         }
     }
 
-    func refineCommitMessage(inventory: GitCommitInventory, nativeDraft: String) {
+    func refineCommitMessage(
+        inventory: GitCommitInventory,
+        nativeDraft: String,
+        settings: GitCommitMessageSettingsSnapshot
+    ) {
         guard GitCommitMessageAgent.isAvailable, let selectedProject, let selectedWorktree else {
             commitFlow?.isGenerating = false
             commitFlow?.generationText = GitCommitMessageAgent.unavailableReason()
@@ -40,7 +45,8 @@ extension AskOverlay {
             projectName: selectedProject.name,
             repoPath: selectedWorktree.path,
             inventory: inventory,
-            nativeDraft: nativeDraft
+            nativeDraft: nativeDraft,
+            settings: settings
         )
         commitGenerationTask = Task { @MainActor in
             do {
@@ -53,7 +59,7 @@ extension AskOverlay {
                 guard !Task.isCancelled else { return }
                 commitFlow?.message = result.message
                 commitFlow?.generatedMessage = result.message
-                commitFlow?.generationText = "Refined with Kaji Agent"
+                commitFlow?.generationText = "Refined with Kaji Agent · \(settings.contextLevel.title)"
                 commitFlow?.isGenerating = false
             } catch {
                 guard !Task.isCancelled else { return }

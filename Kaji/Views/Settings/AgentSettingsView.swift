@@ -4,6 +4,7 @@ struct AgentSettingsView: View {
     @Environment(ProjectStore.self) private var projectStore
     @Environment(AppState.self) private var appState
     @State private var parentSettings = ParentAgentSettingsStore.shared
+    @State private var commitMessageSettings = GitCommitMessageSettingsStore.shared
     @State private var oauthLogin = ParentAgentOAuthLoginService.shared
     @State private var selectedProjectID = ""
 
@@ -74,6 +75,8 @@ struct AgentSettingsView: View {
                     }
                 }
             }
+
+            CommitMessageSettingsSection(settings: commitMessageSettings)
 
             SettingsSection(
                 "Verification",
