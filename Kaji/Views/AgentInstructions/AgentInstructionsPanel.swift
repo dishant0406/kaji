@@ -49,7 +49,7 @@ struct AgentInstructionsPanel: View {
                 )
                 Rectangle().fill(KajiTheme.border).frame(height: 1)
             }
-            AgentInstructionMarkdownPreview(document: state.selectedDocument)
+            AgentInstructionMarkdownPreview(document: state.selectedDocument, projectPath: projectPath)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

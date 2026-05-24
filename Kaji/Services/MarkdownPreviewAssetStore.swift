@@ -93,7 +93,7 @@ enum MarkdownPreviewAssetStore {
             .queryItems?
             .first { $0.name == "path" }?
             .value
-            .map { URL(fileURLWithPath: $0).standardizedFileURL }
+            .map { URL(fileURLWithPath: $0).standardizedFileURL.resolvingSymlinksInPath() }
     }
 
     private static func normalizedPath(_ path: String) -> String {
@@ -120,8 +120,8 @@ enum MarkdownPreviewAssetStore {
 
     private static func isDescendant(_ fileURL: URL, of root: URL?) -> Bool {
         guard let root else { return false }
-        let path = fileURL.standardizedFileURL.path
-        let rootPath = root.standardizedFileURL.path
+        let path = fileURL.standardizedFileURL.resolvingSymlinksInPath().path
+        let rootPath = root.standardizedFileURL.resolvingSymlinksInPath().path
         return path == rootPath || path.hasPrefix(rootPath + "/")
     }
 

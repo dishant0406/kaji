@@ -5,6 +5,7 @@ struct MarkdownPreviewCallbacks {
     let onMetrics: (MarkdownPreviewMetrics) -> Void
     let onScroll: (CGFloat) -> Void
     let onReady: () -> Void
+    let onLink: (MarkdownPreviewLinkRequest) -> Void
 }
 
 @MainActor
@@ -58,6 +59,7 @@ final class MarkdownPreviewSurface: MarkdownPreviewReusableSurface {
     ) {
         coordinator.onMetrics = callbacks.onMetrics
         coordinator.onScroll = callbacks.onScroll
+        coordinator.onLink = callbacks.onLink
         coordinator.onReady = { [weak self] in
             self?.contentDidRender()
             callbacks.onReady()
@@ -75,6 +77,7 @@ final class MarkdownPreviewSurface: MarkdownPreviewReusableSurface {
         coordinator.onMetrics = { _ in }
         coordinator.onScroll = { _ in }
         coordinator.onReady = {}
+        coordinator.onLink = { _ in }
     }
 
     func dispose() {

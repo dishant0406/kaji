@@ -62,6 +62,7 @@ struct MarkdownPreviewAssetStoreTests {
         let payload = MarkdownPreviewPayload(
             content: "a\u{2028}b",
             baseURL: nil,
+            allowedRootURL: nil,
             allowRemoteImages: false,
             anchors: [],
             theme: MarkdownPreviewTheme(
