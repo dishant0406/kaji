@@ -42,7 +42,8 @@ enum LanguagePackStore {
             at: directory,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
-        ) else { return [] }
+        )
+        else { return [] }
 
         var definitions: [LanguageDefinition] = []
         for case let url as URL in enumerator where url.lastPathComponent == "manifest.json" {
@@ -52,7 +53,8 @@ enum LanguagePackStore {
                 let definition = manifest.definition(source: source, rootURL: url.deletingLastPathComponent())
                 let missing = LanguagePackAssetValidator.validateAssets(for: definition)
                 if !missing.isEmpty {
-                    languagePackLogger.warning("Language pack \(definition.id) has missing syntax assets: \(missing.joined(separator: ", "))")
+                    languagePackLogger
+                        .warning("Language pack \(definition.id) has missing syntax assets: \(missing.joined(separator: ", "))")
                 }
                 definitions.append(definition)
             } catch {

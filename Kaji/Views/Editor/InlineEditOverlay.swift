@@ -88,7 +88,7 @@ struct InlineEditOverlay: View {
 
     private var diffPreview: some View {
         InlineEditDiffPreview(original: state.inlineEditOriginal, proposal: proposal)
-        .padding(14)
+            .padding(14)
     }
 
     private func prepare() {
@@ -207,5 +207,4 @@ struct InlineEditOverlay: View {
         if let generatedBy { return "Generated with \(generatedBy). You can edit before applying." }
         return "Generate a proposal directly, or open the same prompt in Ask."
     }
-
 }

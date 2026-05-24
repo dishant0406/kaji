@@ -43,12 +43,13 @@ enum KajiShellBootstrapInstaller {
         _kaji_proxy_zdotdir="$ZDOTDIR"
         _kaji_user_zdotdir="${KAJI_USER_ZDOTDIR:-$HOME}"
         if [ -n "$_kaji_user_zdotdir" ] && [ "$_kaji_user_zdotdir" != "$_kaji_proxy_zdotdir" ]; then
-          if [ -r "$_kaji_user_zdotdir/\(name)" ]; then
+            if [ -r "$_kaji_user_zdotdir/\(name)" ]; then
             export ZDOTDIR="$_kaji_user_zdotdir"
             . "$_kaji_user_zdotdir/\(name)"
             export ZDOTDIR="$_kaji_proxy_zdotdir"
-          fi
+            fi
         fi
+        \(ghosttyIntegrationScript(for: name))
         if [ -n "${KAJI_AGENT_SHIM_DIR:-}" ]; then
           _kaji_path=":$PATH:"
           case "$_kaji_path" in
@@ -65,6 +66,15 @@ enum KajiShellBootstrapInstaller {
           unset _kaji_path
         fi
         unset _kaji_agent _kaji_proxy_zdotdir _kaji_user_zdotdir
+        """
+    }
+
+    private static func ghosttyIntegrationScript(for name: String) -> String {
+        guard name == ".zshrc" else { return "" }
+        return """
+        if [ -n "${GHOSTTY_RESOURCES_DIR:-}" ] && [ -r "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]; then
+          . "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
+        fi
         """
     }
 }

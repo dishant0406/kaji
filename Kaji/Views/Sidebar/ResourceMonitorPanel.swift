@@ -125,8 +125,13 @@ private struct ResourceMonitorAppRow: View {
     }
 
     private var subtitle: String {
-        [app.processName, "pid \(app.pid)", app.threadCount.map { "\($0)t" }]
+        [app.processName, "pid \(app.pid)", app.threadCount.map { "\($0)t" }, diagnostics]
             .compactMap(\.self)
             .joined(separator: "  ")
+    }
+
+    private var diagnostics: String? {
+        guard let snapshot = app.terminalDiagnostics else { return nil }
+        return "\(snapshot.liveSurfaceCount)/\(snapshot.retainedViewCount) surfaces"
     }
 }

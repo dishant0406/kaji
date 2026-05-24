@@ -84,7 +84,9 @@ enum KajiBrowserMCPResourceLocator {
         if let url = Bundle.appResources.url(forResource: basename, withExtension: "js") {
             urls.append(url)
         }
-        if let url = Bundle.appResources.url(forResource: basename, withExtension: "js", subdirectory: "CodingAgents/Browser/kaji-browser") {
+        if let url = Bundle.appResources
+            .url(forResource: basename, withExtension: "js", subdirectory: "CodingAgents/Browser/kaji-browser")
+        {
             urls.append(url)
         }
         if let resourceURL = Bundle.main.resourceURL {

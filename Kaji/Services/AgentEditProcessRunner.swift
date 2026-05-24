@@ -1,6 +1,6 @@
 import Foundation
 
-struct AgentEditProcessResult: Sendable {
+struct AgentEditProcessResult {
     let status: Int32
     let stdout: String
     let stderr: String
@@ -19,7 +19,7 @@ enum AgentEditProcessRunner {
             try await withCheckedThrowingContinuation { continuation in
                 queue.async {
                     do {
-                        continuation.resume(returning: try runSync(
+                        try continuation.resume(returning: runSync(
                             command: command,
                             workingDirectory: workingDirectory,
                             processBox: processBox

@@ -1,6 +1,7 @@
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general = "General"
     case appearance = "Appearance"
+    case terminal = "Terminal"
     case cli = "Coding Agents"
     case extensions = "Extensions"
     case agents = "Agents"
@@ -16,6 +17,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .appearance: "paintbrush"
+        case .terminal: "terminal"
         case .cli: "terminal"
         case .extensions: "puzzlepiece.extension"
         case .agents: "rectangle.stack"

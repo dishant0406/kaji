@@ -1,0 +1,105 @@
+import Foundation
+
+enum TerminalShellIntegrationMode: String, CaseIterable, Identifiable {
+    case detect = "Detect"
+    case disabled = "Disabled"
+    case bash = "Bash"
+    case fish = "Fish"
+    case zsh = "Zsh"
+    case nushell = "Nushell"
+    case elvish = "Elvish"
+
+    var id: String { rawValue }
+
+    var ghosttyValue: String {
+        switch self {
+        case .detect: "detect"
+        case .disabled: "none"
+        case .bash: "bash"
+        case .fish: "fish"
+        case .zsh: "zsh"
+        case .nushell: "nushell"
+        case .elvish: "elvish"
+        }
+    }
+}
+
+enum TerminalScrollbackProfile: String, CaseIterable, Identifiable {
+    case compact = "Compact"
+    case balanced = "Balanced"
+    case legacy = "Legacy"
+    case custom = "Custom"
+
+    var id: String { rawValue }
+
+    func limit(customValue: Int) -> Int {
+        switch self {
+        case .compact: 500_000
+        case .balanced: 2_000_000
+        case .legacy: 5_000_000
+        case .custom: min(max(customValue, 100_000), 50_000_000)
+        }
+    }
+}
+
+enum TerminalScrollSpeedProfile: String, CaseIterable, Identifiable {
+    case native = "Native"
+    case fast = "Fast"
+    case veryFast = "Very Fast"
+
+    var id: String { rawValue }
+
+    var ghosttyValue: String {
+        switch self {
+        case .native: "precision:1,discrete:3"
+        case .fast: "precision:3,discrete:5"
+        case .veryFast: "precision:5,discrete:8"
+        }
+    }
+}
+
+enum TerminalImageStorageProfile: String, CaseIterable, Identifiable {
+    case disabled = "Disabled"
+    case lean = "Lean"
+    case balanced = "Balanced"
+    case high = "High"
+
+    var id: String { rawValue }
+
+    var byteLimit: Int {
+        switch self {
+        case .disabled: 0
+        case .lean: 64 * 1024 * 1024
+        case .balanced: 320 * 1024 * 1024
+        case .high: 512 * 1024 * 1024
+        }
+    }
+}
+
+enum TerminalClipboardAccess: String, CaseIterable, Identifiable {
+    case ask = "Ask"
+    case allow = "Allow"
+    case deny = "Deny"
+
+    var id: String { rawValue }
+
+    var ghosttyValue: String { rawValue.lowercased() }
+}
+
+enum TerminalOptionAsAltMode: String, CaseIterable, Identifiable {
+    case always = "Alt"
+    case never = "Unicode"
+    case left = "Left Alt"
+    case right = "Right Alt"
+
+    var id: String { rawValue }
+
+    var ghosttyValue: String {
+        switch self {
+        case .always: "true"
+        case .never: "false"
+        case .left: "left"
+        case .right: "right"
+        }
+    }
+}

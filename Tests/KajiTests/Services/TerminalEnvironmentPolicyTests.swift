@@ -21,9 +21,16 @@ struct TerminalEnvironmentPolicyTests {
     @Test
     @MainActor
     func startupCommandUsesInteractiveLoginShell() {
-        let command = GhosttyTerminalNSView.loginShellCommand("codex 'hello'")
+        let command = GhosttyShellLaunchCommand.startupCommand("codex 'hello'", environment: ["SHELL": "/bin/zsh"])
 
         #expect(command.contains(" -l -i -c "))
         #expect(command.contains("codex"))
+    }
+
+    @Test
+    func defaultTerminalUsesUserShellForGhosttyIntegrationDetection() {
+        let command = GhosttyShellLaunchCommand.interactiveShell(environment: ["SHELL": "/bin/zsh"])
+
+        #expect(command == "/bin/zsh -l")
     }
 }

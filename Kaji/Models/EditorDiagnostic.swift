@@ -1,6 +1,6 @@
 import Foundation
 
-enum EditorDiagnosticSeverity: Int, Comparable, Sendable {
+enum EditorDiagnosticSeverity: Int, Comparable {
     case error
     case warning
     case information
@@ -11,7 +11,7 @@ enum EditorDiagnosticSeverity: Int, Comparable, Sendable {
     }
 }
 
-struct EditorDiagnostic: Identifiable, Equatable, Sendable {
+struct EditorDiagnostic: Identifiable, Equatable {
     let id: String
     let filePath: String
     let relativePath: String
@@ -22,7 +22,7 @@ struct EditorDiagnostic: Identifiable, Equatable, Sendable {
     let source: String?
 }
 
-struct EditorDiagnosticFileGroup: Identifiable, Equatable, Sendable {
+struct EditorDiagnosticFileGroup: Identifiable, Equatable {
     let id: String
     let filePath: String
     let relativePath: String

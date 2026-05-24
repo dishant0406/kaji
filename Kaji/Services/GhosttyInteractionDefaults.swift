@@ -1,39 +1,26 @@
 import Foundation
 
 enum GhosttyInteractionDefaults {
-    private static let shellIntegrationKey = "shell-integration"
-    private static let cursorStyleKey = "cursor-style"
-    private static let cursorBlinkKey = "cursor-style-blink"
-    private static let cursorClickToMoveKey = "cursor-click-to-move"
-
     static func linesIfMissing(in lines: [String]) -> [String] {
-        var defaults: [String] = []
-
-        if !hasConfigLine(for: shellIntegrationKey, in: lines) {
-            defaults.append("shell-integration = detect")
+        GhosttyTerminalConfigDefaults.lines().filter { defaultLine in
+            let key = defaultLine.components(separatedBy: "=")[0].trimmingCharacters(in: .whitespaces)
+            let keys = [
+                "shell-integration",
+                "shell-integration-features",
+                "cursor-style",
+                "cursor-style-blink",
+                "cursor-click-to-move",
+                "macos-option-as-alt",
+            ]
+            guard keys.contains(key) else { return false }
+            return !lines.contains { hasConfigLine($0, for: key) }
         }
-
-        if !hasConfigLine(for: cursorStyleKey, in: lines) {
-            defaults.append("cursor-style = bar")
-        }
-
-        if !hasConfigLine(for: cursorBlinkKey, in: lines) {
-            defaults.append("cursor-style-blink = true")
-        }
-
-        if !hasConfigLine(for: cursorClickToMoveKey, in: lines) {
-            defaults.append("cursor-click-to-move = true")
-        }
-
-        return defaults
     }
 
-    private static func hasConfigLine(for key: String, in lines: [String]) -> Bool {
-        lines.contains { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix(key) else { return false }
-            let suffix = trimmed.dropFirst(key.count).trimmingCharacters(in: .whitespaces)
-            return suffix.hasPrefix("=")
-        }
+    private static func hasConfigLine(_ line: String, for key: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix(key) else { return false }
+        let suffix = trimmed.dropFirst(key.count).trimmingCharacters(in: .whitespaces)
+        return suffix.hasPrefix("=")
     }
 }

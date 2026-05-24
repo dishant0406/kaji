@@ -54,7 +54,7 @@ extension SyntaxScope {
         case "link": return .link
         case "emphasis": return .emphasis
         default:
-            return Optional<SyntaxScope>.none
+            return SyntaxScope?.none
         }
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct ProjectTextSearchMatch: Identifiable, Equatable, Sendable {
+struct ProjectTextSearchMatch: Identifiable, Equatable {
     let id: String
     let filePath: String
     let relativePath: String
@@ -9,14 +9,14 @@ struct ProjectTextSearchMatch: Identifiable, Equatable, Sendable {
     let preview: String
 }
 
-struct ProjectTextSearchFileGroup: Identifiable, Equatable, Sendable {
+struct ProjectTextSearchFileGroup: Identifiable, Equatable {
     let id: String
     let filePath: String
     let relativePath: String
     let matches: [ProjectTextSearchMatch]
 }
 
-struct ProjectTextReplacePreview: Equatable, Sendable {
+struct ProjectTextReplacePreview: Equatable {
     let fileCount: Int
     let matchCount: Int
     let replacement: String

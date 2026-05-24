@@ -120,7 +120,9 @@ final class ViewportState {
     }
 
     func viewportLine(forBackingStoreLine globalLine: Int) -> Int? {
-        guard let visualLine = visualLines.firstIndex(of: globalLine), visualLine >= viewportStartLine, visualLine < viewportEndLine else { return nil }
+        guard let visualLine = visualLines.firstIndex(of: globalLine), visualLine >= viewportStartLine,
+              visualLine < viewportEndLine
+        else { return nil }
         return visualLine - viewportStartLine
     }
 

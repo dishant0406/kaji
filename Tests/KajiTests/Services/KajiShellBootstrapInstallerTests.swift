@@ -27,6 +27,7 @@ struct KajiShellBootstrapInstallerTests {
 
         #expect(values["KAJI_USER_ZDOTDIR"] == userZdotdir.path)
         #expect(zshrc.contains(". \"$_kaji_user_zdotdir/.zshrc\""))
+        #expect(zshrc.contains("$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"))
         #expect(zshrc.contains("PATH=\"$KAJI_AGENT_SHIM_DIR:$PATH\""))
     }
 

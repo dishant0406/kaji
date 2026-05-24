@@ -46,7 +46,10 @@ enum EditorSymbolParser {
 
     private static let swiftPatterns = [
         Pattern(#"^\s*(?:public|private|internal|fileprivate|open)?\s*(?:static\s+)?func\s+([A-Za-z_][\w]*)"#, .function),
-        Pattern(#"^\s*(?:public|private|internal|fileprivate|open)?\s*(?:final\s+)?(?:class|struct|enum|actor|protocol)\s+([A-Za-z_][\w]*)"#, .type),
+        Pattern(
+            #"^\s*(?:public|private|internal|fileprivate|open)?\s*(?:final\s+)?(?:class|struct|enum|actor|protocol)\s+([A-Za-z_][\w]*)"#,
+            .type
+        ),
         Pattern(#"^\s*(?:public|private|internal|fileprivate|open)?\s*(?:static\s+)?(?:let|var)\s+([A-Za-z_][\w]*)"#, .property),
     ]
 

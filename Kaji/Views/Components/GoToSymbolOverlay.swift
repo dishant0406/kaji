@@ -32,7 +32,7 @@ struct GoToSymbolOverlay: View {
     }
 
     private static func score(_ value: String, query: String) -> Int? {
-        if value == query { return 1_000 }
+        if value == query { return 1000 }
         if value.hasPrefix(query) { return 800 - value.count }
         if value.contains(query) { return 500 - value.count }
         var index = value.startIndex

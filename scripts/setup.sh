@@ -3,16 +3,21 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-GHOSTTY_REPO="${GHOSTTY_REPO:-dishant0406/ghostty}"
-GHOSTTY_REF="${GHOSTTY_REF:-336805e5c5e7ddd759186ed234586d9b55334c0e}"
+GHOSTTY_REPO="${GHOSTTY_REPO:-ghostty-org/ghostty}"
+GHOSTTY_REF="${GHOSTTY_REF:-d5d8cef4d3834cc8999eb9344066b0960b033f2d}"
 GHOSTTY_URL="https://github.com/${GHOSTTY_REPO}.git"
 XCFRAMEWORK_DIR="$PROJECT_ROOT/GhosttyKit.xcframework"
 HEADER_PATH="$PROJECT_ROOT/GhosttyKit/ghostty.h"
 RUNTIME_RESOURCES_DIR="$PROJECT_ROOT/Kaji/Resources/ghostty"
 STAMP_FILE="$PROJECT_ROOT/.ghostty-source"
 REQUIRED_ZIG_VERSION="${REQUIRED_ZIG_VERSION:-0.15.2}"
+GHOSTTY_OPTIMIZE="${GHOSTTY_OPTIMIZE:-ReleaseFast}"
+GHOSTTY_CPU="${GHOSTTY_CPU:-baseline}"
 EXPECTED_STAMP="repo=${GHOSTTY_REPO}
-ref=${GHOSTTY_REF}"
+ref=${GHOSTTY_REF}
+zig=${REQUIRED_ZIG_VERSION}
+optimize=${GHOSTTY_OPTIMIZE}
+cpu=${GHOSTTY_CPU}"
 
 require_tool() {
     local tool="$1"
@@ -25,6 +30,17 @@ require_tool() {
     exit 1
 }
 
+invalidate_swiftpm_ghostty_products() {
+    if [[ ! -d "$PROJECT_ROOT/.build" ]]; then
+        return
+    fi
+
+    find "$PROJECT_ROOT/.build" \
+        \( -path "*/debug/Kaji" -o -path "*/release/Kaji" -o -path "*/debug/KajiPackageTests.xctest" -o -path "*/release/KajiPackageTests.xctest" \) \
+        -exec rm -rf {} +
+    rm -rf "$PROJECT_ROOT/.build/KajiSwiftRun.app"
+}
+
 require_tool git "brew install git"
 
 if ! xcode-select --print-path | grep -q "/Applications/Xcode.app/Contents/Developer"; then
@@ -33,17 +49,15 @@ if ! xcode-select --print-path | grep -q "/Applications/Xcode.app/Contents/Devel
     exit 1
 fi
 
-if [[ -d "$XCFRAMEWORK_DIR" && -f "$STAMP_FILE" ]] \
+if [[ "${GHOSTTY_FORCE_REBUILD:-0}" != "1" ]] \
+    && [[ -d "$XCFRAMEWORK_DIR" && -f "$STAMP_FILE" ]] \
     && [[ "$(cat "$STAMP_FILE")" == "$EXPECTED_STAMP" ]] \
     && [[ -d "$RUNTIME_RESOURCES_DIR/shell-integration" ]] \
     && [[ -d "$RUNTIME_RESOURCES_DIR/terminfo" ]]; then
     echo "==> GhosttyKit.xcframework already matches $GHOSTTY_REPO@$GHOSTTY_REF"
+    echo "==> Invalidating SwiftPM products that statically link GhosttyKit"
+    invalidate_swiftpm_ghostty_products
     exit 0
-fi
-
-if [[ -d "$XCFRAMEWORK_DIR" ]]; then
-    echo "==> Removing existing GhosttyKit.xcframework"
-    rm -rf "$XCFRAMEWORK_DIR"
 fi
 
 WORK_DIR="$(mktemp -d)"
@@ -85,7 +99,8 @@ echo "==> Building GhosttyKit.xcframework from upstream source"
 (
     cd "$WORK_DIR/ghostty"
     "$ZIG_BIN" build \
-        -Doptimize=ReleaseFast \
+        -Doptimize="$GHOSTTY_OPTIMIZE" \
+        -Dcpu="$GHOSTTY_CPU" \
         -Demit-xcframework=true \
         -Dxcframework-target=universal \
         -Demit-macos-app=false
@@ -117,6 +132,7 @@ if [[ ! -d "$SOURCE_TERMINFO_DIR" ]]; then
 fi
 
 echo "==> Installing GhosttyKit.xcframework"
+rm -rf "$XCFRAMEWORK_DIR"
 cp -R "$SOURCE_XCFRAMEWORK" "$XCFRAMEWORK_DIR"
 cp "$SOURCE_HEADER" "$HEADER_PATH"
 rm -rf "$RUNTIME_RESOURCES_DIR"
@@ -124,6 +140,7 @@ mkdir -p "$RUNTIME_RESOURCES_DIR"
 cp -R "$SOURCE_RUNTIME_DIR/shell-integration" "$RUNTIME_RESOURCES_DIR/shell-integration"
 cp -R "$SOURCE_TERMINFO_DIR" "$RUNTIME_RESOURCES_DIR/terminfo"
 printf "%s\n" "$EXPECTED_STAMP" > "$STAMP_FILE"
+invalidate_swiftpm_ghostty_products
 
 echo "==> Done"
 echo "    Run 'swift build' to build the project"

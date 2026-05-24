@@ -34,6 +34,7 @@ final class GhosttyService {
             logger.error("ghostty_config failed")
             return
         }
+        GhosttyRuntimeDiagnostics.log(configPath: kajiConfig.ghosttyConfigPath)
 
         var rt = ghostty_runtime_config_s()
         rt.userdata = Unmanaged.passUnretained(self).toOpaque()

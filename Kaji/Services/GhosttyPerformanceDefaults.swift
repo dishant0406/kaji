@@ -1,20 +1,19 @@
 import Foundation
 
 enum GhosttyPerformanceDefaults {
-    private static let scrollbackLimitKey = "scrollback-limit"
-    private static let defaultScrollbackLimit = 5_000_000
-
     static func linesIfMissing(in lines: [String]) -> [String] {
-        guard !hasConfigLine(for: scrollbackLimitKey, in: lines) else { return [] }
-        return ["scrollback-limit = \(defaultScrollbackLimit)"]
+        GhosttyTerminalConfigDefaults.lines().filter { defaultLine in
+            let key = defaultLine.components(separatedBy: "=")[0].trimmingCharacters(in: .whitespaces)
+            let keys = ["scrollback-limit", "mouse-scroll-multiplier"]
+            guard keys.contains(key) else { return false }
+            return !lines.contains { hasConfigLine($0, for: key) }
+        }
     }
 
-    private static func hasConfigLine(for key: String, in lines: [String]) -> Bool {
-        lines.contains { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix(key) else { return false }
-            let suffix = trimmed.dropFirst(key.count).trimmingCharacters(in: .whitespaces)
-            return suffix.hasPrefix("=")
-        }
+    private static func hasConfigLine(_ line: String, for key: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix(key) else { return false }
+        let suffix = trimmed.dropFirst(key.count).trimmingCharacters(in: .whitespaces)
+        return suffix.hasPrefix("=")
     }
 }

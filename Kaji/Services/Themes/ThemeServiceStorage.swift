@@ -28,12 +28,14 @@ extension ThemeService {
         from content: String,
         themeIdentifier: String,
         theme: ThemePreview?,
-        typographyLines: [String]? = nil
+        typographyLines: [String]? = nil,
+        terminalLines: [String]? = nil
     ) -> String {
         var lines = content.components(separatedBy: .newlines)
         lines.removeAll { line in
             managedThemeKeys.contains { key in isConfigLine(line, for: key) }
                 || GhosttyTypographyDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
+                || GhosttyTerminalConfigDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
         }
 
         let themeLines: [String] = if let theme, theme.source == .bundled {
@@ -47,9 +49,9 @@ extension ThemeService {
             fontSize: AppTypographySettings.shared.fontSize,
             fontFamily: AppTypographySettings.shared.fontFamily
         )
-        let performanceLines = GhosttyPerformanceDefaults.linesIfMissing(in: preserved)
-        let interactionLines = GhosttyInteractionDefaults.linesIfMissing(in: preserved)
-        return (themeLines + resolvedTypographyLines + performanceLines + interactionLines + preserved).joined(separator: "\n")
+        let resolvedTerminalLines = terminalLines
+            ?? GhosttyTerminalConfigDefaults.lines(settings: TerminalSettingsStore.shared.snapshot())
+        return (themeLines + resolvedTypographyLines + resolvedTerminalLines + preserved).joined(separator: "\n")
     }
 
     nonisolated static func userThemesDirectoryURL() throws -> URL {

@@ -1,6 +1,6 @@
 import Foundation
 
-struct AppCommand: Identifiable, Equatable, Sendable {
+struct AppCommand: Identifiable, Equatable {
     let id: ShortcutAction
     let title: String
     let category: String
