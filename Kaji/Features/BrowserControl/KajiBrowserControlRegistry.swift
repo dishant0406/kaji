@@ -17,6 +17,24 @@ final class KajiBrowserControlRegistry {
     }
 
     func handle(_ command: KajiBrowserControlCommand) async -> String {
+        if command.action == "open_panel" {
+            requestOpenPanel()
+            return KajiBrowserControlJSON.body([
+                "connected": false,
+                "pending": true,
+                "action": command.action,
+                "sessionId": command.sessionID,
+            ])
+        }
+        if command.action == "close_panel" {
+            requestClosePanel()
+            return KajiBrowserControlJSON.body([
+                "connected": false,
+                "pending": true,
+                "action": command.action,
+                "sessionId": command.sessionID,
+            ])
+        }
         guard let target = sessions[command.sessionID] else {
             return KajiBrowserControlJSON.body([
                 "connected": false,
@@ -26,6 +44,14 @@ final class KajiBrowserControlRegistry {
         }
         let result = await run(command, target: target)
         return KajiBrowserControlJSON.body(result)
+    }
+
+    private func requestOpenPanel() {
+        NotificationCenter.default.post(name: .openBrowserPanel, object: nil)
+    }
+
+    private func requestClosePanel() {
+        NotificationCenter.default.post(name: .closeBrowserPanel, object: nil)
     }
 
     private func run(_ command: KajiBrowserControlCommand, target: KajiBrowserSessionTarget) async -> [String: Any] {

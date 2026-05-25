@@ -308,6 +308,13 @@ struct MainWindow: View {
                     guard browserEnabled else { return }
                     toggleBrowserPanel()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .openBrowserPanel)) { _ in
+                    guard browserEnabled else { return }
+                    showBrowserPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .closeBrowserPanel)) { _ in
+                    hideBrowserPanel()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFooterTerminal)) { _ in
                     guard footerTerminalEnabled else { return }
                     toggleFooterTerminal()
@@ -1263,6 +1270,26 @@ struct MainWindow: View {
             fileTreePanelVisible = false
             agentInstructionPanelVisible = false
         }
+    }
+
+    private func showBrowserPanel() {
+        guard browserEnabled else {
+            closeBrowserFeature()
+            return
+        }
+        guard let project = activeProject else {
+            hideBrowserPanel()
+            return
+        }
+
+        activateWorkspace()
+        ensureBrowserState(for: project)
+        guard let key = activeWorktreeKey else { return }
+        browserPanelVisible = true
+        browserPanelKey = key
+        vcsPanelVisible = false
+        fileTreePanelVisible = false
+        agentInstructionPanelVisible = false
     }
 
     private var activeFileTreeState: FileTreeState? {

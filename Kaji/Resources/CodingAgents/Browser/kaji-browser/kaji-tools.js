@@ -1,10 +1,12 @@
 const { imageResult, textResult, tool } = require('./results');
-const { browserState, readSession } = require('./session');
+const { browserState, browserStates, readSession, sessionPath } = require('./session');
 
 const tools = [
   tool('kaji_browser_status', 'Return Kaji embedded browser broker and CDP status.'),
   tool('kaji_browser_session', 'Return the Kaji browser session values known to this MCP wrapper.'),
-  tool('kaji_browser_provider_status', 'Return Playwright MCP provider status for Kaji browser automation.'),
+  tool('kaji_browser_provider_status', 'Return active browser automation provider status for Kaji browser automation.'),
+  tool('kaji_browser_open_panel', 'Open the Kaji Browser side panel for the active workspace.'),
+  tool('kaji_browser_close_panel', 'Close the Kaji Browser side panel for the active workspace.'),
   tool('kaji_browser_current', 'Return the active Kaji browser tab and tab list.'),
   tool('kaji_browser_navigate', 'Navigate the active Kaji browser tab through Kaji broker.', { url: stringSchema('URL or search query') }, ['url']),
   tool('kaji_browser_new_tab', 'Open a new Kaji browser tab through Kaji broker.', { url: stringSchema('Optional URL or search query') }),
@@ -32,6 +34,8 @@ function stringSchema(description) {
 function actionName(toolName) {
   return {
     kaji_browser_current: 'current',
+    kaji_browser_open_panel: 'open_panel',
+    kaji_browser_close_panel: 'close_panel',
     kaji_browser_navigate: 'navigate',
     kaji_browser_new_tab: 'new_tab',
     kaji_browser_back: 'back',
@@ -54,22 +58,78 @@ function safeSession() {
 }
 
 async function readStatus() {
-  const state = browserState();
-  if (!state.brokerUrl) return { connected: false, error: 'Kaji browser session is not available. Open Kaji Browser first.' };
-  const response = await fetch(`${state.brokerUrl}/status`);
-  if (!response.ok) return { connected: false, error: `Broker returned ${response.status}` };
-  return response.json();
+  return withReachableBroker('status', async state => {
+    const response = await fetch(`${state.brokerUrl}/status`);
+    if (!response.ok) return { connected: false, error: `Broker returned ${response.status}` };
+    return { ...(await response.json()), brokerSource: state.source };
+  });
 }
 
 async function browserAction(action, args) {
-  const state = browserState();
-  if (!state.brokerUrl) return { connected: false, error: 'Kaji browser session is not available. Open Kaji Browser first.' };
-  const response = await fetch(`${state.brokerUrl}/browser`, {
+  return withReachableBroker(action, async state => {
+    const response = await fetch(`${state.brokerUrl}/browser`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: state.sessionId, action, arguments: args })
+    });
+    return await awaitReadyResult(await parseResponse(response), action, args);
+  });
+}
+
+async function withReachableBroker(action, body) {
+  const states = browserStates().filter(state => state.brokerUrl);
+  if (states.length === 0) return { connected: false, error: 'Kaji browser session is not available. Open Kaji Browser first.' };
+  const errors = [];
+  for (const state of states) {
+    try {
+      const result = await body(state);
+      if (result && result.error === 'browser_panel_not_open' && action !== 'open_panel') {
+        return await openPanelAndRetry(action, state, body, result);
+      }
+      return result;
+    } catch (error) {
+      errors.push(brokerFetchError(action, state, error));
+    }
+  }
+  throw new Error(errors.join(' '));
+}
+
+async function openPanelAndRetry(action, state, body, original) {
+  await sendPanelAction(state, 'open_panel');
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await sleep(150);
+    const current = await body(state);
+    if (!current || current.error === 'browser_panel_not_open' || current.pending) continue;
+    if (action === 'current') return current;
+    return await body(state);
+  }
+  return { ...original, pending: true, error: 'browser_panel_open_timeout' };
+}
+
+async function sendPanelAction(state, action) {
+  await fetch(`${state.brokerUrl}/browser`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: state.sessionId, action, arguments: args })
+    body: JSON.stringify({ sessionId: state.sessionId, action, arguments: {} })
   });
-  return await awaitReadyResult(await parseResponse(response), action, args);
+}
+
+function brokerFetchError(action, state, error) {
+  const reason = error && error.cause && error.cause.code ? error.cause.code : error.message || String(error);
+  return [
+    `Kaji browser broker request failed for ${action}: ${reason}.`,
+    `brokerUrl=${state.brokerUrl || 'missing'}`,
+    `source=${state.source || 'unknown'}`,
+    `sessionPath=${sessionPath()}`,
+    `sessionFile=${sessionDescription()}`,
+    'Open a Kaji Browser pane or restart Kaji so the broker session file is refreshed.'
+  ].join(' ');
+}
+
+function sessionDescription() {
+  const session = readSession();
+  if (!session.brokerUrl) return 'missing';
+  return `updatedAt=${session.updatedAt || 'unknown'}`;
 }
 
 async function parseResponse(response) {

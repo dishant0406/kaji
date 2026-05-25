@@ -13,6 +13,8 @@ extension Notification.Name {
     static let toggleFileTree = Notification.Name("KajiToggleFileTree")
     static let toggleGlobalSearch = Notification.Name("KajiToggleGlobalSearch")
     static let toggleProblemsPanel = Notification.Name("KajiToggleProblemsPanel")
+    static let openBrowserPanel = Notification.Name("KajiOpenBrowserPanel")
+    static let closeBrowserPanel = Notification.Name("KajiCloseBrowserPanel")
     static let toggleBrowserPanel = Notification.Name("KajiToggleBrowserPanel")
     static let toggleFooterTerminal = Notification.Name("KajiToggleFooterTerminal")
     static let quickOpen = Notification.Name("KajiQuickOpen")

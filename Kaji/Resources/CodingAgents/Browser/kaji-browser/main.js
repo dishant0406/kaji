@@ -1,11 +1,10 @@
 const kajiTools = require('./kaji-tools');
-const playwrightToolCache = require('./playwright-tool-cache');
 const { MessageFramer, writeMessage } = require('./framing');
-const { PlaywrightClient } = require('./playwright-client');
+const { createProvider, providerTools } = require('./browser-provider');
 const { isAllowed } = require('./safety');
 
 function main() {
-  const provider = new PlaywrightClient();
+  const provider = createProvider();
   new MessageFramer(process.stdin, message => {
     handle(message, provider).catch(error => sendError(message && message.id, error));
   });
@@ -26,7 +25,7 @@ async function dispatch(method, params, provider) {
       serverInfo: { name: 'kaji-browser', version: '0.3.0' }
     };
   }
-  if (method === 'tools/list') return { tools: [...kajiTools.tools, ...playwrightToolCache.tools()] };
+  if (method === 'tools/list') return { tools: [...kajiTools.tools, ...providerTools(provider)] };
   if (method === 'tools/call') return callTool(params, provider);
   return {};
 }
