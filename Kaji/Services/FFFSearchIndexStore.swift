@@ -6,12 +6,31 @@ actor FFFSearchIndexStore {
     static let shared = FFFSearchIndexStore()
 
     private var indexes: [String: FFFSearchIndex] = [:]
+    private var accessOrder: [String] = []
+    private let maxIndexes = 4
 
     func index(for projectPath: String) throws -> FFFSearchIndex {
-        if let index = indexes[projectPath] { return index }
+        if let index = indexes[projectPath] {
+            touch(projectPath)
+            return index
+        }
         let index = try FFFSearchIndex(projectPath: projectPath)
         indexes[projectPath] = index
+        touch(projectPath)
+        enforceLimit()
         return index
+    }
+
+    private func touch(_ projectPath: String) {
+        accessOrder.removeAll { $0 == projectPath }
+        accessOrder.append(projectPath)
+    }
+
+    private func enforceLimit() {
+        while indexes.count > maxIndexes, let oldest = accessOrder.first {
+            accessOrder.removeFirst()
+            indexes.removeValue(forKey: oldest)
+        }
     }
 }
 
@@ -25,6 +44,7 @@ final class FFFSearchIndex: @unchecked Sendable {
     private let library: FFFDynamicLibrary
     private let handle: UnsafeMutableRawPointer
     private let projectPath: String
+    private let lock = NSLock()
 
     init(projectPath: String) throws {
         let library = FFFDynamicLibrary.shared
@@ -78,15 +98,15 @@ final class FFFSearchIndex: @unchecked Sendable {
     }
 
     func waitForScan(timeoutMs: UInt64 = 10000) throws {
-        guard let result = library.waitForScan(handle, timeoutMs) else { throw FFFSearchError.processFailed("FFF wait returned nil") }
-        defer { library.freeResult(result) }
-        guard result.pointee.success else {
-            throw FFFSearchError.processFailed(errorMessage(result, fallback: "FFF scan failed"))
-        }
+        lock.lock()
+        defer { lock.unlock() }
+        try waitForScanLocked(timeoutMs: timeoutMs)
     }
 
     func searchFiles(query: String, limit: Int) throws -> [FileSearchResult] {
-        try waitForScan()
+        lock.lock()
+        defer { lock.unlock() }
+        try waitForScanLocked()
         let empty = ""
         guard let result = query.withCString({ queryPath in
             empty.withCString { currentFile in
@@ -106,7 +126,9 @@ final class FFFSearchIndex: @unchecked Sendable {
     }
 
     func searchText(query: String, limit: Int) throws -> [ProjectTextSearchMatch] {
-        try waitForScan()
+        lock.lock()
+        defer { lock.unlock() }
+        try waitForScanLocked()
         guard let result = query
             .withCString({ library.liveGrep(handle, $0, 0, 10 * 1024 * 1024, 100, true, 0, UInt32(limit), 0, 0, 0, true) })
         else {
@@ -119,6 +141,14 @@ final class FFFSearchIndex: @unchecked Sendable {
         let grepResult = raw.assumingMemoryBound(to: FffGrepResult.self)
         defer { library.freeGrepResult(grepResult) }
         return FFFSearchResultMapper.textMatches(from: grepResult, projectPath: projectPath)
+    }
+
+    private func waitForScanLocked(timeoutMs: UInt64 = 10000) throws {
+        guard let result = library.waitForScan(handle, timeoutMs) else { throw FFFSearchError.processFailed("FFF wait returned nil") }
+        defer { library.freeResult(result) }
+        guard result.pointee.success else {
+            throw FFFSearchError.processFailed(errorMessage(result, fallback: "FFF scan failed"))
+        }
     }
 }
 
