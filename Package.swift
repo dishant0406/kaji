@@ -54,6 +54,11 @@ let package = Package(
             publicHeadersPath: "."
         ),
         .target(
+            name: "FFFKit",
+            path: "FFFKit",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "SwiftyDiff",
             path: "Vendor/SwiftyDiff/Sources/SwiftyDiff"
         ),
@@ -61,6 +66,7 @@ let package = Package(
             name: "Kaji",
             dependencies: [
                 "CEFBridge",
+                "FFFKit",
                 "GhosttyKit",
                 "SwiftyDiff",
                 .product(name: "Sparkle", package: "Sparkle"),
@@ -101,6 +107,7 @@ let package = Package(
             name: "KajiTests",
             dependencies: [
                 "Kaji",
+                "FFFKit",
             ],
             path: "Tests/KajiTests",
             linkerSettings: [

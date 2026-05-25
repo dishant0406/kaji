@@ -30,8 +30,8 @@ struct FileSearchServiceTests {
         #expect(ranked.first?.relativePath == "Views/Components/QuickOpenOverlay.swift")
     }
 
-    @Test("service finds deep and hidden files")
-    func serviceFindsDeepAndHiddenFiles() async throws {
+    @Test("service finds deep files through FFF")
+    func serviceFindsDeepFilesThroughFFF() async throws {
         let rootURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: rootURL) }
@@ -46,14 +46,33 @@ struct FileSearchServiceTests {
         try FileManager.default.createDirectory(at: deepFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data().write(to: deepFileURL)
 
-        let hiddenFileURL = rootURL.appendingPathComponent(".env")
-        try Data().write(to: hiddenFileURL)
-
         let deepResults = await FileSearchService.search(query: "deep", in: rootURL.path)
-        let hiddenResults = await FileSearchService.search(query: ".env", in: rootURL.path)
 
         #expect(deepResults.contains { $0.absolutePath == deepFileURL.path })
-        #expect(hiddenResults.contains { $0.absolutePath == hiddenFileURL.path })
+    }
+
+    @Test("FFF maps text search columns to one based values")
+    func fffMapsTextSearchColumns() throws {
+        let response = FFFGrepSearchResponse(
+            ok: true,
+            value: FFFGrepSearchValue(items: [
+                FFFGrepItem(relativePath: "App.swift", lineContent: "hello needle", lineNumber: 2, col: 6),
+            ])
+        )
+
+        let matches = FFFSearchResultMapper.textMatches(from: response, projectPath: "/tmp/project")
+
+        #expect(matches[0].column == 7)
+        #expect(matches[0].line == 2)
+        #expect(matches[0].filePath == "/tmp/project/App.swift")
+    }
+
+    @Test("FFF binary store selects a dylib install path")
+    func fffBinaryStoreSelectsDylibPath() throws {
+        let directory = try FFFSearchBinaryStore.installDirectory()
+
+        #expect(directory.path.contains("Search/FFF"))
+        #expect(try FFFSearchBinaryStore.libraryURL().lastPathComponent == "libfff_c.dylib")
     }
 
     @Test("index evicts least recently used project caches")

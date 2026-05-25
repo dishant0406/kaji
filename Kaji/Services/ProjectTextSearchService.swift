@@ -2,23 +2,11 @@ import Foundation
 
 enum ProjectTextSearchService {
     static let maxMatches = 200
-    private static let rgURL = URL(fileURLWithPath: "/opt/homebrew/bin/rg")
 
     static func search(query: String, in projectPath: String) async -> [ProjectTextSearchFileGroup] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
-        guard FileManager.default.isExecutableFile(atPath: rgURL.path) else {
-            return await fallbackSearch(query: trimmed, in: projectPath)
-        }
-        return await ProjectTextSearchProcessRunner.search(
-            request: .init(
-                executableURL: rgURL,
-                arguments: ripgrepArguments(query: trimmed),
-                projectPath: projectPath,
-                currentDirectoryPath: projectPath,
-                limit: maxMatches
-            )
-        )
+        return await (try? FFFSearchService.searchText(query: trimmed, in: projectPath, limit: maxMatches)) ?? []
     }
 
     static func replace(query: String, groups: [ProjectTextSearchFileGroup], with replacement: String) async throws -> [String] {
@@ -32,55 +20,6 @@ enum ProjectTextSearchService {
                 }
             }
         }
-    }
-
-    private static func ripgrepArguments(query: String) -> [String] {
-        [
-            "--hidden",
-            "--no-ignore",
-            "--line-number",
-            "--column",
-            "--color", "never",
-            "--glob", "!.git",
-            "--glob", "!.git/**",
-            "--glob", "!node_modules",
-            "--glob", "!node_modules/**",
-            "--glob", "!.build",
-            "--glob", "!.build/**",
-            "--glob", "!build",
-            "--glob", "!build/**",
-            "--glob", "!DerivedData",
-            "--glob", "!DerivedData/**",
-            "--glob", "!dist",
-            "--glob", "!dist/**",
-            "--glob", "!target",
-            "--glob", "!target/**",
-            "--fixed-strings",
-            query,
-        ]
-    }
-
-    private static func fallbackSearch(query: String, in projectPath: String) async -> [ProjectTextSearchFileGroup] {
-        let files = await FileSearchService.search(query: "", in: projectPath)
-        let lowerQuery = query.lowercased()
-        var matches: [ProjectTextSearchMatch] = []
-        for file in files where matches.count < maxMatches {
-            guard let contents = try? String(contentsOfFile: file.absolutePath, encoding: .utf8) else { continue }
-            for (lineIndex, line) in contents.components(separatedBy: .newlines).enumerated() {
-                guard let range = line.lowercased().range(of: lowerQuery) else { continue }
-                let column = line.distance(from: line.startIndex, to: range.lowerBound) + 1
-                matches.append(.init(
-                    id: "\(file.absolutePath):\(lineIndex + 1):\(column)",
-                    filePath: file.absolutePath,
-                    relativePath: file.relativePath,
-                    line: lineIndex + 1,
-                    column: column,
-                    preview: line.trimmingCharacters(in: .whitespacesAndNewlines)
-                ))
-                if matches.count >= maxMatches { break }
-            }
-        }
-        return group(matches)
     }
 
     static func group(_ matches: [ProjectTextSearchMatch]) -> [ProjectTextSearchFileGroup] {
