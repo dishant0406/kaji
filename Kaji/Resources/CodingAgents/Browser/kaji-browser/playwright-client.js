@@ -1,14 +1,10 @@
-const { spawn } = require('child_process');
-const { MessageFramer, writeMessage } = require('./framing');
 const { browserState } = require('./session');
+const { ensureBrokerSessionReady, waitForCdpEndpoint } = require('./broker-session');
+const { MCPStdioClient } = require('./mcp-stdio-client');
 
 class PlaywrightClient {
   constructor() {
-    this.child = null;
-    this.nextId = 1;
-    this.pending = new Map();
-    this.stderr = '';
-    this.startedAt = null;
+    this.client = new MCPStdioClient('Playwright MCP');
   }
 
   status() {
@@ -16,11 +12,11 @@ class PlaywrightClient {
     return {
       provider: 'playwright',
       package: packageSpec(),
-      running: Boolean(this.child),
+      running: this.client.running,
       cdpUrl: state.cdpUrl,
       hasCdp: Boolean(state.cdpUrl),
-      startedAt: this.startedAt,
-      lastError: this.stderr.split('\n').filter(Boolean).slice(-3).join('\n')
+      startedAt: this.client.startedAt,
+      lastError: this.client.lastError()
     };
   }
 
@@ -31,98 +27,26 @@ class PlaywrightClient {
   }
 
   async ensureStarted() {
-    if (this.child) return;
+    if (this.client.running) return;
     const endpoint = await waitForCdpEndpoint();
     this.start(endpoint);
-    await this.request('initialize', {
-      protocolVersion: '2025-06-18',
-      capabilities: {},
-      clientInfo: { name: 'kaji-browser-wrapper', version: '0.1.0' }
-    }, timeoutMs());
-    this.notify('notifications/initialized', {});
+    await this.client.initialize(timeoutMs());
   }
 
   start(endpoint) {
     const args = ['-y', packageSpec(), `--cdp-endpoint=${endpoint}`, '--output-mode=stdout', '--snapshot-mode=full'];
     for (const item of extraArgs()) args.push(item);
-    this.child = spawn('npx', args, { stdio: ['pipe', 'pipe', 'pipe'], env: childEnvironment() });
-    this.startedAt = new Date().toISOString();
-    new MessageFramer(this.child.stdout, message => this.receive(message));
-    this.child.stderr.on('data', chunk => { this.stderr += chunk.toString(); });
-    this.child.on('exit', () => this.reset(new Error('Playwright MCP exited')));
+    this.client.start('npx', args, childEnvironment());
   }
 
   request(method, params, timeout) {
-    const id = this.nextId++;
-    writeMessage(this.child.stdin, { jsonrpc: '2.0', id, method, params });
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`Playwright MCP request timed out: ${method}`));
-      }, timeout);
-      this.pending.set(id, { resolve, reject, timer });
-    });
-  }
-
-  notify(method, params) {
-    writeMessage(this.child.stdin, { jsonrpc: '2.0', method, params });
-  }
-
-  receive(message) {
-    if (message.id === undefined) return;
-    const pending = this.pending.get(message.id);
-    if (!pending) return;
-    clearTimeout(pending.timer);
-    this.pending.delete(message.id);
-    if (message.error) pending.reject(new Error(message.error.message || JSON.stringify(message.error)));
-    else pending.resolve(message.result || {});
-  }
-
-  reset(error) {
-    for (const [id, pending] of this.pending) {
-      clearTimeout(pending.timer);
-      pending.reject(error);
-      this.pending.delete(id);
-    }
-    this.child = null;
-  }
-}
-
-async function waitForCdpEndpoint() {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const state = browserState();
-    if (state.cdpUrl && await isReady(state.cdpUrl)) return state.cdpUrl;
-    await sleep(250);
-  }
-  throw new Error('Kaji browser CDP endpoint is not available. Open the Kaji browser panel first.');
-}
-
-async function ensureBrokerSessionReady() {
-  const state = browserState();
-  if (!state.brokerUrl) throw new Error('Kaji browser session is not available. Open the Kaji browser panel first.');
-  const response = await fetch(`${state.brokerUrl}/browser`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: state.sessionId, action: 'current', arguments: {} })
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.error) throw new Error(body.error || `Kaji browser broker returned ${response.status}`);
-  if (!body.connected) throw new Error('Kaji browser session is not attached yet. Use kaji_browser_current or open the matching Kaji Browser panel first.');
-}
-
-async function isReady(endpoint) {
-  try {
-    const response = await fetch(`${endpoint}/json/version`);
-    return response.ok;
-  } catch {
-    return false;
+    return this.client.request(method, params, timeout);
   }
 }
 
 function packageSpec() { return process.env.KAJI_BROWSER_PLAYWRIGHT_PACKAGE || '@playwright/mcp@latest'; }
 function timeoutMs() { return Number(process.env.KAJI_BROWSER_PLAYWRIGHT_TIMEOUT_MS || 30000); }
 function extraArgs() { return (process.env.KAJI_BROWSER_PLAYWRIGHT_ARGS || '').split(/\s+/).filter(Boolean); }
-function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 function childEnvironment() {
   const env = { ...process.env };

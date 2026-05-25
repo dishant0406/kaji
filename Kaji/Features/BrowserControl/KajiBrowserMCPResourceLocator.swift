@@ -2,9 +2,14 @@ import Foundation
 
 enum KajiBrowserMCPResourceLocator {
     static let supportFileNames = [
+        "broker-session.js",
+        "browser-provider.js",
+        "chrome-devtools-client.js",
+        "chrome-devtools-tools.js",
         "kaji-tools.js",
         "framing.js",
         "main.js",
+        "mcp-stdio-client.js",
         "playwright-client.js",
         "playwright-tool-cache.js",
         "playwright-tools.js",
