@@ -1,0 +1,4 @@
+module FFFKit [system] {
+  header "include/fff.h"
+  export *
+}
