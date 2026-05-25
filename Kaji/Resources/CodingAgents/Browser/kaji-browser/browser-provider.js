@@ -14,7 +14,7 @@ function providerTools(provider) {
 }
 
 function providerName() {
-  const value = (process.env.KAJI_BROWSER_PROVIDER || 'playwright').trim().toLowerCase();
+  const value = (process.env.KAJI_BROWSER_PROVIDER || 'chrome-devtools').trim().toLowerCase();
   if (value === 'chrome-devtools' || value === 'chrome_devtools' || value === 'devtools') return 'chrome-devtools';
   return 'playwright';
 }
