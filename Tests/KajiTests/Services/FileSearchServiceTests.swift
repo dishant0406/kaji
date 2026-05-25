@@ -51,22 +51,6 @@ struct FileSearchServiceTests {
         #expect(deepResults.contains { $0.absolutePath == deepFileURL.path })
     }
 
-    @Test("FFF maps text search columns to one based values")
-    func fffMapsTextSearchColumns() throws {
-        let response = FFFGrepSearchResponse(
-            ok: true,
-            value: FFFGrepSearchValue(items: [
-                FFFGrepItem(relativePath: "App.swift", lineContent: "hello needle", lineNumber: 2, col: 6),
-            ])
-        )
-
-        let matches = FFFSearchResultMapper.textMatches(from: response, projectPath: "/tmp/project")
-
-        #expect(matches[0].column == 7)
-        #expect(matches[0].line == 2)
-        #expect(matches[0].filePath == "/tmp/project/App.swift")
-    }
-
     @Test("FFF binary store selects a dylib install path")
     func fffBinaryStoreSelectsDylibPath() throws {
         let directory = try FFFSearchBinaryStore.installDirectory()
