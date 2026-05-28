@@ -33,8 +33,9 @@ struct CodexAgentModule: CodingAgentModule, AIUsageProvider {
         projectInstructionFiles: ["AGENTS.md", "AGENTS.override.md"],
         homeSkillDirectories: [".codex/skills"],
         projectSkillDirectories: [".agents/skills"],
-        processMatchNames: ["codex"],
-        processCommandMarkers: ["codex", ".codex", "@openai/codex"],
+        processMatchNames: ["codex", "codex_chronicle"],
+        processCommandMarkers: ["codex", ".codex", "@openai/codex", "codex_chronicle", "Codex.app"],
+        processKillPatterns: ["codex", "codex_chronicle", "@openai/codex"],
         notificationPolicy: .init(coalesceGenericCompletions: true)
     )
 

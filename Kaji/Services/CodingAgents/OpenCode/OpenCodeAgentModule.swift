@@ -33,8 +33,9 @@ struct OpenCodeAgentModule: CodingAgentModule {
         projectInstructionFiles: ["AGENTS.md"],
         homeSkillDirectories: [],
         projectSkillDirectories: [".agents/skills"],
-        processMatchNames: ["opencode", ".opencode", "opencode-cli"],
-        processCommandMarkers: ["opencode", ".opencode", ".config/opencode"]
+        processMatchNames: ["opencode", ".opencode", "opencode-cli", "opencode-ai"],
+        processCommandMarkers: ["opencode", ".opencode", ".config/opencode", "opencode-ai"],
+        processKillPatterns: ["opencode", ".opencode", "opencode-ai"]
     )
 
     private static let pluginFileName = "kaji-notify.js"

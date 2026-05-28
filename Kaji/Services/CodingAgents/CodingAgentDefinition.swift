@@ -26,6 +26,7 @@ struct CodingAgentDefinition: Hashable, Identifiable {
     let projectSkillDirectories: [String]
     let processMatchNames: [String]
     let processCommandMarkers: [String]
+    let processKillPatterns: [String]
     let notificationPolicy: CodingAgentNotificationPolicy
 
     init(
@@ -54,6 +55,7 @@ struct CodingAgentDefinition: Hashable, Identifiable {
         projectSkillDirectories: [String],
         processMatchNames: [String] = [],
         processCommandMarkers: [String] = [],
+        processKillPatterns: [String] = [],
         notificationPolicy: CodingAgentNotificationPolicy = .default
     ) {
         self.id = id
@@ -81,6 +83,7 @@ struct CodingAgentDefinition: Hashable, Identifiable {
         self.projectSkillDirectories = projectSkillDirectories
         self.processMatchNames = processMatchNames
         self.processCommandMarkers = processCommandMarkers
+        self.processKillPatterns = processKillPatterns
         self.notificationPolicy = notificationPolicy
     }
 

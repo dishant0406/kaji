@@ -13,6 +13,7 @@ enum CodingAgentProcessClassifier {
                 providerID: definition.id,
                 providerName: definition.displayName,
                 providerIconName: definition.iconName,
+                providerKillPatterns: definition.processKillPatterns,
                 suspicion: suspicion(for: process, activeProcessGroupIDs: activeProcessGroupIDs)
             )
         }
@@ -24,7 +25,7 @@ enum CodingAgentProcessClassifier {
         if names.contains(commandName) { return true }
 
         guard isGenericRuntime(commandName) else { return false }
-        let commandLine = process.commandLine.lowercased()
+        let commandLine = [process.commandLine, process.executablePath].compactMap(\.self).joined(separator: " ").lowercased()
         return definition.processCommandMarkers.contains { marker in
             commandLine.contains(marker.lowercased())
         }

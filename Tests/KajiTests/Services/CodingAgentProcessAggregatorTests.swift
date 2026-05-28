@@ -37,14 +37,19 @@ struct CodingAgentProcessAggregatorTests {
                 pid: Int32(cpu * 100 + Double(memory)),
                 parentPID: 1,
                 processGroupID: 1,
+                state: "running",
+                tty: "??",
                 cpuPercent: cpu,
                 memoryBytes: memory,
+                threadCount: 1,
                 commandName: providerID,
+                executablePath: nil,
                 commandLine: providerID
             ),
             providerID: providerID,
             providerName: providerName,
             providerIconName: providerID,
+            providerKillPatterns: [providerID],
             suspicion: suspicion
         )
     }

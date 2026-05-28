@@ -14,6 +14,7 @@ enum CodingAgentProcessAggregator {
                     providerID: first.providerID,
                     providerName: first.providerName,
                     iconName: first.providerIconName,
+                    killPatterns: first.providerKillPatterns,
                     processes: sorted
                 )
             }

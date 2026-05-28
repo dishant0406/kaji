@@ -79,6 +79,28 @@ final class CodingAgentProcessMonitorService {
         }
     }
 
+    func patternKillGroup(_ group: CodingAgentProcessProviderGroup, force: Bool, appState: AppState, projectStore: ProjectStore) {
+        guard !group.killPatterns.isEmpty else { return }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let failures = await CodingAgentProcessPatternKiller.kill(
+                patterns: group.killPatterns,
+                signal: force ? .kill : .terminate
+            )
+
+            if failures.isEmpty {
+                statusMessage = "Pattern kill sent for \(group.providerName)."
+                statusIsError = false
+            } else {
+                statusMessage = failures.joined(separator: "  ")
+                statusIsError = true
+            }
+
+            refresh(appState: appState, projectStore: projectStore)
+        }
+    }
+
     private func signal(_ match: CodingAgentProcessMatch, force: Bool, appState: AppState, projectStore: ProjectStore) {
         guard !killingPIDs.contains(match.process.pid) else { return }
         killingPIDs.insert(match.process.pid)

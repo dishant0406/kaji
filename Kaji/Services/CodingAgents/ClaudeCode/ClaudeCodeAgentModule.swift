@@ -34,7 +34,8 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         homeSkillDirectories: [".claude/skills"],
         projectSkillDirectories: [".claude/skills", ".agents/skills"],
         processMatchNames: ["claude", "claude-code"],
-        processCommandMarkers: ["claude", "claude-code", ".claude"]
+        processCommandMarkers: ["claude", "claude-code", ".claude", "@anthropic-ai/claude-code", "node_modules/@anthropic-ai/claude-code"],
+        processKillPatterns: ["claude", "claude-code", "@anthropic-ai/claude-code"]
     )
 
     private static let settingsPath = NSHomeDirectory() + "/.claude/settings.json"
