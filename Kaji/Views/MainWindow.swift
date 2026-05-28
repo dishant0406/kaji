@@ -885,6 +885,7 @@ struct MainWindow: View {
                     ) {
                         NotificationCenter.default.post(name: .quickOpen, object: nil)
                     }
+                    CodingAgentProcessTopBarButton()
                     AIUsageTopBarButton()
                 }
             }
