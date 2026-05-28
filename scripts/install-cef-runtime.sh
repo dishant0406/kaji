@@ -32,9 +32,18 @@ CEF_ROOT="$RUNTIME_ROOT/cef_binary"
 BUILD_ROOT="$RUNTIME_ROOT/build"
 VERSION_FILE="$DOWNLOAD_ROOT/version.txt"
 CEF_FRAMEWORK="$CEF_ROOT/Release/Chromium Embedded Framework.framework"
+CEF_LIB="$CEF_FRAMEWORK/Chromium Embedded Framework"
 mkdir -p "$DOWNLOAD_ROOT" "$RUNTIME_ROOT"
 
-ARCHIVE_NAME="$(python3 - <<PY
+cached_archive_name() {
+  cat "$RUNTIME_ROOT/.archive" 2>/dev/null || cat "$VERSION_FILE" 2>/dev/null || true
+}
+
+CACHED_ARCHIVE_NAME="$(cached_archive_name)"
+if [[ "${REFRESH_CEF_RUNTIME:-0}" != "1" && -s "$CEF_LIB" && -n "$CACHED_ARCHIVE_NAME" && -f "$DOWNLOAD_ROOT/$CACHED_ARCHIVE_NAME" ]]; then
+  ARCHIVE_NAME="$CACHED_ARCHIVE_NAME"
+else
+  ARCHIVE_NAME="$(python3 - <<PY
 import json, urllib.request
 platform = "$PLATFORM"
 index = json.load(urllib.request.urlopen("https://cef-builds.spotifycdn.com/index.json"))
@@ -44,14 +53,14 @@ for build in index[platform]["versions"]:
     print(next(file["name"] for file in build["files"] if file["type"] == "standard"))
     break
 PY
-)"
+  )"
+fi
 ARCHIVE_PATH="$DOWNLOAD_ROOT/$ARCHIVE_NAME"
 if [[ ! -f "$ARCHIVE_PATH" ]]; then
   curl --fail --location --output "$ARCHIVE_PATH" "https://cef-builds.spotifycdn.com/${ARCHIVE_NAME//+/%2B}"
 fi
 printf '%s' "$ARCHIVE_NAME" >"$VERSION_FILE"
 
-CEF_LIB="$CEF_FRAMEWORK/Chromium Embedded Framework"
 if [[ ! -d "$CEF_ROOT" || ! -s "$CEF_LIB" || "$(cat "$RUNTIME_ROOT/.archive" 2>/dev/null || true)" != "$ARCHIVE_NAME" ]]; then
   rm -rf "$CEF_ROOT" "$BUILD_ROOT" "$RUNTIME_ROOT/extracting"
   mkdir -p "$RUNTIME_ROOT/extracting"

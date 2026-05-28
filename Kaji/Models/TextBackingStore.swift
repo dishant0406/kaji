@@ -1,48 +1,38 @@
 import Foundation
-import os
-
-private let logger = Logger(subsystem: "app.kaji", category: "TextBackingStore")
 
 @MainActor
 final class TextBackingStore {
     private(set) var lines: [String] = [""]
-    private var pendingTrailingFragment = ""
+    private var fullTextCache: String?
+    private var cachedUTF16Length = 0
 
     var lineCount: Int { lines.count }
+    var utf16Length: Int { cachedUTF16Length }
 
     func loadFromText(_ text: String) {
         let split = text.split(separator: "\n", omittingEmptySubsequences: false)
-        lines = split.map(String.init)
-        pendingTrailingFragment = ""
+        lines = split.isEmpty ? [""] : split.map(String.init)
+        fullTextCache = text
+        cachedUTF16Length = text.utf16.count
     }
 
     func appendText(_ chunk: String) {
         guard !chunk.isEmpty else { return }
-        let combined = pendingTrailingFragment + chunk
-        let split = combined.split(separator: "\n", omittingEmptySubsequences: false)
-        guard !split.isEmpty else { return }
-
-        let mergeFragment = String(split[0])
+        fullTextCache = nil
+        cachedUTF16Length += chunk.utf16.count
+        let split = chunk.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard let first = split.first else { return }
         if !lines.isEmpty {
-            lines[lines.count - 1] += mergeFragment
+            lines[lines.count - 1] += first
         } else {
-            lines.append(mergeFragment)
+            lines.append(first)
         }
-
-        if split.count > 1 {
-            for i in 1 ..< split.count - 1 {
-                lines.append(String(split[i]))
-            }
-            pendingTrailingFragment = String(split[split.count - 1])
-            lines.append(pendingTrailingFragment)
-        } else {
-            pendingTrailingFragment = lines.last ?? ""
+        for line in split.dropFirst() {
+            lines.append(line)
         }
     }
 
-    func finishLoading() {
-        pendingTrailingFragment = ""
-    }
+    func finishLoading() {}
 
     func line(at index: Int) -> String {
         guard index >= 0, index < lines.count else { return "" }
@@ -56,19 +46,38 @@ final class TextBackingStore {
     }
 
     func fullText() -> String {
-        lines.joined(separator: "\n")
+        if let fullTextCache { return fullTextCache }
+        let text = lines.joined(separator: "\n")
+        fullTextCache = text
+        return text
+    }
+
+    func utf16LengthExceeds(_ limit: Int) -> Bool {
+        guard limit >= 0 else { return true }
+        return cachedUTF16Length > limit
     }
 
     func replaceLines(in range: Range<Int>, with newLines: [String]) -> [String] {
         let clamped = max(0, range.lowerBound) ..< min(lines.count, range.upperBound)
+        let oldLineCount = lines.count
         let old = Array(lines[clamped])
+        let oldTextLength = Self.linesUTF16Length(old)
+        let newTextLength = Self.linesUTF16Length(newLines)
         lines.replaceSubrange(clamped, with: newLines)
+        cachedUTF16Length += newTextLength - oldTextLength
+        cachedUTF16Length += Self.separatorCount(forLineCount: lines.count) - Self.separatorCount(forLineCount: oldLineCount)
+        fullTextCache = nil
         return old
     }
 
     func insertLines(_ newLines: [String], at index: Int) {
+        guard !newLines.isEmpty else { return }
         let clamped = min(max(0, index), lines.count)
+        let oldLineCount = lines.count
         lines.insert(contentsOf: newLines, at: clamped)
+        cachedUTF16Length += Self.linesUTF16Length(newLines)
+        cachedUTF16Length += Self.separatorCount(forLineCount: lines.count) - Self.separatorCount(forLineCount: oldLineCount)
+        fullTextCache = nil
     }
 
     func replaceFirstMatch(
@@ -116,9 +125,20 @@ final class TextBackingStore {
         let range: NSRange
     }
 
-    func search(needle: String, caseSensitive: Bool, useRegex: Bool) -> [SearchMatch] {
+    func search(
+        needle: String,
+        caseSensitive: Bool,
+        useRegex: Bool,
+        maximumMatches: Int? = nil
+    ) -> [SearchMatch] {
         guard !needle.isEmpty else { return [] }
+        if let maximumMatches, maximumMatches <= 0 { return [] }
         var matches: [SearchMatch] = []
+
+        func reachedLimit() -> Bool {
+            guard let maximumMatches else { return false }
+            return matches.count >= maximumMatches
+        }
 
         if useRegex {
             var options: NSRegularExpression.Options = [.anchorsMatchLines]
@@ -126,11 +146,19 @@ final class TextBackingStore {
             guard let regex = try? NSRegularExpression(pattern: needle, options: options) else { return [] }
 
             for (lineIndex, line) in lines.enumerated() {
+                if reachedLimit() { break }
                 let nsLine = line as NSString
                 let lineRange = NSRange(location: 0, length: nsLine.length)
-                regex.enumerateMatches(in: line, range: lineRange) { match, _, _ in
+                regex.enumerateMatches(in: line, range: lineRange) { match, _, stop in
+                    if reachedLimit() {
+                        stop.pointee = true
+                        return
+                    }
                     guard let match, match.range.length > 0 else { return }
                     matches.append(SearchMatch(lineIndex: lineIndex, range: match.range))
+                    if reachedLimit() {
+                        stop.pointee = true
+                    }
                 }
             }
         } else {
@@ -138,9 +166,10 @@ final class TextBackingStore {
             if !caseSensitive { options.insert(.caseInsensitive) }
 
             for (lineIndex, line) in lines.enumerated() {
+                if reachedLimit() { break }
                 let nsLine = line as NSString
                 var searchRange = NSRange(location: 0, length: nsLine.length)
-                while searchRange.location < nsLine.length {
+                while searchRange.location < nsLine.length, !reachedLimit() {
                     let found = nsLine.range(of: needle, options: options, range: searchRange)
                     guard found.location != NSNotFound else { break }
                     matches.append(SearchMatch(lineIndex: lineIndex, range: found))
@@ -151,5 +180,13 @@ final class TextBackingStore {
         }
 
         return matches
+    }
+
+    private static func linesUTF16Length(_ lines: [String]) -> Int {
+        lines.reduce(0) { $0 + $1.utf16.count }
+    }
+
+    private static func separatorCount(forLineCount count: Int) -> Int {
+        max(0, count - 1)
     }
 }

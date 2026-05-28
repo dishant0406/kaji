@@ -28,6 +28,10 @@ struct BrowserDeviceProfile: Identifiable, Hashable, Codable {
 
 enum BrowserDeviceProfiles {
     static let desktopID = "desktop"
+    private static let mobileSafari = "Mozilla/5.0 (%@) AppleWebKit/605.1.15 " +
+        "(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+    private static let androidChrome = "Mozilla/5.0 (%@) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
 
     static let all: [BrowserDeviceProfile] = [
         BrowserDeviceProfile(
@@ -48,7 +52,7 @@ enum BrowserDeviceProfiles {
             width: 393,
             height: 852,
             deviceScaleFactor: 3,
-            userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            userAgent: String(format: mobileSafari, "iPhone; CPU iPhone OS 17_0 like Mac OS X"),
             isMobile: true,
             hasTouch: true
         ),
@@ -59,7 +63,7 @@ enum BrowserDeviceProfiles {
             width: 375,
             height: 667,
             deviceScaleFactor: 2,
-            userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            userAgent: String(format: mobileSafari, "iPhone; CPU iPhone OS 17_0 like Mac OS X"),
             isMobile: true,
             hasTouch: true
         ),
@@ -70,7 +74,7 @@ enum BrowserDeviceProfiles {
             width: 834,
             height: 1194,
             deviceScaleFactor: 2,
-            userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            userAgent: String(format: mobileSafari, "iPad; CPU OS 17_0 like Mac OS X"),
             isMobile: true,
             hasTouch: true
         ),
@@ -81,7 +85,7 @@ enum BrowserDeviceProfiles {
             width: 412,
             height: 915,
             deviceScaleFactor: 2.625,
-            userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+            userAgent: String(format: androidChrome, "Linux; Android 14; Pixel 8"),
             isMobile: true,
             hasTouch: true
         ),
@@ -92,7 +96,7 @@ enum BrowserDeviceProfiles {
             width: 384,
             height: 854,
             deviceScaleFactor: 3,
-            userAgent: "Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+            userAgent: String(format: androidChrome, "Linux; Android 14; SM-S921B"),
             isMobile: true,
             hasTouch: true
         ),

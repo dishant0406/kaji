@@ -56,7 +56,7 @@ final class EditorSettings {
         load()
         DebugFileLog.log(
             "EditorSettings",
-            "init completed defaultEditor=\(defaultEditor.rawValue) command=\(externalEditorCommand) lineNumbers=\(showsLineNumbers) activeLine=\(highlightsActiveLine) indent=\(showsIndentGuides) whitespace=\(rendersWhitespace) brackets=\(highlightsMatchingBrackets) tabSize=\(tabSize)"
+            "init completed defaultEditor=\(defaultEditor.rawValue) tabSize=\(tabSize)"
         )
     }
 

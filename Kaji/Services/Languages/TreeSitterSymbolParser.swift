@@ -4,6 +4,7 @@ import SwiftTreeSitter
 enum TreeSitterSymbolParser {
     @MainActor
     static func symbols(in backingStore: TextBackingStore, definition: LanguageDefinition) -> [EditorSymbol]? {
+        guard EditorStructuralAnalysisPolicy.allowsDocumentWideScan(backingStore) else { return nil }
         guard let parserURL = LanguagePackNativeParserValidator.validatedParserURL(for: definition),
               let treeSitter = definition.syntax?.treeSitter,
               let queryPath = treeSitter.queries.symbols,

@@ -570,6 +570,7 @@ struct MainWindow: View {
                 sessionID: sessionID,
                 closeOnDisappear: false,
                 managesBrowserControl: false,
+                paneIsVisible: true,
                 onClosePane: { hideBrowserPanel() }
             )
             .frame(width: CGFloat(browserPanelWidth))

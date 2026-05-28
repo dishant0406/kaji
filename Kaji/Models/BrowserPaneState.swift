@@ -64,16 +64,19 @@ final class BrowserPaneState {
         let page = BrowserPageState(url: url)
         pages.append(page)
         selectedPageID = page.id
+        pruneInactiveControllers()
         return page
     }
 
     func selectPage(id: UUID) {
         guard pages.contains(where: { $0.id == id }) else { return }
         selectedPageID = id
+        pruneInactiveControllers()
     }
 
     func closePage(id: UUID) {
         guard pages.count > 1 else {
+            controllers.removeController(for: pages[0].id)
             pages[0].url = Self.defaultURL
             pages[0].title = "Browser"
             pages[0].pageSummary = ""
@@ -82,8 +85,10 @@ final class BrowserPaneState {
         }
         guard let index = pages.firstIndex(where: { $0.id == id }) else { return }
         pages.remove(at: index)
+        controllers.removeController(for: id)
         guard selectedPageID == id else { return }
         selectedPageID = pages[min(index, pages.count - 1)].id
+        pruneInactiveControllers()
     }
 
     convenience init(projectPath: String, snapshot: TerminalTabSnapshot) {
@@ -102,5 +107,12 @@ final class BrowserPaneState {
 
     var pageSnapshots: [BrowserPageSnapshot] {
         pages.map { BrowserPageSnapshot(id: $0.id, url: $0.url, title: $0.title) }
+    }
+
+    func pruneInactiveControllers() {
+        controllers.retainControllers(for: BrowserControllerRetentionPolicy.retainedControllerIDs(
+            pageIDs: pages.map(\.id),
+            selectedPageID: selectedPageID
+        ))
     }
 }

@@ -20,30 +20,25 @@ struct LanguagePackCatalogPayload: Codable {
 
 enum LanguagePackCatalog {
     static func allEntries() -> [LanguagePackCatalogEntry] {
-        loadEntries()
+        catalogIndex.entries
     }
 
     @MainActor
     static func availableEntry(forFile filePath: String) -> LanguagePackCatalogEntry? {
         let installed = LanguageRegistry.shared.definition(forFile: filePath)
         guard installed == nil else { return nil }
-        let entries = loadEntries()
-        let url = URL(fileURLWithPath: filePath)
-        let filename = url.lastPathComponent.lowercased()
-        if let entry = entries.first(where: { $0.filenames.map { $0.lowercased() }.contains(filename) }) {
-            return entry
-        }
-        let ext = url.pathExtension.lowercased()
-        guard !ext.isEmpty else { return nil }
-        return entries.first { $0.extensions.map { $0.lowercased() }.contains(ext) }
+        return catalogIndex.entry(forFile: filePath)
     }
 
     static func manifestURL(for entry: LanguagePackCatalogEntry) -> URL? {
-        catalogRootURL()?.appendingPathComponent(entry.manifestPath)
+        catalogRootURL.appendingPathComponent(entry.manifestPath)
     }
 
+    private static let catalogRootURL: URL = findCatalogRootURL()
+    private static let catalogIndex = LanguagePackCatalogIndex(entries: loadEntries())
+
     private static func loadEntries() -> [LanguagePackCatalogEntry] {
-        guard let url = catalogRootURL()?.appendingPathComponent("registry.json") else { return [] }
+        let url = catalogRootURL.appendingPathComponent("registry.json")
         do {
             let data = try Data(contentsOf: url)
             return try JSONDecoder().decode(LanguagePackCatalogPayload.self, from: data).packs
@@ -53,7 +48,7 @@ enum LanguagePackCatalog {
         }
     }
 
-    private static func catalogRootURL() -> URL? {
+    private static func findCatalogRootURL() -> URL {
         let candidates: [URL?] = [
             Bundle.appResources.url(forResource: "LanguagePackRegistry", withExtension: nil),
             Bundle.main.resourceURL?.appendingPathComponent("Kaji_Kaji.bundle/LanguagePackRegistry", isDirectory: true),
@@ -62,6 +57,39 @@ enum LanguagePackCatalog {
         return candidates.compactMap(\.self).first { url in
             var isDirectory: ObjCBool = false
             return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
+        } ?? URL(fileURLWithPath: "/__missing_language_pack_registry__", isDirectory: true)
+    }
+}
+
+struct LanguagePackCatalogIndex {
+    let entries: [LanguagePackCatalogEntry]
+    private let entriesByFilename: [String: LanguagePackCatalogEntry]
+    private let entriesByExtension: [String: LanguagePackCatalogEntry]
+
+    init(entries: [LanguagePackCatalogEntry]) {
+        self.entries = entries
+        var filenames: [String: LanguagePackCatalogEntry] = [:]
+        var extensions: [String: LanguagePackCatalogEntry] = [:]
+        for entry in entries {
+            for filename in entry.filenames {
+                filenames[filename.lowercased(), default: entry] = filenames[filename.lowercased()] ?? entry
+            }
+            for fileExtension in entry.extensions {
+                extensions[fileExtension.lowercased(), default: entry] = extensions[fileExtension.lowercased()] ?? entry
+            }
         }
+        entriesByFilename = filenames
+        entriesByExtension = extensions
+    }
+
+    func entry(forFile filePath: String) -> LanguagePackCatalogEntry? {
+        let url = URL(fileURLWithPath: filePath)
+        let filename = url.lastPathComponent.lowercased()
+        if let entry = entriesByFilename[filename] {
+            return entry
+        }
+        let fileExtension = url.pathExtension.lowercased()
+        guard !fileExtension.isEmpty else { return nil }
+        return entriesByExtension[fileExtension]
     }
 }

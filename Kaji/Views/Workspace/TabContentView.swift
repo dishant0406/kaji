@@ -1,0 +1,78 @@
+import SwiftUI
+
+struct TabContentView: View {
+    let tab: TerminalTab
+    let focused: Bool
+    let visible: Bool
+    let onFocus: () -> Void
+    let onProcessExit: () -> Void
+    let onClosePane: () -> Void
+    let onSplitRequest: (SplitDirection, SplitPosition) -> Void
+    @Environment(\.activeWorktreeKey) private var worktreeKey
+    @Environment(AppState.self) private var appState
+    @Environment(ProjectStore.self) private var projectStore
+    @Environment(WorktreeStore.self) private var worktreeStore
+
+    var body: some View {
+        switch tab.content {
+        case let .terminal(pane):
+            TerminalPane(
+                state: pane,
+                focused: focused,
+                visible: visible,
+                onFocus: onFocus,
+                onProcessExit: onProcessExit,
+                onSplitRequest: onSplitRequest
+            )
+        case let .vcs(vcsState):
+            VCSTabView(state: vcsState, focused: focused, onFocus: onFocus)
+        case let .editor(editorState):
+            EditorPane(
+                state: editorState,
+                focused: focused,
+                onFocus: onFocus,
+                project: activeProject,
+                worktree: activeWorktree
+            )
+        case let .filePreview(previewState):
+            FilePreviewPane(state: previewState, onFocus: onFocus)
+        case let .diffViewer(diffState):
+            DiffViewerPane(state: diffState, focused: focused, onFocus: onFocus)
+        case .problems:
+            ProblemsPanel(
+                store: DiagnosticsStore.shared,
+                onOpenDiagnostic: { diagnostic in
+                    guard let project = activeProject else { return }
+                    appState.openFile(diagnostic.filePath, projectID: project.id)
+                },
+                onClose: onClosePane
+            )
+        case .parentAgent:
+            ParentAgentTabContent()
+        case let .codeGraph(state):
+            KajiCodeGraphPane(state: state)
+        case let .browser(state):
+            BrowserPane(
+                state: state,
+                sessionID: worktreeKey?.worktreeID.uuidString,
+                closeOnDisappear: true,
+                managesBrowserControl: true,
+                paneIsVisible: visible,
+                onClosePane: onClosePane
+            )
+        }
+    }
+
+    private var activeProject: Project? {
+        guard let projectID = appState.activeProjectID else { return nil }
+        return projectStore.projects.first { $0.id == projectID }
+    }
+
+    private var activeWorktree: Worktree? {
+        guard let project = activeProject else { return nil }
+        if let worktreeKey {
+            return worktreeStore.worktrees[project.id]?.first { $0.id == worktreeKey.worktreeID }
+        }
+        return worktreeStore.primary(for: project.id)
+    }
+}

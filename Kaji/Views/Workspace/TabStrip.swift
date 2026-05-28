@@ -113,7 +113,7 @@ struct PaneTabStrip: View {
 
         return HStack(spacing: 0) {
             ReorderableHStack(
-                tabs,
+                Self.indexedSnapshots(from: tabs),
                 onMove: { source, destination in
                     onReorderTab(
                         IndexSet(integer: source),
@@ -124,21 +124,21 @@ struct PaneTabStrip: View {
                     isReordering = dragging
                 },
                 externalCoordinateSpaceName: DragCoordinateSpace.mainWindow,
-                onExternalDragChanged: { tab, value in
-                    handleExternalDragChanged(tab: tab, value: value)
+                onExternalDragChanged: { item, value in
+                    handleExternalDragChanged(tab: item.tab, value: value)
                 },
-                onExternalDragEnded: { tab, value in
-                    handleExternalDragEnded(tab: tab, value: value)
+                onExternalDragEnded: { item, value in
+                    handleExternalDragEnded(tab: item.tab, value: value)
                 },
-                content: { tab, isDragged in
-                    let index = tabs.firstIndex(where: { $0.id == tab.id }) ?? 0
+                content: { item, isDragged in
+                    let tab = item.tab
                     TabCell(
                         tab: tab,
                         active: tab.id == activeTabID,
                         paneFocused: isFocused,
                         hasUnread: notificationStore.hasUnread(tabID: tab.id),
                         isAnyDragging: isReordering,
-                        shortcutIndex: index < 9 ? index + 1 : nil,
+                        shortcut: item.shortcut,
                         onSelect: { onSelectTab(tab.id) },
                         onClose: { onCloseTab(tab.id) },
                         onCreateLeft: { onCreateTabAdjacent(tab.id, .left) },
@@ -239,7 +239,7 @@ private struct TabCell: View {
     let paneFocused: Bool
     var hasUnread: Bool = false
     var isAnyDragging: Bool = false
-    var shortcutIndex: Int?
+    var shortcut: PaneTabStrip.TabShortcutSnapshot?
     let onSelect: () -> Void
     let onClose: () -> Void
     let onCreateLeft: () -> Void
@@ -278,12 +278,8 @@ private struct TabCell: View {
     }
 
     private var showBadge: Bool {
-        guard let shortcutIndex,
-              let action = ShortcutAction.tabAction(for: shortcutIndex)
-        else { return false }
-        return ModifierKeyMonitor.shared.isHolding(
-            modifiers: KeyBindingStore.shared.combo(for: action).modifiers
-        )
+        guard let shortcut else { return false }
+        return ModifierKeyMonitor.shared.isHolding(modifiers: shortcut.modifiers)
     }
 
     var body: some View {
@@ -341,10 +337,8 @@ private struct TabCell: View {
                 }
             }
             .overlay {
-                if showBadge, let shortcutIndex,
-                   let action = ShortcutAction.tabAction(for: shortcutIndex)
-                {
-                    ShortcutBadge(label: KeyBindingStore.shared.combo(for: action).displayString)
+                if showBadge, let shortcut {
+                    ShortcutBadge(label: shortcut.displayString)
                 }
             }
             .overlay(alignment: .bottom) {

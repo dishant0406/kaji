@@ -117,7 +117,7 @@ struct GlobalSearchPanel: View {
         Group {
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 emptyState("Type to search across the project")
-            } else if isSearching && groups.isEmpty {
+            } else if isSearching, groups.isEmpty {
                 emptyState("Searching...")
             } else if groups.isEmpty {
                 emptyState("No results")
@@ -139,7 +139,7 @@ struct GlobalSearchPanel: View {
         if isReplacing { return "Replacing..." }
         if isSearching { return "Searching..." }
         let count = groups.reduce(0) { $0 + $1.matches.count }
-        if count == 0 { return "Search results appear grouped by file" }
+        if count.signum() == 0 { return "Search results appear grouped by file" }
         return "\(count) result\(count == 1 ? "" : "s") in \(groups.count) file\(groups.count == 1 ? "" : "s")"
     }
 
@@ -303,10 +303,15 @@ private struct GlobalSearchFileGroupView: View {
         let ext = URL(fileURLWithPath: group.filePath).pathExtension.lowercased()
         return switch ext {
         case "swift": "swift"
-        case "js", "jsx", "mjs": "j.square"
-        case "ts", "tsx", "mts": "t.square"
+        case "js",
+             "jsx",
+             "mjs": "j.square"
+        case "ts",
+             "tsx",
+             "mts": "t.square"
         case "py": "p.square"
-        case "md", "markdown": "doc.richtext"
+        case "md",
+             "markdown": "doc.richtext"
         default: "doc.text"
         }
     }

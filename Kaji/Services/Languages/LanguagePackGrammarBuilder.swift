@@ -41,13 +41,15 @@ enum LanguagePackGrammarBuilder {
     private static func blockCommentRules(from blockComment: [String]?, nextID: inout Int) -> [SyntaxGrammar.BlockCommentRule] {
         guard let blockComment, blockComment.count == 2 else { return [] }
         nextID += 1
-        return [SyntaxGrammar.BlockCommentRule(
-            id: nextID,
-            open: blockComment[0],
-            close: blockComment[1],
-            scope: .comment,
-            nestable: false
-        ),]
+        return [
+            SyntaxGrammar.BlockCommentRule(
+                id: nextID,
+                open: blockComment[0],
+                close: blockComment[1],
+                scope: .comment,
+                nestable: false
+            ),
+        ]
     }
 
     private static func keywordGroups(from groups: [LanguageSyntaxDefinition.KeywordGroup]) -> [SyntaxGrammar.KeywordGroup] {

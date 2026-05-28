@@ -760,7 +760,7 @@ final class GhosttyTerminalNSView: NSView {
 
     private func sendPromptClickMove(to point: NSPoint) -> Bool {
         guard let movement = promptClickMovement(to: point) else { return false }
-        guard movement.count > 0 else { return true }
+        guard !movement.isEmpty else { return true }
         for _ in 0 ..< movement.count {
             sendKeyPress(codepoint: 0, keycode: movement.keyCode)
         }

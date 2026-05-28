@@ -53,7 +53,25 @@ struct ViewportStateTests {
         let vp = makeViewport(lineCount: 100)
         let range = vp.visibleLineRange(scrollY: 100_000, visibleHeight: 1_000)
 
-        #expect(range == 100 ..< 100)
+        #expect(range == 37 ..< 100)
+    }
+
+    @Test("visibleLineRange ignores bottom padding when clamping scroll")
+    func visibleLineRangeIgnoresBottomPaddingWhenClampingScroll() {
+        let vp = makeViewport(lineCount: 100)
+        vp.updateDocumentPadding(topInset: 10, bottomInset: 80)
+        let maxScrollY = vp.totalDocumentHeight - 160
+        let range = vp.visibleLineRange(scrollY: maxScrollY, visibleHeight: 160)
+
+        #expect(range == 90 ..< 100)
+    }
+
+    @Test("updated document height does not add synthetic safety rows")
+    func updatedDocumentHeightDoesNotAddSyntheticSafetyRows() {
+        let vp = makeViewport(lineCount: 100)
+        vp.updateDocumentPadding(topInset: 4, bottomInset: 6)
+
+        #expect(vp.totalDocumentHeight == 1610)
     }
 
     @Test("computeViewport adds buffer")
@@ -177,18 +195,5 @@ struct ViewportStateTests {
         let vp = makeViewport(lineCount: 100)
         #expect(vp.scrollY(forLine: 10) == 160)
         #expect(vp.scrollY(forLine: 0) == 0)
-    }
-
-    @Test("folded viewport maps only visible lines")
-    func foldedViewportMapsVisibleLines() {
-        let vp = makeViewport(lineCount: 8)
-        vp.rebuildVisualLines(collapsedRegions: [EditorFoldRegion(startLine: 1, endLine: 4)])
-        vp.applyViewport(0 ..< 4)
-
-        #expect(vp.visualLineCount == 5)
-        #expect(vp.viewportText() == "line 0\nline 1\nline 5\nline 6")
-        #expect(vp.viewportLine(forBackingStoreLine: 3) == nil)
-        #expect(vp.viewportLine(forBackingStoreLine: 5) == 2)
-        #expect(vp.isLineFolded(3))
     }
 }

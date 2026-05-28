@@ -74,7 +74,10 @@ enum EditorSymbolParser {
         let kind: EditorSymbol.Kind
 
         init(_ pattern: String, _ kind: EditorSymbol.Kind) {
-            self.regex = try! NSRegularExpression(pattern: pattern)
+            guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                preconditionFailure("Invalid editor symbol pattern")
+            }
+            self.regex = regex
             self.kind = kind
         }
     }

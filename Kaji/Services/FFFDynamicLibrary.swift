@@ -2,7 +2,9 @@ import FFFKit
 import Foundation
 
 final class FFFDynamicLibrary: @unchecked Sendable {
-    static let shared = FFFDynamicLibrary()
+    private static let sharedResult: Result<FFFDynamicLibrary, Error> = Result {
+        try FFFDynamicLibrary(libraryURL: FFFSearchBinaryStore.libraryURL())
+    }
 
     let createInstance: FFFCreateInstance
     let destroy: FFFDestroy
@@ -15,23 +17,39 @@ final class FFFDynamicLibrary: @unchecked Sendable {
 
     private let handle: UnsafeMutableRawPointer
 
-    private init() {
+    static func load() throws -> FFFDynamicLibrary {
+        try sharedResult.get()
+    }
+
+    static func load(libraryURL: URL) throws -> FFFDynamicLibrary {
+        try FFFDynamicLibrary(libraryURL: libraryURL)
+    }
+
+    private init(libraryURL: URL) throws {
+        guard let handle = dlopen(libraryURL.path, RTLD_NOW | RTLD_LOCAL) else {
+            throw FFFSearchError.processFailed(Self.dynamicLoaderError())
+        }
         do {
-            let url = try FFFSearchBinaryStore.libraryURL()
-            guard let handle = dlopen(url.path, RTLD_NOW | RTLD_LOCAL) else {
-                throw FFFSearchError.processFailed(String(cString: dlerror()))
-            }
+            let createInstance: FFFCreateInstance = try Self.symbol("fff_create_instance2", in: handle)
+            let destroy: FFFDestroy = try Self.symbol("fff_destroy", in: handle)
+            let waitForScan: FFFWaitForScan = try Self.symbol("fff_wait_for_scan", in: handle)
+            let search: FFFSearch = try Self.symbol("fff_search", in: handle)
+            let liveGrep: FFFLiveGrep = try Self.symbol("fff_live_grep", in: handle)
+            let freeResult: FFFFreeResult = try Self.symbol("fff_free_result", in: handle)
+            let freeSearchResult: FFFFreeSearchResult = try Self.symbol("fff_free_search_result", in: handle)
+            let freeGrepResult: FFFFreeGrepResult = try Self.symbol("fff_free_grep_result", in: handle)
             self.handle = handle
-            createInstance = try Self.symbol("fff_create_instance2", in: handle)
-            destroy = try Self.symbol("fff_destroy", in: handle)
-            waitForScan = try Self.symbol("fff_wait_for_scan", in: handle)
-            search = try Self.symbol("fff_search", in: handle)
-            liveGrep = try Self.symbol("fff_live_grep", in: handle)
-            freeResult = try Self.symbol("fff_free_result", in: handle)
-            freeSearchResult = try Self.symbol("fff_free_search_result", in: handle)
-            freeGrepResult = try Self.symbol("fff_free_grep_result", in: handle)
+            self.createInstance = createInstance
+            self.destroy = destroy
+            self.waitForScan = waitForScan
+            self.search = search
+            self.liveGrep = liveGrep
+            self.freeResult = freeResult
+            self.freeSearchResult = freeSearchResult
+            self.freeGrepResult = freeGrepResult
         } catch {
-            fatalError(error.localizedDescription)
+            dlclose(handle)
+            throw error
         }
     }
 
@@ -44,6 +62,11 @@ final class FFFDynamicLibrary: @unchecked Sendable {
             throw FFFSearchError.processFailed("Missing FFF symbol: \(name)")
         }
         return unsafeBitCast(pointer, to: T.self)
+    }
+
+    private static func dynamicLoaderError() -> String {
+        guard let error = dlerror() else { return "Unable to load FFF dynamic library" }
+        return String(cString: error)
     }
 }
 

@@ -28,6 +28,12 @@ struct EditorPane: View {
         .background(KajiTheme.bg)
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded { onFocus() })
+        .task {
+            state.loadIfNeeded()
+        }
+        .onDisappear {
+            state.suspendInactiveLoad()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .findInTerminal)) { _ in
             guard focused else { return }
             if state.isMarkdownFile, state.markdownViewMode == .preview {
@@ -265,6 +271,7 @@ struct EditorPane: View {
 private struct EditorMarkdownModePicker: View {
     @Binding var mode: EditorMarkdownViewMode
     @Binding var scrollSyncEnabled: Bool
+    let previewAvailable: Bool
 
     var body: some View {
         HStack(spacing: 2) {
@@ -291,10 +298,13 @@ private struct EditorMarkdownModePicker: View {
                     .padding(.horizontal, 2)
             }
             ForEach(EditorMarkdownViewMode.allCases, id: \.self) { candidate in
+                let isUnavailable = candidate != .code && !previewAvailable
                 Button {
+                    guard !isUnavailable else { return }
                     mode = candidate
                 } label: {
                     KajiIcon(systemName: candidate.symbol, size: 10)
+                        .foregroundStyle(isUnavailable ? KajiTheme.fgDim : KajiTheme.fg)
                         .frame(width: 22, height: 20)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
@@ -303,7 +313,8 @@ private struct EditorMarkdownModePicker: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(candidate.title)
+                .disabled(isUnavailable)
+                .help(isUnavailable ? "Preview is disabled for large Markdown files" : candidate.title)
                 .accessibilityLabel("Markdown \(candidate.title) View")
             }
         }
@@ -357,7 +368,8 @@ private struct EditorBreadcrumb: View {
             if state.isMarkdownFile {
                 EditorMarkdownModePicker(
                     mode: $state.markdownViewMode,
-                    scrollSyncEnabled: $state.markdownScrollSyncEnabled
+                    scrollSyncEnabled: $state.markdownScrollSyncEnabled,
+                    previewAvailable: state.isMarkdownPreviewAvailable
                 )
                 .padding(.trailing, 6)
             }

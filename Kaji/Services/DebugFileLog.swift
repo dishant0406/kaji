@@ -18,16 +18,16 @@ enum DebugFileLog {
         }
     }
 
-    static func log(_ category: String, _ message: String) {
+    static func log(_ category: String, _ message: @autoclosure () -> String) {
         guard shouldLog(category) else { return }
         startIfNeeded()
         let timestamp = Self.timestamp()
         let thread = Thread.isMainThread ? "main" : "background"
-        writeLine("\(timestamp) [\(thread)] [\(category)] \(message)")
+        writeLine("\(timestamp) [\(thread)] [\(category)] \(message())")
     }
 
-    static func logError(_ category: String, _ error: Error, context: String) {
-        log(category, "\(context) error=\(error.localizedDescription)")
+    static func logError(_ category: String, _ error: Error, context: @autoclosure () -> String) {
+        log(category, "\(context()) error=\(error.localizedDescription)")
     }
 
     private static func startIfNeeded() {
@@ -57,9 +57,11 @@ enum DebugFileLog {
 
     private static func installCrashHandlers() {
         NSSetUncaughtExceptionHandler { exception in
+            let reason = exception.reason ?? "nil"
+            let callStack = exception.callStackSymbols.joined(separator: " | ")
             DebugFileLog.log(
                 "Crash",
-                "uncaught exception name=\(exception.name.rawValue) reason=\(exception.reason ?? "nil") callStack=\(exception.callStackSymbols.joined(separator: " | "))"
+                "uncaught exception name=\(exception.name.rawValue) reason=\(reason) callStack=\(callStack)"
             )
         }
         signal(SIGABRT, signalHandler)

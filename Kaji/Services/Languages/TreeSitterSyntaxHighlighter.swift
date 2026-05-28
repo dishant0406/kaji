@@ -7,11 +7,15 @@ final class TreeSitterSyntaxHighlighter: SyntaxHighlighting {
 
     private let language: Language
     private let query: Query
+    private let lineHighlighter: SyntaxHighlighter
     private var cachedText = ""
     private var cachedTokens: [Int: [TokenSpan]] = [:]
+    private var usesLineHighlighter = false
+
+    static let maximumTreeSitterUTF16Length = 500_000
 
     init(definition: LanguageDefinition, language: Language, query: Query) {
-        self.grammar = LanguagePackGrammarBuilder.grammar(for: definition) ?? SyntaxGrammar(
+        let grammar = LanguagePackGrammarBuilder.grammar(for: definition) ?? SyntaxGrammar(
             name: definition.id,
             extensions: definition.extensions,
             caseSensitiveKeywords: true,
@@ -30,21 +34,29 @@ final class TreeSitterSyntaxHighlighter: SyntaxHighlighting {
             identifierStart: SyntaxGrammar.defaultIdentifierStart,
             identifierBody: SyntaxGrammar.defaultIdentifierBody
         )
+        self.grammar = grammar
         self.language = language
         self.query = query
+        self.lineHighlighter = SyntaxHighlighter(grammar: grammar)
     }
 
     func reset() {
         cachedText = ""
         cachedTokens.removeAll(keepingCapacity: false)
+        lineHighlighter.reset()
+        usesLineHighlighter = false
     }
 
     func invalidate(fromLine index: Int) {
         cachedTokens.removeAll(keepingCapacity: false)
+        lineHighlighter.invalidate(fromLine: index)
     }
 
     func tokens(forLine line: Int) -> [TokenSpan]? {
-        cachedTokens[line]
+        if usesLineHighlighter {
+            return lineHighlighter.tokens(forLine: line)
+        }
+        return cachedTokens[line]
     }
 
     func applyEdit(
@@ -53,6 +65,16 @@ final class TreeSitterSyntaxHighlighter: SyntaxHighlighting {
         newLineCount: Int,
         backingStore: TextBackingStore
     ) -> SyntaxHighlighter.EditOutcome {
+        guard !shouldUseLineHighlighterForEdit(for: backingStore) else {
+            activateLineHighlighter()
+            return lineHighlighter.applyEdit(
+                startLine: startLine,
+                oldLineCount: oldLineCount,
+                newLineCount: newLineCount,
+                backingStore: backingStore
+            )
+        }
+        deactivateLineHighlighter()
         rebuild(from: backingStore)
         return .updated
     }
@@ -62,6 +84,15 @@ final class TreeSitterSyntaxHighlighter: SyntaxHighlighting {
         lineStartOffsets: [Int],
         backingStore: TextBackingStore
     ) -> [SyntaxHighlighter.AppliedSpan] {
+        guard !shouldUseLineHighlighter(for: backingStore) else {
+            activateLineHighlighter()
+            return lineHighlighter.spans(
+                in: range,
+                lineStartOffsets: lineStartOffsets,
+                backingStore: backingStore
+            )
+        }
+        deactivateLineHighlighter()
         rebuild(from: backingStore)
         var spans: [SyntaxHighlighter.AppliedSpan] = []
         for globalLine in range {
@@ -76,6 +107,28 @@ final class TreeSitterSyntaxHighlighter: SyntaxHighlighting {
             }
         }
         return spans
+    }
+
+    private func shouldUseLineHighlighter(for backingStore: TextBackingStore) -> Bool {
+        backingStore.utf16LengthExceeds(Self.maximumTreeSitterUTF16Length)
+    }
+
+    private func shouldUseLineHighlighterForEdit(for backingStore: TextBackingStore) -> Bool {
+        shouldUseLineHighlighter(for: backingStore)
+            || TreeSitterEditHighlightPolicy.shouldUseLineHighlighterForEdit(utf16Length: backingStore.utf16Length)
+    }
+
+    private func activateLineHighlighter() {
+        guard !usesLineHighlighter else { return }
+        cachedText = ""
+        cachedTokens.removeAll(keepingCapacity: false)
+        usesLineHighlighter = true
+    }
+
+    private func deactivateLineHighlighter() {
+        guard usesLineHighlighter else { return }
+        lineHighlighter.reset()
+        usesLineHighlighter = false
     }
 
     private func rebuild(from backingStore: TextBackingStore) {
