@@ -4,9 +4,13 @@ struct CodingAgentProcessInfo: Identifiable, Equatable {
     let pid: Int32
     let parentPID: Int32
     let processGroupID: Int32
+    let state: String
+    let tty: String
     let cpuPercent: Double
     let memoryBytes: UInt64
+    let threadCount: Int
     let commandName: String
+    let executablePath: String?
     let commandLine: String
 
     var id: Int32 { pid }
@@ -23,6 +27,7 @@ struct CodingAgentProcessMatch: Identifiable, Equatable {
     let providerID: String
     let providerName: String
     let providerIconName: String
+    let providerKillPatterns: [String]
     let suspicion: CodingAgentProcessSuspicion
 
     var id: String { "\(providerID)|\(process.pid)" }
@@ -32,6 +37,7 @@ struct CodingAgentProcessProviderGroup: Identifiable, Equatable {
     let providerID: String
     let providerName: String
     let iconName: String
+    let killPatterns: [String]
     let processes: [CodingAgentProcessMatch]
 
     var id: String { providerID }

@@ -5,6 +5,7 @@ struct CodingAgentProcessGroupSection: View {
     let killingPIDs: Set<Int32>
     let onKill: (CodingAgentProcessMatch) -> Void
     let onKillGroup: () -> Void
+    let onPatternKillGroup: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -35,6 +36,11 @@ struct CodingAgentProcessGroupSection: View {
             }
             .buttonStyle(KajiButtonStyle(.danger, size: .small))
             .disabled(group.processes.allSatisfy { killingPIDs.contains($0.process.pid) })
+            Button(action: onPatternKillGroup) {
+                Text("pkill -f")
+            }
+            .buttonStyle(KajiButtonStyle(.danger, size: .small))
+            .disabled(group.killPatterns.isEmpty)
         }
         .padding(.horizontal, 2)
     }

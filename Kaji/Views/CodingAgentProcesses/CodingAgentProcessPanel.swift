@@ -9,6 +9,7 @@ struct CodingAgentProcessPanel: View {
     @State private var query = ""
     @State private var pendingKill: CodingAgentProcessMatch?
     @State private var pendingGroupKill: CodingAgentProcessProviderGroup?
+    @State private var pendingPatternKill: CodingAgentProcessProviderGroup?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -48,6 +49,24 @@ struct CodingAgentProcessPanel: View {
             Button("Cancel", role: .cancel) { pendingGroupKill = nil }
         } message: { group in
             Text("This sends SIGTERM to every visible \(group.providerName) process in this list.")
+        }
+        .confirmationDialog(
+            "Run pkill -f for \(pendingPatternKill?.providerName ?? "agent")?",
+            isPresented: pendingPatternKillPresented,
+            titleVisibility: .visible,
+            presenting: pendingPatternKill
+        ) { group in
+            Button("pkill -TERM -f", role: .destructive) {
+                service.patternKillGroup(group, force: false, appState: appState, projectStore: projectStore)
+                pendingPatternKill = nil
+            }
+            Button("pkill -KILL -f", role: .destructive) {
+                service.patternKillGroup(group, force: true, appState: appState, projectStore: projectStore)
+                pendingPatternKill = nil
+            }
+            Button("Cancel", role: .cancel) { pendingPatternKill = nil }
+        } message: { group in
+            Text(patternKillWarning(for: group))
         }
         .task {
             service.refresh(appState: appState, projectStore: projectStore)
@@ -112,7 +131,8 @@ struct CodingAgentProcessPanel: View {
                             group: group,
                             killingPIDs: service.killingPIDs,
                             onKill: { pendingKill = $0 },
-                            onKillGroup: { pendingGroupKill = group }
+                            onKillGroup: { pendingGroupKill = group },
+                            onPatternKillGroup: { pendingPatternKill = group }
                         )
                     }
                 }
@@ -146,6 +166,7 @@ struct CodingAgentProcessPanel: View {
                 providerID: group.providerID,
                 providerName: group.providerName,
                 iconName: group.iconName,
+                killPatterns: group.killPatterns,
                 processes: processes
             )
         }
@@ -163,5 +184,17 @@ struct CodingAgentProcessPanel: View {
             get: { pendingGroupKill != nil },
             set: { if !$0 { pendingGroupKill = nil } }
         )
+    }
+
+    private var pendingPatternKillPresented: Binding<Bool> {
+        Binding(
+            get: { pendingPatternKill != nil },
+            set: { if !$0 { pendingPatternKill = nil } }
+        )
+    }
+
+    private func patternKillWarning(for group: CodingAgentProcessProviderGroup) -> String {
+        "Patterns: \(group.killPatterns.joined(separator: ", ")). " +
+            "This can close matching sessions outside Kaji and may leave active terminals needing reset."
     }
 }

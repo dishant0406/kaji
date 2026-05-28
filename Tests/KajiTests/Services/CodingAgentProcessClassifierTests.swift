@@ -21,6 +21,13 @@ struct CodingAgentProcessClassifierTests {
     }
 
     @Test
+    func matchesClaudePackageMarker() {
+        let claudeNode = process(commandName: "node", commandLine: "node /x/node_modules/@anthropic-ai/claude-code/cli.js", parentPID: 20)
+
+        #expect(classify(claudeNode).first?.providerID == "claude")
+    }
+
+    @Test
     func marksOrphanWhenParentIsLaunchd() {
         let match = classify(process(commandName: "opencode", commandLine: "opencode", parentPID: 1)).first
 
@@ -59,9 +66,13 @@ struct CodingAgentProcessClassifierTests {
             pid: 100,
             parentPID: parentPID,
             processGroupID: processGroupID,
+            state: "running",
+            tty: "??",
             cpuPercent: 0,
             memoryBytes: 1024,
+            threadCount: 1,
             commandName: commandName,
+            executablePath: nil,
             commandLine: commandLine
         )
     }
