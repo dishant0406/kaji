@@ -32,7 +32,9 @@ struct PiAgentModule: CodingAgentModule {
         globalInstructionFiles: [".pi/agent/AGENTS.md"],
         projectInstructionFiles: ["AGENTS.md", "CLAUDE.md"],
         homeSkillDirectories: [".pi/agent/skills", ".agents/skills"],
-        projectSkillDirectories: [".pi/skills", ".agents/skills"]
+        projectSkillDirectories: [".pi/skills", ".agents/skills"],
+        processMatchNames: ["pi"],
+        processCommandMarkers: ["pi-coding-agent", ".pi/agent", "/pi"]
     )
 
     func modelOptions(projectPath: String?) -> [String] {

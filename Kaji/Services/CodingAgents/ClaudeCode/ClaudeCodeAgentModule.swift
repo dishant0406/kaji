@@ -32,7 +32,9 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         globalInstructionFiles: [".claude/CLAUDE.md", ".claude/AGENTS.md"],
         projectInstructionFiles: ["CLAUDE.md", "CLAUDE.local.md", "AGENTS.md"],
         homeSkillDirectories: [".claude/skills"],
-        projectSkillDirectories: [".claude/skills", ".agents/skills"]
+        projectSkillDirectories: [".claude/skills", ".agents/skills"],
+        processMatchNames: ["claude", "claude-code"],
+        processCommandMarkers: ["claude", "claude-code", ".claude"]
     )
 
     private static let settingsPath = NSHomeDirectory() + "/.claude/settings.json"

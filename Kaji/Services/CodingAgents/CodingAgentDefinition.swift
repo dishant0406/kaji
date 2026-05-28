@@ -24,6 +24,8 @@ struct CodingAgentDefinition: Hashable, Identifiable {
     let projectInstructionFiles: [String]
     let homeSkillDirectories: [String]
     let projectSkillDirectories: [String]
+    let processMatchNames: [String]
+    let processCommandMarkers: [String]
     let notificationPolicy: CodingAgentNotificationPolicy
 
     init(
@@ -50,6 +52,8 @@ struct CodingAgentDefinition: Hashable, Identifiable {
         projectInstructionFiles: [String],
         homeSkillDirectories: [String],
         projectSkillDirectories: [String],
+        processMatchNames: [String] = [],
+        processCommandMarkers: [String] = [],
         notificationPolicy: CodingAgentNotificationPolicy = .default
     ) {
         self.id = id
@@ -75,6 +79,8 @@ struct CodingAgentDefinition: Hashable, Identifiable {
         self.projectInstructionFiles = projectInstructionFiles
         self.homeSkillDirectories = homeSkillDirectories
         self.projectSkillDirectories = projectSkillDirectories
+        self.processMatchNames = processMatchNames
+        self.processCommandMarkers = processCommandMarkers
         self.notificationPolicy = notificationPolicy
     }
 
@@ -91,7 +97,7 @@ struct CodingAgentDefinition: Hashable, Identifiable {
     }
 
     private var searchableValues: [String] {
-        ([id, displayName] + annotationValues + executableNames).map { $0.lowercased() }
+        ([id, displayName] + annotationValues + executableNames + processMatchNames).map { $0.lowercased() }
     }
 }
 
