@@ -15,7 +15,7 @@ struct HunkContextButton: View {
                     .overlay(Capsule().stroke(KajiTheme.border, lineWidth: 1))
 
                 if isHovering {
-                    Text(count > 0 ? "+20 (\(count))" : "+20")
+                    Text(count.signum() == 1 ? "+20 (\(count))" : "+20")
                         .kajiFont(size: 10, weight: .semibold, design: .monospaced)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 4)

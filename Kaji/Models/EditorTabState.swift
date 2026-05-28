@@ -102,6 +102,7 @@ final class EditorTabState: Identifiable {
     @ObservationIgnored private var markdownSyncAnchorsCache: [MarkdownSyncAnchor] = []
     @ObservationIgnored private var markdownSyncAnchorsCacheVersion: Int = -1
     @ObservationIgnored private(set) var syntaxHighlighter: (any SyntaxHighlighting)?
+    @ObservationIgnored private var hasResolvedSyntaxHighlighter = false
     @ObservationIgnored private let filePathForLogging: String
     @ObservationIgnored private var foldRegionsCache: [EditorFoldRegion] = []
     @ObservationIgnored private var foldRegionsCacheVersion: Int = -1
@@ -141,17 +142,25 @@ final class EditorTabState: Identifiable {
     }
 
     func updateCursorPosition(line: Int, column: Int, selectionLength: Int) {
-        cursorPosition = EditorCursorPosition(
+        let next = EditorCursorPosition(
             line: max(1, line),
             column: max(1, column),
             selectionLength: max(0, selectionLength)
         )
+        guard cursorPosition != next else { return }
+        cursorPosition = next
     }
 
     var isMarkdownFile: Bool {
         Self.markdownExtensions.contains(fileExtension)
     }
 
+    var isMarkdownPreviewAvailable: Bool {
+        guard isMarkdownFile, let backingStore else { return true }
+        return EditorStructuralAnalysisPolicy.allowsDocumentWideScan(backingStore)
+    }
+
+    @ObservationIgnored private var hasRequestedLoad = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
     private enum FileLoadEvent {
@@ -179,16 +188,14 @@ final class EditorTabState: Identifiable {
         if isMarkdownFile {
             markdownViewMode = .preview
         }
-        syntaxHighlighter = Self.makeSyntaxHighlighter(for: filePath)
-        DebugFileLog.log("EditorState", "syntaxHighlighter=\(syntaxHighlighter == nil ? "nil" : "created") filePath=\(filePath)")
-        loadFile()
+        DebugFileLog.log("EditorState", "syntaxHighlighter deferred filePath=\(filePath)")
     }
 
     func updateFilePath(_ newPath: String) {
         guard filePath != newPath else { return }
         closeLanguageServerDocument()
         filePath = newPath
-        syntaxHighlighter = Self.makeSyntaxHighlighter(for: newPath)
+        resetSyntaxHighlighter()
         refreshReadOnlyStatus()
     }
 
@@ -196,6 +203,11 @@ final class EditorTabState: Identifiable {
         guard isMarkdownFile else { return [] }
         guard let backingStore else { return [] }
         guard markdownSyncAnchorsCacheVersion != backingStoreVersion else {
+            return markdownSyncAnchorsCache
+        }
+        guard EditorStructuralAnalysisPolicy.allowsDocumentWideScan(backingStore) else {
+            markdownSyncAnchorsCache = []
+            markdownSyncAnchorsCacheVersion = backingStoreVersion
             return markdownSyncAnchorsCache
         }
         markdownSyncAnchorsCache = MarkdownAnchorParser.parseAnchors(in: backingStore.fullText())
@@ -206,6 +218,11 @@ final class EditorTabState: Identifiable {
     func foldRegions() -> [EditorFoldRegion] {
         guard let backingStore else { return [] }
         guard foldRegionsCacheVersion != backingStoreVersion else { return foldRegionsCache }
+        guard EditorStructuralAnalysisPolicy.allowsDocumentWideScan(backingStore) else {
+            foldRegionsCache = []
+            foldRegionsCacheVersion = backingStoreVersion
+            return foldRegionsCache
+        }
         foldRegionsCache = LanguageFoldingRegionParser.regions(
             in: backingStore,
             configuration: LanguageRegistry.shared.configuration(forFile: filePath)
@@ -222,6 +239,11 @@ final class EditorTabState: Identifiable {
         collapsedFoldRegionIDs.contains(region.id)
     }
 
+    func collapsedFoldRegions() -> [EditorFoldRegion] {
+        guard EditorCollapsedFoldPolicy.shouldResolveFoldRegions(collapsedIDs: collapsedFoldRegionIDs) else { return [] }
+        return EditorCollapsedFoldPolicy.collapsedRegions(foldRegions(), collapsedIDs: collapsedFoldRegionIDs)
+    }
+
     func toggleFoldRegion(_ region: EditorFoldRegion) {
         if collapsedFoldRegionIDs.contains(region.id) {
             collapsedFoldRegionIDs.remove(region.id)
@@ -231,8 +253,8 @@ final class EditorTabState: Identifiable {
     }
 
     func unfoldRegions(containing line: Int) -> Bool {
-        let matching = foldRegions().filter { region in
-            collapsedFoldRegionIDs.contains(region.id) && line > region.startLine && line <= region.endLine
+        let matching = collapsedFoldRegions().filter { region in
+            line > region.startLine && line <= region.endLine
         }
         guard !matching.isEmpty else { return false }
         for region in matching {
@@ -244,6 +266,11 @@ final class EditorTabState: Identifiable {
     func symbols() -> [EditorSymbol] {
         guard let backingStore else { return [] }
         guard symbolsCacheVersion != backingStoreVersion else { return symbolsCache }
+        guard EditorStructuralAnalysisPolicy.allowsDocumentWideScan(backingStore) else {
+            symbolsCache = []
+            symbolsCacheVersion = backingStoreVersion
+            return symbolsCache
+        }
         let definition = LanguageRegistry.shared.definition(forFile: filePath)
         if let definition,
            let treeSitterSymbols = TreeSitterSymbolParser.symbols(in: backingStore, definition: definition)
@@ -258,6 +285,12 @@ final class EditorTabState: Identifiable {
         )
         symbolsCacheVersion = backingStoreVersion
         return symbolsCache
+    }
+
+    func enforceMarkdownPreviewPolicy() {
+        guard isMarkdownFile, !isMarkdownPreviewAvailable else { return }
+        markdownViewMode = .code
+        markdownScrollSyncEnabled = false
     }
 
     func navigate(to symbol: EditorSymbol) {
@@ -337,7 +370,26 @@ final class EditorTabState: Identifiable {
         SyntaxEngineRegistry.highlighter(forFile: filePath)
     }
 
-    private func syncLanguageServerDocument(filePath: String, text: String) {
+    func ensureSyntaxHighlighter() -> (any SyntaxHighlighting)? {
+        guard !hasResolvedSyntaxHighlighter else { return syntaxHighlighter }
+        syntaxHighlighter = Self.makeSyntaxHighlighter(for: filePath)
+        hasResolvedSyntaxHighlighter = true
+        DebugFileLog.log("EditorState", "syntaxHighlighter=\(syntaxHighlighter == nil ? "nil" : "created") filePath=\(filePath)")
+        return syntaxHighlighter
+    }
+
+    func resetSyntaxHighlighter() {
+        syntaxHighlighter?.reset()
+        syntaxHighlighter = nil
+        hasResolvedSyntaxHighlighter = false
+    }
+
+    private func syncLanguageServerDocument(filePath: String, store: TextBackingStore) {
+        guard LanguageServerManager.shared.canSync(filePath: filePath, backingStore: store) else {
+            closeLanguageServerDocument()
+            return
+        }
+        let text = store.fullText()
         if languageServerOpenFilePath == filePath {
             LanguageServerManager.shared.didChange(filePath: filePath, projectPath: projectPath, text: text)
             return
@@ -355,16 +407,23 @@ final class EditorTabState: Identifiable {
     }
 
     deinit {
-        DebugFileLog.log("EditorState", "deinit filePath=\(filePathForLogging)")
+        let path = filePathForLogging
+        DebugFileLog.log("EditorState", "deinit filePath=\(path)")
         loadTask?.cancel()
         MainActor.assumeIsolated {
             closeLanguageServerDocument()
         }
     }
 
+    func loadIfNeeded() {
+        guard !hasRequestedLoad else { return }
+        loadFile()
+    }
+
     func loadFile() {
         DebugFileLog.log("EditorLoad", "loadFile requested filePath=\(filePath) isLoading=\(isLoading)")
         guard !isLoading else { return }
+        hasRequestedLoad = true
         errorMessage = nil
         isIncrementalLoading = false
         refreshReadOnlyStatus()
@@ -405,6 +464,43 @@ final class EditorTabState: Identifiable {
         errorMessage = "File load cancelled."
     }
 
+    func suspendInactiveLoad() {
+        guard EditorInactiveResourcePolicy.shouldReleaseBackingStore(
+            isModified: isModified,
+            isLoading: isLoading,
+            isIncrementalLoading: isIncrementalLoading,
+            backingStore: backingStore
+        )
+        else { return }
+        DebugFileLog.log("EditorLoad", "releasing inactive resources path=\(filePath)")
+        loadTask?.cancel()
+        loadTask = nil
+        isLoading = false
+        isIncrementalLoading = false
+        backingStore = nil
+        backingStoreVersion += 1
+        errorMessage = nil
+        closeLanguageServerDocument()
+        resetSyntaxHighlighter()
+        hasRequestedLoad = false
+    }
+
+    func releaseInactiveResourcesForBudget() {
+        guard !isModified else { return }
+        guard isLoading || isIncrementalLoading || backingStore != nil else { return }
+        DebugFileLog.log("EditorLoad", "releasing inactive budget resources path=\(filePath)")
+        loadTask?.cancel()
+        loadTask = nil
+        isLoading = false
+        isIncrementalLoading = false
+        backingStore = nil
+        backingStoreVersion += 1
+        errorMessage = nil
+        closeLanguageServerDocument()
+        resetSyntaxHighlighter()
+        hasRequestedLoad = false
+    }
+
     private func performLoad() {
         DebugFileLog.log("EditorLoad", "performLoad started path=\(filePath)")
         isLoading = true
@@ -412,7 +508,7 @@ final class EditorTabState: Identifiable {
         isModified = false
         errorMessage = nil
         backingStore = nil
-        syntaxHighlighter?.reset()
+        resetSyntaxHighlighter()
         loadTask?.cancel()
         let path = filePath
         loadTask = Task { [weak self] in
@@ -428,12 +524,13 @@ final class EditorTabState: Identifiable {
                         store.loadFromText(text)
                         backingStore = store
                         backingStoreVersion += 1
+                        enforceMarkdownPreviewPolicy()
                         refreshReadOnlyStatus()
                         isModified = false
                         isLoading = false
                         isIncrementalLoading = hasMore
                         if !hasMore {
-                            syncLanguageServerDocument(filePath: path, text: store.fullText())
+                            syncLanguageServerDocument(filePath: path, store: store)
                         }
                         DebugFileLog.log(
                             "EditorLoad",
@@ -444,6 +541,7 @@ final class EditorTabState: Identifiable {
                         if let backingStore {
                             backingStore.appendText(text)
                             backingStoreVersion += 1
+                            enforceMarkdownPreviewPolicy()
                             DebugFileLog.log(
                                 "EditorLoad",
                                 "append applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)"
@@ -460,6 +558,7 @@ final class EditorTabState: Identifiable {
                         if let backingStore {
                             backingStore.finishLoading()
                             backingStoreVersion += 1
+                            enforceMarkdownPreviewPolicy()
                             DebugFileLog.log(
                                 "EditorLoad",
                                 "finish applied lineCount=\(backingStore.lineCount) version=\(backingStoreVersion) path=\(path)"
@@ -472,7 +571,9 @@ final class EditorTabState: Identifiable {
                         if isIncrementalLoading {
                             isIncrementalLoading = false
                         }
-                        syncLanguageServerDocument(filePath: path, text: backingStore?.fullText() ?? "")
+                        if let backingStore {
+                            syncLanguageServerDocument(filePath: path, store: backingStore)
+                        }
                     }
                 }
 
@@ -672,11 +773,16 @@ final class EditorTabState: Identifiable {
     }
 
     func notifyLanguageServerChanged() {
+        guard let backingStore else { return }
+        guard LanguageServerManager.shared.canSync(filePath: filePath, backingStore: backingStore) else {
+            closeLanguageServerDocument()
+            return
+        }
         lspChangeVersion += 1
     }
 
     func reloadFromDiskAfterExternalChange() {
-        guard !isModified else { return }
+        guard !isModified, hasRequestedLoad else { return }
         loadTask?.cancel()
         performLoad()
     }

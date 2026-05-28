@@ -109,7 +109,7 @@ enum CodingAgentShimTestHarness {
         try String(contentsOf: output, encoding: .utf8)
             .split(separator: "\n")
             .map(String.init)
-            .filter { $0 != "OPENCODE_CONFIG=" }
             .map { $0.replacingOccurrences(of: root.path + "/", with: "") }
+            .filter { !$0.hasPrefix("OPENCODE_CONFIG=") || $0 == "OPENCODE_CONFIG=opencode.json" || $0 == "OPENCODE_CONFIG=configs/opencode-browser-mcp.json" }
     }
 }

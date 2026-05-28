@@ -22,6 +22,13 @@ final class BrowserWebController {
     func attach(_ attachment: BrowserWebControllerAttachment) {
         let surface = attachment.surface
         let page = attachment.page
+        let previousSurface = self.surface
+        if BrowserSurfaceAttachmentPolicy.shouldReleasePreviousSurface(
+            hasPreviousSurface: previousSurface != nil,
+            sameSurface: previousSurface === surface
+        ) {
+            previousSurface?.release(controller: self, browserView: browserView)
+        }
         self.surface = surface
         self.page = page
         projectPath = attachment.projectPath
@@ -43,6 +50,7 @@ final class BrowserWebController {
             updateActiveState(attachment.isActive, browserView: browserView)
             return
         }
+        activeState = attachment.isActive
         guard attachment.isActive else {
             surface.show(status: "")
             return
@@ -52,8 +60,11 @@ final class BrowserWebController {
 
     func detach(surface: NativeBrowserSurfaceView) {
         guard self.surface === surface else { return }
-        surface.controller = nil
-        if let browserView {
+        surface.release(controller: self, browserView: browserView)
+        if BrowserSurfaceAttachmentPolicy.shouldDeactivateBrowserOnDetach(
+            isCurrentSurface: true,
+            hasBrowserView: browserView != nil
+        ), let browserView {
             activeState = false
             browserView.setActive(false)
         }
@@ -74,18 +85,6 @@ final class BrowserWebController {
         browserView.loadURL(url)
     }
 
-    func goBack() {
-        browserView?.goBack()
-    }
-
-    func goForward() {
-        browserView?.goForward()
-    }
-
-    func reload() {
-        browserView?.reloadPage()
-    }
-
     func setActive(_ active: Bool) {
         guard let browserView else {
             activeState = active
@@ -100,33 +99,19 @@ final class BrowserWebController {
         scheduleStart()
     }
 
-    func click(selector: String) async throws {
-        browserView?.clickSelector(selector)
-    }
-
-    func typeText(_ text: String, selector: String) async throws {
-        browserView?.typeText(text, selector: selector)
-    }
-
-    func readPage() async throws -> String {
-        guard let browserView else { return "" }
-        return await withCheckedContinuation { continuation in
-            browserView.readPage { text in
-                continuation.resume(returning: text)
-            }
-        }
-    }
-
-    func screenshotPNG() -> Data? {
-        guard let browserView else { return nil }
-        return BrowserScreenshotRenderer.pngData(from: browserView)
-    }
-
     func close() {
+        if BrowserStartupCompletionPolicy.shouldMarkStartedWhenControllerCloses(
+            runtimeInfo: KajiBrowserRuntimeCoordinator.shared.currentRuntime()
+        ) {
+            KajiBrowserRuntimeCoordinator.shared.markBrowserStartupComplete()
+        }
         isClosed = true
         startTask?.cancel()
         startTask = nil
         startURL = ""
+        if let surface {
+            surface.release(controller: self, browserView: browserView)
+        }
         browserView?.pageChanged = nil
         browserView?.popupRequested = nil
         browserView?.closeBrowser()
@@ -156,7 +141,10 @@ final class BrowserWebController {
             self.browserView = browserView
             surface?.install(browserView: browserView)
             applyDeviceProfile(deviceProfile)
-            updateActiveState(true, browserView: browserView)
+            updateActiveState(
+                BrowserPaneActivationPolicy.browserActiveStateAfterStartup(requestedActiveState: activeState),
+                browserView: browserView
+            )
             markStartupCompleteAfterStabilityDelay()
         } catch {
             surface?.show(status: error.localizedDescription)
@@ -166,11 +154,11 @@ final class BrowserWebController {
     private func scheduleStart() {
         guard !isClosed, surface != nil, !projectPath.isEmpty, browserView == nil, !isStarting, startTask == nil else { return }
         surface?.show(status: "Starting Chromium…")
-        startTask = Task { @MainActor in
+        startTask = Task { @MainActor [weak self] in
             await Task.yield()
-            guard !Task.isCancelled else { return }
-            startIfNeeded(url: startURL)
-            startTask = nil
+            guard !Task.isCancelled, let self else { return }
+            self.startIfNeeded(url: self.startURL)
+            self.startTask = nil
         }
     }
 
@@ -179,9 +167,9 @@ final class BrowserWebController {
     }
 
     private func markStartupCompleteAfterStabilityDelay() {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(3))
-            guard !isClosed, browserView != nil else { return }
+            guard let self, !self.isClosed, self.browserView != nil else { return }
             KajiBrowserRuntimeCoordinator.shared.markBrowserStartupComplete()
         }
     }

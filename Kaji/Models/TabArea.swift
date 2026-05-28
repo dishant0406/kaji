@@ -7,6 +7,7 @@ final class TabArea: Identifiable {
     let projectPath: String
     var tabs: [TerminalTab] = []
     var activeTabID: UUID?
+    @ObservationIgnored private var contentIndex = TabAreaContentIndex()
     private var tabHistory: [UUID] = []
 
     init(projectPath: String) {
@@ -14,6 +15,7 @@ final class TabArea: Identifiable {
         self.projectPath = projectPath
         let tab = TerminalTab(pane: TerminalPaneState(projectPath: projectPath))
         tabs.append(tab)
+        contentIndex.register(tab)
         activeTabID = tab.id
     }
 
@@ -21,6 +23,7 @@ final class TabArea: Identifiable {
         id = UUID()
         self.projectPath = projectPath
         tabs.append(tab)
+        contentIndex.register(tab)
         activeTabID = tab.id
     }
 
@@ -28,6 +31,7 @@ final class TabArea: Identifiable {
         id = snapshot.id
         projectPath = snapshot.projectPath
         tabs = snapshot.tabs.map { TerminalTab(restoring: $0) }
+        contentIndex = TabAreaContentIndex(tabs: tabs)
         if let index = snapshot.activeTabIndex, index >= 0, index < tabs.count {
             activeTabID = tabs[index].id
         } else {
@@ -51,8 +55,21 @@ final class TabArea: Identifiable {
         return tabs.first { $0.id == activeTabID }
     }
 
+    func existingFileTabID(filePath: String) -> UUID? {
+        contentIndex.editorTabID(filePath: filePath)
+            ?? contentIndex.filePreviewTabID(filePath: filePath)
+    }
+
+    func existingDiffViewerTabID(filePath: String, isStaged: Bool) -> UUID? {
+        contentIndex.diffViewerTabID(filePath: filePath, isStaged: isStaged)
+    }
+
     private var firstUnpinnedIndex: Int {
         tabs.firstIndex(where: { !$0.isPinned }) ?? tabs.count
+    }
+
+    private var tabIDs: Set<UUID> {
+        Set(tabs.map(\.id))
     }
 
     func createTab() {
@@ -77,8 +94,8 @@ final class TabArea: Identifiable {
     }
 
     func createBrowserTab(url: String = "https://www.google.com") {
-        if let existing = tabs.first(where: { $0.kind == .browser }) {
-            selectTab(existing.id)
+        if let existingTabID = contentIndex.existingBrowserTabID() {
+            selectTab(existingTabID)
             return
         }
         insertTab(TerminalTab(browserState: BrowserPaneState(projectPath: projectPath, url: url)))
@@ -95,27 +112,24 @@ final class TabArea: Identifiable {
     }
 
     func createEditorTab(filePath: String) {
-        if let existing = tabs.first(where: { $0.content.editorState?.filePath == filePath }) {
-            selectTab(existing.id)
+        if let existingTabID = contentIndex.editorTabID(filePath: filePath) {
+            selectTab(existingTabID)
             return
         }
         insertTab(TerminalTab(editorState: EditorTabState(projectPath: projectPath, filePath: filePath)))
     }
 
     func createFilePreviewTab(filePath: String, kind: FilePreviewKind) {
-        if let existing = tabs.first(where: { $0.content.filePreviewState?.filePath == filePath }) {
-            selectTab(existing.id)
+        if let existingTabID = contentIndex.filePreviewTabID(filePath: filePath) {
+            selectTab(existingTabID)
             return
         }
         insertTab(TerminalTab(filePreviewState: FilePreviewTabState(projectPath: projectPath, filePath: filePath, kind: kind)))
     }
 
     func createDiffViewerTab(vcs: VCSTabState, filePath: String, isStaged: Bool) {
-        if let existing = tabs.first(where: { tab in
-            guard let diff = tab.content.diffViewerState else { return false }
-            return !diff.showsAllChanges && diff.filePath == filePath && diff.isStaged == isStaged
-        }) {
-            selectTab(existing.id)
+        if let existingTabID = contentIndex.diffViewerTabID(filePath: filePath, isStaged: isStaged) {
+            selectTab(existingTabID)
             return
         }
         insertTab(TerminalTab(diffViewerState: DiffViewerTabState(
@@ -126,8 +140,8 @@ final class TabArea: Identifiable {
     }
 
     func createExternalEditorTab(filePath: String, command: String) {
-        if let existing = tabs.first(where: { $0.content.pane?.externalEditorFilePath == filePath }) {
-            selectTab(existing.id)
+        if let existingTabID = contentIndex.externalEditorTabID(filePath: filePath) {
+            selectTab(existingTabID)
             return
         }
         let title = "\(Self.commandTitle(command)) \(URL(fileURLWithPath: filePath).lastPathComponent)"
@@ -163,10 +177,8 @@ final class TabArea: Identifiable {
 
     private func insertTab(_ tab: TerminalTab) {
         tabs.append(tab)
-        if let current = activeTabID {
-            tabHistory.append(current)
-        }
-        activeTabID = tab.id
+        contentIndex.register(tab)
+        activate(tab.id)
     }
 
     enum InsertSide { case left, right }
@@ -177,10 +189,8 @@ final class TabArea: Identifiable {
         let desiredIndex = side == .left ? index : index + 1
         let insertIndex = max(desiredIndex, firstUnpinnedIndex)
         tabs.insert(tab, at: insertIndex)
-        if let current = activeTabID {
-            tabHistory.append(current)
-        }
-        activeTabID = tab.id
+        contentIndex.register(tab)
+        activate(tab.id)
     }
 
     func closeTab(_ tabID: UUID) -> UUID? {
@@ -190,10 +200,8 @@ final class TabArea: Identifiable {
 
     func selectTab(_ tabID: UUID) {
         guard activeTabID != tabID else { return }
-        if let current = activeTabID, current != tabID {
-            tabHistory.append(current)
-        }
-        activeTabID = tabID
+        guard tabs.contains(where: { $0.id == tabID }) else { return }
+        activate(tabID)
     }
 
     func selectTabByIndex(_ index: Int) {
@@ -226,26 +234,41 @@ final class TabArea: Identifiable {
         let tab = tabs[index]
         guard !tab.isPinned else { return nil }
         tabs.remove(at: index)
-        tabHistory.removeAll { $0 == tabID }
+        contentIndex.unregister(tab)
+        let existingTabIDs = tabIDs
+        tabHistory = TabHistoryPolicy.compacted(
+            tabHistory,
+            activeTabID: activeTabID,
+            existingTabIDs: existingTabIDs
+        )
         guard activeTabID == tabID else { return tab }
-        let validIDs = Set(tabs.map(\.id))
-        while let prev = tabHistory.popLast() {
-            if validIDs.contains(prev) {
-                activeTabID = prev
-                return tab
-            }
+        if let previousTabID = TabHistoryPolicy.previousTabID(
+            in: tabHistory,
+            activeTabID: activeTabID,
+            existingTabIDs: existingTabIDs
+        ) {
+            activeTabID = previousTabID
+            tabHistory = TabHistoryPolicy.compacted(
+                tabHistory,
+                activeTabID: activeTabID,
+                existingTabIDs: existingTabIDs
+            )
+            return tab
         }
         activeTabID = tabs.last?.id
+        tabHistory = TabHistoryPolicy.compacted(
+            tabHistory,
+            activeTabID: activeTabID,
+            existingTabIDs: existingTabIDs
+        )
         return tab
     }
 
     func insertExistingTab(_ tab: TerminalTab) {
         let insertIndex = tab.isPinned ? firstUnpinnedIndex : tabs.count
         tabs.insert(tab, at: insertIndex)
-        if let current = activeTabID {
-            tabHistory.append(current)
-        }
-        activeTabID = tab.id
+        contentIndex.register(tab)
+        activate(tab.id)
     }
 
     func setCustomTitle(_ tabID: UUID, title: String?) {
@@ -268,6 +291,41 @@ final class TabArea: Identifiable {
         } else {
             let insertIndex = max(firstUnpinnedIndex, 0)
             tabs.insert(tab, at: insertIndex)
+        }
+    }
+
+    private func activate(_ tabID: UUID) {
+        tabHistory = TabHistoryPolicy.recordingVisit(
+            from: activeTabID,
+            to: tabID,
+            in: tabHistory,
+            existingTabIDs: tabIDs
+        )
+        activeTabID = tabID
+        pruneInactiveEditorResources()
+    }
+
+    private func pruneInactiveEditorResources() {
+        let activeTabID = activeTabID
+        let recency = Dictionary(uniqueKeysWithValues: tabHistory.enumerated().map { index, tabID in
+            (tabID, index)
+        })
+        let snapshots = tabs.compactMap { tab -> EditorInactiveResourceSnapshot? in
+            guard let state = tab.content.editorState else { return nil }
+            return EditorInactiveResourceSnapshot(
+                tabID: tab.id,
+                isActive: tab.id == activeTabID,
+                isModified: state.isModified,
+                isLoading: state.isLoading,
+                isIncrementalLoading: state.isIncrementalLoading,
+                retainedUTF16Length: state.backingStore?.utf16Length,
+                recencyRank: recency[tab.id] ?? -1
+            )
+        }
+        let releaseIDs = EditorInactiveResourceBudgetPolicy.tabIDsToRelease(snapshots: snapshots)
+        guard !releaseIDs.isEmpty else { return }
+        for tab in tabs where releaseIDs.contains(tab.id) {
+            tab.content.editorState?.releaseInactiveResourcesForBudget()
         }
     }
 }

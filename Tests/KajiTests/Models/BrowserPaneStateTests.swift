@@ -30,16 +30,32 @@ struct BrowserPaneStateTests {
         #expect(first === second)
     }
 
+    @Test("selecting a browser page releases inactive controllers")
+    func selectingBrowserPageReleasesInactiveControllers() throws {
+        let state = BrowserPaneState(projectPath: "/tmp/test")
+        let firstID = state.selectedPageID
+        _ = state.controllers.controller(for: firstID)
+        let secondPage = state.openPage(url: "https://second.example")
+        _ = state.controllers.controller(for: secondPage.id)
+
+        state.selectPage(id: firstID)
+        _ = state.controllers.controller(for: firstID)
+
+        #expect(state.controllers.controllerIDs == [firstID])
+    }
+
     @Test("closePage keeps one reusable page")
     func closePageKeepsOneReusablePage() throws {
         let state = BrowserPaneState(projectPath: "/tmp/test", url: "https://example.com")
         let pageID = state.selectedPageID
+        _ = state.controllers.controller(for: pageID)
 
         state.closePage(id: pageID)
 
         #expect(state.pages.count == 1)
         #expect(state.url == BrowserPaneState.defaultURL)
         #expect(state.title == "Browser")
+        #expect(state.controllers.controllerIDs.isEmpty)
     }
 
     @Test("snapshot restore preserves browser pages and selection")

@@ -47,7 +47,7 @@ final class FFFSearchIndex: @unchecked Sendable {
     private let lock = NSLock()
 
     init(projectPath: String) throws {
-        let library = FFFDynamicLibrary.shared
+        let library = try FFFDynamicLibrary.load()
         let empty = ""
         self.projectPath = projectPath
         self.library = library

@@ -18,16 +18,17 @@ final class WorktreeWorkspace {
         return tabs.first { $0.id == activeTabID } ?? tabs.first
     }
 
+    private var tabIDs: Set<UUID> {
+        Set(tabs.map(\.id))
+    }
+
     private var firstUnpinnedIndex: Int {
         tabs.firstIndex(where: { !$0.isPinned }) ?? tabs.count
     }
 
     func appendTab(_ tab: WorkspaceTab) {
         tabs.append(tab)
-        if let current = activeTabID, current != tab.id {
-            tabHistory.append(current)
-        }
-        activeTabID = tab.id
+        activate(tab.id)
     }
 
     func insertTab(_ tab: WorkspaceTab, adjacentTo tabID: UUID, side: TabArea.InsertSide) {
@@ -38,18 +39,13 @@ final class WorktreeWorkspace {
         let desiredIndex = side == .left ? index : index + 1
         let insertIndex = max(desiredIndex, firstUnpinnedIndex)
         tabs.insert(tab, at: insertIndex)
-        if let current = activeTabID, current != tab.id {
-            tabHistory.append(current)
-        }
-        activeTabID = tab.id
+        activate(tab.id)
     }
 
     func selectTab(_ tabID: UUID) {
         guard activeTabID != tabID else { return }
-        if let current = activeTabID {
-            tabHistory.append(current)
-        }
-        activeTabID = tabID
+        guard tabIDs.contains(tabID) else { return }
+        activate(tabID)
     }
 
     func selectTabByIndex(_ index: Int) {
@@ -82,17 +78,43 @@ final class WorktreeWorkspace {
         let tab = tabs[index]
         guard !tab.isPinned else { return nil }
         tabs.remove(at: index)
-        tabHistory.removeAll { $0 == tabID }
+        let existingTabIDs = tabIDs
+        tabHistory = TabHistoryPolicy.compacted(
+            tabHistory,
+            activeTabID: activeTabID,
+            existingTabIDs: existingTabIDs
+        )
         guard activeTabID == tabID else { return tab }
-        let validIDs = Set(tabs.map(\.id))
-        while let previous = tabHistory.popLast() {
-            if validIDs.contains(previous) {
-                activeTabID = previous
-                return tab
-            }
+        if let previousTabID = TabHistoryPolicy.previousTabID(
+            in: tabHistory,
+            activeTabID: activeTabID,
+            existingTabIDs: existingTabIDs
+        ) {
+            activeTabID = previousTabID
+            tabHistory = TabHistoryPolicy.compacted(
+                tabHistory,
+                activeTabID: activeTabID,
+                existingTabIDs: existingTabIDs
+            )
+            return tab
         }
         activeTabID = tabs.last?.id
+        tabHistory = TabHistoryPolicy.compacted(
+            tabHistory,
+            activeTabID: activeTabID,
+            existingTabIDs: existingTabIDs
+        )
         return tab
+    }
+
+    private func activate(_ tabID: UUID) {
+        tabHistory = TabHistoryPolicy.recordingVisit(
+            from: activeTabID,
+            to: tabID,
+            in: tabHistory,
+            existingTabIDs: tabIDs
+        )
+        activeTabID = tabID
     }
 
     func togglePin(_ tabID: UUID) {

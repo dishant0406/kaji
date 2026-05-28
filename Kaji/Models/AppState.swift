@@ -369,13 +369,10 @@ final class AppState {
         DebugFileLog.log("FileOpen", "checking existing file tabs path=\(filePath)")
         for workspaceTab in workspaceTabs(for: projectID) {
             for area in workspaceTab.root.allAreas() {
-                guard let tab = area.tabs.first(where: {
-                    $0.content.editorState?.filePath == filePath || $0.content.filePreviewState?.filePath == filePath
-                })
-                else { continue }
+                guard let tabID = area.existingFileTabID(filePath: filePath) else { continue }
                 DebugFileLog.log("FileOpen", "activating existing file tab path=\(filePath) workspaceTab=\(workspaceTab.id.uuidString)")
                 activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tab.id))
+                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tabID))
                 return
             }
         }
@@ -435,14 +432,13 @@ final class AppState {
     }
 
     func openDiffViewer(vcs: VCSTabState, filePath: String, isStaged: Bool, projectID: UUID) {
-        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
-            area.tabs.contains(where: { tab in
-                guard let diff = tab.content.diffViewerState else { return false }
-                return !diff.showsAllChanges && diff.filePath == filePath && diff.isStaged == isStaged
-            })
-        }) {
-            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-            return
+        for workspaceTab in workspaceTabs(for: projectID) {
+            for area in workspaceTab.root.allAreas() {
+                guard let tabID = area.existingDiffViewerTabID(filePath: filePath, isStaged: isStaged) else { continue }
+                activateWorkspaceTab(workspaceTab.id, projectID: projectID)
+                dispatch(.selectTab(projectID: projectID, areaID: area.id, tabID: tabID))
+                return
+            }
         }
         dispatch(.createDiffViewerTab(
             projectID: projectID,

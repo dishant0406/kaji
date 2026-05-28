@@ -5,6 +5,7 @@ struct BrowserPane: View {
     let sessionID: String?
     let closeOnDisappear: Bool
     let managesBrowserControl: Bool
+    let paneIsVisible: Bool
     let onClosePane: () -> Void
     @State private var pendingURL = ""
     @State private var showsPageText = false
@@ -58,13 +59,22 @@ struct BrowserPane: View {
         .onChange(of: state.selectedPageID) { _, _ in
             pendingURL = state.url
             showsPageText = false
-            selectedController?.ensureStarted(url: state.url)
+            startSelectedPageIfVisible()
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
+            state.pruneInactiveControllers()
             if managesBrowserControl {
                 registerBrowserControl()
             }
         }
         .onChange(of: state.selectedDeviceProfileID) { _, _ in
+            selectedController?.applyDeviceProfile(selectedDeviceProfile)
+        }
+        .onChange(of: paneIsVisible) { _, visible in
+            guard visible else {
+                state.controllers.setActive(false)
+                return
+            }
+            startSelectedPageIfVisible()
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
         }
     }
@@ -120,44 +130,25 @@ struct BrowserPane: View {
     }
 
     private var pageStack: some View {
-        ZStack {
-            ForEach(state.pages) { page in
-                NativeBrowserSurface(
-                    controller: state.controllers.controller(for: page.id),
-                    page: page,
-                    projectPath: state.projectPath,
-                    isActive: page.id == state.selectedPageID,
-                    deviceProfile: selectedDeviceProfile,
-                    callbacks: BrowserSurfaceCallbacks(pageChanged: pageChanged, popupRequested: popupRequested)
-                )
-                .opacity(page.id == state.selectedPageID ? 1 : 0)
-                .allowsHitTesting(page.id == state.selectedPageID)
-            }
-        }
+        BrowserPageStack(
+            state: state,
+            paneIsVisible: paneIsVisible,
+            deviceProfile: selectedDeviceProfile,
+            callbacks: BrowserSurfaceCallbacks(pageChanged: pageChanged, popupRequested: popupRequested)
+        )
     }
 
     private func navigate() {
         selectedController?.navigate(to: pendingURL)
     }
 
+    private func startSelectedPageIfVisible() {
+        guard BrowserPaneActivationPolicy.shouldStartSelectedPage(paneIsVisible: paneIsVisible) else { return }
+        selectedController?.ensureStarted(url: state.url)
+    }
+
     private var selectedDeviceProfile: BrowserDeviceProfile {
         BrowserDeviceProfiles.profile(for: state.selectedDeviceProfileID)
-    }
-
-    private func registerBrowserControl() {
-        guard let sessionID else { return }
-        KajiBrowserControlRegistry.shared.register(
-            sessionID: sessionID,
-            state: state,
-            controllers: state.controllers,
-            close: onClosePane
-        )
-        KajiBrowserControlBroker.shared.updateSession(sessionID)
-    }
-
-    private func unregisterBrowserControl() {
-        guard let sessionID else { return }
-        KajiBrowserControlRegistry.shared.unregister(sessionID: sessionID)
     }
 
     private func closeBrowserPage(_ pageID: UUID) {
@@ -168,7 +159,6 @@ struct BrowserPane: View {
         }
         state.closePage(id: pageID)
         pendingURL = state.url
-        state.controllers.removeController(for: pageID)
     }
 
     private func pageChanged(pageID: UUID, url: String) {

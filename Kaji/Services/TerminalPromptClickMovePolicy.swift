@@ -6,6 +6,10 @@ enum TerminalPromptClickMovePolicy {
     struct Movement: Equatable {
         let keyCode: UInt32
         let count: Int
+
+        var isEmpty: Bool {
+            count.signum() == 0
+        }
     }
 
     static func isCandidate(flags: NSEvent.ModifierFlags) -> Bool {

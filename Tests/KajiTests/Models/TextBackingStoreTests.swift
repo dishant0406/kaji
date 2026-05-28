@@ -208,6 +208,38 @@ struct TextBackingStoreTests {
         #expect(matches.allSatisfy { $0.lineIndex == 0 })
     }
 
+    @Test("search caps literal matches")
+    func searchCapsLiteralMatches() {
+        let store = TextBackingStore()
+        store.loadFromText("aaaa\nbbbb\naaaa")
+
+        let matches = store.search(needle: "a", caseSensitive: true, useRegex: false, maximumMatches: 3)
+
+        #expect(matches.count == 3)
+        #expect(matches.allSatisfy { $0.lineIndex == 0 })
+    }
+
+    @Test("search caps regex matches")
+    func searchCapsRegexMatches() {
+        let store = TextBackingStore()
+        store.loadFromText("item1 item2\nitem3 item4")
+
+        let matches = store.search(needle: "item\\d", caseSensitive: true, useRegex: true, maximumMatches: 2)
+
+        #expect(matches.count == 2)
+        #expect(matches[0].lineIndex == 0)
+        #expect(matches[1].lineIndex == 0)
+    }
+
+    @Test("search ignores non positive match caps")
+    func searchIgnoresNonPositiveMatchCaps() {
+        let store = TextBackingStore()
+        store.loadFromText("aaa")
+
+        #expect(store.search(needle: "a", caseSensitive: true, useRegex: false, maximumMatches: 0).isEmpty)
+        #expect(store.search(needle: "a", caseSensitive: true, useRegex: false, maximumMatches: -1).isEmpty)
+    }
+
     @Test("replaceFirstMatch returns next match after replacement")
     func replaceFirstMatchReturnsNext() {
         let store = TextBackingStore()

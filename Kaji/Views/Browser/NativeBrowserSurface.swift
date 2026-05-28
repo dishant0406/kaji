@@ -89,6 +89,24 @@ final class NativeBrowserSurfaceView: NSView {
         needsDisplay = true
     }
 
+    func release(controller: BrowserWebController, browserView: KajiCEFBrowserView?) {
+        if self.controller === controller {
+            self.controller = nil
+        }
+        guard let browserView else { return }
+        uninstall(browserView: browserView)
+    }
+
+    func uninstall(browserView: KajiCEFBrowserView) {
+        guard BrowserSurfaceAttachmentPolicy.shouldUninstallBrowserView(
+            surfaceOwnsBrowserView: contains(browserView: browserView)
+        )
+        else { return }
+        self.browserView = nil
+        browserView.removeFromSuperview()
+        needsDisplay = true
+    }
+
     func applyDeviceProfile(_ profile: BrowserDeviceProfile) {
         deviceProfile = profile
         browserView?.frame = browserFrame

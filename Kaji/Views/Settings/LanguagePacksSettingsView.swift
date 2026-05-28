@@ -1,5 +1,8 @@
 import SwiftUI
 
+private let languagePacksSettingsFooter = "Language packs install comments, brackets, syntax highlighting metadata, " +
+    "and LSP metadata. Native parser artifacts are only used after integrity validation."
+
 struct LanguagePacksSettingsView: View {
     @State private var installed: [LanguageDefinition] = []
     @State private var available: [LanguagePackCatalogEntry] = []
@@ -9,7 +12,7 @@ struct LanguagePacksSettingsView: View {
         SettingsContainer {
             SettingsSection(
                 "Language Packs",
-                footer: "Language packs install comments, brackets, syntax highlighting metadata, and LSP metadata. Native parser artifacts are only used after integrity validation."
+                footer: languagePacksSettingsFooter
             ) {
                 SettingsRow("Installed") {
                     Text("\(installed.count)")

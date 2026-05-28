@@ -7,6 +7,17 @@ final class LanguageServerManager {
 
     private var clients: [String: LanguageServerClient] = [:]
 
+    static let maximumDocumentUTF16Length = 1_000_000
+
+    func supportsFile(_ filePath: String) -> Bool {
+        guard let definition = LanguageRegistry.shared.definition(forFile: filePath) else { return false }
+        return definition.lsp != nil
+    }
+
+    func canSync(filePath: String, backingStore: TextBackingStore) -> Bool {
+        supportsFile(filePath) && !backingStore.utf16LengthExceeds(Self.maximumDocumentUTF16Length)
+    }
+
     func didOpen(filePath: String, projectPath: String, text: String) {
         guard let definition = LanguageRegistry.shared.definition(forFile: filePath), definition.lsp != nil else { return }
         client(for: definition, projectPath: projectPath).didOpen(filePath: filePath, text: text)

@@ -79,6 +79,79 @@ struct TabAreaTests {
         #expect(area.activeTabID == editorTabID)
     }
 
+    @Test("createEditorTab can reopen after indexed tab is closed")
+    func createEditorTabReopenAfterClose() {
+        let area = TabArea(projectPath: testPath)
+        let filePath = "/tmp/test/file.swift"
+        area.createEditorTab(filePath: filePath)
+        let editorTabID = area.activeTabID!
+        _ = area.closeTab(editorTabID)
+
+        area.createEditorTab(filePath: filePath)
+
+        #expect(area.activeTabID != editorTabID)
+        #expect(area.activeTab?.kind == .editor)
+    }
+
+    @Test("opening many editor tabs releases older clean inactive backing stores")
+    func openingManyEditorTabsReleasesOlderCleanInactiveBackingStores() throws {
+        let area = TabArea(projectPath: testPath)
+        var editorTabIDs: [UUID] = []
+
+        for index in 0 ... EditorInactiveResourceBudgetPolicy.maximumRetainedInactiveCleanEditors + 2 {
+            area.createEditorTab(filePath: "/tmp/test/file-\(index).swift")
+            let tab = try #require(area.activeTab)
+            let state = try #require(tab.content.editorState)
+            let store = TextBackingStore()
+            store.loadFromText("line \(index)")
+            state.backingStore = store
+            editorTabIDs.append(tab.id)
+        }
+
+        let activeTabID = try #require(area.activeTabID)
+        let retainedInactiveStores = area.tabs.filter { tab in
+            tab.id != activeTabID && tab.content.editorState?.backingStore != nil
+        }
+
+        #expect(retainedInactiveStores.count <= EditorInactiveResourceBudgetPolicy.maximumRetainedInactiveCleanEditors)
+        #expect(area.tabs.first { $0.id == editorTabIDs[0] }?.content.editorState?.backingStore == nil)
+        #expect(area.activeTab?.content.editorState?.backingStore != nil)
+    }
+
+    @Test("existingFileTabID uses the tab content index")
+    func existingFileTabID() {
+        let area = TabArea(projectPath: testPath)
+        let editorPath = "/tmp/test/file.swift"
+        let previewPath = "/tmp/test/image.png"
+
+        area.createEditorTab(filePath: editorPath)
+        let editorTabID = area.activeTabID
+        area.createFilePreviewTab(filePath: previewPath, kind: .image)
+        let previewTabID = area.activeTabID
+
+        #expect(area.existingFileTabID(filePath: editorPath) == editorTabID)
+        #expect(area.existingFileTabID(filePath: previewPath) == previewTabID)
+
+        _ = editorTabID.map { area.closeTab($0) }
+
+        #expect(area.existingFileTabID(filePath: editorPath) == nil)
+        #expect(area.existingFileTabID(filePath: previewPath) == previewTabID)
+    }
+
+    @Test("existingDiffViewerTabID uses the tab content index")
+    func existingDiffViewerTabID() {
+        let area = TabArea(projectPath: testPath)
+        let filePath = "/tmp/test/file.swift"
+
+        area.createDiffViewerTab(vcs: VCSTabState(projectPath: testPath), filePath: filePath, isStaged: false)
+        let unstagedTabID = area.activeTabID
+        area.createDiffViewerTab(vcs: VCSTabState(projectPath: testPath), filePath: filePath, isStaged: true)
+        let stagedTabID = area.activeTabID
+
+        #expect(area.existingDiffViewerTabID(filePath: filePath, isStaged: false) == unstagedTabID)
+        #expect(area.existingDiffViewerTabID(filePath: filePath, isStaged: true) == stagedTabID)
+    }
+
     @Test("createExternalEditorTab adds terminal tab with launch command")
     func createExternalEditorTab() {
         let area = TabArea(projectPath: testPath)
@@ -176,6 +249,14 @@ struct TabAreaTests {
         let firstTabID = area.tabs[0].id
         area.selectTab(firstTabID)
         #expect(area.activeTabID == firstTabID)
+    }
+
+    @Test("selectTab ignores unknown tab id")
+    func selectTabUnknownID() {
+        let area = TabArea(projectPath: testPath)
+        let originalID = area.activeTabID
+        area.selectTab(UUID())
+        #expect(area.activeTabID == originalID)
     }
 
     @Test("selectTabByIndex selects correct tab")
