@@ -877,6 +877,7 @@ struct MainWindow: View {
             .overlay {
                 HStack(spacing: 8) {
                     ResourceMonitorTopBarButton()
+                    PortMonitorTopBarButton()
                     TopBarSearchButton(
                         title: topBarSearchTitle,
                         shortcut: KeyBindingStore.shared.combo(for: .quickOpen).displayString,
