@@ -15,7 +15,7 @@ enum CodexHookHandler {
         if parsed.action == "observe" {
             return
         }
-        HookEventEmitter.emitActivity(provider: provider, state: parsed.action)
+        HookEventEmitter.emitActivity(provider: provider, state: parsed.action, input: input)
         guard provider == "codex" else { return }
         emitTranscript(provider: provider, action: parsed.action, eventName: parsed.eventName, input: input)
         if parsed.action == "stop" {

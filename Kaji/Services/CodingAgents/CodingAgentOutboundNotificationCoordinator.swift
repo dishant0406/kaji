@@ -4,9 +4,15 @@ import Foundation
 final class CodingAgentOutboundNotificationCoordinator {
     static let shared = CodingAgentOutboundNotificationCoordinator()
 
+    struct PendingKey: Hashable {
+        let source: NotificationRouteSource
+        let project: String
+        let worktree: String
+    }
+
     private let delay: Duration
     private let sleep: @Sendable (Duration) async -> Void
-    private var pendingGenericTask: Task<Void, Never>?
+    private var pendingGenericTasks: [PendingKey: Task<Void, Never>] = [:]
 
     init(
         delay: Duration = .seconds(2),
@@ -33,8 +39,9 @@ final class CodingAgentOutboundNotificationCoordinator {
             return
         }
 
-        pendingGenericTask?.cancel()
-        pendingGenericTask = nil
+        let key = pendingKey(for: event)
+        pendingGenericTasks[key]?.cancel()
+        pendingGenericTasks[key] = nil
         Task { await send(event) }
     }
 
@@ -42,13 +49,14 @@ final class CodingAgentOutboundNotificationCoordinator {
         event: NotificationOutboundEvent,
         send: @escaping @Sendable (NotificationOutboundEvent) async -> Void
     ) {
-        pendingGenericTask?.cancel()
-        pendingGenericTask = Task { [delay, sleep] in
+        let key = pendingKey(for: event)
+        pendingGenericTasks[key]?.cancel()
+        pendingGenericTasks[key] = Task { [delay, sleep] in
             await sleep(delay)
             guard !Task.isCancelled else { return }
             await send(event)
             await MainActor.run {
-                self.pendingGenericTask = nil
+                self.pendingGenericTasks[key] = nil
             }
         }
     }
@@ -60,5 +68,9 @@ final class CodingAgentOutboundNotificationCoordinator {
     private func isGeneric(_ body: String) -> Bool {
         let normalized = body.lowercased()
         return normalized == "turn completed" || normalized.hasPrefix("turn completed (")
+    }
+
+    private func pendingKey(for event: NotificationOutboundEvent) -> PendingKey {
+        PendingKey(source: event.source, project: event.project, worktree: event.worktree)
     }
 }

@@ -41,4 +41,21 @@ struct SystemWakeCoordinatorTests {
 
         #expect(wakeCount == 1)
     }
+
+    @Test
+    func defaultSleepWakeHandlersPreserveRunHistory() async throws {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        let coordinator = SystemWakeCoordinator(notificationCenter: NotificationCenter())
+
+        coordinator.start()
+        coordinator.stop()
+
+        #expect(AgentRunStore.shared.runs.first?.status == .running)
+        store.reset()
+    }
 }

@@ -1,6 +1,7 @@
 export const KajiNotificationPlugin = async ({ client }) => {
   let activityState = ""
   let completedAt = 0
+  let activeSessionID = ""
 
   return {
     event: async ({ event }) => {
@@ -10,7 +11,14 @@ export const KajiNotificationPlugin = async ({ client }) => {
       const worktreeID = process.env.KAJI_WORKTREE_ID
       const worktreePath = process.env.KAJI_WORKTREE_PATH
       if (!hookClientPath || !paneID) return
-      const context = projectID && worktreeID ? `${projectID},${worktreeID},${worktreePath || ""}` : ""
+      const context = (sessionID = "") => {
+        const body = {}
+        if (projectID) body.projectID = projectID
+        if (worktreeID) body.worktreeID = worktreeID
+        if (worktreePath) body.worktreePath = worktreePath
+        if (sessionID) body.sessionID = sessionID
+        return Object.keys(body).length ? JSON.stringify(body) : ""
+      }
 
       const send = async (type, title, body) => {
         try {
@@ -76,16 +84,26 @@ export const KajiNotificationPlugin = async ({ client }) => {
 
       const start = async () => {
         completedAt = 0
+        const sessionID = findSessionID(event)
+        if (sessionID) activeSessionID = sessionID
         if (activityState === "start") return
         activityState = "start"
-        await send("opencode_activity", "start", context)
+        await send("opencode_activity", "start", context(sessionID))
       }
 
       const stop = async () => {
+        const sessionID = findSessionID(event)
+        if (activeSessionID && sessionID && activeSessionID !== sessionID) return
         if (activityState === "stop") return
         activityState = "stop"
         completedAt = Date.now()
-        await send("opencode_activity", "stop", context)
+        await send("opencode_activity", "stop", context(sessionID || activeSessionID))
+        activeSessionID = ""
+      }
+
+      const observe = async () => {
+        const sessionID = findSessionID(event)
+        await send("opencode_activity", "observe", context(sessionID))
       }
 
       if (event.type === "tui.command.execute") {
@@ -95,7 +113,7 @@ export const KajiNotificationPlugin = async ({ client }) => {
       }
 
       if (event.type === "tool.execute.before") {
-        await start()
+        await observe()
         await sendTranscript("tool", event.properties?.tool || event.properties?.name)
         return
       }
@@ -116,12 +134,6 @@ export const KajiNotificationPlugin = async ({ client }) => {
           await stop()
           return
         }
-      }
-
-      if (event.type === "message.updated" || event.type === "message.part.updated") {
-        if (completedAt && Date.now() - completedAt < 1000) return
-        await start()
-        return
       }
 
       if (event.type === "permission.asked") {

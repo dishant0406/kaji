@@ -20,6 +20,23 @@ enum AIActivitySocketRouter {
         let worktreePath: String?
     }
 
+    private struct ActivityContext {
+        let explicitContext: ExplicitContext?
+        let sessionID: String?
+        let turnID: String?
+
+        var hasRoutingContext: Bool { explicitContext != nil }
+        var hasIdentity: Bool { sessionID != nil || turnID != nil }
+    }
+
+    private struct ActivityEventBody: Decodable {
+        let projectID: UUID?
+        let worktreeID: UUID?
+        let worktreePath: String?
+        let sessionID: String?
+        let turnID: String?
+    }
+
     static func handle(_ payload: Payload, appState: AppState?, worktreeStore: WorktreeStore?) -> Bool {
         guard let paneIDString = payload.paneIDString, let paneID = UUID(uuidString: paneIDString) else {
             return false
@@ -54,12 +71,12 @@ enum AIActivitySocketRouter {
 
         guard payload.type.hasSuffix("_activity") else { return false }
         let providerID = String(payload.type.dropLast("_activity".count))
-        let context = explicitContext(from: payload.body)
+        let context = activityContext(from: payload.body)
         return handleProviderActivity(
             providerID: providerID,
             state: payload.title,
             paneID: paneID,
-            explicitContext: context,
+            activityContext: context,
             routingContext: RoutingContext(appState: appState, worktreeStore: worktreeStore)
         )
     }
@@ -68,15 +85,15 @@ enum AIActivitySocketRouter {
         providerID: String,
         state: String,
         paneID: UUID,
-        explicitContext: ExplicitContext?,
+        activityContext: ActivityContext,
         routingContext: RoutingContext
     ) -> Bool {
         let normalizedState = state.lowercased()
         if normalizedState == "stop" {
-            if AIActivityStore.shared.stop(paneID: paneID) != nil {
+            if AIActivityStore.shared.stop(paneID: paneID, sessionID: activityContext.sessionID, turnID: activityContext.turnID) != nil {
                 return true
             }
-            if let explicitContext {
+            if let explicitContext = activityContext.explicitContext, !activityContext.hasIdentity {
                 AIActivityStore.shared.stop(
                     providerID: providerID,
                     projectID: explicitContext.projectID,
@@ -99,14 +116,26 @@ enum AIActivitySocketRouter {
             return true
         }
 
+        if normalizedState == "observe" {
+            AIActivityStore.shared.observe(
+                providerID: providerID,
+                paneID: paneID,
+                sessionID: activityContext.sessionID,
+                turnID: activityContext.turnID
+            )
+            return true
+        }
+
         guard normalizedState == "start" else { return true }
-        if let explicitContext {
+        if let explicitContext = activityContext.explicitContext {
             AIActivityStore.shared.start(
                 providerID: providerID,
                 paneID: paneID,
                 projectID: explicitContext.projectID,
                 worktreeID: explicitContext.worktreeID,
-                worktreePath: explicitContext.worktreePath
+                worktreePath: explicitContext.worktreePath,
+                sessionID: activityContext.sessionID,
+                turnID: activityContext.turnID
             )
             return true
         }
@@ -115,7 +144,9 @@ enum AIActivitySocketRouter {
             providerID: providerID,
             paneID: paneID,
             appState: appState,
-            worktreeStore: routingContext.worktreeStore
+            worktreeStore: routingContext.worktreeStore,
+            sessionID: activityContext.sessionID,
+            turnID: activityContext.turnID
         )
         return true
     }
@@ -168,5 +199,20 @@ enum AIActivitySocketRouter {
             return nil
         }
         return ExplicitContext(projectID: projectID, worktreeID: worktreeID, worktreePath: parts.count == 3 ? parts[2] : nil)
+    }
+
+    private static func activityContext(from body: String) -> ActivityContext {
+        guard let data = body.data(using: .utf8),
+              let event = try? JSONDecoder().decode(ActivityEventBody.self, from: data)
+        else {
+            return ActivityContext(explicitContext: explicitContext(from: body), sessionID: nil, turnID: nil)
+        }
+
+        let explicit: ExplicitContext? = if let projectID = event.projectID, let worktreeID = event.worktreeID {
+            ExplicitContext(projectID: projectID, worktreeID: worktreeID, worktreePath: event.worktreePath)
+        } else {
+            nil
+        }
+        return ActivityContext(explicitContext: explicit, sessionID: event.sessionID, turnID: event.turnID)
     }
 }

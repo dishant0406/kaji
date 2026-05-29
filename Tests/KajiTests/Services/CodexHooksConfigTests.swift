@@ -106,9 +106,13 @@ struct CodexHooksConfigTests {
             "PreToolUse",
             "SessionStart",
             "Stop",
+            "SubagentStart",
+            "SubagentStop",
             "UserPromptSubmit",
         ])
-        #expect((hooks["SessionStart"]?.first?["matcher"] as? String) == "startup|resume|clear")
+        #expect((hooks["SessionStart"]?.first?["matcher"] as? String) == "startup|resume|clear|compact")
+        #expect((hooks["SubagentStart"]?.first?["matcher"] as? String) == "*")
+        #expect((hooks["SubagentStop"]?.first?["matcher"] as? String) == "*")
         #expect((hooks["PreToolUse"]?.first?["matcher"] as? String) == "*")
         #expect((hooks["PostToolUse"]?.first?["matcher"] as? String) == "*")
         #expect((hooks["PermissionRequest"]?.first?["matcher"] as? String) == "*")

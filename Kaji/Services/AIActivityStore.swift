@@ -9,8 +9,35 @@ final class AIActivityStore {
         let worktreeID: UUID
         let worktreePath: String?
         let providerID: String
+        let sessionID: String?
+        let turnID: String?
         let startedAt: Date
+        var lastEventAt: Date
         var transcriptEntries: [AgentTranscriptEntry] = []
+
+        init(
+            paneID: UUID,
+            projectID: UUID,
+            worktreeID: UUID,
+            worktreePath: String?,
+            providerID: String,
+            sessionID: String? = nil,
+            turnID: String? = nil,
+            startedAt: Date,
+            lastEventAt: Date = Date(),
+            transcriptEntries: [AgentTranscriptEntry] = []
+        ) {
+            self.paneID = paneID
+            self.projectID = projectID
+            self.worktreeID = worktreeID
+            self.worktreePath = worktreePath
+            self.providerID = providerID
+            self.sessionID = sessionID
+            self.turnID = turnID
+            self.startedAt = startedAt
+            self.lastEventAt = lastEventAt
+            self.transcriptEntries = transcriptEntries
+        }
     }
 
     static let shared = AIActivityStore()
@@ -27,7 +54,9 @@ final class AIActivityStore {
         providerID: String,
         paneID: UUID,
         appState: AppState,
-        worktreeStore: WorktreeStore?
+        worktreeStore: WorktreeStore?,
+        sessionID: String? = nil,
+        turnID: String? = nil
     ) {
         if let worktreeStore,
            let context = NotificationNavigator.resolveContext(
@@ -41,7 +70,9 @@ final class AIActivityStore {
                 paneID: paneID,
                 projectID: context.projectID,
                 worktreeID: context.worktreeID,
-                worktreePath: context.worktreePath
+                worktreePath: context.worktreePath,
+                sessionID: sessionID,
+                turnID: turnID
             )
             return
         }
@@ -57,7 +88,9 @@ final class AIActivityStore {
             paneID: paneID,
             projectID: key.projectID,
             worktreeID: key.worktreeID,
-            worktreePath: appState.activeWorktreePath[key.projectID]
+            worktreePath: appState.activeWorktreePath[key.projectID],
+            sessionID: sessionID,
+            turnID: turnID
         )
     }
 
@@ -66,15 +99,21 @@ final class AIActivityStore {
         paneID: UUID,
         projectID: UUID,
         worktreeID: UUID,
-        worktreePath: String? = nil
+        worktreePath: String? = nil,
+        sessionID: String? = nil,
+        turnID: String? = nil
     ) {
+        let now = Date()
         activitiesByPaneID[paneID] = Activity(
             paneID: paneID,
             projectID: projectID,
             worktreeID: worktreeID,
             worktreePath: worktreePath,
             providerID: providerID,
-            startedAt: Date()
+            sessionID: sessionID,
+            turnID: turnID,
+            startedAt: now,
+            lastEventAt: now
         )
         AgentRunStore.shared.start(
             providerID: providerID,
@@ -85,14 +124,47 @@ final class AIActivityStore {
         )
     }
 
+    func observe(providerID: String, paneID: UUID, sessionID: String? = nil, turnID: String? = nil) {
+        guard var activity = activitiesByPaneID[paneID], activity.providerID == providerID else { return }
+        guard matches(activity: activity, sessionID: sessionID, turnID: turnID) else { return }
+        activity.lastEventAt = Date()
+        activitiesByPaneID[paneID] = activity
+    }
+
     @discardableResult
-    func stop(paneID: UUID) -> Activity? {
+    func stop(paneID: UUID, sessionID: String? = nil, turnID: String? = nil) -> Activity? {
+        guard let existing = activitiesByPaneID[paneID], matches(activity: existing, sessionID: sessionID, turnID: turnID) else {
+            return nil
+        }
         let activity = activitiesByPaneID.removeValue(forKey: paneID)
         AgentRunStore.shared.stop(paneID: paneID)
         if let activity {
             captureChangedFiles(for: activity)
         }
         return activity
+    }
+
+    func markStale(paneID: UUID, message: String) {
+        guard let activity = activitiesByPaneID.removeValue(forKey: paneID) else { return }
+        AgentRunStore.shared.markStale(providerID: activity.providerID, paneID: paneID, message: message)
+        captureChangedFiles(for: activity)
+    }
+
+    func clearLiveActivities(markRunsStale: Bool, message: String) {
+        let activities = Array(activitiesByPaneID.values)
+        activitiesByPaneID.removeAll()
+        guard markRunsStale else { return }
+        for activity in activities {
+            AgentRunStore.shared.markStale(providerID: activity.providerID, paneID: activity.paneID, message: message)
+            captureChangedFiles(for: activity)
+        }
+    }
+
+    func markActivitiesStale(where shouldMark: (Activity) -> Bool, message: String) {
+        let activities = activitiesByPaneID.values.filter(shouldMark)
+        for activity in activities {
+            markStale(paneID: activity.paneID, message: message)
+        }
     }
 
     func appendTranscript(providerID: String, paneID: UUID, kind: String, text: String) {
@@ -170,7 +242,10 @@ final class AIActivityStore {
             worktreeID: worktreeID,
             worktreePath: run.worktreePath,
             providerID: providerID,
-            startedAt: run.startedAt
+            sessionID: nil,
+            turnID: nil,
+            startedAt: run.startedAt,
+            lastEventAt: Date()
         ))
     }
 
@@ -184,7 +259,7 @@ final class AIActivityStore {
                 }
             }
         )
-        activitiesByPaneID = activitiesByPaneID.filter { validPaneIDs.contains($0.key) }
+        markActivitiesStale(where: { !validPaneIDs.contains($0.paneID) }, message: "Agent terminal pane disappeared.")
     }
 
     private func captureChangedFiles(for activity: Activity) {
@@ -234,6 +309,12 @@ final class AIActivityStore {
                 )
             }
         }
+    }
+
+    private func matches(activity: Activity, sessionID: String?, turnID: String?) -> Bool {
+        if let sessionID, let activeSessionID = activity.sessionID, sessionID != activeSessionID { return false }
+        if let turnID, let activeTurnID = activity.turnID, turnID != activeTurnID { return false }
+        return true
     }
 
     private func hasSharedWorktreeAttribution(paneID: UUID) -> Bool {

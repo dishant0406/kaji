@@ -80,6 +80,14 @@ final class AgentRunStore {
         persist()
     }
 
+    func markStale(providerID: String, paneID: UUID, message: String) {
+        updateRuns(providerID: providerID, paneID: paneID, openOnly: true) { run in
+            appendEvent(.init(kind: .stopped, label: "stale", text: message), to: &run)
+            run.status = .stale
+        }
+        persist()
+    }
+
     func stop(providerID: String, projectID: UUID, worktreeID: UUID) {
         updateRuns(providerID: providerID, projectID: projectID, worktreeID: worktreeID, openOnly: true) { run in
             appendEvent(.init(kind: .stopped, label: "stop", text: "Stopped"), to: &run)
