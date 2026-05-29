@@ -4,11 +4,13 @@ enum CodexHooksConfig {
     private static let marker = "kaji-activity-hook"
     private static let obsoleteMarkers = [marker, "muxy-activity-hook"]
     private static let hookEvents = [
-        HookEvent(name: "SessionStart", matcher: "startup|resume|clear", action: "start"),
+        HookEvent(name: "SessionStart", matcher: "startup|resume|clear|compact", action: "observe"),
+        HookEvent(name: "SubagentStart", matcher: "*", action: "observe"),
         HookEvent(name: "UserPromptSubmit", matcher: nil, action: "start"),
         HookEvent(name: "PreToolUse", matcher: "*", action: "observe"),
         HookEvent(name: "PermissionRequest", matcher: "*", action: "attention"),
         HookEvent(name: "PostToolUse", matcher: "*", action: "observe"),
+        HookEvent(name: "SubagentStop", matcher: "*", action: "observe"),
         HookEvent(name: "Stop", matcher: nil, action: "stop"),
     ]
 

@@ -118,6 +118,26 @@ struct AgentRunStoreTests {
     }
 
     @Test
+    func markStaleOnlyMarksOpenMatchingRun() {
+        let store = AgentRunStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let otherPaneID = UUID()
+        let projectID = UUID()
+
+        store.start(providerID: "codex", paneID: paneID, projectID: projectID, worktreeID: UUID())
+        store.start(providerID: "codex", paneID: otherPaneID, projectID: projectID, worktreeID: UUID())
+
+        store.markStale(providerID: "codex", paneID: paneID, message: "Interrupted by sleep")
+
+        #expect(store.runs.first { $0.paneID == paneID }?.status == .stale)
+        #expect(store.runs.first { $0.paneID == paneID }?.events.last?.text == "Interrupted by sleep")
+        #expect(store.runs.first { $0.paneID == otherPaneID }?.status == .running)
+        store.reset()
+    }
+
+    @Test
     func stopByPanePrefersOpenRunWhenPaneHasHistory() {
         let store = AgentRunStore.shared
         store.reset()

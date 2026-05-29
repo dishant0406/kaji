@@ -5,7 +5,7 @@ enum ClaudeHookHandler {
         HookEventEmitter.emitSession(provider: "claude", input: input, source: event)
         switch event {
         case "userpromptsubmit":
-            HookEventEmitter.emitActivity(provider: "claude", state: "start")
+            HookEventEmitter.emitActivity(provider: "claude", state: "start", input: input)
             let keys = ["prompt", "message", "text", "content"]
             HookEventEmitter.emitTranscript(provider: "claude", kind: "user", text: extractedText(input, keys: keys, limit: 500))
         case "permissionrequest":
@@ -26,7 +26,7 @@ enum ClaudeHookHandler {
             )
             emitNotification(body: "Needs attention")
         case "stop":
-            HookEventEmitter.emitActivity(provider: "claude", state: "stop")
+            HookEventEmitter.emitActivity(provider: "claude", state: "stop", input: input)
             let body = extractedText(input, keys: ["last_assistant_message", "message", "text", "content"], limit: 200)
             let resolvedBody = body.isEmpty ? "Session completed" : body
             HookEventEmitter.emitTranscript(provider: "claude", kind: "assistant", text: resolvedBody)

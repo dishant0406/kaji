@@ -142,4 +142,92 @@ struct AIActivitySocketRouterTests {
         #expect(AgentRunStore.shared.runs.first?.events.last?.text == "Bash: npm install")
         store.reset()
     }
+
+    @Test
+    func observePayloadDoesNotStartActivity() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let handled = AIActivitySocketRouter.handle(
+            .init(
+                type: "opencode_activity",
+                title: "observe",
+                body: "",
+                paneIDString: UUID().uuidString
+            ),
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(handled)
+        #expect(store.activitiesByPaneID.isEmpty)
+        #expect(AgentRunStore.shared.runs.isEmpty)
+    }
+
+    @Test
+    func staleIdentifiedStopDoesNotStopNewerActivity() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+
+        store.start(
+            providerID: "opencode",
+            paneID: paneID,
+            projectID: projectID,
+            worktreeID: worktreeID,
+            sessionID: "new-session",
+            turnID: "new-turn"
+        )
+
+        let handled = AIActivitySocketRouter.handle(
+            .init(
+                type: "opencode_activity",
+                title: "stop",
+                body: "{\"sessionID\":\"old-session\",\"turnID\":\"old-turn\"}",
+                paneIDString: paneID.uuidString
+            ),
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(handled)
+        #expect(store.activitiesByPaneID[paneID]?.sessionID == "new-session")
+        #expect(store.activitiesByPaneID[paneID]?.turnID == "new-turn")
+        #expect(AgentRunStore.shared.runs.first?.status == .running)
+        store.reset()
+    }
+
+    @Test
+    func identifiedActivityPayloadStoresSessionAndTurn() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+        let body = """
+        {"projectID":"\(projectID.uuidString)","worktreeID":"\(worktreeID.uuidString)","worktreePath":"/tmp/muxy","sessionID":"session-1","turnID":"turn-1"}
+        """
+
+        let handled = AIActivitySocketRouter.handle(
+            .init(
+                type: "codex_activity",
+                title: "start",
+                body: body,
+                paneIDString: paneID.uuidString
+            ),
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(handled)
+        #expect(store.activitiesByPaneID[paneID]?.projectID == projectID)
+        #expect(store.activitiesByPaneID[paneID]?.worktreeID == worktreeID)
+        #expect(store.activitiesByPaneID[paneID]?.sessionID == "session-1")
+        #expect(store.activitiesByPaneID[paneID]?.turnID == "turn-1")
+        store.reset()
+    }
 }

@@ -30,6 +30,16 @@ enum HookEventEmitter {
         )
     }
 
+    static func emitActivity(provider: String, state: String, input: String) {
+        guard let paneID = ProcessInfo.processInfo.environment["KAJI_PANE_ID"], !paneID.isEmpty else { return }
+        emit(
+            type: "\(provider)_activity",
+            paneID: paneID,
+            title: state,
+            body: activityContext(input: input)
+        )
+    }
+
     static func emitTranscript(provider: String, kind: String, text: String) {
         guard let paneID = ProcessInfo.processInfo.environment["KAJI_PANE_ID"], !paneID.isEmpty else { return }
         let cleaned = HookTextSanitizer.clean(text)
@@ -86,6 +96,24 @@ enum HookEventEmitter {
             return ""
         }
         return [projectID, worktreeID, env["KAJI_WORKTREE_PATH"] ?? ""].joined(separator: ",")
+    }
+
+    private static func activityContext(input: String) -> String {
+        var body: [String: String] = [:]
+        if let object = HookJSONExtractor.object(from: input) {
+            insert("sessionID", value: string(in: object, keys: ["session_id", "sessionID", "sessionId"]), into: &body)
+            insert("turnID", value: string(in: object, keys: ["turn_id", "turnID", "turnId"]), into: &body)
+        }
+        for key in ["KAJI_PROJECT_ID", "KAJI_WORKTREE_ID", "KAJI_WORKTREE_PATH"] {
+            guard let value = ProcessInfo.processInfo.environment[key], !value.isEmpty else { continue }
+            let bodyKey = key == "KAJI_PROJECT_ID" ? "projectID" : key == "KAJI_WORKTREE_ID" ? "worktreeID" : "worktreePath"
+            body[bodyKey] = value
+        }
+        guard !body.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys]),
+              let text = String(data: data, encoding: .utf8)
+        else { return context() }
+        return text
     }
 
     private static func emitSession(provider: String, paneID: String, body: [String: String]) {

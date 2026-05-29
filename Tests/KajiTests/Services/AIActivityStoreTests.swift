@@ -150,6 +150,37 @@ struct AIActivityStoreTests {
         #expect(!store.hasActiveAgent(projectID: project.id))
     }
 
+    @Test
+    func clearLiveActivitiesCanPreserveRunHistory() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "codex", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        store.clearLiveActivities(markRunsStale: false, message: "Sleep")
+
+        #expect(store.activitiesByPaneID.isEmpty)
+        #expect(AgentRunStore.shared.runs.first?.status == .running)
+        store.reset()
+    }
+
+    @Test
+    func clearLiveActivitiesCanMarkRunsStale() {
+        let store = AIActivityStore.shared
+        store.reset()
+
+        let paneID = UUID()
+        store.start(providerID: "opencode", paneID: paneID, projectID: UUID(), worktreeID: UUID())
+
+        store.clearLiveActivities(markRunsStale: true, message: "Interrupted")
+
+        #expect(store.activitiesByPaneID.isEmpty)
+        #expect(AgentRunStore.shared.runs.first?.status == .stale)
+        #expect(AgentRunStore.shared.runs.first?.events.contains { $0.label == "stale" && $0.text == "Interrupted" } == true)
+        store.reset()
+    }
+
 }
 
 private struct AIActivitySelectionStore: ActiveProjectSelectionStoring {

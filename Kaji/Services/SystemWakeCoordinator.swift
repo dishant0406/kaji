@@ -13,13 +13,13 @@ final class SystemWakeCoordinator {
     init(
         notificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter,
         onWillSleep: @escaping () -> Void = {
-            AIActivityStore.shared.reset()
+            CodingAgentActivityReconciler.shared.cancelScheduledReconciliation()
             CodexSessionMonitor.shared.stop()
         },
         onDidWake: @escaping () -> Void = {
-            AIActivityStore.shared.reset()
             ResourceMonitorService.shared.restartIfRunning()
             CodexSessionMonitor.shared.restart()
+            CodingAgentActivityReconciler.shared.schedulePostWakeReconciliation()
         }
     ) {
         self.notificationCenter = notificationCenter
