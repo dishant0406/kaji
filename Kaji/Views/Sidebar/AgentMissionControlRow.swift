@@ -11,6 +11,7 @@ struct AgentMissionControlRow: View {
     let onOpenFile: ((AgentChangedFile) -> Void)?
     let onOpenDiff: ((AgentChangedFile) -> Void)?
     let onSelect: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
     @State private var expanded = false
 
@@ -35,6 +36,7 @@ struct AgentMissionControlRow: View {
                     )
                     .padding(.horizontal, 10)
                     .padding(.bottom, 8)
+                    .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
                 }
             }
             AgentMissionControlControlsView(
@@ -49,6 +51,9 @@ struct AgentMissionControlRow: View {
         }
         .background(hovered ? KajiTheme.hover : .clear)
         .onHover { hovered = $0 }
+        .animation(KajiMotion.fast, value: hovered)
+        .animation(KajiMotion.panel, value: expanded)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: item.status.title)
         .accessibilityLabel("\(item.title), \(item.status.title)")
     }
 
@@ -94,6 +99,7 @@ struct AgentMissionControlRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: expanded)
         .kajiPointer()
     }
 

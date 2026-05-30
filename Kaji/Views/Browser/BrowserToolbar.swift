@@ -22,6 +22,8 @@ struct BrowserToolbar: View {
                 .padding(.horizontal, 10)
                 .frame(height: 28)
                 .background(KajiTheme.surface, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+                .overlay(RoundedRectangle(cornerRadius: KajiShape.tileRadius).stroke(KajiTheme.border.opacity(0.7), lineWidth: 1))
+                .animation(KajiMotion.fast, value: pendingURL)
                 .onSubmit { onNavigate() }
             IconButton(symbol: "paperplane", accessibilityLabel: "Open URL", action: onNavigate)
             BrowserDeviceSelect(selection: $deviceProfileID)

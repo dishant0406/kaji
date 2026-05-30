@@ -27,6 +27,8 @@ struct UpdateBadge: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: hovered, scale: 1.02)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: version)
         .accessibilityLabel("Update available: version \(version)")
         .accessibilityHint("Activates to check for updates")
     }

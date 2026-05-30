@@ -23,6 +23,8 @@ struct SidebarToggleButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: hovered)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: expanded)
         .kajiPointer()
         .accessibilityLabel(accessibilityLabel)
     }

@@ -52,6 +52,8 @@ struct TopBarBranchPicker: View {
                     .frame(maxWidth: 150, alignment: .leading)
                 KajiIcon(systemName: "chevron.down", size: 8)
                     .foregroundStyle(KajiTheme.fgDim)
+                    .rotationEffect(.degrees(showPopover ? 180 : 0))
+                    .animation(KajiMotion.fast, value: showPopover)
             }
             .padding(.horizontal, 10)
             .frame(height: 28)
@@ -66,6 +68,9 @@ struct TopBarBranchPicker: View {
         .buttonStyle(.borderless)
         .disabled(state.isSwitching)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: active)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: state.currentBranch ?? "")
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: state.isSwitching, isEnabled: state.isSwitching)
         .kajiPointer()
         .help(state.currentBranch ?? "Branch")
         .accessibilityLabel("Git Branch")
@@ -144,6 +149,8 @@ private struct TopBarBranchRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .background(rowBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+        .animation(KajiMotion.fast, value: isHighlighted)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: isActive, isEnabled: isActive)
     }
 
     private var rowBackground: Color {

@@ -16,9 +16,11 @@ struct ParentAgentThinkingRow: View {
             if isExpanded, !item.detail.isEmpty {
                 ParentAgentMarkdownText(content: item.detail, size: 12, color: KajiTheme.fgDim)
                     .padding(.leading, 22)
+                    .transition(KajiMotion.disclosureTransition(reduceMotion: false))
             }
         }
         .padding(.vertical, 8)
+        .animation(KajiMotion.panel, value: isExpanded)
     }
 }
 
@@ -44,9 +46,11 @@ struct ParentAgentToolGroup: View {
                     }
                 }
                 .padding(.leading, 22)
+                .transition(KajiMotion.disclosureTransition(reduceMotion: false))
             }
         }
         .padding(.vertical, 8)
+        .animation(KajiMotion.panel, value: isExpanded)
     }
 
     private var title: String {
@@ -106,4 +110,5 @@ private func disclosureButton(
         .foregroundStyle(KajiTheme.fgMuted)
     }
     .buttonStyle(.plain)
+    .kajiChangeFeedback(KajiMotion.selectionFeedback, value: isExpanded)
 }

@@ -101,6 +101,10 @@ struct SidebarWorktreeRow: View {
         .background(rowBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
+        .animation(KajiMotion.fast, value: selected)
+        .animation(KajiMotion.hover, value: hovered)
+        .kajiHoverEffect(isActive: hovered && !isRenaming, scale: 1.01)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selected, isEnabled: selected)
         .kajiPointer()
         .onTapGesture {
             guard !isRenaming else { return }
@@ -170,6 +174,8 @@ struct SidebarNewWorktreeRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: hovered, scale: 1.012)
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: hovered, isEnabled: hovered)
         .kajiPointer()
         .accessibilityLabel("New Worktree")
     }

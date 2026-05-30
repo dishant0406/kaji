@@ -149,6 +149,8 @@ struct PaneTabStrip: View {
                     )
                     .frame(width: perTabWidth)
                     .opacity(isDragged ? 0.92 : 1)
+                    .scaleEffect(isDragged ? 1.015 : 1)
+                    .animation(KajiMotion.select, value: isDragged)
                 }
             )
 
@@ -216,6 +218,8 @@ private struct TabAddButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: hovered, scale: 1.04)
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: hovered, isEnabled: hovered)
         .kajiPointer()
         .help("New Tab (\(KeyBindingStore.shared.combo(for: .newTab).displayString))")
         .accessibilityLabel("New Tab")
@@ -366,6 +370,9 @@ private struct TabCell: View {
             .onChange(of: isAnyDragging) { _, dragging in
                 if dragging { hovered = false }
             }
+            .animation(KajiMotion.fast, value: active)
+            .animation(KajiMotion.hover, value: hovered)
+            .kajiChangeFeedback(KajiMotion.selectionFeedback, value: active, isEnabled: active)
             .kajiPointer()
             .overlay {
                 if !tab.isPinned {

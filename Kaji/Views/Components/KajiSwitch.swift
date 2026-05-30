@@ -26,6 +26,7 @@ struct KajiSwitch: View {
                 }
                 .frame(width: 34, height: 18)
                 .animation(animation, value: isOn)
+                .kajiChangeFeedback(KajiMotion.tapFeedback, value: isOn)
         }
         .buttonStyle(.plain)
         .kajiPointer()

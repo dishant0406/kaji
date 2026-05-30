@@ -86,6 +86,10 @@ struct ProjectRow: View {
             .onChange(of: isAnyDragging) { _, dragging in
                 if dragging { hovered = false }
             }
+            .animation(KajiMotion.fast, value: isActive)
+            .animation(KajiMotion.hover, value: hovered)
+            .kajiHoverEffect(isActive: hovered && !isAnyDragging, scale: 1.025)
+            .kajiChangeFeedback(KajiMotion.selectionFeedback, value: isActive, isEnabled: isActive)
             .kajiPointer()
             .onTapGesture {
                 guard !isAnyDragging else { return }

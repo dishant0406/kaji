@@ -64,6 +64,7 @@ struct KajiButtonStyle: ButtonStyle {
                     .stroke(borderColor(isPressed: configuration.isPressed), lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+            .kajiPressEffect(isPressed: configuration.isPressed)
             .kajiPointer()
     }
 

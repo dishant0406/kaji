@@ -85,12 +85,17 @@ struct AIUsageSettingsView: View {
                     refreshUsage()
                 } label: {
                     HStack(spacing: 6) {
-                        KajiIcon(systemName: "arrow.clockwise", size: 10)
+                        if usageService.isRefreshing {
+                            KajiSpinner(size: 10, lineWidth: 1.4)
+                        } else {
+                            KajiIcon(systemName: "arrow.clockwise", size: 10)
+                        }
                         Text("Refresh")
                     }
                 }
                 .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                 .disabled(usageService.isRefreshing)
+                .kajiChangeFeedback(KajiMotion.successFeedback, value: usageService.lastRefreshDate, isEnabled: usageService.lastRefreshDate != nil)
             }
 
             AIUsageProviderTrackingGrid(

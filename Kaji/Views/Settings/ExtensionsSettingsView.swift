@@ -89,14 +89,18 @@ private struct KajiCodeGraphExtensionRow: View {
                 Spacer(minLength: 0)
 
                 if store.isInstalled {
-                    Button("Repair") {
+                    Button {
                         onInstall()
+                    } label: {
+                        installButtonLabel(title: "Repair")
                     }
                     .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                     .disabled(isInstalling)
                 } else {
-                    Button(isInstalling ? "Installing" : "Install") {
+                    Button {
                         onInstall()
+                    } label: {
+                        installButtonLabel(title: "Install")
                     }
                     .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                     .disabled(isInstalling)
@@ -110,6 +114,8 @@ private struct KajiCodeGraphExtensionRow: View {
             }
             .padding(.horizontal, SettingsMetrics.horizontalPadding)
             .padding(.vertical, SettingsMetrics.rowVerticalPadding + 4)
+            .kajiChangeFeedback(KajiMotion.successFeedback, value: store.isInstalled, isEnabled: store.isInstalled)
+            .kajiChangeFeedback(KajiMotion.invalidFeedback, value: store.state.phase == .failed, isEnabled: store.state.phase == .failed)
 
             SettingsGraphPathRow(label: "Runtime", path: KajiCodeGraphDirectory.root.path)
             SettingsGraphPathRow(label: "Graphify", path: store.state.graphifyCommit ?? "Not installed")
@@ -129,6 +135,15 @@ private struct KajiCodeGraphExtensionRow: View {
     private var statusColor: Color {
         if store.state.phase == .failed { return KajiTheme.diffRemoveFg }
         return store.isInstalled ? KajiTheme.fgMuted : KajiTheme.fgDim
+    }
+
+    private func installButtonLabel(title: String) -> some View {
+        HStack(spacing: 6) {
+            if isInstalling {
+                KajiSpinner(size: 10, lineWidth: 1.4)
+            }
+            Text(isInstalling ? "Installing" : title)
+        }
     }
 }
 

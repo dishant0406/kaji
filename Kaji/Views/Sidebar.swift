@@ -16,6 +16,7 @@ struct Sidebar: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isReordering = false
     @State private var expanded = UserDefaults.standard.bool(forKey: "kaji.sidebarExpanded")
     let parentAgentSelected: Bool
@@ -41,15 +42,14 @@ struct Sidebar: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
+        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: expanded)
         .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
             toggleExpanded()
         }
     }
 
     private func toggleExpanded() {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
+        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
             expanded.toggle()
         }
         UserDefaults.standard.set(expanded, forKey: "kaji.sidebarExpanded")
@@ -123,6 +123,7 @@ struct Sidebar: View {
                 )
             }
         }
+        .transition(KajiMotion.contentSwitchTransition(reduceMotion: reduceMotion))
         .opacity(isDragged ? 0.92 : 1)
         .padding(.bottom, expanded ? 4 : 6)
     }

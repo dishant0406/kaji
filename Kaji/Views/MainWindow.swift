@@ -40,6 +40,16 @@ struct MainWindow: View {
         static let maxRetainedSessions = 3
     }
 
+    private enum SidePanelIdentity: Hashable {
+        case codeGraphAgent(UUID)
+        case vcs
+        case problems
+        case globalSearch(UUID)
+        case fileTree(WorktreeKey)
+        case agentInstructions(UUID)
+        case browser(WorktreeKey)
+    }
+
     private enum CloseConfirmationKind {
         case lastTab
         case unsavedEditor
@@ -389,6 +399,17 @@ struct MainWindow: View {
             showCreateThemeModal || createWorktreeProjectID != nil || projectLogoCropRequest != nil
     }
 
+    private var activeSidePanelIdentity: SidePanelIdentity? {
+        if let session = activeCodeGraphAgentSession { return .codeGraphAgent(session.id) }
+        if vcsPanelVisible, activeVCSState != nil { return .vcs }
+        if problemsPanelVisible { return .problems }
+        if globalSearchPanelVisible, let project = activeProject { return .globalSearch(project.id) }
+        if fileTreePanelVisible, let key = activeWorktreeKey, activeFileTreeState != nil { return .fileTree(key) }
+        if agentInstructionPanelVisible, let project = activeProject { return .agentInstructions(project.id) }
+        if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let key = activeWorktreeKey, activeBrowserState != nil { return .browser(key) }
+        return nil
+    }
+
     private var mainLayout: some View {
         VStack(spacing: 0) {
             topBarContent
@@ -455,7 +476,10 @@ struct MainWindow: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                             activeSidePanel(contentWidth: contentGeometry.size.width)
+                                .id(activeSidePanelIdentity)
+                                .transition(KajiMotion.sidePanelTransition(reduceMotion: reduceMotion))
                         }
+                        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: activeSidePanelIdentity)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -524,7 +548,7 @@ struct MainWindow: View {
                     state: agentInstructionState,
                     projectPath: activeWorktreePath(for: project),
                     enabledLaunchers: cliLauncherSettings.enabledLaunchers,
-                    onClose: { agentInstructionPanelVisible = false }
+                    onClose: { withSidePanelAnimation { agentInstructionPanelVisible = false } }
                 )
                 .frame(width: max(AgentInstructionsLayout.minWidth, contentWidth * AgentInstructionsLayout.widthRatio))
             }
@@ -621,7 +645,7 @@ struct MainWindow: View {
                 onReplaceComplete: { changedPaths in
                     appState.reloadOpenEditors(paths: Set(changedPaths))
                 },
-                onClose: { globalSearchPanelVisible = false }
+                onClose: { withSidePanelAnimation { globalSearchPanelVisible = false } }
             )
             .frame(width: CGFloat(fileTreePanelWidth))
         }
@@ -641,7 +665,7 @@ struct MainWindow: View {
                     appState.openFile(diagnostic.filePath, projectID: project.id)
                     activeEditorState?.navigate(to: .init(line: diagnostic.line, column: diagnostic.column))
                 },
-                onClose: { problemsPanelVisible = false }
+                onClose: { withSidePanelAnimation { problemsPanelVisible = false } }
             )
             .frame(width: CGFloat(fileTreePanelWidth))
         }
@@ -698,7 +722,6 @@ struct MainWindow: View {
                 },
                 onDismiss: { showCommandPalette = false }
             )
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -753,7 +776,6 @@ struct MainWindow: View {
                 },
                 onDismiss: { showWorktreeSwitcher = false }
             )
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -768,7 +790,6 @@ struct MainWindow: View {
                 },
                 onDismiss: { showGoToSymbol = false }
             )
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -784,7 +805,6 @@ struct MainWindow: View {
                 },
                 onDismiss: { showGoToLine = false }
             )
-            .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
     }
 
@@ -874,7 +894,7 @@ struct MainWindow: View {
 
     private var topBarContent: some View {
         WindowDragRepresentable(alwaysEnabled: true)
-            .overlay {
+            .overlay(alignment: .leading) {
                 HStack(spacing: 8) {
                     ResourceMonitorTopBarButton()
                     PortMonitorTopBarButton()
@@ -888,6 +908,7 @@ struct MainWindow: View {
                     CodingAgentProcessTopBarButton()
                     AIUsageTopBarButton()
                 }
+                .padding(.leading, 8)
             }
             .overlay(alignment: .trailing) {
                 topBarActions
@@ -917,42 +938,52 @@ struct MainWindow: View {
                     appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tabID))
                 },
                 onCreateTab: {
-                    activateWorkspace()
-                    appState.dispatch(.createTab(projectID: project.id, areaID: nil))
+                    withSidePanelAnimation {
+                        activateWorkspace()
+                        appState.dispatch(.createTab(projectID: project.id, areaID: nil))
+                    }
                 },
                 onCreateVCSTab: {
-                    activateWorkspace()
-                    openVCS(for: project, preferredAreaID: areaID)
+                    withSidePanelAnimation {
+                        activateWorkspace()
+                        openVCS(for: project, preferredAreaID: areaID)
+                    }
                 },
                 onCloseTab: { tabID in
                     activateWorkspace()
                     appState.closeTab(tabID, areaID: areaID, projectID: project.id)
                 },
                 onSplit: { dir in
-                    activateWorkspace()
-                    appState.dispatch(.splitArea(.init(
-                        projectID: project.id,
-                        areaID: areaID,
-                        direction: dir,
-                        position: .second
-                    )))
+                    withSidePanelAnimation {
+                        activateWorkspace()
+                        appState.dispatch(.splitArea(.init(
+                            projectID: project.id,
+                            areaID: areaID,
+                            direction: dir,
+                            position: .second
+                        )))
+                    }
                 },
                 onDropAction: { result in
-                    activateWorkspace()
-                    appState.dispatch(result.action(projectID: project.id))
+                    withSidePanelAnimation {
+                        activateWorkspace()
+                        appState.dispatch(result.action(projectID: project.id))
+                    }
                 },
                 onCreateTabAdjacent: { tabID, side in
-                    activateWorkspace()
-                    let path = activeWorktreePath(for: project)
-                    let area = TabArea(projectPath: path)
-                    let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
-                    workspace.insertTab(
-                        tab,
-                        adjacentTo: tabID,
-                        side: side
-                    )
-                    appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tab.id))
-                    appState.saveWorkspaces()
+                    withSidePanelAnimation {
+                        activateWorkspace()
+                        let path = activeWorktreePath(for: project)
+                        let area = TabArea(projectPath: path)
+                        let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+                        workspace.insertTab(
+                            tab,
+                            adjacentTo: tabID,
+                            side: side
+                        )
+                        appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tab.id))
+                        appState.saveWorkspaces()
+                    }
                 },
                 onTogglePin: { tabID in
                     workspace.togglePin(tabID)
@@ -1237,8 +1268,10 @@ struct MainWindow: View {
     }
 
     private func hideBrowserPanel() {
-        browserPanelVisible = false
-        browserPanelKey = nil
+        withSidePanelAnimation {
+            browserPanelVisible = false
+            browserPanelKey = nil
+        }
     }
 
     private func closeBrowserSession(for key: WorktreeKey) {
@@ -1266,12 +1299,14 @@ struct MainWindow: View {
         ensureBrowserState(for: project)
         guard let key = activeWorktreeKey else { return }
         let isShowing = !(browserPanelVisible && browserPanelKey == key)
-        browserPanelVisible = isShowing
-        browserPanelKey = isShowing ? key : nil
-        if isShowing {
-            vcsPanelVisible = false
-            fileTreePanelVisible = false
-            agentInstructionPanelVisible = false
+        withSidePanelAnimation {
+            browserPanelVisible = isShowing
+            browserPanelKey = isShowing ? key : nil
+            if isShowing {
+                vcsPanelVisible = false
+                fileTreePanelVisible = false
+                agentInstructionPanelVisible = false
+            }
         }
     }
 
@@ -1288,11 +1323,13 @@ struct MainWindow: View {
         activateWorkspace()
         ensureBrowserState(for: project)
         guard let key = activeWorktreeKey else { return }
-        browserPanelVisible = true
-        browserPanelKey = key
-        vcsPanelVisible = false
-        fileTreePanelVisible = false
-        agentInstructionPanelVisible = false
+        withSidePanelAnimation {
+            browserPanelVisible = true
+            browserPanelKey = key
+            vcsPanelVisible = false
+            fileTreePanelVisible = false
+            agentInstructionPanelVisible = false
+        }
     }
 
     private var activeFileTreeState: FileTreeState? {
@@ -1339,55 +1376,64 @@ struct MainWindow: View {
 
     private func toggleAttachedVCSPanel() {
         guard let project = activeProject else {
-            vcsPanelVisible = false
+            withSidePanelAnimation { vcsPanelVisible = false }
             return
         }
 
         activateWorkspace()
         ensureVCSState(for: project)
         let isShowing = !vcsPanelVisible
-        vcsPanelVisible = isShowing
-        if isShowing {
-            fileTreePanelVisible = false
-            hideBrowserPanel()
-            agentInstructionPanelVisible = false
+        withSidePanelAnimation {
+            vcsPanelVisible = isShowing
+            if isShowing {
+                fileTreePanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+                agentInstructionPanelVisible = false
+            }
         }
     }
 
     private func toggleFileTreePanel() {
         guard let project = activeProject else {
-            fileTreePanelVisible = false
+            withSidePanelAnimation { fileTreePanelVisible = false }
             return
         }
 
         activateWorkspace()
         ensureFileTreeState(for: project)
         let isShowing = !fileTreePanelVisible
-        fileTreePanelVisible = isShowing
-        if isShowing {
-            vcsPanelVisible = false
-            globalSearchPanelVisible = false
-            problemsPanelVisible = false
-            hideBrowserPanel()
-            agentInstructionPanelVisible = false
+        withSidePanelAnimation {
+            fileTreePanelVisible = isShowing
+            if isShowing {
+                vcsPanelVisible = false
+                globalSearchPanelVisible = false
+                problemsPanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+                agentInstructionPanelVisible = false
+            }
         }
     }
 
     private func toggleGlobalSearchPanel() {
         guard activeProject != nil else {
-            globalSearchPanelVisible = false
+            withSidePanelAnimation { globalSearchPanelVisible = false }
             return
         }
 
         activateWorkspace()
         let isShowing = !globalSearchPanelVisible
-        globalSearchPanelVisible = isShowing
-        if isShowing {
-            vcsPanelVisible = false
-            fileTreePanelVisible = false
-            problemsPanelVisible = false
-            hideBrowserPanel()
-            agentInstructionPanelVisible = false
+        withSidePanelAnimation {
+            globalSearchPanelVisible = isShowing
+            if isShowing {
+                vcsPanelVisible = false
+                fileTreePanelVisible = false
+                problemsPanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+                agentInstructionPanelVisible = false
+            }
         }
     }
 
@@ -1399,7 +1445,7 @@ struct MainWindow: View {
 
     private func toggleAgentInstructionPanel() {
         guard let project = activeProject else {
-            agentInstructionPanelVisible = false
+            withSidePanelAnimation { agentInstructionPanelVisible = false }
             return
         }
 
@@ -1409,11 +1455,14 @@ struct MainWindow: View {
             enabledLaunchers: cliLauncherSettings.enabledLaunchers
         )
         let isShowing = !agentInstructionPanelVisible
-        agentInstructionPanelVisible = isShowing
-        if isShowing {
-            vcsPanelVisible = false
-            fileTreePanelVisible = false
-            hideBrowserPanel()
+        withSidePanelAnimation {
+            agentInstructionPanelVisible = isShowing
+            if isShowing {
+                vcsPanelVisible = false
+                fileTreePanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+            }
         }
     }
 
@@ -1442,11 +1491,14 @@ struct MainWindow: View {
         activateWorkspace()
         ensureVCSState(for: project)
         let isShowing = !vcsPanelVisible
-        vcsPanelVisible = isShowing
-        if isShowing {
-            fileTreePanelVisible = false
-            hideBrowserPanel()
-            agentInstructionPanelVisible = false
+        withSidePanelAnimation {
+            vcsPanelVisible = isShowing
+            if isShowing {
+                fileTreePanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+                agentInstructionPanelVisible = false
+            }
         }
     }
 
@@ -1459,17 +1511,23 @@ struct MainWindow: View {
         }
         footerTerminalCleanupTasks[project.id]?.cancel()
         footerTerminalCleanupTasks[project.id] = nil
-        _ = footerTerminalStore.show(projectID: project.id, projectPath: activeWorktreePath(for: project))
+        withAnimation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion)) {
+            _ = footerTerminalStore.show(projectID: project.id, projectPath: activeWorktreePath(for: project))
+        }
     }
 
     private func collapseFooterTerminal(projectID: UUID) {
-        footerTerminalStore.collapse(projectID: projectID)
+        withAnimation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion)) {
+            footerTerminalStore.collapse(projectID: projectID)
+        }
         scheduleFooterTerminalCleanupIfIdle(projectID: projectID)
     }
 
     private func collapseAllFooterTerminals() {
         let projectIDs = Array(footerTerminalCleanupTasks.keys) + projectStore.projects.map(\.id)
-        footerTerminalStore.collapseAll()
+        withAnimation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion)) {
+            footerTerminalStore.collapseAll()
+        }
         for projectID in Set(projectIDs) {
             scheduleFooterTerminalCleanupIfIdle(projectID: projectID)
         }
@@ -1497,8 +1555,14 @@ struct MainWindow: View {
         footerTerminalCleanupTasks[projectID] = nil
     }
 
+    private func withSidePanelAnimation(_ updates: () -> Void) {
+        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), updates)
+    }
+
     private func footerTerminalProcessExited(projectID: UUID) {
-        footerTerminalStore.collapse(projectID: projectID)
+        withAnimation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion)) {
+            footerTerminalStore.collapse(projectID: projectID)
+        }
         scheduleFooterTerminalCleanupIfIdle(projectID: projectID)
     }
 
@@ -1513,9 +1577,11 @@ struct MainWindow: View {
     private func handleCreateWorktreeResult(_ result: CreateWorktreeResult, project: Project) {
         guard case let .created(worktree, runSetup) = result else { return }
         appState.selectWorktree(projectID: project.id, worktree: worktree)
+        ToastState.shared.show("Worktree created")
         guard runSetup,
               let paneID = appState.focusedArea(for: project.id)?.activeTab?.content.pane?.id
         else { return }
+        ToastState.shared.show("Running worktree setup…")
         Task {
             await WorktreeSetupRunner.run(
                 sourceProjectPath: project.path,

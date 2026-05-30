@@ -1,3 +1,4 @@
+import Pow
 import SwiftUI
 
 struct KajiKitScriptRunnerView: View {
@@ -24,6 +25,7 @@ struct KajiKitScriptRunnerView: View {
         HStack(spacing: 10) {
             KajiIcon(systemName: statusIcon, size: 13)
                 .foregroundStyle(statusColor)
+                .kajiChangeFeedback(statusFeedback, value: statusText)
             VStack(alignment: .leading, spacing: 2) {
                 Text(runner.plan?.script.title ?? "Running script")
                     .kajiFont(size: 13, weight: .semibold)
@@ -87,6 +89,17 @@ struct KajiKitScriptRunnerView: View {
         case .failed: KajiTheme.diffRemoveFg
         case .succeeded: KajiTheme.diffAddFg
         default: KajiTheme.fgMuted
+        }
+    }
+
+    private var statusFeedback: AnyChangeEffect {
+        switch runner.status {
+        case .failed:
+            KajiMotion.invalidFeedback
+        case .succeeded:
+            KajiMotion.successFeedback
+        default:
+            KajiMotion.tapFeedback
         }
     }
 }

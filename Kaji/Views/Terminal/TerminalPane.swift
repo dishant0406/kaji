@@ -41,7 +41,6 @@ struct TerminalPane: View {
                         }
                     }
                 )
-                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
     }

@@ -36,6 +36,8 @@ struct BranchPicker: View {
             .contentShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         }
         .buttonStyle(.plain)
+        .kajiHoverEffect(isActive: showPopover, scale: 1.01)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: currentBranch ?? "detached")
         .help(currentBranch ?? "detached")
         .accessibilityLabel("Branch: \(currentBranch ?? "detached")")
         .accessibilityHint("Opens branch picker")
@@ -113,6 +115,9 @@ private struct BranchRow: View {
         .padding(.vertical, 7)
         .background(rowBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         .onHover { hovered = $0 }
+        .animation(KajiMotion.fast, value: isHighlighted)
+        .animation(KajiMotion.hover, value: hovered)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: isActive, isEnabled: isActive)
     }
 
     private var rowBackground: AnyShapeStyle {

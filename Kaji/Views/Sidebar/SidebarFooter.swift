@@ -75,7 +75,7 @@ struct SidebarFooter: View {
     @ViewBuilder
     private var updateButton: some View {
         if let version = updateService.availableUpdateVersion {
-            SidebarUpdateButton(version: version) {
+            SidebarUpdateButton(version: version, isChecking: updateService.isChecking) {
                 updateService.checkForUpdates()
             }
         }

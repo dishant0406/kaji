@@ -34,6 +34,7 @@ struct KajiInput: View {
             RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                 .stroke(isFocused ? KajiTheme.accent.opacity(0.6) : KajiTheme.border, lineWidth: 1)
         )
+        .animation(KajiMotion.fast, value: isFocused)
     }
 
     private var controlBackground: Color {

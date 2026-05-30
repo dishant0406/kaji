@@ -44,6 +44,9 @@ struct KajiPill: View {
         .buttonStyle(.plain)
         .disabled(disabled || action == nil)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: hovered && !disabled && action != nil, scale: 1.018)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selected, isEnabled: selected)
+        .kajiPointer()
     }
 
     private var foreground: Color {

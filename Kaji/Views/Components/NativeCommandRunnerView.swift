@@ -1,4 +1,5 @@
 import AppKit
+import Pow
 import SwiftUI
 
 struct NativeCommandRunnerView: View {
@@ -59,6 +60,12 @@ struct NativeCommandRunnerView: View {
         }
         .frame(width: 30, height: 30)
         .overlay(Circle().stroke(statusColor.opacity(0.24), lineWidth: 1))
+        .kajiChangeFeedback(runner.isRunning ? KajiMotion.tapFeedback : completionFeedback, value: statusText)
+    }
+
+    private var completionFeedback: AnyChangeEffect {
+        if case .succeeded = runner.status { return KajiMotion.successFeedback }
+        return KajiMotion.invalidFeedback
     }
 
     private var commandSummary: some View {

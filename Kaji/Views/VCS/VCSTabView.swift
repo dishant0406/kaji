@@ -5,6 +5,7 @@ struct VCSTabView: View {
     @Bindable var state: VCSTabState
     let focused: Bool
     let onFocus: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
@@ -477,6 +478,8 @@ struct VCSTabView: View {
         .buttonStyle(KajiButtonStyle(commitEnabled ? .primary : .secondary, size: .small))
         .opacity(commitEnabled || state.isCommitting ? 1 : 0.46)
         .disabled(!commitEnabled || state.isCommitting)
+        .kajiChangeFeedback(KajiMotion.successFeedback, value: state.stagedFiles.count, isEnabled: !state.isCommitting)
+        .kajiChangeFeedback(KajiMotion.invalidFeedback, value: commitEnabled, isEnabled: !commitEnabled && state.hasStagedChanges)
         .help("Commit staged changes")
     }
 
@@ -500,6 +503,7 @@ struct VCSTabView: View {
         }
         .buttonStyle(KajiButtonStyle(.secondary, size: .small))
         .disabled(state.isPulling)
+        .kajiChangeFeedback(KajiMotion.successFeedback, value: state.aheadBehind.behind, isEnabled: !state.isPulling)
         .help(state.aheadBehind.behind > 0
             ? "Pull \(state.aheadBehind.behind) commit\(state.aheadBehind.behind == 1 ? "" : "s") from origin"
             : "Pull from origin")
@@ -525,6 +529,7 @@ struct VCSTabView: View {
         }
         .buttonStyle(KajiButtonStyle(.secondary, size: .small))
         .disabled(state.isPushing)
+        .kajiChangeFeedback(KajiMotion.successFeedback, value: state.aheadBehind.ahead, isEnabled: !state.isPushing)
         .help(state.aheadBehind.ahead > 0
             ? "Push \(state.aheadBehind.ahead) commit\(state.aheadBehind.ahead == 1 ? "" : "s") to origin"
             : "Push to origin")
@@ -1044,6 +1049,7 @@ private struct SectionSplitLayout: View {
     @Binding var pendingDiscardPath: String?
     let onOpenInEditor: (String) -> Void
     let onOpenDiff: (String, Bool) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let sectionHeaderHeight: CGFloat = 30
 
@@ -1244,7 +1250,7 @@ private struct SectionSplitLayout: View {
 
         return HStack(spacing: 6) {
             Button {
-                toggleCollapsed(section)
+                withAnimation(KajiMotion.panel) { toggleCollapsed(section) }
             } label: {
                 HStack(spacing: 6) {
                     KajiIcon(systemName: isCollapsedState ? "chevron.right" : "chevron.down", size: 9)
@@ -1269,6 +1275,8 @@ private struct SectionSplitLayout: View {
         .padding(.horizontal, 10)
         .frame(height: Self.sectionHeaderHeight)
         .background(KajiTheme.secondaryBackground)
+        .animation(KajiMotion.fast, value: collapsed)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: collapsed)
     }
 
     private func sectionCount(for section: SectionKind) -> Int {
@@ -1328,7 +1336,7 @@ private struct SectionSplitLayout: View {
     private func expandCollapseButton(for files: [GitStatusFile]) -> some View {
         let anyExpanded = files.contains { state.expandedFilePaths.contains($0.path) }
         Button {
-            state.setExpanded(files: files, expanded: !anyExpanded)
+            withAnimation(KajiMotion.panel) { state.setExpanded(files: files, expanded: !anyExpanded) }
         } label: {
             KajiIcon(
                 systemName: anyExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
@@ -1356,7 +1364,7 @@ private struct SectionSplitLayout: View {
                 isStaged: isStaged,
                 onToggle: {
                     onFocus()
-                    state.toggleExpanded(filePath: file.path)
+                    withAnimation(KajiMotion.panel) { state.toggleExpanded(filePath: file.path) }
                 },
                 onStage: { state.stageFile(file.path) },
                 onUnstage: { state.unstageFile(file.path) },
@@ -1367,11 +1375,13 @@ private struct SectionSplitLayout: View {
 
             if expanded {
                 expandedDiff(for: file)
+                    .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
             }
 
             Rectangle().fill(KajiTheme.border).frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(KajiMotion.panel, value: expanded)
     }
 
     private func expandedDiff(for file: GitStatusFile) -> some View {
@@ -1489,6 +1499,9 @@ private struct FileRow: View {
         .background(hovered ? KajiTheme.hover : Color.clear)
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
+        .animation(KajiMotion.fast, value: expanded)
+        .animation(KajiMotion.hover, value: hovered)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: expanded, isEnabled: expanded)
         .onTapGesture(perform: onToggle)
     }
 

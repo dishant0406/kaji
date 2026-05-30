@@ -7,6 +7,7 @@ struct BrowserPane: View {
     let managesBrowserControl: Bool
     let paneIsVisible: Bool
     let onClosePane: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pendingURL = ""
     @State private var showsPageText = false
     @State private var isReading = false
@@ -29,12 +30,18 @@ struct BrowserPane: View {
                     BrowserPageTextPanel(
                         title: isReading ? "Reading page…" : "Page text",
                         text: state.pageSummary,
-                        onClose: { showsPageText = false }
+                        onClose: {
+                            withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                                showsPageText = false
+                            }
+                        }
                     )
+                    .transition(KajiMotion.bottomPanelTransition(reduceMotion: reduceMotion))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
+            .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: showsPageText)
         }
         .background(KajiTheme.bg)
         .clipped()
@@ -58,7 +65,9 @@ struct BrowserPane: View {
         }
         .onChange(of: state.selectedPageID) { _, _ in
             pendingURL = state.url
-            showsPageText = false
+            withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                showsPageText = false
+            }
             startSelectedPageIfVisible()
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
             state.pruneInactiveControllers()
@@ -175,7 +184,9 @@ struct BrowserPane: View {
 
     private func readPage() async {
         isReading = true
-        showsPageText = true
+        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+            showsPageText = true
+        }
         defer { isReading = false }
         do {
             state.pageSummary = try await selectedController?.readPage() ?? ""

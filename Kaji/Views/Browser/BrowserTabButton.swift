@@ -39,6 +39,8 @@ struct BrowserTabButton: View {
         .background(selected ? KajiTheme.surface : KajiTheme.bg, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         .overlay(RoundedRectangle(cornerRadius: KajiShape.tileRadius).stroke(KajiTheme.border))
         .contentShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+        .animation(KajiMotion.fast, value: selected)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selected, isEnabled: selected)
         .kajiPointer()
     }
 

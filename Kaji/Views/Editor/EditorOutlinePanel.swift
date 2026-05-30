@@ -59,6 +59,7 @@ struct EditorOutlinePanel: View {
 
 private struct EditorOutlineRow: View {
     let symbol: EditorSymbol
+    @State private var hovered = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -78,7 +79,11 @@ private struct EditorOutlineRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .background(hovered ? KajiTheme.hover : .clear, in: RoundedRectangle(cornerRadius: 6))
         .contentShape(Rectangle())
+        .onHover { hovered = $0 }
+        .animation(KajiMotion.hover, value: hovered)
+        .kajiHoverEffect(isActive: hovered, scale: 1.01)
     }
 
     private var icon: String {

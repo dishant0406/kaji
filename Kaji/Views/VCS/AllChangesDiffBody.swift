@@ -4,6 +4,7 @@ import SwiftUI
 struct AllChangesDiffBody: View {
     @Bindable var state: DiffViewerTabState
     let onCommentRequest: (DiffCommentAnchor, CGPoint) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -26,12 +27,17 @@ struct AllChangesDiffBody: View {
                             comments: state.comments(for: file.path),
                             suppressLeadingTopBorder: true
                         )
+                        .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
                     }
                 } header: {
                     GithubDiffFileHeader(
                         isCollapsed: Binding(
                             get: { state.isCollapsed(file.path) },
-                            set: { state.setCollapsed($0, filePath: file.path) }
+                            set: { collapsed in
+                                withAnimation(KajiMotion.panel) {
+                                    state.setCollapsed(collapsed, filePath: file.path)
+                                }
+                            }
                         ),
                         file: currentFile,
                         stats: state.vcs.displayedStats(for: currentFile),
@@ -50,6 +56,7 @@ struct AllChangesDiffBody: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(KajiMotion.panel, value: state.collapsedFilePaths)
     }
 }
 
@@ -189,8 +196,12 @@ private struct FileHeaderIconButton: View {
             .frame(width: 22, height: 22)
             .background(backgroundColor, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .onTapGesture(perform: action)
+            .onTapGesture { withAnimation(KajiMotion.panel, action) }
             .onHover { isHovering = $0 }
+            .animation(KajiMotion.fast, value: selected)
+            .animation(KajiMotion.hover, value: isHovering)
+            .kajiHoverEffect(isActive: isHovering, scale: 1.04)
+            .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selected, isEnabled: selected)
             .kajiPointer()
             .help(label)
     }

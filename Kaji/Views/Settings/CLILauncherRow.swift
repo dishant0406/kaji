@@ -64,11 +64,19 @@ struct CLILauncherRow: View {
                     }
                     .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                     .disabled(refreshed)
+                    .kajiChangeFeedback(KajiMotion.successFeedback, value: refreshed, isEnabled: refreshed)
                 }
 
                 if !installed, provider != nil {
-                    Button(installing ? "Installing" : "Install") {
+                    Button {
                         installProvider()
+                    } label: {
+                        HStack(spacing: 6) {
+                            if installing {
+                                KajiSpinner(size: 10, lineWidth: 1.4)
+                            }
+                            Text(installing ? "Installing" : "Install")
+                        }
                     }
                     .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                     .disabled(installing || installState == .checking)
@@ -80,6 +88,8 @@ struct CLILauncherRow: View {
             .padding(.horizontal, SettingsMetrics.horizontalPadding)
             .padding(.top, SettingsMetrics.rowVerticalPadding + 2)
             .padding(.bottom, 6)
+            .kajiChangeFeedback(KajiMotion.successFeedback, value: installed, isEnabled: installed)
+            .kajiChangeFeedback(KajiMotion.invalidFeedback, value: installMessage ?? "", isEnabled: installMessage != nil && !installed)
 
             HStack {
                 KajiInput(

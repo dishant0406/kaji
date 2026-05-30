@@ -24,8 +24,11 @@ struct NotificationRouteRow: View {
             Button("Edit", action: onEdit)
                 .buttonStyle(KajiButtonStyle(.ghost, size: .small))
 
-            Button("Delete", action: onDelete)
+            Button("Delete") {
+                onDelete()
+            }
                 .buttonStyle(KajiButtonStyle(.ghost, size: .small))
+                .kajiChangeFeedback(KajiMotion.attentionFeedback, value: route.id)
 
             KajiSwitch(
                 isOn: Binding(

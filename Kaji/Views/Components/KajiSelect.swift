@@ -34,6 +34,8 @@ struct KajiSelect<Value: Hashable>: View {
 
                 KajiIcon(systemName: "chevron.up.chevron.down", size: 10)
                     .foregroundStyle(KajiTheme.fgDim)
+                    .rotationEffect(.degrees(isPresented ? 180 : 0))
+                    .animation(KajiMotion.fast, value: isPresented)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -46,6 +48,7 @@ struct KajiSelect<Value: Hashable>: View {
             .contentShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         }
         .buttonStyle(.plain)
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: isPresented, isEnabled: isPresented)
         .kajiPointer()
         .kajiPopover(isPresented: $isPresented, preferredEdge: .top) {
             popoverContent
@@ -132,6 +135,7 @@ private struct KajiSelectRow: View {
         .background(rowBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         .contentShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         .onHover { hovered = $0 }
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: isSelected, isEnabled: isSelected)
         .kajiPointer()
     }
 

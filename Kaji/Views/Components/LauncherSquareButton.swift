@@ -26,6 +26,7 @@ struct LauncherSquareButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: hovered)
         .kajiPointer()
         .accessibilityLabel(accessibilityLabel)
         .help(helpText ?? accessibilityLabel)
