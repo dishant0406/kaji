@@ -1,10 +1,13 @@
 import Foundation
 
 enum AgentChangedFilesSnapshotter {
-    static func snapshot(repoPath: String) async -> [AgentChangedFile]? {
+    static func snapshot(
+        repoPath: String,
+        policy: AgentChangedFilesSnapshotPolicy = .default
+    ) async -> [AgentChangedFile]? {
         do {
             let files = try await GitRepositoryService().changedFiles(repoPath: repoPath)
-            return files.map(map)
+            return policy.capturedFiles(from: files.map(map))
         } catch {
             return nil
         }

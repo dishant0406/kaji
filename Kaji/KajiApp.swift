@@ -178,6 +178,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         DebugFileLog.log("Lifecycle", "applicationWillTerminate started")
         onTerminate?()
+        AgentRunStore.shared.flushPersistence()
         NotificationStore.shared.saveToDisk()
         SleepPreventionController.shared.stop()
         SystemWakeCoordinator.shared.stop()

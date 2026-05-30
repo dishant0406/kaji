@@ -3,19 +3,24 @@ import Foundation
 @MainActor
 @Observable
 final class AgentRunStore {
-    static let shared = AgentRunStore(fileStore: defaultFileStore())
+    static let shared = AgentRunStore(persistence: defaultPersistence())
 
     private(set) var runs: [AgentRun] = []
 
     @ObservationIgnored private let fileStore: CodableFileStore<[AgentRun]>?
+    @ObservationIgnored private let persistence: AgentRunPersistence?
     private let maxRuns = 80
     private let maxEventsPerRun = 40
     private let maxActionsPerRun = 40
     private let restartGraceInterval: TimeInterval = 2
 
-    init(fileStore: CodableFileStore<[AgentRun]>? = nil) {
+    init(
+        fileStore: CodableFileStore<[AgentRun]>? = nil,
+        persistence: AgentRunPersistence? = nil
+    ) {
         self.fileStore = fileStore
-        runs = Self.loadRuns(from: fileStore)
+        self.persistence = persistence
+        runs = Self.loadRuns(from: fileStore, persistence: persistence)
         trimRuns()
     }
 
@@ -254,16 +259,30 @@ final class AgentRunStore {
         persist()
     }
 
-    private static func defaultFileStore() -> CodableFileStore<[AgentRun]>? {
+    func flushPersistence() {
+        if let persistence {
+            persistence.saveSynchronously(runs)
+            return
+        }
+        try? fileStore?.save(runs)
+    }
+
+    private static func defaultPersistence() -> AgentRunPersistence? {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
             ProcessInfo.processInfo.processName.hasSuffix("PackageTests")
         {
             return nil
         }
-        return CodableFileStore(fileURL: KajiFileStorage.fileURL(filename: "agent-runs.json"))
+        return AgentRunPersistence()
     }
 
-    private static func loadRuns(from fileStore: CodableFileStore<[AgentRun]>?) -> [AgentRun] {
+    private static func loadRuns(
+        from fileStore: CodableFileStore<[AgentRun]>?,
+        persistence: AgentRunPersistence?
+    ) -> [AgentRun] {
+        if let persistence {
+            return persistence.loadRuns().map(normalizedPersistedRun)
+        }
         guard let fileStore, let loaded = try? fileStore.load() else { return [] }
         return loaded.map(normalizedPersistedRun)
     }
@@ -285,6 +304,10 @@ final class AgentRunStore {
     }
 
     private func persist() {
+        if let persistence {
+            persistence.scheduleSave(runs)
+            return
+        }
         try? fileStore?.save(runs)
     }
 
