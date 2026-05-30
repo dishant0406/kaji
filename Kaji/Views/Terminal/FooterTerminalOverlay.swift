@@ -11,6 +11,7 @@ struct FooterTerminalOverlay: View {
     let onProcessExit: () -> Void
 
     private let headerHeight: CGFloat = 34
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var terminalSettings = TerminalSettingsStore.shared
 
     var body: some View {
@@ -18,7 +19,7 @@ struct FooterTerminalOverlay: View {
             if let terminalState, expanded {
                 terminalPanel(state: terminalState)
                     .frame(height: terminalHeight)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(KajiMotion.bottomPanelTransition(reduceMotion: reduceMotion))
             }
             CLILauncherFooter(
                 projectID: projectID,
@@ -29,7 +30,7 @@ struct FooterTerminalOverlay: View {
                 onOpenMCPControlPanel: onOpenMCPControlPanel
             )
         }
-        .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: false), value: expanded)
+        .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: expanded)
         .frame(maxWidth: .infinity)
     }
 

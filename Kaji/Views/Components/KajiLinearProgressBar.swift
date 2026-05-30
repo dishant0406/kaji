@@ -21,6 +21,8 @@ struct KajiLinearProgressBar: View {
             }
         }
         .frame(height: height)
+        .animation(KajiMotion.fast, value: value)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: Int((value / max(total, 1)) * 100))
         .accessibilityValue("\(Int((max(0, min(1, total > 0 ? value / total : 0)) * 100).rounded())) percent")
     }
 }

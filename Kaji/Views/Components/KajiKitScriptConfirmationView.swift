@@ -29,5 +29,6 @@ struct KajiKitScriptConfirmationView: View {
                 .overlay(RoundedRectangle(cornerRadius: KajiShape.tileRadius).stroke(KajiTheme.border, lineWidth: 1))
         }
         .padding(14)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: script.id)
     }
 }

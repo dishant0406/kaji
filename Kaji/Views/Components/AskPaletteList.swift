@@ -75,6 +75,7 @@ private struct AskPaletteRow: View {
                 .stroke(isHighlighted ? KajiTheme.borderStrong : .clear, lineWidth: 1)
         )
         .onHover { hovered = $0 }
+        .animation(KajiMotion.hover, value: hovered)
     }
 
     private var background: Color {

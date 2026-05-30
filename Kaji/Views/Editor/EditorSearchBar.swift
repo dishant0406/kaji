@@ -34,6 +34,7 @@ struct EditorSearchBar: View {
                     searchRow
                     if state.replaceVisible {
                         replaceRow
+                            .transition(KajiMotion.disclosureTransition(reduceMotion: false))
                     }
                 }
             }
@@ -46,6 +47,7 @@ struct EditorSearchBar: View {
         .onChange(of: state.searchFocusVersion) { _, _ in focusedField = .search }
         .onChange(of: state.replaceFocusVersion) { _, _ in focusedField = .replace }
         .onAppear { focusedField = state.replaceVisible ? .replace : .search }
+        .animation(KajiMotion.panel, value: state.replaceVisible)
         .onKeyPress(.escape) {
             onClose()
             return .handled

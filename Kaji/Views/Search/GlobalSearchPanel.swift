@@ -15,6 +15,7 @@ struct GlobalSearchPanel: View {
     @State private var replaceMessage: String?
     @State private var replacePreview: ProjectTextReplacePreview?
     @State private var searchTask: Task<Void, Never>?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -24,7 +25,9 @@ struct GlobalSearchPanel: View {
             searchField
             if replaceVisible {
                 replaceField
+                    .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
                 Rectangle().fill(KajiTheme.border).frame(height: 1)
+                    .transition(.opacity)
             }
             Rectangle().fill(KajiTheme.border).frame(height: 1)
             resultsList
@@ -33,6 +36,7 @@ struct GlobalSearchPanel: View {
         .overlay { replaceConfirmationOverlay }
         .onAppear { searchFocused = true }
         .onDisappear { searchTask?.cancel() }
+        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: replaceVisible)
     }
 
     private var header: some View {
@@ -56,7 +60,9 @@ struct GlobalSearchPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Button {
-                    replaceVisible.toggle()
+                    withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                        replaceVisible.toggle()
+                    }
                 } label: {
                     KajiIcon(systemName: replaceVisible ? "chevron.down" : "chevron.right", size: 10)
                         .foregroundStyle(KajiTheme.fgMuted)

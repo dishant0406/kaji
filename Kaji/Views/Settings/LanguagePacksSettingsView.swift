@@ -7,6 +7,8 @@ struct LanguagePacksSettingsView: View {
     @State private var installed: [LanguageDefinition] = []
     @State private var available: [LanguagePackCatalogEntry] = []
     @State private var statusMessage: String?
+    @State private var lastInstalledID: String?
+    @State private var failedInstallMessage: String?
 
     var body: some View {
         SettingsContainer {
@@ -26,7 +28,12 @@ struct LanguagePacksSettingsView: View {
 
             SettingsSection("Available", showsDivider: false) {
                 ForEach(available) { entry in
-                    LanguagePackAvailableRow(entry: entry, isInstalled: installed.contains { $0.id == entry.id }) {
+                    LanguagePackAvailableRow(
+                        entry: entry,
+                        isInstalled: installed.contains { $0.id == entry.id },
+                        recentlyInstalled: lastInstalledID == entry.id,
+                        failedMessage: failedInstallMessage
+                    ) {
                         install(entry)
                     }
                 }
@@ -51,8 +58,12 @@ struct LanguagePacksSettingsView: View {
         switch LanguagePackInstaller.install(entry) {
         case let .success(definition):
             statusMessage = "Installed \(definition.name)"
+            lastInstalledID = definition.id
+            failedInstallMessage = nil
+            ToastState.shared.show("Installed \(definition.name) language pack")
         case let .failure(error):
             statusMessage = error.localizedDescription
+            failedInstallMessage = error.localizedDescription
         }
         refresh()
     }
@@ -73,6 +84,8 @@ private struct LanguagePackInstalledRow: View {
 private struct LanguagePackAvailableRow: View {
     let entry: LanguagePackCatalogEntry
     let isInstalled: Bool
+    let recentlyInstalled: Bool
+    let failedMessage: String?
     let install: () -> Void
 
     var body: some View {
@@ -86,5 +99,7 @@ private struct LanguagePackAvailableRow: View {
                 }
             }
         }
+        .kajiChangeFeedback(KajiMotion.successFeedback, value: recentlyInstalled, isEnabled: recentlyInstalled)
+        .kajiChangeFeedback(KajiMotion.invalidFeedback, value: failedMessage ?? "", isEnabled: failedMessage != nil)
     }
 }

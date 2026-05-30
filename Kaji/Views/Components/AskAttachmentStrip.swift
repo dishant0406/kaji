@@ -22,6 +22,7 @@ private struct AskAttachmentThumbnail: View {
     let attachment: AskAttachment
     let onRemove: (AskAttachment) -> Void
     let onPreview: (AskAttachment) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 6) {
@@ -49,6 +50,8 @@ private struct AskAttachmentThumbnail: View {
         .background(KajiTheme.surface, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
         .overlay(RoundedRectangle(cornerRadius: KajiShape.tileRadius).stroke(KajiTheme.border, lineWidth: 1))
         .onTapGesture { onPreview(attachment) }
+        .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: attachment.id)
     }
 
     private var iconName: String {

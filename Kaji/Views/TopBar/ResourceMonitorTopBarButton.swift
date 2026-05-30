@@ -33,6 +33,9 @@ struct ResourceMonitorTopBarButton: View {
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: active)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: showPopover, isEnabled: showPopover)
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: memoryText)
         .kajiPointer()
         .help("Resource Monitor")
         .accessibilityLabel("Resource Monitor")

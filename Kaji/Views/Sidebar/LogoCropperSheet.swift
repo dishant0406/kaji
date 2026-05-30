@@ -9,6 +9,7 @@ struct LogoCropperSheet: View {
     @State private var scale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
+    @State private var cropError: String?
 
     private let cropSize: CGFloat = 200
     private let outputSize: CGFloat = 128
@@ -57,6 +58,12 @@ struct LogoCropperSheet: View {
                     .buttonStyle(KajiButtonStyle(.primary, size: .small))
                     .keyboardShortcut(.defaultAction)
             }
+            if let cropError {
+                Text(cropError)
+                    .kajiFont(size: 10)
+                    .foregroundStyle(KajiTheme.diffRemoveFg)
+                    .kajiChangeFeedback(KajiMotion.invalidFeedback, value: cropError)
+            }
         }
         .padding(14)
         .frame(width: 286)
@@ -74,6 +81,7 @@ struct LogoCropperSheet: View {
         }
         .preferredColorScheme(KajiTheme.colorScheme)
         .onAppear { fitImageInitially() }
+        .kajiChangeFeedback(KajiMotion.successFeedback, value: cropError == nil && scale != 1)
     }
 
     private var cropCanvas: some View {
@@ -214,7 +222,7 @@ struct LogoCropperSheet: View {
             hints: nil
         )
         else {
-            onCancel()
+            cropError = "Could not read image"
             return
         }
 
@@ -243,7 +251,7 @@ struct LogoCropperSheet: View {
         )
 
         guard let cropped = cgImage.cropping(to: cropRect) else {
-            onCancel()
+            cropError = "Could not crop image"
             return
         }
 
@@ -259,6 +267,7 @@ struct LogoCropperSheet: View {
             return true
         }
 
+        cropError = nil
         onConfirm(result)
     }
 }

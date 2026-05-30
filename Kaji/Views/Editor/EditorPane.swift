@@ -8,6 +8,7 @@ struct EditorPane: View {
     let worktree: Worktree?
     @Environment(GhosttyService.self) private var ghostty
     @Environment(AppTypographySettings.self) private var typography
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsOutline = false
 
     var body: some View {
@@ -55,8 +56,10 @@ struct EditorPane: View {
         .overlay {
             if state.inlineEditVisible {
                 InlineEditOverlay(state: state, project: project, worktree: worktree)
+                    .transition(KajiMotion.overlayTransition(reduceMotion: reduceMotion))
             }
         }
+        .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: state.inlineEditVisible)
     }
 
     private var editorContentLayer: some View {
@@ -108,23 +111,28 @@ struct EditorPane: View {
 
     @ViewBuilder
     private var editorMainContent: some View {
-        if state.isMarkdownFile {
-            switch state.markdownViewMode {
-            case .code:
-                codeEditorContainer
-            case .preview:
-                markdownPreviewContainer(mode: .preview)
-            case .split:
-                HSplitView {
+        Group {
+            if state.isMarkdownFile {
+                switch state.markdownViewMode {
+                case .code:
                     codeEditorContainer
-                        .frame(minWidth: 320)
-                    markdownPreviewContainer(mode: .split)
-                        .frame(minWidth: 320)
+                case .preview:
+                    markdownPreviewContainer(mode: .preview)
+                case .split:
+                    HSplitView {
+                        codeEditorContainer
+                            .frame(minWidth: 320)
+                        markdownPreviewContainer(mode: .split)
+                            .frame(minWidth: 320)
+                    }
                 }
+            } else {
+                codeEditorContainer
             }
-        } else {
-            codeEditorContainer
         }
+        .id(state.markdownViewMode)
+        .transition(KajiMotion.contentSwitchTransition(reduceMotion: reduceMotion))
+        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: state.markdownViewMode)
     }
 
     private var codeEditorContainer: some View {
@@ -155,11 +163,14 @@ struct EditorPane: View {
                 EditorOutlinePanel(symbols: state.symbols()) { symbol in
                     state.navigate(to: symbol)
                 }
+                .transition(KajiMotion.sidePanelTransition(reduceMotion: reduceMotion))
             }
         }
         .overlay(alignment: .topTrailing) {
             Button {
-                showsOutline.toggle()
+                withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                    showsOutline.toggle()
+                }
             } label: {
                 KajiIcon(systemName: "list.bullet.rectangle", size: 12)
                     .foregroundStyle(showsOutline ? KajiTheme.accent : KajiTheme.fgMuted)
@@ -171,6 +182,7 @@ struct EditorPane: View {
             .padding(.trailing, showsOutline ? 248 : 8)
             .help("Toggle Outline")
         }
+        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: showsOutline)
     }
 
     private func markdownPreviewContainer(mode: EditorMarkdownViewMode) -> some View {

@@ -17,12 +17,16 @@ struct AgentMissionControlControlsView: View {
     @State private var replyText = ""
 
     var body: some View {
-        if hasVisibleControls {
-            actionTray
-            if replying, let onReply {
-                replyComposer(onReply)
+        VStack(alignment: .leading, spacing: 0) {
+            if hasVisibleControls {
+                actionTray
+                if replying, let onReply {
+                    replyComposer(onReply)
+                        .transition(KajiMotion.disclosureTransition(reduceMotion: false))
+                }
             }
         }
+        .animation(KajiMotion.panel, value: replying)
     }
 
     private var actionTray: some View {
@@ -126,6 +130,7 @@ struct AgentMissionControlControlsView: View {
         }
         .buttonStyle(.plain)
         .disabled(!capability.isAvailable)
+        .kajiChangeFeedback(role == .danger ? KajiMotion.attentionFeedback : KajiMotion.tapFeedback, value: capability.isAvailable)
         .kajiPointer()
     }
 

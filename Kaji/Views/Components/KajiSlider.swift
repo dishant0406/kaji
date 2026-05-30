@@ -4,6 +4,7 @@ struct KajiSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     var width: CGFloat?
+    @State private var isDragging = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -22,17 +23,21 @@ struct KajiSlider: View {
 
                 Circle()
                     .fill(KajiTheme.fg)
-                    .frame(width: 12, height: 12)
+                    .frame(width: isDragging ? 15 : 12, height: isDragging ? 15 : 12)
                     .overlay(Circle().stroke(KajiTheme.borderStrong, lineWidth: 1))
-                    .offset(x: min(max(thumbOffset - 6, 0), trackWidth - 12))
+                    .offset(x: min(max(thumbOffset - (isDragging ? 7.5 : 6), 0), trackWidth - (isDragging ? 15 : 12)))
             }
             .frame(height: 18)
             .contentShape(Rectangle())
+            .animation(KajiMotion.fast, value: value)
+            .animation(KajiMotion.fast, value: isDragging)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { gesture in
+                        isDragging = true
                         updateValue(at: gesture.location.x, trackWidth: trackWidth)
                     }
+                    .onEnded { _ in isDragging = false }
             )
         }
         .frame(width: width, height: 18)

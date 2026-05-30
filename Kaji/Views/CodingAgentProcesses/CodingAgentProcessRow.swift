@@ -45,6 +45,7 @@ struct CodingAgentProcessRow: View {
             RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                 .strokeBorder(KajiTheme.border.opacity(0.75), lineWidth: 1)
         )
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: isKilling, isEnabled: isKilling)
     }
 
     private var badgeText: String {

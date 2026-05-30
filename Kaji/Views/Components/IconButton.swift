@@ -28,6 +28,8 @@ struct IconButton: View {
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: active)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selected, isEnabled: selected)
         .kajiPointer()
         .accessibilityLabel(accessibilityLabel)
     }

@@ -58,6 +58,9 @@ struct AIUsageTopBarButton: View {
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: active)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: showPopover, isEnabled: showPopover)
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: usageText)
         .kajiPointer()
         .help("AI Usage (\(KeyBindingStore.shared.combo(for: .toggleAIUsage).displayString))")
         .accessibilityLabel("AI Usage")

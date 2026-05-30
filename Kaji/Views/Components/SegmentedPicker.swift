@@ -9,7 +9,9 @@ struct SegmentedPicker<T: Hashable>: View {
         HStack(spacing: 0) {
             ForEach(Array(options.enumerated()), id: \.offset) { index, option in
                 Button {
-                    selection = option.value
+                    withAnimation(KajiMotion.select) {
+                        selection = option.value
+                    }
                 } label: {
                     Text(option.label)
                         .kajiFont(size: 11, weight: selection == option.value ? .semibold : .regular)
@@ -25,6 +27,7 @@ struct SegmentedPicker<T: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selection == option.value, isEnabled: selection == option.value)
                 .kajiPointer()
 
                 if index < options.count - 1, selection != option.value,

@@ -33,7 +33,10 @@ struct NotificationRoutesSection: View {
                             integrations.upsertRoute(updated)
                         },
                         onEdit: { onEdit(route) },
-                        onDelete: { integrations.removeRoute(route.id) }
+                        onDelete: {
+                            integrations.removeRoute(route.id)
+                            ToastState.shared.show("Notification rule removed")
+                        }
                     )
                 }
             }

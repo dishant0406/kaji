@@ -7,6 +7,7 @@ struct TerminalArea: View {
     @Environment(AppState.self) private var appState
     @Environment(TabDragCoordinator.self) private var dragCoordinator
     @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var root: SplitNode? {
         appState.workspaceRoots[worktreeKey]
@@ -35,7 +36,9 @@ struct TerminalArea: View {
                         appState.dispatch(.selectTab(projectID: project.id, areaID: areaID, tabID: tabID))
                     },
                     onCreateTab: { areaID in
-                        appState.dispatch(.createTab(projectID: project.id, areaID: areaID))
+                        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                            appState.dispatch(.createTab(projectID: project.id, areaID: areaID))
+                        }
                     },
                     onCreateVCSTab: { areaID in
                         _ = areaID
@@ -48,21 +51,29 @@ struct TerminalArea: View {
                         appState.forceCloseTab(tabID, areaID: areaID, projectID: project.id)
                     },
                     onSplit: { areaID, dir in
-                        appState.dispatch(.splitArea(.init(
-                            projectID: project.id,
-                            areaID: areaID,
-                            direction: dir,
-                            position: .second
-                        )))
+                        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                            appState.dispatch(.splitArea(.init(
+                                projectID: project.id,
+                                areaID: areaID,
+                                direction: dir,
+                                position: .second
+                            )))
+                        }
                     },
                     onCloseArea: { areaID in
-                        appState.dispatch(.closeArea(projectID: project.id, areaID: areaID))
+                        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                            appState.dispatch(.closeArea(projectID: project.id, areaID: areaID))
+                        }
                     },
                     onDropAction: { result in
-                        appState.dispatch(result.action(projectID: project.id))
+                        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                            appState.dispatch(result.action(projectID: project.id))
+                        }
                     },
                     onMoveArea: { result in
-                        appState.dispatch(result.action(projectID: project.id))
+                        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
+                            appState.dispatch(result.action(projectID: project.id))
+                        }
                     }
                 )
             }

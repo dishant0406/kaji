@@ -31,6 +31,9 @@ struct PortMonitorTopBarButton: View {
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: active)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: showPopover, isEnabled: showPopover)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: service.ports.count, isEnabled: !service.ports.isEmpty)
         .kajiPointer()
         .help("Running Ports")
         .accessibilityLabel("Running Ports")

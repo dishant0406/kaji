@@ -33,5 +33,6 @@ struct GitCommandConfirmationView: View {
             }
         }
         .padding(16)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: request.displayCommand)
     }
 }

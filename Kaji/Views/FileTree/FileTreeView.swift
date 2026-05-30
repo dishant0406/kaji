@@ -224,6 +224,7 @@ private struct FileTreeRowGroup: View {
     let commands: FileTreeCommands
     let onOpenFile: (String) -> Void
     let requestFocus: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         FileTreeRow(
@@ -244,10 +245,12 @@ private struct FileTreeRowGroup: View {
                     onOpenFile: onOpenFile,
                     requestFocus: requestFocus
                 )
+                .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
             }
             if let pending = state.pendingNewEntry, pending.parentPath == entry.absolutePath {
                 FileTreeNewEntryRow(kind: pending.kind, depth: depth + 1, commands: commands)
                     .id(pending.token)
+                    .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
             }
         }
     }
@@ -305,6 +308,9 @@ private struct FileTreeRow: View {
         .contentShape(Rectangle())
         .onTapGesture { handleTap() }
         .onHover { hovered = $0 }
+        .animation(KajiMotion.fast, value: isDropHighlighted)
+        .animation(KajiMotion.hover, value: hovered)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: isDropHighlighted, isEnabled: isDropHighlighted)
         .contextMenu {
             FileTreeContextMenuContents(
                 path: entry.absolutePath,
@@ -396,7 +402,7 @@ private struct FileTreeRow: View {
         }
         state.selectOnly(entry.absolutePath)
         if entry.isDirectory {
-            state.toggle(entry)
+            withAnimation(KajiMotion.panel) { state.toggle(entry) }
         } else if state.status(for: entry.absolutePath) != .deleted {
             onOpenFile(entry.absolutePath)
         }

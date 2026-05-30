@@ -1,3 +1,4 @@
+import Pow
 import SwiftUI
 
 enum KajiBadgeVariant {
@@ -22,6 +23,7 @@ struct KajiBadge: View {
                 RoundedRectangle(cornerRadius: 6)
                     .strokeBorder(border, lineWidth: 1)
             }
+            .kajiChangeFeedback(feedback, value: text)
     }
 
     private var foreground: Color {
@@ -60,6 +62,17 @@ struct KajiBadge: View {
             KajiTheme.diffHunkFg.opacity(0.28)
         case .danger:
             KajiTheme.diffRemoveFg.opacity(0.32)
+        }
+    }
+
+    private var feedback: AnyChangeEffect {
+        switch variant {
+        case .neutral:
+            KajiMotion.tapFeedback
+        case .accent:
+            KajiMotion.selectionFeedback
+        case .warning, .danger:
+            KajiMotion.attentionFeedback
         }
     }
 }

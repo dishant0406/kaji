@@ -156,6 +156,11 @@ struct ExpandedProjectRow: View {
         .onChange(of: isAnyDragging) { _, dragging in
             if dragging { hovered = false }
         }
+        .animation(KajiMotion.fast, value: isActive)
+        .animation(KajiMotion.hover, value: hovered)
+        .kajiHoverEffect(isActive: hovered && !isAnyDragging, scale: 1.012)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: isActive, isEnabled: isActive)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: hasRunningAgent, isEnabled: hasRunningAgent)
         .kajiPointer()
         .onTapGesture {
             guard !isAnyDragging else { return }
@@ -276,6 +281,7 @@ struct ExpandedProjectRow: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: worktreesExpanded)
         .kajiPointer()
         .accessibilityLabel(worktreesExpanded ? "Collapse Worktrees" : "Expand Worktrees")
     }

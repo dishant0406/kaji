@@ -3,6 +3,7 @@ import SwiftUI
 struct KajiCodeGraphPane: View {
     @Bindable var state: KajiCodeGraphTabState
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
@@ -28,13 +29,13 @@ struct KajiCodeGraphPane: View {
                             document: document,
                             nodes: state.filteredNodes,
                             selectedNodeID: state.selectedNodeID,
-                            onSelect: { state.selectedNodeID = $0 }
+                            onSelect: { selectNode($0) }
                         )
                     case .map:
                         KajiCodeGraphCanvas(
                             document: document,
                             selectedNodeID: state.selectedNodeID,
-                            onSelect: { state.selectedNodeID = $0 }
+                            onSelect: { selectNode($0) }
                         )
                     }
                     graphModePicker
@@ -61,6 +62,9 @@ struct KajiCodeGraphPane: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .transition(KajiMotion.contentSwitchTransition(reduceMotion: reduceMotion))
+        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: state.viewMode)
+        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: state.activeVersionID)
     }
 
     private var graphModePicker: some View {
@@ -130,7 +134,7 @@ struct KajiCodeGraphPane: View {
             LazyVStack(spacing: 2) {
                 ForEach(state.filteredNodes.prefix(120)) { node in
                     Button {
-                        state.selectedNodeID = node.id
+                        selectNode(node.id)
                     } label: {
                         KajiCodeGraphNodeRow(
                             node: node,
@@ -171,8 +175,13 @@ struct KajiCodeGraphPane: View {
                     .foregroundStyle(KajiTheme.fgDim)
             }
         }
+        .id(state.selectedNodeID ?? "empty")
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+    }
+
+    private func selectNode(_ nodeID: String?) {
+        state.selectedNodeID = nodeID
     }
 
     private func openInstructions() {

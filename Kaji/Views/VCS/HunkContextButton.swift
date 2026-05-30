@@ -5,6 +5,7 @@ struct HunkContextButton: View {
     let count: Int
     let action: () -> Void
     @State private var isHovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -24,6 +25,7 @@ struct HunkContextButton: View {
                         .offset(x: 24)
                         .fixedSize(horizontal: true, vertical: false)
                         .zIndex(2)
+                        .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
                 }
             }
             .foregroundStyle(KajiTheme.accent)
@@ -33,6 +35,9 @@ struct HunkContextButton: View {
         .buttonStyle(.plain)
         .help(direction == .above ? "Show 20 lines above" : "Show 20 lines below")
         .onHover { isHovering = $0 }
+        .animation(KajiMotion.fast, value: isHovering)
+        .kajiHoverEffect(isActive: isHovering, scale: 1.035)
+        .kajiChangeFeedback(KajiMotion.tapFeedback, value: count)
         .kajiPointer()
     }
 }

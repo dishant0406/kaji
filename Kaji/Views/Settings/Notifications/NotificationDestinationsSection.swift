@@ -33,7 +33,10 @@ struct NotificationDestinationsSection: View {
                             integrations.upsertDestination(updated, bearerToken: integrations.bearerToken(for: destination.id))
                         },
                         onEdit: { onEdit(destination) },
-                        onDelete: { integrations.removeDestination(destination.id) },
+                        onDelete: {
+                            integrations.removeDestination(destination.id)
+                            ToastState.shared.show("Notification destination removed")
+                        },
                         onTest: {
                             do {
                                 try await integrations.sendTest(to: destination)

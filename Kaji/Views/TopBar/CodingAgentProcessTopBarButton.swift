@@ -33,6 +33,9 @@ struct CodingAgentProcessTopBarButton: View {
         }
         .buttonStyle(.borderless)
         .onHover { hovered = $0 }
+        .kajiHoverEffect(isActive: active || service.orphanCount > 0)
+        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: showPopover, isEnabled: showPopover)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: service.orphanCount, isEnabled: service.orphanCount > 0)
         .kajiPointer()
         .help("Agent Processes")
         .accessibilityLabel("Agent Processes")
