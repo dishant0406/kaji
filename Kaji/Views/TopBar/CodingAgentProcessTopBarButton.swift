@@ -13,7 +13,7 @@ struct CodingAgentProcessTopBarButton: View {
             service.refresh(appState: appState, projectStore: projectStore)
         } label: {
             HStack(spacing: 8) {
-                KajiIcon(systemName: "sparkles", size: 13)
+                KajiIcon(systemName: "cpu", size: 13)
                     .foregroundStyle(iconColor)
                 if service.processCount > 0 {
                     Text("\(service.processCount)")

@@ -25,7 +25,7 @@ enum CodingAgentProcessSnapshotter {
     }
 
     private static func snapshotSync() throws -> [CodingAgentProcessInfo] {
-        let arguments = try CodingAgentProcessArgumentSnapshotter.arguments()
-        return CodingAgentNativeProcessSnapshotter.snapshot(argumentsByPID: arguments)
+        let processes = try CodingAgentPSProcessSnapshotter.snapshot()
+        return CodingAgentNativeProcessSnapshotter.enrich(processes)
     }
 }

@@ -24,15 +24,24 @@ enum CodingAgentProcessClassifier {
         let names = Set((definition.executableNames + definition.processMatchNames).map { $0.lowercased() })
         if names.contains(commandName) { return true }
 
-        guard isGenericRuntime(commandName) else { return false }
         let commandLine = [process.commandLine, process.executablePath].compactMap(\.self).joined(separator: " ").lowercased()
-        return definition.processCommandMarkers.contains { marker in
+        let markerMatched = definition.processCommandMarkers.contains { marker in
             commandLine.contains(marker.lowercased())
         }
+        guard markerMatched else { return false }
+
+        return !isGenericRuntime(commandName) || hasStrongMarker(commandLine, definition: definition)
     }
 
     private static func isGenericRuntime(_ commandName: String) -> Bool {
         ["node", "bun", "zsh", "bash", "sh", "python", "python3"].contains(commandName)
+    }
+
+    private static func hasStrongMarker(_ commandLine: String, definition: CodingAgentDefinition) -> Bool {
+        definition.processCommandMarkers.contains { marker in
+            let normalized = marker.lowercased()
+            return commandLine.contains(normalized) && (normalized.contains("/") || normalized.contains(".") || normalized.contains("@"))
+        }
     }
 
     private static func suspicion(

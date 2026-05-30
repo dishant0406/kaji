@@ -28,6 +28,24 @@ struct CodingAgentProcessClassifierTests {
     }
 
     @Test
+    func matchesNonGenericCodexHelperMarker() {
+        let codexHelper = process(
+            commandName: "Codex Helper",
+            commandLine: "/Applications/Codex.app/Contents/Frameworks/Codex Helper.app --type=renderer",
+            parentPID: 20
+        )
+
+        #expect(classify(codexHelper).first?.providerID == "codex")
+    }
+
+    @Test
+    func genericRuntimeRequiresStrongMarker() {
+        let nodeWithWeakMarker = process(commandName: "node", commandLine: "node codex-helper.js", parentPID: 20)
+
+        #expect(classify(nodeWithWeakMarker).isEmpty)
+    }
+
+    @Test
     func marksOrphanWhenParentIsLaunchd() {
         let match = classify(process(commandName: "opencode", commandLine: "opencode", parentPID: 1)).first
 

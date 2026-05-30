@@ -894,7 +894,7 @@ struct MainWindow: View {
 
     private var topBarContent: some View {
         WindowDragRepresentable(alwaysEnabled: true)
-            .overlay(alignment: .leading) {
+            .overlay {
                 HStack(spacing: 8) {
                     ResourceMonitorTopBarButton()
                     PortMonitorTopBarButton()
@@ -908,7 +908,6 @@ struct MainWindow: View {
                     CodingAgentProcessTopBarButton()
                     AIUsageTopBarButton()
                 }
-                .padding(.leading, 8)
             }
             .overlay(alignment: .trailing) {
                 topBarActions
