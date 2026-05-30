@@ -75,7 +75,7 @@ struct CodingAgentProcessPanel: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            KajiIcon(systemName: "sparkles", size: 12)
+            KajiIcon(systemName: "cpu", size: 12)
                 .foregroundStyle(service.orphanCount > 0 ? KajiTheme.diffRemoveFg : KajiTheme.fgMuted)
             Text("Agent Processes")
                 .kajiFont(size: 12, weight: .semibold)

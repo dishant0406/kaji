@@ -2,6 +2,26 @@ import Darwin
 import Foundation
 
 enum CodingAgentNativeProcessSnapshotter {
+    static func enrich(_ processes: [CodingAgentProcessInfo]) -> [CodingAgentProcessInfo] {
+        let nativeByPID = Dictionary(uniqueKeysWithValues: snapshot(argumentsByPID: [:]).map { ($0.pid, $0) })
+        return processes.map { process in
+            guard let native = nativeByPID[process.pid] else { return process }
+            return CodingAgentProcessInfo(
+                pid: process.pid,
+                parentPID: process.parentPID,
+                processGroupID: process.processGroupID,
+                state: process.state,
+                tty: process.tty,
+                cpuPercent: process.cpuPercent,
+                memoryBytes: native.memoryBytes > 0 ? native.memoryBytes : process.memoryBytes,
+                threadCount: native.threadCount,
+                commandName: process.commandName,
+                executablePath: native.executablePath ?? process.executablePath,
+                commandLine: process.commandLine
+            )
+        }
+    }
+
     static func snapshot(argumentsByPID: [Int32: String]) -> [CodingAgentProcessInfo] {
         processIDs().compactMap { processInfo(pid: $0, argumentsByPID: argumentsByPID) }
     }

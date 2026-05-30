@@ -34,7 +34,7 @@ struct OpenCodeAgentModule: CodingAgentModule {
         homeSkillDirectories: [],
         projectSkillDirectories: [".agents/skills"],
         processMatchNames: ["opencode", ".opencode", "opencode-cli", "opencode-ai"],
-        processCommandMarkers: ["opencode", ".opencode", ".config/opencode", "opencode-ai"],
+        processCommandMarkers: ["opencode", "/opencode", ".opencode", ".config/opencode", "opencode-ai"],
         processKillPatterns: ["opencode", ".opencode", "opencode-ai"]
     )
 
