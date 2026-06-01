@@ -38,6 +38,36 @@ enum KajiAgentHostToolRegistry {
             ]),
             hidden: false
         ),
+        KajiAgentHostToolDefinition(
+            name: "kaji_fff_find",
+            label: "FFF File Search",
+            description: "Fast Kaji-native fuzzy file search powered by FFF. Prefer this over broad find/glob when you need to locate files by fuzzy path, symbol-like names, or partial filenames in the active worktree.",
+            parameters: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object(["type": .string("string"), "description": .string("Fuzzy file query")]),
+                    "limit": .object(["type": .string("number"), "description": .string("Maximum results, default 30")]),
+                ]),
+                "required": .array([.string("query")]),
+                "additionalProperties": .bool(false),
+            ]),
+            hidden: false
+        ),
+        KajiAgentHostToolDefinition(
+            name: "kaji_fff_search",
+            label: "FFF Text Search",
+            description: "Fast Kaji-native repository content search powered by FFF live grep. Prefer this for broad codebase text search in the active worktree when exact grep flags are not required.",
+            parameters: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object(["type": .string("string"), "description": .string("Text query to search for")]),
+                    "limit": .object(["type": .string("number"), "description": .string("Maximum matches, default 120")]),
+                ]),
+                "required": .array([.string("query")]),
+                "additionalProperties": .bool(false),
+            ]),
+            hidden: false
+        ),
     ]
 
     static let uriSchemes: [KajiAgentHostURISchemeDefinition] = [
@@ -54,7 +84,7 @@ enum KajiAgentHostToolRegistry {
         appState: AppState?,
         projectStore: ProjectStore?,
         worktreeStore: WorktreeStore?
-    ) -> KajiAgentToolResult {
+    ) async -> KajiAgentToolResult {
         switch frame.toolName {
         case "kaji_get_active_context":
             return activeContext(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
@@ -62,6 +92,10 @@ enum KajiAgentHostToolRegistry {
             return openFile(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         case "kaji_open_terminal":
             return openTerminal(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+        case "kaji_fff_find":
+            return await fffFind(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+        case "kaji_fff_search":
+            return await fffSearch(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         default:
             return error("Unsupported Kaji host tool: \(frame.toolName ?? "unknown")")
         }
@@ -122,6 +156,65 @@ enum KajiAgentHostToolRegistry {
             context.appState.createCommandTab(projectID: context.project.id, title: title, command: command)
         }
         return text(command.isEmpty ? "Opened terminal." : "Opened command terminal.")
+    }
+
+    private static func fffFind(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) async -> KajiAgentToolResult {
+        guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
+            return error("No active Kaji project.")
+        }
+        guard let query = frame.arguments?["query"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !query.isEmpty else {
+            return error("query is required.")
+        }
+        let limit = min(max(frame.arguments?["limit"]?.numberValue.map(Int.init) ?? 30, 1), 100)
+        do {
+            let started = Date()
+            let results = try await FFFSearchService.searchFiles(query: query, in: context.worktree.path, limit: limit)
+            let elapsed = Int(Date().timeIntervalSince(started) * 1000)
+            KajiAgentEventLog.record("fff_find", fields: [
+                "query": .string(query),
+                "count": .number(Double(results.count)),
+                "elapsedMs": .number(Double(elapsed)),
+            ])
+            let body = results.enumerated().map { index, result in
+                "\(index + 1). \(result.relativePath)"
+            }.joined(separator: "\n")
+            return text(results.isEmpty ? "No files found for \"\(query)\"." : "Found \(results.count) files in \(elapsed)ms:\n\(body)")
+        } catch {
+            return Self.error(error.localizedDescription)
+        }
+    }
+
+    private static func fffSearch(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) async -> KajiAgentToolResult {
+        guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
+            return error("No active Kaji project.")
+        }
+        guard let query = frame.arguments?["query"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !query.isEmpty else {
+            return error("query is required.")
+        }
+        let limit = min(max(frame.arguments?["limit"]?.numberValue.map(Int.init) ?? 120, 1), 300)
+        do {
+            let started = Date()
+            let groups = try await FFFSearchService.searchText(query: query, in: context.worktree.path, limit: limit)
+            let elapsed = Int(Date().timeIntervalSince(started) * 1000)
+            let matchCount = groups.reduce(0) { $0 + $1.matches.count }
+            KajiAgentEventLog.record("fff_search", fields: [
+                "query": .string(query),
+                "fileCount": .number(Double(groups.count)),
+                "matchCount": .number(Double(matchCount)),
+                "elapsedMs": .number(Double(elapsed)),
+            ])
+            guard !groups.isEmpty else { return text("No matches found for \"\(query)\".") }
+            let body = groups.map { group in
+                let matches = group.matches.prefix(6).map { match in
+                    "  \(match.line):\(match.column): \(match.preview)"
+                }.joined(separator: "\n")
+                let suffix = group.matches.count > 6 ? "\n  ... \(group.matches.count - 6) more matches" : ""
+                return "\(group.relativePath)\n\(matches)\(suffix)"
+            }.joined(separator: "\n\n")
+            return text("Found \(matchCount) matches in \(groups.count) files in \(elapsed)ms:\n\(body)")
+        } catch {
+            return Self.error(error.localizedDescription)
+        }
     }
 
     private static func activeWorkspace(appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) -> KajiAgentWorkspaceContext? {

@@ -81,35 +81,38 @@ enum AgentComposerCompletionProvider {
 
         if parts.count > 1 { return AgentComposerCompletionState() }
 
-        let commandSuggestions = slashCommands.filter {
-            commandQuery.isEmpty || fuzzy(commandQuery, in: $0.name) || fuzzy(commandQuery, in: $0.detail)
-        }.map {
-            AgentComposerSuggestion(
-                id: "slash:\($0.id)",
-                title: "/\($0.name)",
-                detail: $0.detail,
-                annotation: $0.source,
-                replacement: "/\($0.name)",
+        let commandSuggestions = slashCommands.compactMap { command -> (AgentComposerSuggestion, Int)? in
+            guard let score = slashScore(commandQuery, name: command.name, detail: command.detail, source: command.source) else { return nil }
+            let suggestion = AgentComposerSuggestion(
+                id: "slash:\(command.id)",
+                title: "/\(command.name)",
+                detail: command.detail,
+                annotation: command.source,
+                replacement: "/\(command.name)",
                 kind: .slash,
                 submitOnEnter: true,
-                slashName: $0.name,
-                opensNativePanel: nativePanelCommands.contains($0.name)
+                slashName: command.name,
+                opensNativePanel: nativePanelCommands.contains(command.name)
             )
+            return (suggestion, score)
         }
-        let skillSuggestions = skills.filter {
-            commandQuery.isEmpty || fuzzy(commandQuery, in: "skill:\($0.name)") || fuzzy(commandQuery, in: $0.detail)
-        }.map {
-            AgentComposerSuggestion(
-                id: "skill:\($0.id)",
-                title: "/skill:\($0.name)",
-                detail: $0.detail,
+        .sorted { lhs, rhs in lhs.1 == rhs.1 ? lhs.0.title < rhs.0.title : lhs.1 > rhs.1 }
+        .map(\.0)
+        let skillSuggestions = skills.compactMap { skill -> (AgentComposerSuggestion, Int)? in
+            guard let score = slashScore(commandQuery, name: "skill:\(skill.name)", detail: skill.detail, source: "skill") else { return nil }
+            return (AgentComposerSuggestion(
+                id: "skill:\(skill.id)",
+                title: "/skill:\(skill.name)",
+                detail: skill.detail,
                 annotation: "skill",
-                replacement: "/skill:\($0.name)",
+                replacement: "/skill:\(skill.name)",
                 kind: .skill,
                 submitOnEnter: true,
-                slashName: "skill:\($0.name)"
-            )
+                slashName: "skill:\(skill.name)"
+            ), score - 50)
         }
+        .sorted { lhs, rhs in lhs.1 == rhs.1 ? lhs.0.title < rhs.0.title : lhs.1 > rhs.1 }
+        .map(\.0)
         return completionState(range: token.range, suggestions: commandSuggestions + skillSuggestions)
     }
 
@@ -156,6 +159,21 @@ enum AgentComposerCompletionProvider {
         state.suggestions = Array(suggestions.prefix(12))
         state.inlineHint = inlineHint
         return state
+    }
+
+    private static func slashScore(_ query: String, name: String, detail: String, source: String) -> Int? {
+        let query = query.lowercased()
+        guard !query.isEmpty else { return nativePanelCommands.contains(name) ? 1_200 : 1_000 }
+        let name = name.lowercased()
+        let detail = detail.lowercased()
+        if name == query { return 2_000 }
+        if name.hasPrefix(query) { return 1_800 - name.count }
+        if name.split(whereSeparator: { "-_/:".contains($0) }).contains(where: { $0.hasPrefix(query) }) { return 1_600 - name.count }
+        if name.contains(query) { return 1_300 - name.count }
+        if fuzzy(query, in: name) { return 1_000 - name.count }
+        if detail.contains(query) { return 500 - detail.distance(from: detail.startIndex, to: detail.range(of: query)?.lowerBound ?? detail.startIndex) }
+        if source.contains(query) { return 250 }
+        return nil
     }
 
     private static func fuzzy(_ query: String, in target: String) -> Bool {

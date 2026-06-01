@@ -777,8 +777,10 @@ final class KajiAgentStore {
 
     private func handleHostToolCall(_ frame: KajiAgentRPCFrame) {
         guard let id = frame.id else { return }
-        let result = KajiAgentHostToolRegistry.execute(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        send(KajiAgentRPCFrame(id: id, type: "host_tool_result", result: result, isError: result.isError))
+        Task { @MainActor in
+            let result = await KajiAgentHostToolRegistry.execute(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            send(KajiAgentRPCFrame(id: id, type: "host_tool_result", result: result, isError: result.isError))
+        }
     }
 
     private func handleHostURIRequest(_ frame: KajiAgentRPCFrame) {
