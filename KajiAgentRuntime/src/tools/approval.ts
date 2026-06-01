@@ -11,7 +11,7 @@ import type { AgentTool, ToolApprovalDecision, ToolTier } from "@oh-my-pi/pi-age
 export type { ToolApproval, ToolApprovalDecision, ToolTier } from "@oh-my-pi/pi-agent-core";
 
 export type ApprovalPolicy = "allow" | "deny" | "prompt";
-export type ApprovalMode = "always-ask" | "write" | "yolo";
+export type ApprovalMode = "ask" | "read-allow" | "bypass" | "always-ask" | "write" | "yolo";
 
 type ApprovalSubject = Pick<AgentTool, "name" | "approval" | "formatApprovalDetails">;
 
@@ -31,11 +31,11 @@ const TIER_RANK: Record<ToolTier, number> = {
 	exec: 2,
 };
 
-const APPROVAL_MODE_MAX_TIER: Record<ApprovalMode, ToolTier> = {
-	"always-ask": "read",
-	write: "write",
-	yolo: "exec",
-};
+function normalizeApprovalMode(mode: ApprovalMode): "ask" | "read-allow" | "write" | "bypass" {
+	if (mode === "always-ask") return "read-allow";
+	if (mode === "yolo") return "bypass";
+	return mode;
+}
 
 const DEFAULT_PROMPT_TRUNCATE_CHARS = 2000;
 
@@ -76,7 +76,11 @@ function getToolDecision(tool: ApprovalSubject, args: unknown): Omit<ResolvedApp
 }
 
 function modeApprovesTier(mode: ApprovalMode, tier: ToolTier): boolean {
-	return TIER_RANK[tier] <= TIER_RANK[APPROVAL_MODE_MAX_TIER[mode]];
+	const normalized = normalizeApprovalMode(mode);
+	if (normalized === "ask") return false;
+	if (normalized === "read-allow") return tier === "read";
+	if (normalized === "write") return TIER_RANK[tier] <= TIER_RANK.write;
+	return true;
 }
 
 /**
@@ -99,7 +103,7 @@ export function resolveApproval(
 	const decision = getToolDecision(tool, args);
 	const userPolicy = Object.hasOwn(userConfig, tool.name) ? normalizePolicy(userConfig[tool.name]) : undefined;
 
-	if (mode === "yolo") {
+	if (normalizeApprovalMode(mode) === "bypass") {
 		return { policy: userPolicy ?? "allow", tier: decision.tier, override: false };
 	}
 

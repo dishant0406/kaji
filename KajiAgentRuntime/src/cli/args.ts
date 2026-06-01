@@ -47,7 +47,7 @@ export interface Args {
 	listModels?: string | true;
 	noTitle?: boolean;
 	autoApprove?: boolean;
-	approvalMode?: "always-ask" | "write" | "yolo";
+	approvalMode?: "ask" | "read-allow" | "bypass" | "always-ask" | "write" | "yolo";
 	messages: string[];
 	fileArgs: string[];
 	/** Unknown flags (potentially extension flags) - map of flag name to value */
@@ -180,12 +180,12 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.autoApprove = true;
 		} else if (arg === "--approval-mode" && i + 1 < args.length) {
 			const mode = args[++i];
-			if (mode === "always-ask" || mode === "write" || mode === "yolo") {
+			if (["ask", "read-allow", "bypass", "always-ask", "write", "yolo"].includes(mode)) {
 				result.approvalMode = mode;
 			} else {
 				logger.warn("Invalid value passed to --approval-mode", {
 					value: mode,
-					validValues: ["always-ask", "write", "yolo"],
+					validValues: ["ask", "read-allow", "bypass", "always-ask", "write", "yolo"],
 				});
 			}
 		} else if (arg === "--skills" && i + 1 < args.length) {

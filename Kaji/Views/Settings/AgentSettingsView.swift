@@ -5,6 +5,7 @@ struct AgentSettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var kajiAgent = KajiAgentStore()
+    @State private var kajiSettings = KajiAgentSettingsStore.shared
     @State private var commitMessageSettings = GitCommitMessageSettingsStore.shared
     @State private var selectedProjectID = ""
 
@@ -46,6 +47,14 @@ struct AgentSettingsView: View {
                 SettingsRow("Models") {
                     Button("Refresh") { refreshKajiAgentMetadata() }
                         .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+                }
+
+                SettingsRow("Permissions") {
+                    KajiSelect(
+                        options: permissionOptions,
+                        selection: permissionSelection,
+                        width: 320
+                    )
                 }
 
                 SettingsRow("Auth") {
@@ -160,6 +169,19 @@ struct AgentSettingsView: View {
         Binding(
             get: { kajiAgent.thinkingLevel },
             set: { kajiAgent.setThinkingLevel($0) }
+        )
+    }
+
+    private var permissionOptions: [KajiSelectOption<String>] {
+        KajiAgentPermissionMode.allCases.map { mode in
+            KajiSelectOption(id: mode.rawValue, title: mode.title, value: mode.rawValue)
+        }
+    }
+
+    private var permissionSelection: Binding<String> {
+        Binding(
+            get: { kajiSettings.permissionMode },
+            set: { kajiSettings.permissionMode = $0 }
         )
     }
 

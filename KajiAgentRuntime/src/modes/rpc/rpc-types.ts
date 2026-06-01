@@ -110,6 +110,8 @@ export type RpcCommand =
 	| { id?: string; type: "get_tools" }
 	| { id?: string; type: "get_active_tools" }
 	| { id?: string; type: "set_active_tools"; toolNames: string[] }
+	| { id?: string; type: "get_approval_mode" }
+	| { id?: string; type: "set_approval_mode"; mode?: string }
 
 	// Native UI metadata
 	| { id?: string; type: "get_slash_commands" }
@@ -330,6 +332,7 @@ export interface RpcHostToolDefinition {
 	description: string;
 	parameters: Record<string, unknown>;
 	hidden?: boolean;
+	approval?: "read" | "write" | "exec";
 }
 
 /** Emitted by the RPC server when it needs the host to execute a registered tool. */

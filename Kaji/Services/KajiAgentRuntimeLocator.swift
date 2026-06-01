@@ -4,12 +4,12 @@ enum KajiAgentRuntimeLocator {
     private static let cache = KajiAgentRuntimeLocatorCache()
     private static let bunLookupTTL: TimeInterval = 30
 
-    static func sourceLaunch(projectPath: String?, sessionDirectory: String? = nil) -> KajiAgentLaunch? {
+    static func sourceLaunch(projectPath: String?, sessionDirectory: String? = nil, approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue) -> KajiAgentLaunch? {
         guard let root = projectRoot() else { return nil }
         let runtimeRoot = root.appending(path: "KajiAgentRuntime")
         let script = runtimeRoot.appending(path: "src/kaji-rpc.ts")
         guard FileManager.default.fileExists(atPath: script.path), let bun = bunExecutablePath() else { return nil }
-        return KajiAgentLaunch(arguments: [bun, script.path] + launchArguments(projectPath: projectPath, sessionDirectory: sessionDirectory), directory: runtimeRoot)
+        return KajiAgentLaunch(arguments: [bun, script.path] + launchArguments(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode), directory: runtimeRoot)
     }
 
     static func bundledScriptURL() -> URL? {
@@ -17,9 +17,9 @@ enum KajiAgentRuntimeLocator {
             ?? bundledDevScriptURL()
     }
 
-    static func bundledLaunch(projectPath: String?, sessionDirectory: String? = nil) -> KajiAgentLaunch? {
+    static func bundledLaunch(projectPath: String?, sessionDirectory: String? = nil, approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue) -> KajiAgentLaunch? {
         guard let script = bundledScriptURL(), let bun = bunExecutablePath() else { return nil }
-        return KajiAgentLaunch(arguments: [bun, script.path] + launchArguments(projectPath: projectPath, sessionDirectory: sessionDirectory), directory: nil)
+        return KajiAgentLaunch(arguments: [bun, script.path] + launchArguments(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode), directory: nil)
     }
 
     static func bunExecutablePath() -> String? {
@@ -36,8 +36,8 @@ enum KajiAgentRuntimeLocator {
         cache.clear()
     }
 
-    private static func launchArguments(projectPath: String?, sessionDirectory: String?) -> [String] {
-        var args = ["--approval-mode", "write"]
+    private static func launchArguments(projectPath: String?, sessionDirectory: String?, approvalMode: String) -> [String] {
+        var args = ["--approval-mode", approvalMode]
         if let projectPath, !projectPath.isEmpty {
             args.append(contentsOf: ["--cwd", projectPath])
         }

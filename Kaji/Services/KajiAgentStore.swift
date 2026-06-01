@@ -6,6 +6,7 @@ import Foundation
 final class KajiAgentStore {
     let process = KajiAgentProcess()
     let scope: KajiAgentScope?
+    private let settings = KajiAgentSettingsStore.shared
     var isReady = false
     var isRunning = false
     var statusMessage = "Starting Kaji Agent"
@@ -32,6 +33,7 @@ final class KajiAgentStore {
     var sessionOptions: [KajiAgentSessionOption] = []
     var loginStatus = "Choose a provider to connect."
     var isLoginInProgress = false
+    var sessionPermissionMode: KajiAgentPermissionMode?
     var widgetLines: [String] = []
     var statusMessages: [String: String] = [:]
     var widgets: [KajiAgentWidget] = []
@@ -70,8 +72,25 @@ final class KajiAgentStore {
         projectPath = scope?.projectPath ?? projectPathOverride ?? activeWorktreePath(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         process.projectPath = projectPath
         process.sessionDirectory = scope.map(KajiAgentSessionDirectory.path(for:))
+        process.approvalMode = sessionPermissionMode?.rawValue ?? settings.selectedPermissionMode.rawValue
         send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in
             self?.applyState(frame.data)
+        }
+    }
+
+    var effectivePermissionMode: KajiAgentPermissionMode {
+        sessionPermissionMode ?? settings.selectedPermissionMode
+    }
+
+    func setSessionPermissionMode(_ mode: KajiAgentPermissionMode) {
+        sessionPermissionMode = mode
+        process.approvalMode = mode.rawValue
+        send(KajiAgentRPCFrame(type: "set_approval_mode", data: .object(["mode": .string(mode.rawValue)]))) { [weak self] frame in
+            if frame.success == true {
+                self?.appendSystem(title: "Permissions", detail: "\(mode.title) for this chat", kind: .event)
+            } else if let error = frame.error {
+                self?.appendSystem(title: "Permissions failed", detail: error, kind: .error)
+            }
         }
     }
 

@@ -82,12 +82,14 @@ function normalizeHostToolDefinitions(tools: RpcHostToolDefinition[]): RpcHostTo
 			throw new Error(`Host tool "${name}" must provide a JSON Schema object`);
 		}
 		const label = typeof tool.label === "string" && tool.label.trim() ? tool.label.trim() : name;
+		const approval = ["read", "write", "exec"].includes(String(tool.approval)) ? tool.approval : undefined;
 		return {
 			name,
 			label,
 			description,
 			parameters: tool.parameters,
 			hidden: tool.hidden === true,
+			...(approval ? { approval } : {}),
 		};
 	});
 }
@@ -866,6 +868,19 @@ export async function runRpcMode(
 				const toolNames = Array.isArray(command.toolNames) ? command.toolNames : readStringArray(command.data, "toolNames");
 				await session.setActiveToolsByName(toolNames);
 				return success(id, "set_active_tools", { toolNames: session.getActiveToolNames() });
+			}
+
+			case "get_approval_mode": {
+				return success(id, "get_approval_mode", { mode: session.settings.get("tools.approvalMode") });
+			}
+
+			case "set_approval_mode": {
+				const mode = command.mode ?? readString(command.data, "mode") ?? "read-allow";
+				if (!["ask", "read-allow", "bypass", "always-ask", "write", "yolo"].includes(mode)) {
+					return error(id, "set_approval_mode", `Invalid approval mode: ${mode}`);
+				}
+				session.settings.override("tools.approvalMode", mode);
+				return success(id, "set_approval_mode", { mode });
 			}
 
 			// =================================================================

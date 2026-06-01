@@ -136,8 +136,8 @@ export default class Index extends Command {
 		// in `main.ts` after the `Settings` instance is constructed, so every `settings.get("tools.approvalMode")`
 		// site (wrapper, `/settings` UI) observes the same value.
 		"approval-mode": Flags.string({
-			options: ["always-ask", "write", "yolo"],
-			description: "Override tools.approvalMode for this session (always-ask|write|yolo)",
+			options: ["ask", "read-allow", "bypass", "always-ask", "write", "yolo"],
+			description: "Override tools.approvalMode for this session (ask|read-allow|bypass)",
 		}),
 	};
 

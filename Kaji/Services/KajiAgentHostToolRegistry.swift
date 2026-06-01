@@ -12,7 +12,8 @@ enum KajiAgentHostToolRegistry {
                 "properties": .object([:]),
                 "additionalProperties": .bool(false),
             ]),
-            hidden: false
+            hidden: false,
+            approval: "read"
         ),
         KajiAgentHostToolDefinition(
             name: "kaji_open_file",
@@ -23,7 +24,8 @@ enum KajiAgentHostToolRegistry {
                 "properties": .object(["path": .object(["type": .string("string")])]),
                 "required": .array([.string("path")]),
             ]),
-            hidden: false
+            hidden: false,
+            approval: "read"
         ),
         KajiAgentHostToolDefinition(
             name: "kaji_open_terminal",
@@ -36,7 +38,8 @@ enum KajiAgentHostToolRegistry {
                     "command": .object(["type": .string("string")]),
                 ]),
             ]),
-            hidden: false
+            hidden: false,
+            approval: "exec"
         ),
         KajiAgentHostToolDefinition(
             name: "kaji_fff_find",
@@ -51,7 +54,8 @@ enum KajiAgentHostToolRegistry {
                 "required": .array([.string("query")]),
                 "additionalProperties": .bool(false),
             ]),
-            hidden: false
+            hidden: false,
+            approval: "read"
         ),
         KajiAgentHostToolDefinition(
             name: "kaji_fff_search",
@@ -66,7 +70,8 @@ enum KajiAgentHostToolRegistry {
                 "required": .array([.string("query")]),
                 "additionalProperties": .bool(false),
             ]),
-            hidden: false
+            hidden: false,
+            approval: "read"
         ),
     ]
 

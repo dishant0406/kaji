@@ -1826,33 +1826,32 @@ export const SETTINGS_SCHEMA = {
 	},
 
 	// Default tool approval mode (interaction tab, but governs the tool wrapper).
-	//   "always-ask" — auto-approves read-tier tools only; prompts for write/exec.
-	//   "write"      — auto-approves read and write-tier tools; prompts for exec.
-	//   "yolo"       — auto-approves every tier.
+	//   "ask"        — prompts for every tool tier.
+	//   "read-allow" — auto-approves read-tier tools only; prompts for write/exec.
+	//   "bypass"     — auto-approves every tier.
 	"tools.approvalMode": {
 		type: "enum",
-		values: ["always-ask", "write", "yolo"] as const,
-		default: "yolo",
+		values: ["ask", "read-allow", "bypass", "always-ask", "write", "yolo"] as const,
+		default: "read-allow",
 		ui: {
 			tab: "interaction",
 			label: "Tool Approval",
 			description:
-				"Default approval behaviour for tool calls. 'Always ask' auto-approves read-only tools only. 'Write' auto-approves read and workspace-write tools. 'Yolo' auto-approves all tiers; user policy may still prompt or block.",
+				"Default approval behaviour for tool calls. Ask prompts for every tool. Read allow auto-approves read-only tools. Bypass auto-approves all tiers; user policy may still prompt or block.",
 			options: [
 				{
-					value: "always-ask",
-					label: "Always ask",
+					value: "ask",
+					label: "Ask",
+					description: "Require confirmation for read, write, and exec tools.",
+				},
+				{
+					value: "read-allow",
+					label: "Read allow",
 					description: "Auto-approve read-only tools; require confirmation for write and exec tools.",
 				},
 				{
-					value: "write",
-					label: "Write",
-					description:
-						"Auto-approve read-only and write tools; require confirmation for exec tools such as bash, eval, browser, task, recipe, and ssh.",
-				},
-				{
-					value: "yolo",
-					label: "Yolo",
+					value: "bypass",
+					label: "Bypass",
 					description:
 						"Auto-approve read, write, and exec tools. User policy can still require confirmation or block calls.",
 				},

@@ -196,7 +196,7 @@ enum AgentComposerCompletionProvider {
     ]
 
     private static let nativePanelCommands: Set<String> = [
-        "model", "models", "settings", "login", "auth", "session", "sessions", "tools", "new", "compact", "handoff", "bash"
+        "model", "models", "settings", "login", "auth", "session", "sessions", "tools", "new", "compact", "handoff", "bash", "ask", "read", "bypass"
     ]
 }
 

@@ -14,6 +14,7 @@ final class KajiAgentProcess {
     var environmentOverrides: [String: String] = [:]
     var projectPath: String?
     var sessionDirectory: String?
+    var approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
     var onMessage: ((KajiAgentRPCFrame) -> Void)?
     var onError: ((String) -> Void)?
 
@@ -45,12 +46,15 @@ final class KajiAgentProcess {
             .path
         environment["KAJI_AGENT_ENABLE_MCP"] = environment["KAJI_AGENT_ENABLE_MCP"] ?? "0"
         environment["KAJI_AGENT_ENABLE_AUTORESEARCH"] = environment["KAJI_AGENT_ENABLE_AUTORESEARCH"] ?? "0"
+        if let zlob = KajiAgentZlobLocator.executableURL() {
+            environment["KAJI_ZLOB_BIN"] = zlob.path
+        }
         environment.merge(environmentOverrides) { _, new in new }
         let signature = configurationSignature(for: environment)
         if process?.isRunning == true, configurationSignature == signature { return }
         if process?.isRunning == true { stop() }
-        guard let launch = KajiAgentRuntimeLocator.sourceLaunch(projectPath: projectPath, sessionDirectory: sessionDirectory)
-            ?? KajiAgentRuntimeLocator.bundledLaunch(projectPath: projectPath, sessionDirectory: sessionDirectory)
+        guard let launch = KajiAgentRuntimeLocator.sourceLaunch(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode)
+            ?? KajiAgentRuntimeLocator.bundledLaunch(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode)
         else {
             throw KajiAgentProcessError.runtimeMissing
         }
@@ -112,10 +116,12 @@ final class KajiAgentProcess {
         [
             projectPath ?? "",
             sessionDirectory ?? "",
+            approvalMode,
             environment["KAJI_AGENT_DIR"] ?? "",
             environment["KAJI_AGENT_ENABLE_MCP"] ?? "",
             environment["KAJI_AGENT_ENABLE_AUTORESEARCH"] ?? "",
             environment["KAJI_AGENT_ENABLE_MOCK"] ?? "",
+            environment["KAJI_ZLOB_BIN"] ?? "",
         ].joined(separator: "\u{1f}")
     }
 

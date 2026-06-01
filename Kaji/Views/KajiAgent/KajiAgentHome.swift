@@ -77,6 +77,8 @@ struct KajiAgentHome: View {
                 modelPopover
             }
                 .help(store.statusMessage)
+            KajiPill(title: store.effectivePermissionMode.title, leadingIcon: "lock", variant: .plain) {}
+                .help(store.effectivePermissionMode.detail)
             KajiPill(title: "New thread", leadingIcon: "plus", variant: .plain, action: startNewThread)
             KajiPill(title: store.readiness.title, leadingIcon: store.readiness.isReady ? "checkmark.circle" : "exclamationmark.triangle", variant: .plain) {}
                 .help(store.readiness.detail)
@@ -433,6 +435,15 @@ struct KajiAgentHome: View {
             return true
         case "settings":
             NotificationCenter.default.post(name: .openParentAgentSettings, object: nil)
+            return true
+        case "ask":
+            store.setSessionPermissionMode(.ask)
+            return true
+        case "read", "read-allow":
+            store.setSessionPermissionMode(.readAllow)
+            return true
+        case "bypass":
+            store.setSessionPermissionMode(.bypass)
             return true
         case "new":
             startNewThread()

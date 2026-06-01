@@ -70,7 +70,7 @@ function mockResponse(context: Context): string {
 
 async function main(): Promise<void> {
 	const agentDir = configureEnvironment();
-	const args = parseArgs(["--mode", "rpc", "--approval-mode", "write", ...process.argv.slice(2)]);
+	const args = parseArgs(["--mode", "rpc", "--approval-mode", "read-allow", ...process.argv.slice(2)]);
 	const cwd = args.cwd || process.cwd();
 	setProjectDir(cwd);
 	const settings = await Settings.init({ cwd, agentDir });

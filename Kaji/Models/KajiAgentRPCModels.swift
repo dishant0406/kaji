@@ -495,6 +495,7 @@ struct KajiAgentHostToolDefinition: Codable, Hashable {
     let description: String
     let parameters: KajiAgentJSONValue
     let hidden: Bool?
+    var approval: String?
 }
 
 struct KajiAgentHostURISchemeDefinition: Codable, Hashable {

@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AgentTool, AgentToolContext, AgentToolResult, AgentToolUpdateCallback } from "@oh-my-pi/pi-agent-core";
-import * as natives from "@oh-my-pi/pi-natives";
 import type { Component } from "@oh-my-pi/pi-tui";
 import { Text } from "@oh-my-pi/pi-tui";
 import { isEnoent, prompt, untilAborted } from "@oh-my-pi/pi-utils";
@@ -9,6 +8,7 @@ import * as z from "zod/v4";
 import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import { InternalUrlRouter } from "../internal-urls";
 import type { Theme } from "../modes/theme/theme";
+import { FileType, glob as zlobGlob, type GlobMatch } from "../fs/zlob-glob";
 import findDescription from "../prompts/tools/find.md" with { type: "text" };
 import { type TruncationResult, truncateHead } from "../session/streaming-output";
 import { Ellipsis, fileHyperlink, renderFileList, renderStatusLine, renderTreeList, truncateToWidth } from "../tui";
@@ -238,11 +238,11 @@ export class FindTool implements AgentTool<typeof findSchema, FindToolDetails> {
 			const timeoutMs = Math.min(MAX_GLOB_TIMEOUT_MS, Math.max(MIN_GLOB_TIMEOUT_MS, requestedTimeoutMs));
 			const timeoutSignal = AbortSignal.timeout(timeoutMs);
 			const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-			const formatMatchPath = (matchPath: string, fileType?: natives.FileType): string => {
+			const formatMatchPath = (matchPath: string, fileType?: FileType): string => {
 				const hadTrailingSlash = matchPath.endsWith("/") || matchPath.endsWith("\\");
 				const absolutePath = path.isAbsolute(matchPath) ? matchPath : path.resolve(searchPath, matchPath);
 				return formatPathRelativeToCwd(absolutePath, this.session.cwd, {
-					trailingSlash: fileType === natives.FileType.Dir || hadTrailingSlash,
+					trailingSlash: fileType === FileType.Dir || hadTrailingSlash,
 				});
 			};
 
@@ -339,7 +339,7 @@ export class FindTool implements AgentTool<typeof findSchema, FindToolDetails> {
 				throw new ToolError(`Path is not a directory: ${searchPath}`);
 			}
 
-			let matches: natives.GlobMatch[];
+			let matches: GlobMatch[];
 			const onUpdateMatches: string[] = [];
 			const onUpdateMtimes: number[] = [];
 			const updateIntervalMs = 200;
@@ -360,7 +360,7 @@ export class FindTool implements AgentTool<typeof findSchema, FindToolDetails> {
 					details,
 				});
 			};
-			const onMatch = (err: Error | null, match: natives.GlobMatch | null) => {
+			const onMatch = (err: Error | null, match: GlobMatch | null) => {
 				if (err || combinedSignal.aborted || !match?.path) return;
 				const relativePath = formatMatchPath(match.path, match.fileType);
 				onUpdateMatches.push(relativePath);
@@ -370,7 +370,7 @@ export class FindTool implements AgentTool<typeof findSchema, FindToolDetails> {
 
 			const doGlob = async (useGitignore: boolean) =>
 				untilAborted(combinedSignal, () =>
-					natives.glob(
+					zlobGlob(
 						{
 							pattern: globPattern,
 							path: searchPath,
