@@ -3,42 +3,71 @@ import SwiftUI
 struct AgentSettingsView: View {
     @Environment(ProjectStore.self) private var projectStore
     @Environment(AppState.self) private var appState
-    @State private var parentSettings = ParentAgentSettingsStore.shared
+    @Environment(WorktreeStore.self) private var worktreeStore
+    @State private var kajiAgent = KajiAgentStore()
     @State private var commitMessageSettings = GitCommitMessageSettingsStore.shared
-    @State private var oauthLogin = ParentAgentOAuthLoginService.shared
     @State private var selectedProjectID = ""
 
     var body: some View {
         SettingsContainer {
             SettingsSection(
-                "Parent Agent",
-                footer: "The parent model plans and calls Kaji tools. "
-                    + "Worker agents are enabled in Coding Agents."
+                "Kaji Agent",
+                footer: "Kaji Agent uses the embedded coding-agent harness with native Kaji UI."
             ) {
-                SettingsToggleRow(label: "Enable parent agent", isOn: parentAgentEnabled)
-
                 SettingsRow("Status") {
-                    ParentAgentReadinessBadge(readiness: parentSettings.readiness)
-                }
-
-                SettingsRow("Provider") {
-                    KajiSelect(
-                        options: providerOptions,
-                        selection: providerSelection,
-                        width: 320
-                    )
+                    KajiAgentReadinessBadge(readiness: kajiAgent.readiness)
                 }
 
                 SettingsRow("Model") {
-                    KajiSelect(
-                        options: modelOptions,
-                        selection: modelSelection,
-                        width: 320
-                    )
+                    if kajiAgent.modelOptions.isEmpty {
+                        Button("Refresh models") { refreshKajiAgentMetadata() }
+                            .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+                    } else {
+                        KajiSelect(
+                            options: modelSelectOptions,
+                            selection: modelSelection,
+                            width: 320
+                        )
+                    }
+                }
+
+                if !kajiAgent.modelRoles.isEmpty {
+                    ForEach(kajiAgent.modelRoles.filter { ["default", "smol", "plan", "designer", "task"].contains($0.role) }) { role in
+                        SettingsRow(role.name) {
+                            KajiSelect(
+                                options: modelRoleOptions(for: role),
+                                selection: modelRoleSelection(for: role),
+                                width: 320
+                            )
+                        }
+                    }
+                }
+
+                SettingsRow("Models") {
+                    Button("Refresh") { refreshKajiAgentMetadata() }
+                        .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                 }
 
                 SettingsRow("Auth") {
-                    ParentAgentAuthBadge(status: parentSettings.authStatus)
+                    KajiAgentAuthSummary(providers: kajiAgent.loginProviders)
+                }
+
+                if let question = kajiAgent.loginQuestion ?? kajiAgent.settingsQuestion {
+                    SettingsRow("Input") {
+                        KajiAgentQuestionPrompt(question: question) { answer in
+                            kajiAgent.answerQuestion(question, value: answer)
+                        } onCancel: {
+                            kajiAgent.cancelQuestion(question)
+                        }
+                        .frame(width: 320, alignment: .leading)
+                    }
+                }
+
+                if kajiAgent.loginCode != nil || kajiAgent.loginInstructions != nil || kajiAgent.loginURL != nil {
+                    SettingsRow("Device code") {
+                        KajiAgentLoginInstructionsView(store: kajiAgent)
+                            .frame(width: 320, alignment: .leading)
+                    }
                 }
 
                 SettingsRow("Thinking") {
@@ -47,32 +76,27 @@ struct AgentSettingsView: View {
                         selection: thinkingSelection,
                         width: 320
                     )
-                    .disabled(!parentSettings.thinkingSupported)
                 }
 
-                if parentSettings.provider.oauthKey != nil {
-                    SettingsRow("OAuth") {
-                        oauthControls
-                    }
-                }
-
-                if oauthLogin.promptMessage != nil {
-                    SettingsRow("Code") {
-                        HStack(spacing: 8) {
-                            KajiInput(
-                                placeholder: oauthPromptPlaceholder,
-                                text: $oauthLogin.promptValue,
-                                width: 228,
-                                monospaced: true
-                            )
-                            Button("Submit") {
-                                oauthLogin.submitPromptValue()
-                            }
+                SettingsRow("OAuth") {
+                    if kajiAgent.loginProviders.isEmpty {
+                        Button("Refresh providers") { refreshKajiAgentMetadata() }
                             .buttonStyle(KajiButtonStyle(.secondary, size: .small))
-                            .disabled(oauthLogin.promptValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        }
-                        .frame(width: 320, alignment: .leading)
+                    } else {
+                        KajiSelect(
+                            options: loginProviderOptions,
+                            selection: loginSelection,
+                            width: 320
+                        )
                     }
+                }
+
+                SettingsRow("Login status") {
+                    Text(kajiAgent.loginStatus)
+                        .kajiFont(size: 12)
+                        .foregroundStyle(KajiTheme.fgMuted)
+                        .lineLimit(2)
+                        .frame(width: 320, alignment: .leading)
                 }
             }
 
@@ -101,7 +125,10 @@ struct AgentSettingsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear(perform: selectDefaultProject)
+        .onAppear {
+            selectDefaultProject()
+            refreshKajiAgentMetadata()
+        }
         .onChange(of: projectStore.projects.map(\.id)) { _, _ in selectDefaultProject() }
     }
 
@@ -109,87 +136,47 @@ struct AgentSettingsView: View {
         projectStore.projects.first { $0.id.uuidString == selectedProjectID }
     }
 
-    private var parentAgentEnabled: Binding<Bool> {
-        Binding(
-            get: { parentSettings.isEnabled },
-            set: { parentSettings.isEnabled = $0 }
-        )
-    }
-
-    private var providerOptions: [KajiSelectOption<String>] {
-        ParentAgentProviderRegistry.providers.map { provider in
-            KajiSelectOption(id: provider.id, title: provider.title, value: provider.id)
-        }
-    }
-
-    private var modelOptions: [KajiSelectOption<String>] {
-        parentSettings.modelOptions.map { model in
-            KajiSelectOption(id: model, title: model, value: model)
-        }
-    }
-
-    private var providerSelection: Binding<String> {
-        Binding(
-            get: { parentSettings.providerID },
-            set: { parentSettings.providerID = $0 }
-        )
-    }
-
     private var modelSelection: Binding<String> {
         Binding(
-            get: { parentSettings.modelID },
-            set: { parentSettings.modelID = $0 }
+            get: { kajiAgent.modelLabel },
+            set: { value in
+                guard let option = kajiAgent.modelOptions.first(where: { $0.title == value || $0.id == value }) else { return }
+                kajiAgent.setModel(provider: option.provider, modelID: option.modelID)
+            }
         )
+    }
+
+    private var modelSelectOptions: [KajiSelectOption<String>] {
+        kajiAgent.modelOptions.map { KajiSelectOption(id: $0.id, title: $0.title, value: $0.title) }
     }
 
     private var thinkingOptions: [KajiSelectOption<String>] {
         ParentAgentThinkingLevel.allCases.map { level in
-            KajiSelectOption(id: level.rawValue, title: level.rawValue, value: level.rawValue)
+            KajiSelectOption(id: level.environmentValue, title: level.rawValue, value: level.environmentValue)
         }
     }
 
     private var thinkingSelection: Binding<String> {
         Binding(
-            get: { parentSettings.thinkingSupported ? parentSettings.thinkingLevel : ParentAgentThinkingLevel.off.rawValue },
-            set: { parentSettings.thinkingLevel = $0 }
+            get: { kajiAgent.thinkingLevel },
+            set: { kajiAgent.setThinkingLevel($0) }
         )
     }
 
-    private var oauthControls: some View {
-        HStack(spacing: 8) {
-            if parentSettings.authStatus.configured {
-                HStack(spacing: 6) {
-                    KajiIcon(systemName: "checkmark.circle", size: 12)
-                        .foregroundStyle(KajiTheme.diffAddFg)
-                    Text("Connected")
-                        .kajiFont(size: 12, weight: .medium)
-                        .foregroundStyle(KajiTheme.fg)
-                }
-            } else {
-                Button(oauthLogin.isRunning ? "Connecting" : "Connect") {
-                    oauthLogin.login(provider: parentSettings.provider)
-                }
-                .buttonStyle(KajiButtonStyle(.secondary, size: .small))
-                .disabled(oauthLogin.isRunning)
+    private var loginProviderOptions: [KajiSelectOption<String>] {
+        [KajiSelectOption(id: "none", title: "Choose provider", value: "")] + kajiAgent.loginProviders.map {
+            KajiSelectOption(id: $0.id, title: $0.authenticated ? "\($0.name) (connected)" : $0.name, value: $0.id)
+        }
+    }
+
+    private var loginSelection: Binding<String> {
+        Binding(
+            get: { "" },
+            set: { providerID in
+                guard !providerID.isEmpty else { return }
+                kajiAgent.login(providerID: providerID)
             }
-
-            Text(oauthStatusText)
-                .kajiFont(size: 12)
-                .foregroundStyle(KajiTheme.fgMuted)
-                .lineLimit(1)
-        }
-        .frame(width: 320, alignment: .leading)
-    }
-
-    private var oauthStatusText: String {
-        if !oauthLogin.statusMessage.isEmpty {
-            return oauthLogin.statusMessage
-        }
-        return parentSettings.authStatus.configured ? parentSettings.authStatus.label : "Uses Pi OAuth"
-    }
-
-    private var oauthPromptPlaceholder: String {
-        oauthLogin.promptPlaceholder.isEmpty ? "Paste code or redirect URL" : oauthLogin.promptPlaceholder
+        )
     }
 
     private var projectOptions: [KajiSelectOption<String>] {
@@ -212,26 +199,57 @@ struct AgentSettingsView: View {
         if projectStore.projects.contains(where: { $0.id.uuidString == selectedProjectID }) { return }
         selectedProjectID = appState.activeProjectID?.uuidString ?? projectStore.projects.first?.id.uuidString ?? ""
     }
+
+    private func refreshKajiAgentMetadata() {
+        kajiAgent.configure(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+        kajiAgent.requestAvailableModels { _ in }
+        kajiAgent.requestModelConfig { _ in }
+        kajiAgent.requestLoginProviders { _ in }
+    }
+
+    private func modelRoleOptions(for role: KajiAgentModelRoleAssignment) -> [KajiSelectOption<String>] {
+        [KajiSelectOption(id: "inherit", title: role.selector ?? "Choose model", value: "")] + kajiAgent.modelOptions.map {
+            KajiSelectOption(id: "\(role.role):\($0.id)", title: $0.title, value: $0.id)
+        }
+    }
+
+    private func modelRoleSelection(for role: KajiAgentModelRoleAssignment) -> Binding<String> {
+        Binding(
+            get: { role.selector ?? "" },
+            set: { value in
+                guard let option = kajiAgent.modelOptions.first(where: { $0.id == value }) else { return }
+                kajiAgent.setModelRole(role: role.role, provider: option.provider, modelID: option.modelID)
+            }
+        )
+    }
 }
 
-private struct ParentAgentAuthBadge: View {
-    let status: ParentAgentAuthStatus
+private struct KajiAgentAuthSummary: View {
+    let providers: [KajiAgentLoginProvider]
 
     var body: some View {
         HStack(spacing: 6) {
-            KajiIcon(systemName: status.configured ? "checkmark.circle" : "exclamationmark.triangle", size: 12)
-                .foregroundStyle(status.configured ? KajiTheme.diffAddFg : KajiTheme.diffHunkFg)
-            Text(status.label)
+            let connected = providers.filter(\.authenticated).count
+            KajiIcon(systemName: connected > 0 ? "checkmark.circle" : "person.badge.key", size: 12)
+                .foregroundStyle(connected > 0 ? KajiTheme.diffAddFg : KajiTheme.fgDim)
+            Text(summary)
                 .kajiFont(size: 12)
                 .foregroundStyle(KajiTheme.fgMuted)
                 .lineLimit(1)
         }
         .frame(width: 320, alignment: .leading)
     }
+
+    private var summary: String {
+        let connectedProviders = providers.filter(\.authenticated)
+        guard !connectedProviders.isEmpty else { return "Use OAuth provider picker" }
+        let modelCount = connectedProviders.reduce(0) { $0 + ($1.availableModelCount ?? 0) }
+        return "\(connectedProviders.count) connected, \(modelCount) models available"
+    }
 }
 
-private struct ParentAgentReadinessBadge: View {
-    let readiness: ParentAgentReadiness
+private struct KajiAgentReadinessBadge: View {
+    let readiness: KajiAgentReadiness
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {

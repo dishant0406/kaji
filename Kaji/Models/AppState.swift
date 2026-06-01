@@ -60,6 +60,8 @@ final class AppState {
         case createCommandSplit(projectID: UUID, title: String, command: String)
         case createVCSTab(projectID: UUID, areaID: UUID?)
         case createParentAgentTab(projectID: UUID, areaID: UUID?)
+        case createParentAgentSessionTab(projectID: UUID, sessionPath: String)
+        case createParentAgentSplit(projectID: UUID)
         case createCodeGraphTab(CodeGraphTabRequest)
         case createBrowserSplit(projectID: UUID)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
@@ -92,7 +94,6 @@ final class AppState {
     var onProjectsEmptied: (([UUID]) -> Void)?
 
     var activeProjectID: UUID?
-    var isParentAgentHomePresented = false
 
     var activeWorktreeID: [UUID: UUID] = [:]
     var activeWorktreePath: [UUID: String] = [:]
@@ -231,14 +232,6 @@ final class AppState {
         return focusedAreaID[key]
     }
 
-    func showParentAgentHome() {
-        isParentAgentHomePresented = true
-    }
-
-    func hideParentAgentHome() {
-        isParentAgentHomePresented = false
-    }
-
     func selectProject(_ project: Project, worktree: Worktree) {
         dispatch(.selectProject(
             projectID: project.id,
@@ -286,13 +279,15 @@ final class AppState {
     }
 
     func openParentAgentTab(projectID: UUID) {
-        for workspaceTab in workspaceTabs(for: projectID) where workspaceTab.root.allAreas().contains(where: { area in
-            area.tabs.contains(where: { $0.kind == .parentAgent })
-        }) {
-            activateWorkspaceTab(workspaceTab.id, projectID: projectID)
-            return
-        }
         dispatch(.createParentAgentTab(projectID: projectID, areaID: nil))
+    }
+
+    func openParentAgentTab(projectID: UUID, sessionPath: String) {
+        dispatch(.createParentAgentSessionTab(projectID: projectID, sessionPath: sessionPath))
+    }
+
+    func createParentAgentSplit(projectID: UUID) {
+        dispatch(.createParentAgentSplit(projectID: projectID))
     }
 
     func openCodeGraphTab(projectID: UUID, worktreeID: UUID, worktreePath: String, graphURL: URL) {

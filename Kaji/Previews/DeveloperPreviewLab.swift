@@ -10,10 +10,7 @@ private struct DeveloperPreviewLab: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Sidebar(
-                parentAgentSelected: true,
-                parentAgentEnabled: true
-            )
+            Sidebar()
             .environment(stores.appState)
             .environment(stores.projectStore)
             .environment(stores.worktreeStore)

@@ -109,6 +109,7 @@ echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
 "$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
 "$SCRIPT_DIR/build-parent-agent.sh"
+"$SCRIPT_DIR/build-kaji-agent-runtime.sh"
 swift build -c release --triple "$TRIPLE"
 swift build -c release --triple "$TRIPLE" --target KajiHookClient
 

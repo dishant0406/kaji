@@ -8,6 +8,7 @@ struct SidebarWorktreeSection: View {
     let onRename: (Worktree, String) -> Void
     let onRemove: (Worktree) -> Void
     let onCreate: () -> Void
+    var accessory: AnyView = AnyView(EmptyView())
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -29,6 +30,7 @@ struct SidebarWorktreeSection: View {
                         onRemove: worktree.canBeRemoved ? { onRemove(worktree) } : nil
                     )
                 }
+                accessory
                 SidebarNewWorktreeRow(action: onCreate)
             }
             .padding(.horizontal, 8)

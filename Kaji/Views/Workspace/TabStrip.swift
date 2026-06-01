@@ -469,7 +469,7 @@ private struct TabCell: View {
         } else if tab.kind == .problems {
             KajiIcon(systemName: "exclamationmark.triangle", size: 12)
         } else if tab.kind == .parentAgent {
-            KajiIcon(systemName: "sparkles", size: 12)
+            KajiLogo(size: 12)
         } else if tab.kind == .codeGraph {
             KajiIcon(systemName: "point.3.connected.trianglepath.dotted", size: 12)
         } else if tab.kind == .browser {

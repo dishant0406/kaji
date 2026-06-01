@@ -34,6 +34,16 @@ struct EmptyProjectPlaceholder: View {
                         run(launcher)
                     }
                 }
+
+                LauncherSquareButton(
+                    iconName: "kaji",
+                    accessibilityLabel: "Kaji Agent",
+                    helpText: "Open Kaji Agent for this project",
+                    iconSize: 18,
+                    frameSize: 40
+                ) {
+                    appState.openParentAgentTab(projectID: project.id)
+                }
             }
             Text("No tabs in \(project.name)")
                 .kajiFont(size: 14, weight: .semibold)
@@ -53,8 +63,8 @@ struct EmptyProjectPlaceholder: View {
 
     private var descriptionText: String {
         enabledLaunchers.isEmpty
-            ? "Open a terminal to start working in this project."
-            : "Start with a terminal or launch one of your enabled CLI tools."
+            ? "Open a terminal or Kaji Agent to start working in this project."
+            : "Start with a terminal, Kaji Agent, or one of your enabled CLI tools."
     }
 
     private func run(_ launcher: CLILauncherConfiguration) {

@@ -8,6 +8,8 @@ struct CLILauncherIcon: View {
     var body: some View {
         if iconName == "terminal" {
             TerminalLauncherIcon(size: size, color: color)
+        } else if iconName == "kaji" {
+            KajiLogo(size: size)
         } else if ProviderIconView.hasIcon(named: iconName) {
             ProviderIconView(
                 iconName: iconName,

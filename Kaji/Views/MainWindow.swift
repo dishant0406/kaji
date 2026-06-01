@@ -9,6 +9,7 @@ struct MainWindow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragCoordinator = TabDragCoordinator()
     @State private var paneDragCoordinator = PaneDragCoordinator()
+    @State private var modalCoordinator = KajiModalCoordinator()
     private enum AttachedVCSLayout {
         static let minWidth: CGFloat = 200
         static let defaultWidth: CGFloat = 400
@@ -114,7 +115,6 @@ struct MainWindow: View {
     @State private var showSettings = false
     @State private var showMCPControlPanel = false
     @State private var showCreateThemeModal = false
-    @State private var parentAgentSettings = ParentAgentSettingsStore.shared
     @State private var createWorktreeProjectID: UUID?
     @State private var projectLogoCropRequest: ProjectLogoCropRequest?
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
@@ -147,11 +147,13 @@ struct MainWindow: View {
                 .overlay { createWorktreeOverlay }
                 .overlay { createThemeOverlay }
                 .overlay { projectLogoCropperOverlay }
+                .overlay { globalModalOverlay }
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showSettings)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showMCPControlPanel)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showCreateThemeModal)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: createWorktreeProjectID)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: projectLogoCropRequest?.id)
+                .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: modalCoordinator.route?.id)
                 .animation(KajiMotion.preferred(KajiMotion.fast, reduceMotion: reduceMotion), value: ToastState.shared.message != nil)
                 .task(id: activeQuickOpenProjectPath) {
                     guard let path = activeQuickOpenProjectPath else { return }
@@ -182,6 +184,7 @@ struct MainWindow: View {
 
         let receives1 = AnyView(
             base
+                .environment(modalCoordinator)
                 .onReceive(NotificationCenter.default.publisher(for: .commandPalette)) { _ in
                     showQuickOpen = false
                     showAsk = false
@@ -241,23 +244,6 @@ struct MainWindow: View {
                     showGoToSymbol = false
                     showGoToLine = false
                     showAgentCommandCenter = shouldShow
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .showParentAgentHome)) { _ in
-                    guard parentAgentSettings.isEnabled else {
-                        showSettings = true
-                        return
-                    }
-                    showCommandPalette = false
-                    showQuickOpen = false
-                    showAsk = false
-                    showAgentCommandCenter = false
-                    showWorktreeSwitcher = false
-                    showGoToSymbol = false
-                    showGoToLine = false
-                    appState.showParentAgentHome()
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .hideParentAgentHome)) { _ in
-                    appState.hideParentAgentHome()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .switchWorktree)) { _ in
                     showCommandPalette = false
@@ -432,10 +418,7 @@ struct MainWindow: View {
 
             HStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    Sidebar(
-                        parentAgentSelected: parentAgentSelected,
-                        parentAgentEnabled: parentAgentSettings.isEnabled
-                    )
+                    Sidebar()
                     Rectangle().fill(KajiTheme.border).frame(width: 1)
                         .accessibilityHidden(true)
                 }
@@ -492,11 +475,9 @@ struct MainWindow: View {
 
     @ViewBuilder
     private var workspaceContent: some View {
-        if appState.isParentAgentHomePresented {
-            ParentAgentTabContent()
-        } else if let project = activeProject,
-                  appState.workspaceRoot(for: project.id) == nil,
-                  resolvedActiveWorktree(for: project) != nil
+        if let project = activeProject,
+           appState.workspaceRoot(for: project.id) == nil,
+           resolvedActiveWorktree(for: project) != nil
         {
             EmptyProjectPlaceholder(project: project) {
                 activateWorkspace()
@@ -892,6 +873,22 @@ struct MainWindow: View {
         }
     }
 
+    @ViewBuilder
+    private var globalModalOverlay: some View {
+        if let route = modalCoordinator.route {
+            KajiModalOverlay {
+                modalCoordinator.dismiss()
+            } content: {
+                switch route {
+                case let .subagent(agent):
+                    KajiAgentSubagentDetailView(agent: agent) {
+                        modalCoordinator.dismiss()
+                    }
+                }
+            }
+        }
+    }
+
     private var topBarContent: some View {
         WindowDragRepresentable(alwaysEnabled: true)
             .overlay {
@@ -1112,19 +1109,12 @@ struct MainWindow: View {
         return codeGraphAgentCoordinator.session(projectID: key.projectID, worktreeID: key.worktreeID)
     }
 
-    private var parentAgentSelected: Bool {
-        appState.isParentAgentHomePresented
-    }
-
     private var activeQuickOpenProjectPath: String? {
         guard let project = activeProject else { return nil }
         return activeWorktreePath(for: project)
     }
 
     private var windowTitle: String {
-        if appState.isParentAgentHomePresented {
-            return "Kaji"
-        }
         guard let project = activeProject else { return "Kaji" }
         guard let tabTitle = appState.activeTab(for: project.id)?.title,
               !tabTitle.isEmpty
@@ -1140,8 +1130,7 @@ struct MainWindow: View {
     }
 
     private var showsWorkspaceTabBar: Bool {
-        guard !appState.isParentAgentHomePresented,
-              let project = activeProject,
+        guard let project = activeProject,
               let workspace = appState.workspace(for: project.id)
         else { return false }
         return workspace.activeTab?.activeArea != nil
@@ -1206,9 +1195,7 @@ struct MainWindow: View {
         projectStore.projects.filter { appState.workspaceRoot(for: $0.id) != nil }
     }
 
-    private func activateWorkspace() {
-        appState.hideParentAgentHome()
-    }
+    private func activateWorkspace() {}
 
     private func sidePanelResizeHandle(onDrag: @escaping (CGFloat) -> Void) -> some View {
         SidePanelResizeHandle(onDrag: onDrag)

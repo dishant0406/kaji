@@ -342,7 +342,12 @@ struct ExpandedProjectRow: View {
             },
             onCreate: {
                 requestCreateWorktree()
-            }
+            },
+            accessory: AnyView(VStack(alignment: .leading, spacing: 0) {
+                if let worktree = activeWorktree ?? worktrees.first(where: \.isPrimary) {
+                    KajiAgentSidebarHistorySection(project: project, worktree: worktree, expanded: true)
+                }
+            })
         )
     }
 

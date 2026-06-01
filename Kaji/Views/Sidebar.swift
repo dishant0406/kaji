@@ -19,8 +19,6 @@ struct Sidebar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isReordering = false
     @State private var expanded = UserDefaults.standard.bool(forKey: "kaji.sidebarExpanded")
-    let parentAgentSelected: Bool
-    let parentAgentEnabled: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,9 +83,6 @@ struct Sidebar: View {
                     }
                 )
                 addButton
-                if parentAgentEnabled {
-                    parentAgentButton
-                }
             }
             .padding(.horizontal, expanded ? 10 : 8)
             .padding(.vertical, 6)
@@ -132,16 +127,7 @@ struct Sidebar: View {
         "\(name) (\(KeyBindingStore.shared.combo(for: action).displayString))"
     }
 
-    private var parentAgentButton: some View {
-        ParentAgentTabButton(selected: parentAgentSelected, expanded: expanded) {
-            NotificationCenter.default.post(name: .showParentAgentHome, object: nil)
-        }
-        .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
-        .help("Kaji")
-    }
-
     private func select(_ project: Project) {
-        appState.hideParentAgentHome()
         worktreeStore.ensurePrimary(for: project)
         guard let worktree = worktreeStore.preferred(
             for: project.id,

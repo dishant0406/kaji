@@ -51,7 +51,8 @@ struct ProviderIconView: View {
                 return true
             }
         }
-        if let url = Bundle.appResources.url(forResource: name, withExtension: "svg") ??
+        if let url = Bundle.appResources.url(forResource: name, withExtension: "svg", subdirectory: "ProviderIcons") ??
+            Bundle.appResources.url(forResource: name, withExtension: "svg") ??
             Bundle.main.url(forResource: name, withExtension: "svg")
         {
             return FileManager.default.fileExists(atPath: url.path)
@@ -79,7 +80,8 @@ struct ProviderIconView: View {
             }
         }
 
-        if let url = Bundle.appResources.url(forResource: name, withExtension: "svg") ??
+        if let url = Bundle.appResources.url(forResource: name, withExtension: "svg", subdirectory: "ProviderIcons") ??
+            Bundle.appResources.url(forResource: name, withExtension: "svg") ??
             Bundle.main.url(forResource: name, withExtension: "svg")
         {
             return NSImage(contentsOf: url)

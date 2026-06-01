@@ -23,3 +23,5 @@ appcast*.xml
 /External/pi-mono
 /KajiParentAgentRuntime/node_modules
 /KajiParentAgentRuntime/dist
+/KajiAgentRuntime/node_modules
+/KajiAgentRuntime/dist

@@ -110,6 +110,7 @@ enum SwiftRunBundleLauncher {
             .appendingPathComponent("cefsimple Helper.app/Contents/MacOS/cefsimple Helper")
         let profile = projectRoot.appendingPathComponent(".build/KajiSwiftRunCEFProfile", isDirectory: true)
         return [
+            ("KAJI_PROJECT_ROOT", projectRoot.path),
             ("KAJI_APP_SUPPORT_DIR", environment["KAJI_APP_SUPPORT_DIR"]),
             ("KAJI_CEF_ROOT", environment["KAJI_CEF_ROOT"] ?? cefRoot.path),
             ("KAJI_CEF_HELPER_PATH", environment["KAJI_CEF_HELPER_PATH"] ?? helper.path),

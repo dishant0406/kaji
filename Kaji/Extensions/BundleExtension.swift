@@ -41,6 +41,9 @@ extension Bundle {
         if let resourceURL = Bundle.main.resourceURL {
             candidates.append(resourceURL.appendingPathComponent("ProviderIcons"))
         }
+        if let appResourceURL = Bundle.appResources.resourceURL {
+            candidates.append(appResourceURL.appendingPathComponent("ProviderIcons"))
+        }
         candidates.append(contentsOf: [
             Bundle.main.bundleURL.appendingPathComponent("ProviderIcons"),
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/ProviderIcons"),

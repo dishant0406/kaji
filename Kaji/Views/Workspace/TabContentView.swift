@@ -47,8 +47,8 @@ struct TabContentView: View {
                 },
                 onClose: onClosePane
             )
-        case .parentAgent:
-            ParentAgentTabContent()
+        case let .parentAgent(state):
+            KajiAgentHome(scope: state.scope, projectPathOverride: state.projectPath, initialSessionPath: state.initialSessionPath)
         case let .codeGraph(state):
             KajiCodeGraphPane(state: state)
         case let .browser(state):

@@ -18,6 +18,13 @@ struct CLILauncherFooter: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            LauncherSquareButton(
+                iconName: "kaji",
+                accessibilityLabel: "Kaji Agent",
+                helpText: "Open Kaji Agent split"
+            ) {
+                appState.createParentAgentSplit(projectID: projectID)
+            }
             ForEach(enabledLaunchers) { launcher in
                 LauncherSquareButton(
                     iconName: launcher.definition.iconName,
