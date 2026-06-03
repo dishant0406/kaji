@@ -7,7 +7,7 @@ BUILD_ROOT="$PROJECT_ROOT/.build-support/zlob"
 SOURCE_DIR="$BUILD_ROOT/source"
 OUT_DIR="$PROJECT_ROOT/Kaji/Resources/Zlob"
 PINNED_TAG="v1.4.2"
-REQUIRED_ZIG_VERSION="${REQUIRED_ZIG_VERSION:-0.16.1}"
+REQUIRED_ZIG_VERSION="${REQUIRED_ZIG_VERSION:-0.16.0}"
 
 ZIG_BIN="zig"
 if ! command -v zig >/dev/null 2>&1 || [[ "$(zig version)" != "$REQUIRED_ZIG_VERSION" ]]; then
