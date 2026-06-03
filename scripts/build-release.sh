@@ -12,6 +12,8 @@ SPARKLE_PUBLIC_KEY=""
 SPARKLE_FEED_URL=""
 SMOKE_LAUNCH=false
 
+SKIP_NATIVE_DEPS=false
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         --arch)
@@ -38,6 +40,12 @@ while [[ $# -gt 0 ]]; do
             SMOKE_LAUNCH=true
             shift
             ;;
+
+        --skip-native-deps)
+            SKIP_NATIVE_DEPS=true
+            shift
+            ;;
+
         *)
             echo "Unknown option: $1"
             exit 1
@@ -105,12 +113,15 @@ sign_cef_runtime() {
 
 rm -rf "$APP_BUNDLE"
 
+
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
-"$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
-"$SCRIPT_DIR/build-parent-agent.sh"
-"$SCRIPT_DIR/build-kaji-agent-runtime.sh"
-"$SCRIPT_DIR/build-zlob.sh"
+if ! $SKIP_NATIVE_DEPS; then
+    "$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
+    "$SCRIPT_DIR/build-parent-agent.sh"
+    "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
+    "$SCRIPT_DIR/build-zlob.sh"
+fi
 swift build -c release --triple "$TRIPLE"
 swift build -c release --triple "$TRIPLE" --target KajiHookClient
 

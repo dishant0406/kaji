@@ -19,9 +19,71 @@ env:
   TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GH_PAT }}
 
 jobs:
+  build-deps:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GH_PAT || github.token }}
+
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
+      - name: Install GhosttyKit
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GH_PAT || github.token }}
+        run: |
+          EXPECTED_STAMP="$(cat .ghostty-source)"
+          CACHE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$CACHE_DIR"' EXIT
+          if gh release download ghosttykit-cache \
+            --repo "$REPOSITORY_SLUG" \
+            --pattern "GhosttyKit.xcframework.zip" \
+            --dir "$CACHE_DIR" \
+            --clobber; then
+            unzip -oq "$CACHE_DIR/GhosttyKit.xcframework.zip" -d "$CACHE_DIR"
+            if [[ -d "$CACHE_DIR/GhosttyKit.xcframework" && -f "$CACHE_DIR/.ghostty-source" && "$(cat "$CACHE_DIR/.ghostty-source")" == "$EXPECTED_STAMP" ]]; then
+              rm -rf GhosttyKit.xcframework
+              cp -R "$CACHE_DIR/GhosttyKit.xcframework" GhosttyKit.xcframework
+              exit 0
+            fi
+            echo "Cached GhosttyKit does not match .ghostty-source; rebuilding from source"
+          else
+            echo "Cached GhosttyKit is unavailable; rebuilding from source"
+          fi
+          rm -rf GhosttyKit.xcframework
+          scripts/setup.sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build native dependencies
+        run: |
+          chmod +x scripts/install-cef-runtime.sh scripts/build-parent-agent.sh scripts/build-kaji-agent-runtime.sh scripts/build-zlob.sh
+          scripts/install-cef-runtime.sh --arch "$ARCH"
+          scripts/build-parent-agent.sh
+          scripts/build-kaji-agent-runtime.sh
+          scripts/build-zlob.sh
+
+      - name: Upload native dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-deps
+          path: |
+            GhosttyKit.xcframework/
+            .dev-support/cef-runtime/
+            Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs
+            Kaji/Resources/pi/kaji-agent.mjs
+            Kaji/Resources/pi/oauth-login.mjs
+            Kaji/Resources/Zlob/zlob
+          retention-days: 1
+
   release:
+    needs: build-deps
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,30 +120,19 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 
-      - name: Install GhosttyKit
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GH_PAT || github.token }}
+      - name: Download native dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: native-deps
+
+      - name: Restore native dependency paths
         run: |
-          EXPECTED_STAMP="$(cat .ghostty-source)"
-          CACHE_DIR="$(mktemp -d)"
-          trap 'rm -rf "$CACHE_DIR"' EXIT
-          if gh release download ghosttykit-cache \
-            --repo "$REPOSITORY_SLUG" \
-            --pattern "GhosttyKit.xcframework.zip" \
-            --dir "$CACHE_DIR" \
-            --clobber; then
-            unzip -oq "$CACHE_DIR/GhosttyKit.xcframework.zip" -d "$CACHE_DIR"
-            if [[ -d "$CACHE_DIR/GhosttyKit.xcframework" && -f "$CACHE_DIR/.ghostty-source" && "$(cat "$CACHE_DIR/.ghostty-source")" == "$EXPECTED_STAMP" ]]; then
-              rm -rf GhosttyKit.xcframework
-              cp -R "$CACHE_DIR/GhosttyKit.xcframework" GhosttyKit.xcframework
-              exit 0
-            fi
-            echo "Cached GhosttyKit does not match .ghostty-source; rebuilding from source"
-          else
-            echo "Cached GhosttyKit is unavailable; rebuilding from source"
-          fi
-          rm -rf GhosttyKit.xcframework
-          scripts/setup.sh
+          echo "Verifying native dependencies..."
+          ls -la GhosttyKit.xcframework/ 2>/dev/null || echo "WARNING: GhosttyKit.xcframework missing"
+          ls -la .dev-support/cef-runtime/ 2>/dev/null || echo "WARNING: CEF runtime missing"
+          ls -la Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs 2>/dev/null || echo "WARNING: agent runtime missing"
+          ls -la Kaji/Resources/pi/kaji-agent.mjs 2>/dev/null || echo "WARNING: parent agent missing"
+          ls -la Kaji/Resources/Zlob/zlob 2>/dev/null || echo "WARNING: zlob missing"
 
       - name: Resolve Swift packages
         run: swift package resolve
@@ -89,16 +140,13 @@ jobs:
       - name: Install create-dmg
         run: npm install --global create-dmg
 
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
       - name: Build unsigned DMG
         run: |
-          chmod +x scripts/build-parent-agent.sh scripts/build-release.sh scripts/create-icns.sh
+          chmod +x scripts/build-release.sh scripts/create-icns.sh
           scripts/build-release.sh \
             --arch "$ARCH" \
             --version "${{ steps.validate.outputs.version }}" \
+            --skip-native-deps \
             --smoke-launch
 
       - name: Verify and checksum DMG
