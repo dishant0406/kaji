@@ -171,12 +171,14 @@ struct KajiPopoverSurface<Content: View>: View {
 
     var body: some View {
         content()
+            .kajiGlassEffectScope(spacing: 6)
             .background(
                 TranslucentSurface(
                     base: KajiTheme.tertiaryBackground,
                     material: .menu,
                     blendingMode: .behindWindow,
-                    tintOpacity: 0.74
+                    tintOpacity: 0.74,
+                    glassCornerRadius: KajiShape.panelRadius
                 )
             )
             .preferredColorScheme(KajiTheme.colorScheme)

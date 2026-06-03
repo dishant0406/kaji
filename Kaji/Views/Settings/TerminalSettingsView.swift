@@ -71,6 +71,28 @@ struct TerminalSettingsView: View {
                 selection: $settings.imageStorageProfile,
                 options: TerminalImageStorageProfile.allCases.map(\.rawValue)
             )
+            if AppearanceCapabilities.supportsLiquidGlass {
+                SettingsDetailToggleRow(
+                    label: "Glass terminal background",
+                    detail: "Uses Ghostty's native macOS glass blur. New terminals may be required.",
+                    isOn: $settings.glassBackgroundEnabled
+                )
+                SettingsSliderRow(
+                    label: "Glass opacity",
+                    value: $settings.glassBackgroundOpacity,
+                    range: 0.72 ... 1,
+                    isEnabled: settings.glassBackgroundEnabled,
+                    valueText: { value in
+                        "\(Int((value * 100).rounded()))%"
+                    }
+                )
+                picker(
+                    "Glass blur",
+                    selection: $settings.glassBlurMode,
+                    options: TerminalGlassBlurMode.allCases.map(\.rawValue)
+                )
+                .disabled(!settings.glassBackgroundEnabled)
+            }
         }
     }
 

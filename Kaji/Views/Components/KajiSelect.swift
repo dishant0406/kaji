@@ -17,7 +17,7 @@ struct KajiSelect<Value: Hashable>: View {
     var placeholder: String?
     var width: CGFloat?
     var variant: KajiSelectVariant = .filled
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
     @State private var isPresented = false
 
     var body: some View {
@@ -40,7 +40,13 @@ struct KajiSelect<Value: Hashable>: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .frame(width: width, alignment: .leading)
-            .background(controlBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+            .background(
+                KajiControlSurface(
+                    base: controlBackground,
+                    cornerRadius: KajiShape.tileRadius,
+                    isInteractive: true
+                )
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                     .stroke(controlBorder, lineWidth: 1)
@@ -94,12 +100,17 @@ struct KajiSelect<Value: Hashable>: View {
 
     private var controlBackground: Color {
         if variant == .plain { return .clear }
-        return transparencyEnabled ? KajiTheme.surface.opacity(0.5) : KajiTheme.surface
+        if effectiveMode == .glass { return KajiTheme.surface.opacity(isPresented ? 0.32 : 0.22) }
+        return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.5) : KajiTheme.surface
     }
 
     private var controlBorder: Color {
         if variant == .plain { return isPresented ? KajiTheme.border.opacity(0.7) : .clear }
         return isPresented ? KajiTheme.accent.opacity(0.6) : KajiTheme.border
+    }
+
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
     }
 }
 
@@ -113,7 +124,7 @@ private struct KajiSelectRow: View {
     let title: String
     let isSelected: Bool
     let isHighlighted: Bool
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
     @State private var hovered = false
 
     var body: some View {
@@ -140,10 +151,20 @@ private struct KajiSelectRow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return transparencyEnabled ? KajiTheme.accentSoft.opacity(0.7) : KajiTheme.accentSoft }
-        if isHighlighted { return transparencyEnabled ? KajiTheme.surface.opacity(0.44) : KajiTheme.surface }
-        if hovered { return transparencyEnabled ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover }
+        if effectiveMode == .glass {
+            if isSelected { return KajiTheme.accentSoft.opacity(0.42) }
+            if isHighlighted { return KajiTheme.surface.opacity(0.28) }
+            if hovered { return KajiTheme.hover.opacity(0.28) }
+            return .clear
+        }
+        if isSelected { return effectiveMode.usesSoftSurfaces ? KajiTheme.accentSoft.opacity(0.7) : KajiTheme.accentSoft }
+        if isHighlighted { return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.44) : KajiTheme.surface }
+        if hovered { return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover }
         return .clear
+    }
+
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
     }
 }
 

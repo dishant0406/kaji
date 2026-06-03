@@ -103,3 +103,17 @@ enum TerminalOptionAsAltMode: String, CaseIterable, Identifiable {
         }
     }
 }
+
+enum TerminalGlassBlurMode: String, CaseIterable, Identifiable {
+    case regular = "Regular Glass"
+    case clear = "Clear Glass"
+
+    var id: String { rawValue }
+
+    var ghosttyValue: String {
+        switch self {
+        case .regular: "macos-glass-regular"
+        case .clear: "macos-glass-clear"
+        }
+    }
+}

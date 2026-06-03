@@ -6,7 +6,7 @@ struct KajiInput: View {
     var leadingIcon: String?
     var width: CGFloat?
     var monospaced = false
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -29,7 +29,12 @@ struct KajiInput: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(width: width, alignment: .leading)
-        .background(controlBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+        .background(
+            KajiControlSurface(
+                base: controlBackground,
+                cornerRadius: KajiShape.tileRadius
+            )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                 .stroke(isFocused ? KajiTheme.accent.opacity(0.6) : KajiTheme.border, lineWidth: 1)
@@ -38,6 +43,11 @@ struct KajiInput: View {
     }
 
     private var controlBackground: Color {
-        transparencyEnabled ? KajiTheme.surface.opacity(0.5) : KajiTheme.surface
+        if effectiveMode == .glass { return KajiTheme.surface.opacity(isFocused ? 0.32 : 0.22) }
+        return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.5) : KajiTheme.surface
+    }
+
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
     }
 }

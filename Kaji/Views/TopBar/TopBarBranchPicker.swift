@@ -57,8 +57,13 @@ struct TopBarBranchPicker: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(active ? KajiTheme.surface : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+            .background(
+                KajiControlSurface(
+                    base: active ? KajiTheme.surface : .clear,
+                    cornerRadius: KajiShape.tileRadius,
+                    isInteractive: true
+                )
+            )
             .overlay {
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                     .strokeBorder(KajiTheme.border.opacity(active ? 0.85 : 0.35), lineWidth: 1)

@@ -3,7 +3,7 @@ import SwiftUI
 struct SegmentedPicker<T: Hashable>: View {
     @Binding var selection: T
     let options: [(value: T, label: String)]
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
 
     var body: some View {
         HStack(spacing: 0) {
@@ -40,7 +40,12 @@ struct SegmentedPicker<T: Hashable>: View {
             }
         }
         .padding(2)
-        .background(containerBackground, in: RoundedRectangle(cornerRadius: KajiShape.controlRadius))
+        .background(
+            KajiControlSurface(
+                base: containerBackground,
+                cornerRadius: KajiShape.controlRadius
+            )
+        )
         .accessibilityRepresentation {
             Picker(selection: $selection, label: EmptyView()) {
                 ForEach(Array(options.enumerated()), id: \.offset) { _, option in
@@ -51,10 +56,16 @@ struct SegmentedPicker<T: Hashable>: View {
     }
 
     private var activeSegmentBackground: Color {
-        transparencyEnabled ? KajiTheme.surface.opacity(0.54) : KajiTheme.surface
+        if effectiveMode == .glass { return KajiTheme.surface.opacity(0.28) }
+        return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.54) : KajiTheme.surface
     }
 
     private var containerBackground: Color {
-        transparencyEnabled ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover
+        if effectiveMode == .glass { return KajiTheme.hover.opacity(0.22) }
+        return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover
+    }
+
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
     }
 }

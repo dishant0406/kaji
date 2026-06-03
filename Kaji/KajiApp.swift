@@ -209,6 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct WindowConfigurator: NSViewRepresentable {
     let configVersion: Int
+    let interfaceModeRaw: String
     let sidebarTransparencyEnabled: Bool
 
     func makeCoordinator() -> Coordinator {
@@ -225,7 +226,11 @@ struct WindowConfigurator: NSViewRepresentable {
             w.styleMask.insert(.fullSizeContentView)
             w.isMovable = false
             w.isMovableByWindowBackground = false
-            Self.applyWindowBackground(w, sidebarTransparencyEnabled: sidebarTransparencyEnabled)
+            Self.applyWindowBackground(
+                w,
+                interfaceModeRaw: interfaceModeRaw,
+                sidebarTransparencyEnabled: sidebarTransparencyEnabled
+            )
             Self.repositionTrafficLights(in: w)
             Self.hideTitlebarDecorationView(in: w)
             Self.neutralizeSafeAreaInsets(in: w)
@@ -236,11 +241,23 @@ struct WindowConfigurator: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let w = nsView.window else { return }
-        Self.applyWindowBackground(w, sidebarTransparencyEnabled: sidebarTransparencyEnabled)
+        Self.applyWindowBackground(
+            w,
+            interfaceModeRaw: interfaceModeRaw,
+            sidebarTransparencyEnabled: sidebarTransparencyEnabled
+        )
     }
 
-    private static func applyWindowBackground(_ window: NSWindow, sidebarTransparencyEnabled: Bool) {
-        if sidebarTransparencyEnabled, !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
+    private static func applyWindowBackground(
+        _ window: NSWindow,
+        interfaceModeRaw: String,
+        sidebarTransparencyEnabled: Bool
+    ) {
+        let mode = AppearanceModeResolver.effectiveModeForWindow(
+            modeRaw: interfaceModeRaw,
+            legacyTransparencyEnabled: sidebarTransparencyEnabled
+        )
+        if mode.usesTransparentWindow {
             window.isOpaque = false
             window.backgroundColor = .clear
             return

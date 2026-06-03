@@ -15,7 +15,14 @@ struct IconButton: View {
         Button(action: action) {
             ZStack {
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
-                    .fill(active ? KajiTheme.surface : .clear)
+                    .fill(.clear)
+                    .background(
+                        KajiControlSurface(
+                            base: active ? KajiTheme.surface : .clear,
+                            cornerRadius: KajiShape.tileRadius,
+                            isInteractive: true
+                        )
+                    )
                 KajiIcon(systemName: symbol, size: size)
                     .foregroundStyle(active ? hoverColor : color)
             }

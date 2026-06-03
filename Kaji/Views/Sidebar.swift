@@ -14,8 +14,6 @@ struct Sidebar: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
-    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isReordering = false
     @State private var expanded = UserDefaults.standard.bool(forKey: "kaji.sidebarExpanded")
@@ -32,12 +30,7 @@ struct Sidebar: View {
         .padding(.top, 10)
         .frame(maxHeight: .infinity, alignment: .bottom)
         .frame(width: SidebarLayout.resolvedWidth(expanded: expanded))
-        .background(
-            SidebarBackgroundSurface(
-                transparencyEnabled: sidebarTransparencyEnabled,
-                transparencyAmount: interfaceTransparencyAmount
-            )
-        )
+        .background(SidebarBackgroundSurface())
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
         .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: expanded)

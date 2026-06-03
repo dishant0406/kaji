@@ -20,10 +20,16 @@ enum GhosttyTerminalConfigDefaults {
         "quick-terminal-position",
         "quick-terminal-size",
         "quick-terminal-autohide",
+        "background-opacity",
+        "background-blur",
+        "background-opacity-cells",
         "custom-shader-animation",
     ]
 
-    static func lines(settings: TerminalSettingsSnapshot = .default) -> [String] {
+    static func lines(
+        settings: TerminalSettingsSnapshot = .default,
+        supportsLiquidGlass: Bool = AppearanceCapabilities.supportsLiquidGlass
+    ) -> [String] {
         var lines = [
             "shell-integration = \(settings.shellIntegrationMode.ghosttyValue)",
             "shell-integration-features = \(shellFeatures(settings))",
@@ -46,6 +52,11 @@ enum GhosttyTerminalConfigDefaults {
         ]
         if settings.batteryOptimizedMode {
             lines.append("custom-shader-animation = false")
+        }
+        if settings.glassBackgroundEnabled, supportsLiquidGlass {
+            lines.append("background-opacity = \(settings.glassBackgroundOpacity)")
+            lines.append("background-blur = \(settings.glassBlurMode.ghosttyValue)")
+            lines.append("background-opacity-cells = false")
         }
         return lines
     }

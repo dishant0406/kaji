@@ -10,7 +10,14 @@ struct SidebarToggleButton: View {
         Button(action: action) {
             ZStack {
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
-                    .fill(hovered ? KajiTheme.surface : .clear)
+                    .fill(.clear)
+                    .background(
+                        KajiControlSurface(
+                            base: hovered ? KajiTheme.surface : .clear,
+                            cornerRadius: KajiShape.tileRadius,
+                            isInteractive: true
+                        )
+                    )
                 SidebarToggleGlyph(expanded: expanded)
                     .foregroundStyle(hovered ? KajiTheme.fg : KajiTheme.fgMuted)
             }

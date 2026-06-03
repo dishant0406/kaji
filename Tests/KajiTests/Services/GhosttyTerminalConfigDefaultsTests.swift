@@ -44,7 +44,10 @@ struct GhosttyTerminalConfigDefaultsTests {
             telemetryEnabled: false,
             quickTerminalPosition: "top",
             quickTerminalSize: "30%",
-            quickTerminalAutohide: false
+            quickTerminalAutohide: false,
+            glassBackgroundEnabled: false,
+            glassBackgroundOpacity: 0.94,
+            glassBlurMode: .regular
         )
 
         let lines = GhosttyTerminalConfigDefaults.lines(settings: settings)
@@ -58,5 +61,47 @@ struct GhosttyTerminalConfigDefaultsTests {
         #expect(lines.contains("clipboard-read = deny"))
         #expect(lines.contains("clipboard-paste-bracketed-safe = true"))
         #expect(lines.contains("custom-shader-animation = false"))
+    }
+
+    @Test
+    func emitsGlassBackgroundOnlyWhenSupported() {
+        var settings = TerminalSettingsSnapshot.default
+        settings = TerminalSettingsSnapshot(
+            shellIntegrationMode: settings.shellIntegrationMode,
+            shellCursorEnabled: settings.shellCursorEnabled,
+            shellSSHIntegrationEnabled: settings.shellSSHIntegrationEnabled,
+            shellSudoIntegrationEnabled: settings.shellSudoIntegrationEnabled,
+            batteryOptimizedMode: settings.batteryOptimizedMode,
+            scrollSpeedProfile: settings.scrollSpeedProfile,
+            scrollbackProfile: settings.scrollbackProfile,
+            customScrollbackLimit: settings.customScrollbackLimit,
+            copyOnSelect: settings.copyOnSelect,
+            clipboardRead: settings.clipboardRead,
+            clipboardWrite: settings.clipboardWrite,
+            pasteProtectionEnabled: settings.pasteProtectionEnabled,
+            linkPreviewsEnabled: settings.linkPreviewsEnabled,
+            filePathActionsEnabled: settings.filePathActionsEnabled,
+            cursorClickToMoveEnabled: settings.cursorClickToMoveEnabled,
+            optionAsAltMode: settings.optionAsAltMode,
+            mouseReportingEnabled: settings.mouseReportingEnabled,
+            imageStorageProfile: settings.imageStorageProfile,
+            telemetryEnabled: settings.telemetryEnabled,
+            quickTerminalPosition: settings.quickTerminalPosition,
+            quickTerminalSize: settings.quickTerminalSize,
+            quickTerminalAutohide: settings.quickTerminalAutohide,
+            glassBackgroundEnabled: true,
+            glassBackgroundOpacity: 0.82,
+            glassBlurMode: .clear
+        )
+
+        let supportedLines = GhosttyTerminalConfigDefaults.lines(settings: settings, supportsLiquidGlass: true)
+        let unsupportedLines = GhosttyTerminalConfigDefaults.lines(settings: settings, supportsLiquidGlass: false)
+
+        #expect(supportedLines.contains("background-opacity = 0.82"))
+        #expect(supportedLines.contains("background-blur = macos-glass-clear"))
+        #expect(supportedLines.contains("background-opacity-cells = false"))
+        #expect(!unsupportedLines.contains { $0.hasPrefix("background-opacity = ") })
+        #expect(!unsupportedLines.contains { $0.hasPrefix("background-blur = ") })
+        #expect(!unsupportedLines.contains("background-opacity-cells = false"))
     }
 }

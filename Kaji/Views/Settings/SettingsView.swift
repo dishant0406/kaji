@@ -19,12 +19,14 @@ struct SettingsView: View {
                 content
             }
         }
+        .kajiGlassEffectScope(spacing: 8)
         .frame(width: 860, height: 560)
         .background(
             TranslucentSurface(
                 base: KajiTheme.bg,
                 material: .underWindowBackground,
-                tintOpacity: 0.24
+                tintOpacity: 0.24,
+                glassCornerRadius: KajiShape.modalRadius
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: KajiShape.modalRadius))
@@ -76,7 +78,8 @@ struct SettingsView: View {
             TranslucentSurface(
                 base: KajiTheme.secondaryBackground,
                 material: .sidebar,
-                tintOpacity: 0.18
+                tintOpacity: 0.18,
+                glassCornerRadius: KajiShape.modalRadius
             )
         )
     }
@@ -116,7 +119,8 @@ struct SettingsView: View {
             TranslucentSurface(
                 base: KajiTheme.bg,
                 material: .underWindowBackground,
-                tintOpacity: 0.28
+                tintOpacity: 0.28,
+                glassCornerRadius: KajiShape.modalRadius
             )
         )
     }

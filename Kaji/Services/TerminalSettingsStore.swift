@@ -30,6 +30,9 @@ final class TerminalSettingsStore {
     var quickTerminalPosition: String { didSet { saveString(quickTerminalPosition, key: "quickTerminalPosition") } }
     var quickTerminalSize: String { didSet { saveString(quickTerminalSize, key: "quickTerminalSize") } }
     var quickTerminalAutohide: Bool { didSet { saveBool(quickTerminalAutohide, key: "quickTerminalAutohide") } }
+    var glassBackgroundEnabled: Bool { didSet { saveBool(glassBackgroundEnabled, key: "glassBackgroundEnabled") } }
+    var glassBackgroundOpacity: Double { didSet { saveDouble(glassBackgroundOpacity, key: "glassBackgroundOpacity") } }
+    var glassBlurMode: String { didSet { saveOption(glassBlurMode, key: "glassBlurMode") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -56,6 +59,9 @@ final class TerminalSettingsStore {
         quickTerminalPosition = defaults.string(forKey: Self.key("quickTerminalPosition")) ?? fallback.quickTerminalPosition
         quickTerminalSize = defaults.string(forKey: Self.key("quickTerminalSize")) ?? fallback.quickTerminalSize
         quickTerminalAutohide = Self.bool(defaults, "quickTerminalAutohide", fallback.quickTerminalAutohide)
+        glassBackgroundEnabled = Self.bool(defaults, "glassBackgroundEnabled", fallback.glassBackgroundEnabled)
+        glassBackgroundOpacity = Self.double(defaults, "glassBackgroundOpacity", fallback.glassBackgroundOpacity)
+        glassBlurMode = defaults.string(forKey: Self.key("glassBlurMode")) ?? fallback.glassBlurMode.rawValue
     }
 
     func snapshot() -> TerminalSettingsSnapshot {
@@ -81,7 +87,10 @@ final class TerminalSettingsStore {
             telemetryEnabled: telemetryEnabled,
             quickTerminalPosition: quickTerminalPosition.isEmpty ? "bottom" : quickTerminalPosition,
             quickTerminalSize: quickTerminalSize.isEmpty ? "40%" : quickTerminalSize,
-            quickTerminalAutohide: quickTerminalAutohide
+            quickTerminalAutohide: quickTerminalAutohide,
+            glassBackgroundEnabled: glassBackgroundEnabled,
+            glassBackgroundOpacity: min(max(glassBackgroundOpacity, 0.72), 1),
+            glassBlurMode: TerminalGlassBlurMode(rawValue: glassBlurMode) ?? .regular
         )
     }
 
@@ -100,6 +109,11 @@ final class TerminalSettingsStore {
         apply()
     }
 
+    private func saveDouble(_ value: Double, key: String) {
+        defaults.set(value, forKey: Self.key(key))
+        apply()
+    }
+
     private func apply() {
         applyTask?.cancel()
         applyTask = Task { @MainActor [weak self] in
@@ -112,6 +126,11 @@ final class TerminalSettingsStore {
     private static func bool(_ defaults: UserDefaults, _ key: String, _ fallback: Bool) -> Bool {
         guard defaults.object(forKey: Self.key(key)) != nil else { return fallback }
         return defaults.bool(forKey: Self.key(key))
+    }
+
+    private static func double(_ defaults: UserDefaults, _ key: String, _ fallback: Double) -> Double {
+        guard defaults.object(forKey: Self.key(key)) != nil else { return fallback }
+        return defaults.double(forKey: Self.key(key))
     }
 
     private static func key(_ name: String) -> String {

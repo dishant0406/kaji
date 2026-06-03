@@ -9,7 +9,7 @@ struct KajiTextArea: View {
     var onSubmit: (() -> Void)?
     var onShiftEnter: (() -> Void)?
     var onCommandEnter: (() -> Void)?
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -26,7 +26,12 @@ struct KajiTextArea: View {
             onCommandEnter: onCommandEnter
         )
         .frame(minHeight: minHeight, maxHeight: maxHeight)
-        .background(controlBackground, in: RoundedRectangle(cornerRadius: KajiShape.controlRadius))
+        .background(
+            KajiControlSurface(
+                base: controlBackground,
+                cornerRadius: KajiShape.controlRadius
+            )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: KajiShape.controlRadius)
                 .stroke(isFocused ? KajiTheme.accent.opacity(0.55) : KajiTheme.borderStrong.opacity(0.9), lineWidth: 1)
@@ -37,6 +42,11 @@ struct KajiTextArea: View {
     }
 
     private var controlBackground: Color {
-        transparencyEnabled ? KajiTheme.secondaryBackground.opacity(0.46) : KajiTheme.secondaryBackground
+        if effectiveMode == .glass { return KajiTheme.secondaryBackground.opacity(isFocused ? 0.32 : 0.2) }
+        return effectiveMode.usesSoftSurfaces ? KajiTheme.secondaryBackground.opacity(0.46) : KajiTheme.secondaryBackground
+    }
+
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
     }
 }

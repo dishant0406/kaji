@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct SidebarBackgroundSurface: View {
-    let transparencyEnabled: Bool
-    let transparencyAmount: Double
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
 
     var body: some View {
         TranslucentSurface(
@@ -10,12 +9,12 @@ struct SidebarBackgroundSurface: View {
             material: .sidebar,
             blendingMode: .behindWindow,
             tintOpacity: AppearanceTransparencyStyle.sidebarTintOpacity(
-                enabled: transparencyEnabled,
-                amount: transparencyAmount
+                enabled: appearanceContext.effectiveMode.usesSoftSurfaces,
+                amount: appearanceContext.transparencyAmount
             ),
             gradientOpacity: AppearanceTransparencyStyle.sidebarGradientOpacity(
-                enabled: transparencyEnabled,
-                amount: transparencyAmount
+                enabled: appearanceContext.effectiveMode.usesSoftSurfaces,
+                amount: appearanceContext.transparencyAmount
             )
         )
     }

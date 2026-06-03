@@ -42,7 +42,7 @@ enum KajiButtonSize {
 struct KajiButtonStyle: ButtonStyle {
     let variant: KajiButtonVariant
     let size: KajiButtonSize
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
 
     init(_ variant: KajiButtonVariant = .secondary, size: KajiButtonSize = .regular) {
         self.variant = variant
@@ -55,10 +55,7 @@ struct KajiButtonStyle: ButtonStyle {
             .foregroundStyle(foregroundColor(isPressed: configuration.isPressed))
             .padding(.horizontal, size.horizontalPadding)
             .padding(.vertical, size.verticalPadding)
-            .background(
-                backgroundColor(isPressed: configuration.isPressed),
-                in: RoundedRectangle(cornerRadius: KajiShape.tileRadius)
-            )
+            .background(controlSurface(isPressed: configuration.isPressed))
             .overlay(
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                     .stroke(borderColor(isPressed: configuration.isPressed), lineWidth: 1)
@@ -85,23 +82,36 @@ struct KajiButtonStyle: ButtonStyle {
         switch variant {
         case .primary:
             return isPressed
-                ? KajiTheme.accent.opacity(transparencyEnabled ? 0.76 : 0.82)
-                : KajiTheme.accent.opacity(transparencyEnabled ? 0.88 : 1)
+                ? KajiTheme.accent.opacity(effectiveMode.usesSoftSurfaces ? 0.76 : 0.82)
+                : KajiTheme.accent.opacity(effectiveMode.usesSoftSurfaces ? 0.88 : 1)
         case .secondary:
             if isPressed {
-                return transparencyEnabled ? KajiTheme.hover.opacity(0.54) : KajiTheme.hover
+                return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.54) : KajiTheme.hover
             }
-            return transparencyEnabled ? KajiTheme.surface.opacity(0.52) : KajiTheme.surface
+            return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.52) : KajiTheme.surface
         case .ghost:
             if isPressed {
-                return transparencyEnabled ? KajiTheme.hover.opacity(0.48) : KajiTheme.hover
+                return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.48) : KajiTheme.hover
             }
-            return transparencyEnabled ? KajiTheme.bg.opacity(0.18) : KajiTheme.bg
+            return effectiveMode.usesSoftSurfaces ? KajiTheme.bg.opacity(0.18) : KajiTheme.bg
         case .danger:
             return isPressed
-                ? KajiTheme.diffRemoveBg.opacity(transparencyEnabled ? 0.56 : 0.82)
-                : KajiTheme.diffRemoveBg.opacity(transparencyEnabled ? 0.42 : 1)
+                ? KajiTheme.diffRemoveBg.opacity(effectiveMode.usesSoftSurfaces ? 0.56 : 0.82)
+                : KajiTheme.diffRemoveBg.opacity(effectiveMode.usesSoftSurfaces ? 0.42 : 1)
         }
+    }
+
+    private func controlSurface(isPressed: Bool) -> some View {
+        KajiControlSurface(
+            base: backgroundColor(isPressed: isPressed),
+            cornerRadius: KajiShape.tileRadius,
+            isInteractive: true
+        )
+    }
+
+
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
     }
 
     private func borderColor(isPressed: Bool) -> Color {

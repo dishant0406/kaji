@@ -21,7 +21,7 @@ struct BrowserToolbar: View {
                 .font(.system(size: 12))
                 .padding(.horizontal, 10)
                 .frame(height: 28)
-                .background(KajiTheme.surface, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+                .background(KajiControlSurface(base: KajiTheme.surface, cornerRadius: KajiShape.tileRadius))
                 .overlay(RoundedRectangle(cornerRadius: KajiShape.tileRadius).stroke(KajiTheme.border.opacity(0.7), lineWidth: 1))
                 .animation(KajiMotion.fast, value: pendingURL)
                 .onSubmit { onNavigate() }
@@ -35,6 +35,12 @@ struct BrowserToolbar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(KajiTheme.secondaryBackground)
+        .background(
+            TranslucentSurface(
+                base: KajiTheme.secondaryBackground,
+                material: .headerView,
+                tintOpacity: 0.44
+            )
+        )
     }
 }

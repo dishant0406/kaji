@@ -5,8 +5,6 @@ struct SidebarFooter: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
-    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @State private var showThemePicker = false
     @State private var showNotifications = false
     @State private var showAgents = false
@@ -59,12 +57,7 @@ struct SidebarFooter: View {
         }
         .padding(.horizontal, 10)
         .frame(height: KajiLayout.footerBarHeight)
-        .background(
-            SidebarBackgroundSurface(
-                transparencyEnabled: sidebarTransparencyEnabled,
-                transparencyAmount: interfaceTransparencyAmount
-            )
-        )
+        .background(SidebarBackgroundSurface())
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(KajiTheme.border)

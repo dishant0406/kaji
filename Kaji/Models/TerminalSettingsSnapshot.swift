@@ -23,6 +23,9 @@ struct TerminalSettingsSnapshot: Equatable {
     let quickTerminalPosition: String
     let quickTerminalSize: String
     let quickTerminalAutohide: Bool
+    let glassBackgroundEnabled: Bool
+    let glassBackgroundOpacity: Double
+    let glassBlurMode: TerminalGlassBlurMode
 
     static let `default` = TerminalSettingsSnapshot(
         shellIntegrationMode: .detect,
@@ -46,6 +49,9 @@ struct TerminalSettingsSnapshot: Equatable {
         telemetryEnabled: true,
         quickTerminalPosition: "bottom",
         quickTerminalSize: "40%",
-        quickTerminalAutohide: true
+        quickTerminalAutohide: true,
+        glassBackgroundEnabled: false,
+        glassBackgroundOpacity: 0.94,
+        glassBlurMode: .regular
     )
 }

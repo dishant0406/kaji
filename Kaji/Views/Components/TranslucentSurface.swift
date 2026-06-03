@@ -8,13 +8,19 @@ struct TranslucentSurface: View {
     var tintOpacity: Double = 0.72
     var gradientOpacity: Double = 0
     var isEmphasized = false
-    @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var transparencyEnabled = false
-    @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var transparencyAmount = 0.7
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    var glassCornerRadius: CGFloat = 0
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
 
     var body: some View {
         Group {
-            if transparencyEnabled, !reduceTransparency {
+            if effectiveMode == .glass {
+                if #available(macOS 26.0, *) {
+                    base.opacity(adjustedGlassSurfaceTint)
+                        .glassEffect(.regular, in: .rect(cornerRadius: glassCornerRadius))
+                } else {
+                    base.opacity(adjustedGlassSurfaceTint)
+                }
+            } else if effectiveMode == .translucent {
                 ZStack {
                     MaterialBackgroundView(
                         material: material,
@@ -42,17 +48,26 @@ struct TranslucentSurface: View {
         }
     }
 
+    private var effectiveMode: EffectiveAppearanceMode {
+        appearanceContext.effectiveMode
+    }
+
     private var adjustedTintOpacity: Double {
         AppearanceTransparencyStyle.adjustedTintOpacity(
             baseTintOpacity: tintOpacity,
-            amount: transparencyAmount
+            amount: appearanceContext.transparencyAmount
         )
     }
 
     private var adjustedGradientOpacity: Double {
         AppearanceTransparencyStyle.adjustedGradientOpacity(
             baseGradientOpacity: gradientOpacity,
-            amount: transparencyAmount
+            amount: appearanceContext.transparencyAmount
         )
+    }
+
+    private var adjustedGlassSurfaceTint: Double {
+        if glassCornerRadius == 0 { return 0.04 }
+        return max(0.06, adjustedTintOpacity * 0.12)
     }
 }

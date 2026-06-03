@@ -24,8 +24,13 @@ struct TopBarSearchButton: View {
             }
             .padding(.horizontal, 14)
             .frame(width: 340, height: 30)
-            .background(background)
-            .clipShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+            .background(
+                KajiControlSurface(
+                    base: background,
+                    cornerRadius: KajiShape.tileRadius,
+                    isInteractive: true
+                )
+            )
             .overlay {
                 RoundedRectangle(cornerRadius: KajiShape.tileRadius)
                     .strokeBorder(KajiTheme.border.opacity(hovered && enabled ? 1 : 0.65), lineWidth: 1)

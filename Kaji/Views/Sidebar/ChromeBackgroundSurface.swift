@@ -2,8 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ChromeBackgroundSurface: View {
-    let transparencyEnabled: Bool
-    let transparencyAmount: Double
+    @Environment(\.kajiAppearanceContext) private var appearanceContext
 
     var body: some View {
         TranslucentSurface(
@@ -11,8 +10,8 @@ struct ChromeBackgroundSurface: View {
             material: .headerView,
             blendingMode: .behindWindow,
             tintOpacity: AppearanceTransparencyStyle.chromeTintOpacity(
-                enabled: transparencyEnabled,
-                amount: transparencyAmount
+                enabled: appearanceContext.effectiveMode.usesSoftSurfaces,
+                amount: appearanceContext.transparencyAmount
             )
         )
     }

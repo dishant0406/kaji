@@ -117,6 +117,7 @@ struct MainWindow: View {
     @State private var showCreateThemeModal = false
     @State private var createWorktreeProjectID: UUID?
     @State private var projectLogoCropRequest: ProjectLogoCropRequest?
+    @AppStorage(AppearanceSettingsKeys.interfaceMode) private var interfaceModeRaw = ""
     @AppStorage(AppearanceSettingsKeys.sidebarTransparencyEnabled) private var sidebarTransparencyEnabled = false
     @AppStorage(AppearanceSettingsKeys.interfaceTransparencyAmount) private var interfaceTransparencyAmount = 0.7
     @AppStorage("kaji.notifications.toastPosition") private var toastPositionRaw = ToastPosition.topCenter.rawValue
@@ -129,6 +130,7 @@ struct MainWindow: View {
     private var configuredMainLayout: AnyView {
         let overlayed = AnyView(
             mainLayout
+                .kajiGlassEffectScope(spacing: 8)
                 .environment(\.overlayActive, overlayActive)
                 .overlay(alignment: toastAlignment) { toastOverlay }
                 .overlay { commandPaletteOverlay }
@@ -170,6 +172,7 @@ struct MainWindow: View {
                 .background(
                     WindowConfigurator(
                         configVersion: ghostty.configVersion,
+                        interfaceModeRaw: interfaceModeRaw,
                         sidebarTransparencyEnabled: sidebarTransparencyEnabled
                     )
                 )
@@ -344,6 +347,11 @@ struct MainWindow: View {
 
         return AnyView(
             changes1
+                .kajiAppearanceContext(
+                    modeRaw: interfaceModeRaw,
+                    legacyTransparencyEnabled: sidebarTransparencyEnabled,
+                    transparencyAmount: interfaceTransparencyAmount
+                )
                 .onChange(of: appState.pendingUnsavedEditorTabClose != nil) { _, isPresented in
                     guard isPresented else { return }
                     presentCloseConfirmation(.unsavedEditor)
@@ -392,7 +400,8 @@ struct MainWindow: View {
         if globalSearchPanelVisible, let project = activeProject { return .globalSearch(project.id) }
         if fileTreePanelVisible, let key = activeWorktreeKey, activeFileTreeState != nil { return .fileTree(key) }
         if agentInstructionPanelVisible, let project = activeProject { return .agentInstructions(project.id) }
-        if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let key = activeWorktreeKey, activeBrowserState != nil { return .browser(key) }
+        if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let key = activeWorktreeKey,
+           activeBrowserState != nil { return .browser(key) }
         return nil
     }
 
@@ -401,20 +410,10 @@ struct MainWindow: View {
             topBarContent
                 .frame(height: 38)
                 .background(WindowDragRepresentable())
-                .background(
-                    ChromeBackgroundSurface(
-                        transparencyEnabled: sidebarTransparencyEnabled,
-                        transparencyAmount: interfaceTransparencyAmount
-                    )
-                )
+                .background(ChromeBackgroundSurface())
 
             Rectangle().fill(KajiTheme.border).frame(height: 1)
-                .background(
-                    ChromeBackgroundSurface(
-                        transparencyEnabled: sidebarTransparencyEnabled,
-                        transparencyAmount: interfaceTransparencyAmount
-                    )
-                )
+                .background(ChromeBackgroundSurface())
 
             HStack(spacing: 0) {
                 HStack(spacing: 0) {
@@ -423,38 +422,28 @@ struct MainWindow: View {
                         .accessibilityHidden(true)
                 }
                 .fixedSize(horizontal: true, vertical: false)
-                .background(
-                    SidebarBackgroundSurface(
-                        transparencyEnabled: sidebarTransparencyEnabled,
-                        transparencyAmount: interfaceTransparencyAmount
-                    )
-                )
+                .background(SidebarBackgroundSurface())
 
                 VStack(spacing: 0) {
                     if showsWorkspaceTabBar {
                         workspaceTabBarContent
                             .frame(height: 36)
-                            .background(
-                                ChromeBackgroundSurface(
-                                    transparencyEnabled: sidebarTransparencyEnabled,
-                                    transparencyAmount: interfaceTransparencyAmount
-                                )
-                            )
+                            .background(ChromeBackgroundSurface())
 
                         Rectangle().fill(KajiTheme.border).frame(height: 1)
-                            .background(
-                                ChromeBackgroundSurface(
-                                    transparencyEnabled: sidebarTransparencyEnabled,
-                                    transparencyAmount: interfaceTransparencyAmount
-                                )
-                            )
+                            .background(ChromeBackgroundSurface())
                     }
 
                     GeometryReader { contentGeometry in
                         HStack(spacing: 0) {
                             ZStack {
                                 KajiTheme.bg
-                                workspaceContent
+                                if #available(macOS 26.0, *) {
+                                    workspaceContent
+                                        .backgroundExtensionEffect()
+                                } else {
+                                    workspaceContent
+                                }
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
 

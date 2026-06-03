@@ -80,7 +80,13 @@ struct FooterTerminalOverlay: View {
         }
         .padding(.horizontal, 12)
         .frame(height: headerHeight)
-        .background(KajiTheme.secondaryBackground)
+        .background(
+            TranslucentSurface(
+                base: KajiTheme.secondaryBackground,
+                material: .headerView,
+                tintOpacity: 0.42
+            )
+        )
         .overlay(alignment: .bottom) {
             Rectangle().fill(KajiTheme.border).frame(height: 1)
         }
