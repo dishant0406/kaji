@@ -26,3 +26,5 @@ appcast*.xml
 /KajiParentAgentRuntime/dist
 /KajiAgentRuntime/node_modules
 /KajiAgentRuntime/dist
+
+Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs
