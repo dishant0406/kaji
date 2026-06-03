@@ -89,6 +89,10 @@ jobs:
       - name: Install create-dmg
         run: npm install --global create-dmg
 
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Build unsigned DMG
         run: |
           chmod +x scripts/build-parent-agent.sh scripts/build-release.sh scripts/create-icns.sh
