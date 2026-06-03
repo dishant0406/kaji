@@ -73,6 +73,8 @@ jobs:
           name: native-deps
           path: |
             GhosttyKit.xcframework/
+
+            GhosttyKit/ghostty.h
             .dev-support/cef-runtime/
             Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs
             Kaji/Resources/pi/kaji-agent.mjs
