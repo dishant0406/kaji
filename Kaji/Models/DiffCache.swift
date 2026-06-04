@@ -5,10 +5,20 @@ import Foundation
 final class DiffCache {
     struct LoadedDiff {
         let rows: [DiffDisplayRow]
+        let renderPlan: DiffRenderPlan
         let additions: Int
         let deletions: Int
         let truncated: Bool
         let fileLineCount: Int?
+
+        init(rows: [DiffDisplayRow], additions: Int, deletions: Int, truncated: Bool, fileLineCount: Int?) {
+            self.rows = rows
+            self.renderPlan = DiffRenderPlan(rows: rows)
+            self.additions = additions
+            self.deletions = deletions
+            self.truncated = truncated
+            self.fileLineCount = fileLineCount
+        }
 
         func replacingRows(_ rows: [DiffDisplayRow]) -> LoadedDiff {
             LoadedDiff(rows: rows, additions: additions, deletions: deletions, truncated: truncated, fileLineCount: fileLineCount)

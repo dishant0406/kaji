@@ -111,6 +111,11 @@ struct GitRef: Hashable {
     let kind: Kind
 }
 
+struct DiffInlineSegment: Equatable {
+    let text: String
+    let emphasized: Bool
+}
+
 struct DiffDisplayRow: Identifiable {
     enum Kind {
         case hunk
@@ -127,4 +132,26 @@ struct DiffDisplayRow: Identifiable {
     let oldText: String?
     let newText: String?
     let text: String
+    let oldInlineSegments: [DiffInlineSegment]?
+    let newInlineSegments: [DiffInlineSegment]?
+
+    init(
+        kind: Kind,
+        oldLineNumber: Int?,
+        newLineNumber: Int?,
+        oldText: String?,
+        newText: String?,
+        text: String,
+        oldInlineSegments: [DiffInlineSegment]? = nil,
+        newInlineSegments: [DiffInlineSegment]? = nil
+    ) {
+        self.kind = kind
+        self.oldLineNumber = oldLineNumber
+        self.newLineNumber = newLineNumber
+        self.oldText = oldText
+        self.newText = newText
+        self.text = text
+        self.oldInlineSegments = oldInlineSegments
+        self.newInlineSegments = newInlineSegments
+    }
 }

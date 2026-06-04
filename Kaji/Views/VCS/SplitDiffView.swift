@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SplitDiffView: View {
     let rows: [DiffDisplayRow]
+    let renderPlan: DiffRenderPlan
     let filePath: String
     var onViewMore: ((Int, DiffContextExpansionDirection) -> Void)?
     var contextExpansion: ((Int) -> DiffHunkContextExpansion)?
@@ -10,12 +11,12 @@ struct SplitDiffView: View {
     var comments: [DiffComment] = []
     var suppressLeadingTopBorder: Bool = false
 
-    private var chunks: [SplitDiffChunk] {
-        buildSplitDiffChunks(from: rows)
+    private var chunks: [SplitDiffRenderChunk] {
+        renderPlan.splitChunks
     }
 
     private var numberColumnWidth: CGFloat {
-        lineNumberWidth(for: maxLineNumber(in: rows))
+        lineNumberWidth(for: renderPlan.maxLineNumber)
     }
 
     var body: some View {
@@ -29,8 +30,8 @@ struct SplitDiffView: View {
                         onViewMore: onViewMore,
                         showsTopBorder: !(index == 0 && suppressLeadingTopBorder)
                     )
-                case let .codeBlock(leftRows, rightRows, hunkIndex):
-                    splitCodeBlock(leftRows: leftRows, rightRows: rightRows, hunkIndex: hunkIndex)
+                case let .codeBlock(block):
+                    splitCodeBlock(block)
                 }
             }
         }
@@ -39,11 +40,11 @@ struct SplitDiffView: View {
         .accessibilityLabel("Split diff, \(filePath)")
     }
 
-    private func splitCodeBlock(leftRows: [DiffDisplayRow], rightRows: [DiffDisplayRow], hunkIndex: Int?) -> some View {
-        let lineCount = max(leftRows.count, rightRows.count)
+    private func splitCodeBlock(_ block: SplitDiffRenderCodeBlock) -> some View {
+        let lineCount = max(block.leftRows.count, block.rightRows.count)
         let height = CGFloat(lineCount) * diffLineHeight
-        let leftMeta = buildDiffMetadata(from: leftRows)
-        let rightMeta = buildDiffMetadata(from: rightRows)
+        let leftMeta = buildDiffMetadata(from: block.leftRows)
+        let rightMeta = buildDiffMetadata(from: block.rightRows)
 
         return ZStack(alignment: .leading) {
             HStack(alignment: .top, spacing: 0) {
@@ -61,8 +62,10 @@ struct SplitDiffView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     DiffContentBridge(
-                        rows: leftRows,
-                        backgroundSide: .left
+                        rows: block.leftRows,
+                        backgroundSide: .left,
+                        signature: block.leftSignature,
+                        maxDisplayColumns: block.leftMaxDisplayColumns
                     )
                     .frame(height: height)
                 }
@@ -86,8 +89,10 @@ struct SplitDiffView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     DiffContentBridge(
-                        rows: rightRows,
-                        backgroundSide: .right
+                        rows: block.rightRows,
+                        backgroundSide: .right,
+                        signature: block.rightSignature,
+                        maxDisplayColumns: block.rightMaxDisplayColumns
                     )
                     .frame(height: height)
                 }
@@ -95,7 +100,7 @@ struct SplitDiffView: View {
                 .zIndex(0)
             }
 
-            hunkControls(hunkIndex: hunkIndex)
+            hunkControls(hunkIndex: block.hunkIndex)
         }
         .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)

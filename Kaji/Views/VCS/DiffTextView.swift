@@ -115,38 +115,23 @@ enum DiffMetrics {
 final class DiffContentNSView: NSView {
     override var isFlipped: Bool { true }
 
-    let textView: NSTextView
-    let backgroundLayoutManager: DiffBackgroundLayoutManager
     var lineMetadata: [DiffLineMetadata] = []
     var diffLineHeight: CGFloat = 20
+    private var rows: [DiffDisplayRow] = []
+    private var lineBackgrounds: [NSColor?] = []
+    private var theme = DiffRenderTheme.current()
     private var expectedRowCount: Int = 0
     private var expectedWidth: CGFloat = 100
+    private var attributedLineCache: [Int: NSAttributedString] = [:]
+    private let paragraphStyle: NSParagraphStyle = {
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byClipping
+        return style
+    }()
 
     override init(frame frameRect: NSRect) {
-        backgroundLayoutManager = DiffBackgroundLayoutManager()
-        let textStorage = NSTextStorage()
-        textStorage.addLayoutManager(backgroundLayoutManager)
-
-        let textContainer = NSTextContainer(size: NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
-        textContainer.widthTracksTextView = false
-        textContainer.heightTracksTextView = false
-        textContainer.lineFragmentPadding = 6
-        backgroundLayoutManager.addTextContainer(textContainer)
-
-        textView = NSTextView(frame: frameRect, textContainer: textContainer)
-        textView.isEditable = false
-        textView.isSelectable = true
-        textView.isRichText = true
-        textView.drawsBackground = false
-        textView.isVerticallyResizable = false
-        textView.isHorizontallyResizable = true
-        textView.autoresizingMask = [.width, .height]
-        textView.textContainerInset = .zero
-        textView.isAutomaticLinkDetectionEnabled = false
-
         super.init(frame: frameRect)
-
-        addSubview(textView)
+        wantsLayer = true
         setAccessibilityRole(.textArea)
         setAccessibilityRoleDescription("Diff Content")
     }
@@ -160,57 +145,147 @@ final class DiffContentNSView: NSView {
         diffLineHeight = lineHeight
         expectedRowCount = rowCount
         expectedWidth = DiffMetrics.expectedWidth(maxColumns: maxColumns)
-
-        let height = CGFloat(max(rowCount, 1)) * lineHeight
-        let size = NSSize(width: expectedWidth, height: height)
-        textView.setFrameSize(size)
-        if let container = textView.textContainer {
-            container.size = size
-        }
         invalidateIntrinsicContentSize()
     }
 
     func configure(
-        attributedString: NSAttributedString,
+        rows: [DiffDisplayRow],
         metadata: [DiffLineMetadata],
         lineBackgrounds: [NSColor?],
+        theme: DiffRenderTheme,
         lineHeight: CGFloat
     ) {
-        lineMetadata = metadata
+        self.rows = rows
+        self.lineMetadata = metadata
+        self.lineBackgrounds = lineBackgrounds
+        self.theme = theme
         diffLineHeight = lineHeight
-        backgroundLayoutManager.lineBackgrounds = lineBackgrounds
-
-        textView.textStorage?.setAttributedString(attributedString)
-
-        guard let container = textView.textContainer else { return }
-        backgroundLayoutManager.ensureLayout(for: container)
-
-        let usedRect = backgroundLayoutManager.usedRect(for: container)
-        let height = CGFloat(max(metadata.count, 1)) * lineHeight
-        let measuredWidth = usedRect.width + DiffMetrics.horizontalPadding
-        let width = max(measuredWidth, expectedWidth, 100)
-        expectedWidth = width
         expectedRowCount = metadata.count
-
-        textView.setFrameSize(NSSize(width: width, height: height))
-        container.size = NSSize(width: width, height: height)
+        attributedLineCache.removeAll(keepingCapacity: true)
         invalidateIntrinsicContentSize()
+        needsDisplay = true
     }
 
     override var intrinsicContentSize: NSSize {
         let rowCount = max(lineMetadata.count, expectedRowCount, 1)
-        let height = CGFloat(rowCount) * diffLineHeight
-        guard let container = textView.textContainer else {
-            return NSSize(width: max(expectedWidth, 100), height: height)
-        }
-        let usedRect = backgroundLayoutManager.usedRect(for: container)
-        let measuredWidth = usedRect.width + DiffMetrics.horizontalPadding
-        return NSSize(width: max(measuredWidth, expectedWidth, 100), height: height)
+        return NSSize(width: max(expectedWidth, 100), height: CGFloat(rowCount) * diffLineHeight)
     }
 
-    override func layout() {
-        super.layout()
-        textView.frame = bounds
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard !rows.isEmpty else { return }
+
+        let firstLine = max(0, Int(floor(dirtyRect.minY / diffLineHeight)) - 1)
+        let lastLine = min(rows.count, Int(ceil(dirtyRect.maxY / diffLineHeight)) + 1)
+        guard firstLine < lastLine else { return }
+
+        for index in firstLine ..< lastLine {
+            let y = CGFloat(index) * diffLineHeight
+            let rowRect = NSRect(x: 0, y: y, width: max(bounds.width, expectedWidth), height: diffLineHeight)
+            if let background = index < lineBackgrounds.count ? lineBackgrounds[index] : nil {
+                background.setFill()
+                rowRect.fill()
+            }
+
+            let attributed = cachedAttributedLine(at: index)
+            let textY = y + max(0, (diffLineHeight - theme.font.ascender + theme.font.descender) / 2)
+            attributed.draw(
+                with: NSRect(x: 6, y: textY, width: rowRect.width - 12, height: diffLineHeight),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]
+            )
+        }
+    }
+
+    private func cachedAttributedLine(at index: Int) -> NSAttributedString {
+        if let cached = attributedLineCache[index] {
+            return cached
+        }
+        let attributed = attributedLine(for: rows[index])
+        attributedLineCache[index] = attributed
+        return attributed
+    }
+
+    private func attributedLine(for row: DiffDisplayRow) -> NSAttributedString {
+        let baseColor: NSColor = switch row.kind {
+        case .addition: theme.additionColor
+        case .deletion: theme.deletionColor
+        default: theme.defaultColor
+        }
+        let emphasizedBackground: NSColor = switch row.kind {
+        case .addition: theme.additionBackground.withAlphaComponent(0.85)
+        case .deletion: theme.deletionBackground.withAlphaComponent(0.85)
+        default: theme.collapsedBackground.withAlphaComponent(0.85)
+        }
+
+        if let segments = segments(for: row), !segments.isEmpty {
+            let result = NSMutableAttributedString()
+            for segment in segments {
+                append(
+                    segment.text,
+                    to: result,
+                    color: baseColor,
+                    background: segment.emphasized ? emphasizedBackground : nil
+                )
+            }
+            return result
+        }
+
+        let result = NSMutableAttributedString()
+        append(text(for: row), to: result, color: baseColor, background: nil)
+        return result
+    }
+
+    private func append(
+        _ text: String,
+        to result: NSMutableAttributedString,
+        color: NSColor,
+        background: NSColor?
+    ) {
+        guard !text.isEmpty else { return }
+        let baseAttributes = attributes(color: color, background: background)
+        let segment = NSMutableAttributedString(string: text, attributes: baseAttributes)
+        let fullRange = NSRange(location: 0, length: (text as NSString).length)
+        for rule in theme.rules {
+            let matches = rule.regex.matches(in: text, range: fullRange)
+            for match in matches {
+                segment.addAttribute(.foregroundColor, value: rule.color, range: match.range)
+            }
+        }
+        result.append(segment)
+    }
+
+    private func attributes(color: NSColor, background: NSColor?) -> [NSAttributedString.Key: Any] {
+        var attributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: color,
+            .font: theme.font,
+            .paragraphStyle: paragraphStyle,
+        ]
+        if let background {
+            attributes[.backgroundColor] = background
+        }
+        return attributes
+    }
+
+    private func segments(for row: DiffDisplayRow) -> [DiffInlineSegment]? {
+        switch row.kind {
+        case .deletion:
+            row.oldInlineSegments
+        case .addition:
+            row.newInlineSegments
+        default:
+            nil
+        }
+    }
+
+    private func text(for row: DiffDisplayRow) -> String {
+        switch row.kind {
+        case .deletion:
+            row.oldText ?? ""
+        case .addition:
+            row.newText ?? ""
+        default:
+            row.newText ?? row.oldText ?? row.text
+        }
     }
 }
 

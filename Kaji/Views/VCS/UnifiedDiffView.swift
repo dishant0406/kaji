@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UnifiedDiffView: View {
     let rows: [DiffDisplayRow]
+    let renderPlan: DiffRenderPlan
     let filePath: String
     var onViewMore: ((Int, DiffContextExpansionDirection) -> Void)?
     var contextExpansion: ((Int) -> DiffHunkContextExpansion)?
@@ -10,12 +11,12 @@ struct UnifiedDiffView: View {
     var comments: [DiffComment] = []
     var suppressLeadingTopBorder: Bool = false
 
-    private var chunks: [DiffChunk] {
-        buildDiffChunks(from: rows)
+    private var chunks: [UnifiedDiffRenderChunk] {
+        renderPlan.unifiedChunks
     }
 
     private var numberColumnWidth: CGFloat {
-        lineNumberWidth(for: maxLineNumber(in: rows))
+        lineNumberWidth(for: renderPlan.maxLineNumber)
     }
 
     var body: some View {
@@ -29,8 +30,8 @@ struct UnifiedDiffView: View {
                         onViewMore: onViewMore,
                         showsTopBorder: !(index == 0 && suppressLeadingTopBorder)
                     )
-                case let .codeBlock(blockRows, hunkIndex):
-                    unifiedCodeBlock(blockRows, hunkIndex: hunkIndex)
+                case let .codeBlock(block):
+                    unifiedCodeBlock(block)
                 }
             }
         }
@@ -43,9 +44,9 @@ struct UnifiedDiffView: View {
         numberColumnWidth * 2 + 2 + DiffGutterNSView.prefixColumnWidth
     }
 
-    private func unifiedCodeBlock(_ blockRows: [DiffDisplayRow], hunkIndex: Int?) -> some View {
-        let height = CGFloat(blockRows.count) * diffLineHeight
-        let metadata = buildDiffMetadata(from: blockRows)
+    private func unifiedCodeBlock(_ block: DiffRenderCodeBlock) -> some View {
+        let height = CGFloat(block.rows.count) * diffLineHeight
+        let metadata = buildDiffMetadata(from: block.rows)
         return ZStack(alignment: .leading) {
             HStack(alignment: .top, spacing: 0) {
                 DiffGutterBridge(
@@ -62,8 +63,10 @@ struct UnifiedDiffView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     DiffContentBridge(
-                        rows: blockRows,
-                        backgroundSide: .both
+                        rows: block.rows,
+                        backgroundSide: .both,
+                        signature: block.signature,
+                        maxDisplayColumns: block.maxDisplayColumns
                     )
                     .frame(height: height)
                 }
@@ -71,7 +74,7 @@ struct UnifiedDiffView: View {
                 .zIndex(0)
             }
 
-            hunkControls(hunkIndex: hunkIndex)
+            hunkControls(hunkIndex: block.hunkIndex)
         }
         .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)

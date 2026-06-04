@@ -12,16 +12,21 @@ final class CodingAgentOutboundNotificationCoordinator {
 
     private let delay: Duration
     private let sleep: @Sendable (Duration) async -> Void
+    private let notificationPolicy: (KajiNotification.Source) -> CodingAgentNotificationPolicy
     private var pendingGenericTasks: [PendingKey: Task<Void, Never>] = [:]
 
     init(
         delay: Duration = .seconds(2),
         sleep: @escaping @Sendable (Duration) async -> Void = {
             try? await Task.sleep(for: $0)
+        },
+        notificationPolicy: @escaping (KajiNotification.Source) -> CodingAgentNotificationPolicy = {
+            AIProviderRegistry.shared.notificationPolicy(for: $0)
         }
     ) {
         self.delay = delay
         self.sleep = sleep
+        self.notificationPolicy = notificationPolicy
     }
 
     func deliver(
@@ -30,7 +35,7 @@ final class CodingAgentOutboundNotificationCoordinator {
         send: @escaping @Sendable (NotificationOutboundEvent) async -> Void
     ) {
         guard shouldDelayGenericCompletion(notification) else {
-            Task { await send(event) }
+            Task.detached { await send(event) }
             return
         }
 
@@ -42,7 +47,7 @@ final class CodingAgentOutboundNotificationCoordinator {
         let key = pendingKey(for: event)
         pendingGenericTasks[key]?.cancel()
         pendingGenericTasks[key] = nil
-        Task { await send(event) }
+        Task.detached { await send(event) }
     }
 
     private func scheduleGeneric(
@@ -51,7 +56,7 @@ final class CodingAgentOutboundNotificationCoordinator {
     ) {
         let key = pendingKey(for: event)
         pendingGenericTasks[key]?.cancel()
-        pendingGenericTasks[key] = Task { [delay, sleep] in
+        pendingGenericTasks[key] = Task.detached { [delay, sleep] in
             await sleep(delay)
             guard !Task.isCancelled else { return }
             await send(event)
@@ -62,7 +67,7 @@ final class CodingAgentOutboundNotificationCoordinator {
     }
 
     private func shouldDelayGenericCompletion(_ notification: KajiNotification) -> Bool {
-        AIProviderRegistry.shared.notificationPolicy(for: notification.source).coalesceGenericCompletions
+        notificationPolicy(notification.source).coalesceGenericCompletions
     }
 
     private func isGeneric(_ body: String) -> Bool {

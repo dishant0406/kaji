@@ -36,6 +36,7 @@ struct DiffBodyView: View {
                     case .unified:
                         UnifiedDiffView(
                             rows: diff.rows,
+                            renderPlan: diff.renderPlan,
                             filePath: filePath,
                             onViewMore: onViewMore,
                             contextExpansion: contextExpansion,
@@ -47,6 +48,7 @@ struct DiffBodyView: View {
                     case .split:
                         SplitDiffView(
                             rows: diff.rows,
+                            renderPlan: diff.renderPlan,
                             filePath: filePath,
                             onViewMore: onViewMore,
                             contextExpansion: contextExpansion,

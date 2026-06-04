@@ -131,14 +131,11 @@ func buildDiffAttributedString(
 struct DiffContentBridge: NSViewRepresentable {
     let rows: [DiffDisplayRow]
     let backgroundSide: DiffBackgroundSide
+    let signature: Int?
+    let maxDisplayColumns: Int?
 
     final class Coordinator {
         var configuredSignature = Int.min
-        var buildTask: Task<Void, Never>?
-
-        deinit {
-            buildTask?.cancel()
-        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -150,36 +147,27 @@ struct DiffContentBridge: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: DiffContentNSView, context: Context) {
-        let signature = contentSignature
+        let signature = signature ?? contentSignature
         guard signature != context.coordinator.configuredSignature else { return }
         context.coordinator.configuredSignature = signature
-        context.coordinator.buildTask?.cancel()
-
         let capturedRows = rows
         let side = backgroundSide
         let theme = DiffRenderTheme.current()
-
-        let maxColumns = Self.maxDisplayColumns(in: capturedRows)
+        let metadata = buildDiffMetadata(from: capturedRows)
+        let backgrounds = buildLineBackgrounds(metadata: metadata, side: side, theme: theme)
+        let maxColumns = maxDisplayColumns ?? Self.maxDisplayColumns(in: capturedRows)
         nsView.prepareSize(
             rowCount: capturedRows.count,
             maxColumns: maxColumns,
             lineHeight: diffLineHeight
         )
-
-        context.coordinator.buildTask = Task { [weak nsView] in
-            let rendered = await GitProcessRunner.offMain {
-                let block = buildDiffAttributedString(from: capturedRows, theme: theme)
-                let backgrounds = buildLineBackgrounds(metadata: block.metadata, side: side, theme: theme)
-                return DiffRenderedBundle(block: block, backgrounds: backgrounds)
-            }
-            guard !Task.isCancelled, let nsView else { return }
-            nsView.configure(
-                attributedString: rendered.block.attributedString,
-                metadata: rendered.block.metadata,
-                lineBackgrounds: rendered.backgrounds,
-                lineHeight: diffLineHeight
-            )
-        }
+        nsView.configure(
+            rows: capturedRows,
+            metadata: metadata,
+            lineBackgrounds: backgrounds,
+            theme: theme,
+            lineHeight: diffLineHeight
+        )
     }
 
     private static func maxDisplayColumns(in rows: [DiffDisplayRow]) -> Int {

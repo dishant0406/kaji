@@ -7,11 +7,15 @@ import Testing
 struct CodingAgentOutboundNotificationCoordinatorTests {
     @Test
     func richerCodexMessageCancelsPendingGenericDelivery() async {
-        let coordinator = CodingAgentOutboundNotificationCoordinator(delay: .seconds(1)) { _ in
-            while !Task.isCancelled {
-                await Task.yield()
-            }
-        }
+        let coordinator = CodingAgentOutboundNotificationCoordinator(
+            delay: .seconds(1),
+            sleep: { _ in
+                while !Task.isCancelled {
+                    await Task.yield()
+                }
+            },
+            notificationPolicy: { _ in .init(coalesceGenericCompletions: true) }
+        )
         let recorder = DeliveryRecorder()
 
         coordinator.deliver(
@@ -32,7 +36,11 @@ struct CodingAgentOutboundNotificationCoordinatorTests {
 
     @Test
     func genericCodexMessageDeliversWhenNoRicherUpdateArrives() async {
-        let coordinator = CodingAgentOutboundNotificationCoordinator(delay: .milliseconds(25)) { _ in }
+        let coordinator = CodingAgentOutboundNotificationCoordinator(
+            delay: .milliseconds(25),
+            sleep: { _ in },
+            notificationPolicy: { _ in .init(coalesceGenericCompletions: true) }
+        )
         let recorder = DeliveryRecorder()
 
         coordinator.deliver(
