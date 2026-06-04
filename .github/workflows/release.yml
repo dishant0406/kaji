@@ -127,14 +127,16 @@ jobs:
         with:
           name: native-deps
 
-      - name: Restore native dependency paths
+
+      - name: Restore executable permissions
         run: |
-          echo "Verifying native dependencies..."
-          ls -la GhosttyKit.xcframework/ 2>/dev/null || echo "WARNING: GhosttyKit.xcframework missing"
-          ls -la .dev-support/cef-runtime/ 2>/dev/null || echo "WARNING: CEF runtime missing"
-          ls -la Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs 2>/dev/null || echo "WARNING: agent runtime missing"
-          ls -la Kaji/Resources/pi/kaji-agent.mjs 2>/dev/null || echo "WARNING: parent agent missing"
-          ls -la Kaji/Resources/Zlob/zlob 2>/dev/null || echo "WARNING: zlob missing"
+          chmod +x Kaji/Resources/Zlob/zlob 2>/dev/null || true
+          for helper in .dev-support/cef-runtime/build/tests/cefsimple/Release/cefsimple\ Helper*.app; do
+            [[ -d "$helper" ]] || continue
+            name="$(basename "$helper" .app)"
+            chmod +x "$helper/Contents/MacOS/$name" 2>/dev/null || true
+          done
+          echo "Permissions restored"
 
       - name: Resolve Swift packages
         run: swift package resolve
