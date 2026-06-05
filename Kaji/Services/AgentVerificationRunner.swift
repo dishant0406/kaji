@@ -51,6 +51,9 @@ enum AgentVerificationRunner {
         process.standardOutput = outputPipe
         process.standardError = outputPipe
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
@@ -58,7 +61,12 @@ enum AgentVerificationRunner {
         }
 
         let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 120) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+            return VerificationResult(status: 124, output: "Verification timed out after 120s")
+        }
         let output = String(data: data, encoding: .utf8) ?? ""
         return VerificationResult(status: process.terminationStatus, output: trimmed(output))
     }

@@ -18,9 +18,17 @@ final class OsaScriptAdminPowerCommandRunner: AdminPowerCommandRunning {
         process.standardOutput = Pipe()
         process.standardError = Pipe()
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
-            process.waitUntilExit()
+            let timedOut = finished.wait(timeout: .now() + 10) == .timedOut
+            if timedOut {
+                process.terminate()
+                process.waitUntilExit()
+                return false
+            }
             return process.terminationStatus == 0
         } catch {
             return false

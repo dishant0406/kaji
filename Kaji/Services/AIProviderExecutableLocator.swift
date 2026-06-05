@@ -152,13 +152,22 @@ enum AIProviderExecutableLocator {
         process.standardOutput = output
         process.standardError = Pipe()
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
             return nil
         }
 
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+            return nil
+        }
+
         guard process.terminationStatus == 0 else { return nil }
 
         let data = output.fileHandleForReading.readDataToEndOfFile()

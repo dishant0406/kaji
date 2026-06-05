@@ -196,10 +196,17 @@ actor GitWorktreeService: GitWorktreeListing {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         try process.run()
         let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 10) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+        }
 
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""

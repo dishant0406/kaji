@@ -113,9 +113,18 @@ enum OpenCodeAgentHistory {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = Pipe()
+
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do { try process.run() } catch { return nil }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 3) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+            return nil
+        }
         return process.terminationStatus == 0 ? data : nil
     }
 

@@ -103,6 +103,9 @@ enum FileTreeService {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
@@ -121,7 +124,11 @@ enum FileTreeService {
 
         let outData = (try? stdoutPipe.fileHandleForReading.readToEnd()) ?? Data()
         _ = try? stderrPipe.fileHandleForReading.readToEnd()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+        }
 
         var result: Set<String> = []
         var current = Data()

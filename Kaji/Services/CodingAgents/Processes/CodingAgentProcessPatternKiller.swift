@@ -40,8 +40,15 @@ enum CodingAgentProcessPatternKiller {
         process.standardOutput = Pipe()
         process.standardError = Pipe()
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         try process.run()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+        }
 
         guard process.terminationStatus == 0 || process.terminationStatus == 1 else {
             throw CodingAgentProcessKillError.signalFailed(process.terminationStatus)

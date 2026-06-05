@@ -50,6 +50,9 @@ enum AgentEditProcessRunner {
         process.standardError = stderrPipe
         processBox.set(process)
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
@@ -58,7 +61,11 @@ enum AgentEditProcessRunner {
 
         let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 60) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+        }
 
         if processBox.isCancelled { throw CancellationError() }
         return AgentEditProcessResult(

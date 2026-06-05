@@ -20,13 +20,16 @@ enum MCPRuntimeCommandRunner {
         process.standardOutput = output
         process.standardError = error
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do { try process.run() } catch { return nil }
-        let deadline = Date().addingTimeInterval(timeout)
-        while process.isRunning, Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.05)
+        let timedOut = finished.wait(timeout: .now() + timeout) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+            return nil
         }
-        if process.isRunning { process.terminate() }
-        process.waitUntilExit()
 
         let data = output.fileHandleForReading.readDataToEndOfFile()
         guard let text = String(data: data, encoding: .utf8), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {

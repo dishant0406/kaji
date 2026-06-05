@@ -50,6 +50,9 @@ enum AIUsageTokenReader {
         process.standardOutput = stdout
         process.standardError = stderr
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
@@ -58,7 +61,12 @@ enum AIUsageTokenReader {
 
         let outputData = stdout.fileHandleForReading.readDataToEndOfFile()
         _ = stderr.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+            return nil
+        }
 
         guard process.terminationStatus == 0,
               let output = String(data: outputData, encoding: .utf8)

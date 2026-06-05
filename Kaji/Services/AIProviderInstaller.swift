@@ -27,12 +27,21 @@ enum AIProviderInstaller {
         process.arguments = command.arguments
         process.standardOutput = Pipe()
         process.standardError = Pipe()
+
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
             return .failure(error)
         }
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 120) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+            return .failure(InstallError.failed(status: -1))
+        }
         guard process.terminationStatus == 0 else { return .failure(InstallError.failed(status: process.terminationStatus)) }
         return .success(())
     }

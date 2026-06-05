@@ -125,8 +125,12 @@ enum GitProcessRunner {
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
+
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
+
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
 
         do {
             try process.run()
@@ -140,11 +144,16 @@ enum GitProcessRunner {
             stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         }
         let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 30) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+        }
 
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-        let truncated = process.terminationReason == .uncaughtSignal
+
+        let truncated = timedOut || process.terminationReason == .uncaughtSignal
         return GitProcessResult(
             status: process.terminationStatus,
             stdout: stdout,

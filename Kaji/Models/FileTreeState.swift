@@ -314,6 +314,9 @@ final class FileTreeState {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
+
         do {
             try process.run()
         } catch {
@@ -322,7 +325,11 @@ final class FileTreeState {
 
         let outData = (try? stdoutPipe.fileHandleForReading.readToEnd()) ?? Data()
         _ = try? stderrPipe.fileHandleForReading.readToEnd()
-        process.waitUntilExit()
+        let timedOut = finished.wait(timeout: .now() + 10) == .timedOut
+        if timedOut {
+            process.terminate()
+            process.waitUntilExit()
+        }
 
         let normalizedRoot = repoRoot.hasSuffix("/") ? String(repoRoot.dropLast()) : repoRoot
         var fileStatuses: [String: FileStatus] = [:]
