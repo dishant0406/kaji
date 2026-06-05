@@ -4,12 +4,23 @@ enum KajiAgentRuntimeLocator {
     private static let cache = KajiAgentRuntimeLocatorCache()
     private static let bunLookupTTL: TimeInterval = 30
 
-    static func sourceLaunch(projectPath: String?, sessionDirectory: String? = nil, approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue) -> KajiAgentLaunch? {
+    static func sourceLaunch(
+        projectPath: String?,
+        sessionDirectory: String? = nil,
+        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+    ) -> KajiAgentLaunch? {
         guard let root = projectRoot() else { return nil }
         let runtimeRoot = root.appending(path: "KajiAgentRuntime")
         let script = runtimeRoot.appending(path: "src/kaji-rpc.ts")
         guard FileManager.default.fileExists(atPath: script.path), let bun = bunExecutablePath() else { return nil }
-        return KajiAgentLaunch(arguments: [bun, script.path] + launchArguments(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode), directory: runtimeRoot)
+        return KajiAgentLaunch(
+            arguments: [bun, script.path] + launchArguments(
+                projectPath: projectPath,
+                sessionDirectory: sessionDirectory,
+                approvalMode: approvalMode
+            ),
+            directory: runtimeRoot
+        )
     }
 
     static func bundledScriptURL() -> URL? {
@@ -17,9 +28,20 @@ enum KajiAgentRuntimeLocator {
             ?? bundledDevScriptURL()
     }
 
-    static func bundledLaunch(projectPath: String?, sessionDirectory: String? = nil, approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue) -> KajiAgentLaunch? {
+    static func bundledLaunch(
+        projectPath: String?,
+        sessionDirectory: String? = nil,
+        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+    ) -> KajiAgentLaunch? {
         guard let script = bundledScriptURL(), let bun = bunExecutablePath() else { return nil }
-        return KajiAgentLaunch(arguments: [bun, script.path] + launchArguments(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode), directory: nil)
+        return KajiAgentLaunch(
+            arguments: [bun, script.path] + launchArguments(
+                projectPath: projectPath,
+                sessionDirectory: sessionDirectory,
+                approvalMode: approvalMode
+            ),
+            directory: nil
+        )
     }
 
     static func bunExecutablePath() -> String? {
@@ -48,21 +70,35 @@ enum KajiAgentRuntimeLocator {
     }
 
     private static func bunVersion(at path: String) -> KajiAgentBunVersion {
+        guard FileManager.default.isExecutableFile(atPath: path) else { return KajiAgentBunVersion() }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
+
         process.arguments = ["--version"]
         let output = Pipe()
         process.standardOutput = output
         process.standardError = Pipe()
+
+        let semaphore = DispatchSemaphore(value: 0)
+        nonisolated(unsafe) var exitCode: Int32 = -1
+        nonisolated(unsafe) var outputData = Data()
         do {
             try process.run()
         } catch {
             return KajiAgentBunVersion()
         }
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return KajiAgentBunVersion() }
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        return KajiAgentBunVersion(String(data: data, encoding: .utf8) ?? "")
+        process.terminationHandler = { proc in
+            exitCode = proc.terminationStatus
+            outputData = output.fileHandleForReading.readDataToEndOfFile()
+            semaphore.signal()
+        }
+        _ = semaphore.wait(timeout: .now() + 3)
+        if process.isRunning {
+            process.terminate()
+            return KajiAgentBunVersion()
+        }
+        guard exitCode == 0 else { return KajiAgentBunVersion() }
+        return KajiAgentBunVersion(String(data: outputData, encoding: .utf8) ?? "")
     }
 
     private static func bundledResourceURL(named name: String) -> URL? {
@@ -84,6 +120,8 @@ enum KajiAgentRuntimeLocator {
             ProcessInfo.processInfo.environment["KAJI_PROJECT_ROOT"].map { URL(fileURLWithPath: $0, isDirectory: true) },
             URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true),
             Bundle.main.executableURL?.deletingLastPathComponent(),
+
+            Bundle.main.bundleURL,
         ].compactMap(\.self)
 
         for candidate in candidates {
@@ -97,7 +135,7 @@ enum KajiAgentRuntimeLocator {
     private static func containingProjectRoot(startingAt url: URL, fileManager: FileManager) -> URL? {
         var cursor = url.standardizedFileURL
         while cursor.path != "/" {
-            if fileManager.fileExists(atPath: cursor.appending(path: "Kaji/Info.plist").path),
+            if fileManager.fileExists(atPath: cursor.appending(path: "Package.swift").path),
                fileManager.fileExists(atPath: cursor.appending(path: "KajiAgentRuntime/src/kaji-rpc.ts").path)
             {
                 return cursor

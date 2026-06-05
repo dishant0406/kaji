@@ -55,11 +55,16 @@ final class KajiAgentStore {
         self.scope = scope
         process.onMessage = { [weak self] frame in self?.handle(frame) }
         process.onError = { [weak self] error in self?.handleRuntimeError(error) }
+
+        Task.detached { KajiAgentRuntimeLocator.clearCache()
+            _ = KajiAgentRuntimeLocator.bunExecutablePath()
+        }
     }
 
     var readiness: KajiAgentReadiness {
         guard KajiAgentRuntimeLocator.bunExecutablePath() != nil else { return .missingBun }
-        guard KajiAgentRuntimeLocator.sourceLaunch(projectPath: projectPath) != nil || KajiAgentRuntimeLocator.bundledScriptURL() != nil else {
+        guard KajiAgentRuntimeLocator.sourceLaunch(projectPath: projectPath) != nil || KajiAgentRuntimeLocator.bundledScriptURL() != nil
+        else {
             return .missingRuntime
         }
         return .ready
@@ -69,7 +74,11 @@ final class KajiAgentStore {
         self.appState = appState
         self.projectStore = projectStore
         self.worktreeStore = worktreeStore
-        projectPath = scope?.projectPath ?? projectPathOverride ?? activeWorktreePath(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+        projectPath = scope?.projectPath ?? projectPathOverride ?? activeWorktreePath(
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
         process.projectPath = projectPath
         process.sessionDirectory = scope.map(KajiAgentSessionDirectory.path(for:))
         process.approvalMode = sessionPermissionMode?.rawValue ?? settings.selectedPermissionMode.rawValue
@@ -220,7 +229,10 @@ final class KajiAgentStore {
     }
 
     func setActiveTools(_ names: [String]) {
-        send(KajiAgentRPCFrame(type: "set_active_tools", data: .object(["toolNames": .array(names.map(KajiAgentJSONValue.string))]))) { [weak self] _ in
+        send(KajiAgentRPCFrame(
+            type: "set_active_tools",
+            data: .object(["toolNames": .array(names.map(KajiAgentJSONValue.string))])
+        )) { [weak self] _ in
             self?.requestTools()
         }
     }
@@ -263,7 +275,11 @@ final class KajiAgentStore {
 
     func executeBash(_ command: String) {
         send(KajiAgentRPCFrame(type: "bash", data: .object(["command": .string(command)]))) { [weak self] frame in
-            self?.appendSystem(title: "Bash", detail: frame.data?.prettyDescription ?? frame.error ?? "", kind: frame.success == false ? .error : .event)
+            self?.appendSystem(
+                title: "Bash",
+                detail: frame.data?.prettyDescription ?? frame.error ?? "",
+                kind: frame.success == false ? .error : .event
+            )
         }
     }
 
@@ -361,7 +377,14 @@ final class KajiAgentStore {
         case "agent_end":
             isRunning = false
             send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in self?.applyState(frame.data) }
-        case "message_start", "message_update", "message_end", "tool_execution_start", "tool_execution_update", "tool_execution_end", "turn_start", "turn_end":
+        case "message_start",
+             "message_update",
+             "message_end",
+             "tool_execution_start",
+             "tool_execution_update",
+             "tool_execution_end",
+             "turn_start",
+             "turn_end":
             handleEvent(frame.event ?? KajiAgentSessionEvent(frame: frame))
         case "fatal_error":
             appendSystem(title: "Runtime failed", detail: frame.error ?? "Unknown runtime error", kind: .error)
@@ -445,7 +468,8 @@ final class KajiAgentStore {
             appendAssistantDelta(update.delta ?? "", contentIndex: update.contentIndex)
         case "thinking_delta":
             appendThinkingDelta(update.delta ?? "", contentIndex: update.contentIndex)
-        case "toolcall_start", "toolcall_delta":
+        case "toolcall_start",
+             "toolcall_delta":
             break
         default:
             break
@@ -479,10 +503,23 @@ final class KajiAgentStore {
         guard !parts.isEmpty else { return }
         for part in parts.sorted(by: { ($0.index ?? 0) < ($1.index ?? 0) }) where !part.text.isEmpty {
             switch part.kind {
-            case .text, .image:
-                appendResponseMessage(KajiAgentMessage(kind: .assistant, title: "Kaji", detail: part.text, contentIndex: part.index, isComplete: false))
+            case .text,
+                 .image:
+                appendResponseMessage(KajiAgentMessage(
+                    kind: .assistant,
+                    title: "Kaji",
+                    detail: part.text,
+                    contentIndex: part.index,
+                    isComplete: false
+                ))
             case .thinking:
-                appendResponseMessage(KajiAgentMessage(kind: .thinking, title: "Thinking", detail: part.text, contentIndex: part.index, isComplete: false))
+                appendResponseMessage(KajiAgentMessage(
+                    kind: .thinking,
+                    title: "Thinking",
+                    detail: part.text,
+                    contentIndex: part.index,
+                    isComplete: false
+                ))
             }
         }
     }
@@ -498,7 +535,13 @@ final class KajiAgentStore {
         if let location = responseLocation(where: { $0.kind == .assistant && !$0.isComplete && $0.contentIndex == contentIndex }) {
             updateMessage(at: location) { $0.detail += text }
         } else {
-            appendResponseMessage(KajiAgentMessage(kind: .assistant, title: "Kaji", detail: text, contentIndex: contentIndex, isComplete: false))
+            appendResponseMessage(KajiAgentMessage(
+                kind: .assistant,
+                title: "Kaji",
+                detail: text,
+                contentIndex: contentIndex,
+                isComplete: false
+            ))
         }
     }
 
@@ -513,7 +556,13 @@ final class KajiAgentStore {
         if let location = activeTailMessageLocation(where: { $0.kind == .thinking && !$0.isComplete && $0.contentIndex == contentIndex }) {
             updateMessage(at: location) { $0.detail += text }
         } else {
-            appendResponseMessage(KajiAgentMessage(kind: .thinking, title: "Thinking", detail: text, contentIndex: contentIndex, isComplete: false))
+            appendResponseMessage(KajiAgentMessage(
+                kind: .thinking,
+                title: "Thinking",
+                detail: text,
+                contentIndex: contentIndex,
+                isComplete: false
+            ))
         }
     }
 
@@ -528,7 +577,9 @@ final class KajiAgentStore {
         }
         guard let turnIndex = activeTurnIndex() else { return }
         for blockIndex in turns[turnIndex].blocks.indices {
-            guard case var .message(message) = turns[turnIndex].blocks[blockIndex], message.kind == .thinking, !message.isComplete else { continue }
+            guard case var .message(message) = turns[turnIndex].blocks[blockIndex], message.kind == .thinking,
+                  !message.isComplete
+            else { continue }
             message.isComplete = true
             turns[turnIndex].blocks[blockIndex] = .message(message)
         }
@@ -543,7 +594,14 @@ final class KajiAgentStore {
             "turn": .string(activeTurnID?.uuidString ?? ""),
             "lastBlock": .string(activeTurnIndex().flatMap { turns[$0].blocks.last?.debugName } ?? ""),
         ])
-        appendToolToActiveGroup(KajiAgentMessage(kind: .tool, title: event.toolName ?? "Tool", detail: "", toolCallID: id, toolArguments: event.args?.prettyDescription, isComplete: false))
+        appendToolToActiveGroup(KajiAgentMessage(
+            kind: .tool,
+            title: event.toolName ?? "Tool",
+            detail: "",
+            toolCallID: id,
+            toolArguments: event.args?.prettyDescription,
+            isComplete: false
+        ))
     }
 
     private func updateTool(_ event: KajiAgentSessionEvent) {
@@ -593,7 +651,11 @@ final class KajiAgentStore {
         guard toolName == "todo_write" else { return }
         if isError {
             KajiAgentEventLog.record("todo_write_failed", fields: ["source": .string(source)])
-            appendSystem(title: "Todo update failed", detail: result?.textContent ?? "Progress may be stale until todo_write succeeds.", kind: .error)
+            appendSystem(
+                title: "Todo update failed",
+                detail: result?.textContent ?? "Progress may be stale until todo_write succeeds.",
+                kind: .error
+            )
             return
         }
         guard let phasesValue = result?.details?.objectValue?["phases"],
@@ -609,8 +671,8 @@ final class KajiAgentStore {
             "source": .string(source),
             "phaseCount": .number(Double(phases.count)),
             "taskCount": .number(Double(phases.flatMap(\.tasks).count)),
-            "completedCount": .number(Double(phases.flatMap(\.tasks).filter { $0.status == "completed" }.count)),
-            "inProgressCount": .number(Double(phases.flatMap(\.tasks).filter { $0.status == "in_progress" }.count)),
+            "completedCount": .number(Double(phases.flatMap(\.tasks).count(where: { $0.status == "completed" }))),
+            "inProgressCount": .number(Double(phases.flatMap(\.tasks).count(where: { $0.status == "in_progress" }))),
         ])
     }
 
@@ -729,12 +791,16 @@ final class KajiAgentStore {
     }
 
     private func tool(at location: KajiAgentToolLocation) -> KajiAgentMessage? {
-        guard case let .toolGroup(group) = turns[location.turn].blocks[location.block], group.tools.indices.contains(location.tool) else { return nil }
+        guard case let .toolGroup(group) = turns[location.turn].blocks[location.block],
+              group.tools.indices.contains(location.tool)
+        else { return nil }
         return group.tools[location.tool]
     }
 
     private func updateTool(at location: KajiAgentToolLocation, mutate: (inout KajiAgentMessage) -> Void) {
-        guard case var .toolGroup(group) = turns[location.turn].blocks[location.block], group.tools.indices.contains(location.tool) else { return }
+        guard case var .toolGroup(group) = turns[location.turn].blocks[location.block],
+              group.tools.indices.contains(location.tool)
+        else { return }
         mutate(&group.tools[location.tool])
         turns[location.turn].blocks[location.block] = .toolGroup(group)
     }
@@ -749,8 +815,14 @@ final class KajiAgentStore {
         case "select":
             setQuestion(KajiAgentQuestion(id: id, title: frame.title ?? "Choose an option", method: method, options: frame.options ?? []))
         case "confirm":
-            setQuestion(KajiAgentQuestion(id: id, title: frame.title ?? frame.message ?? "Confirm", method: method, options: ["Confirm", "Cancel"]))
-        case "input", "editor":
+            setQuestion(KajiAgentQuestion(
+                id: id,
+                title: frame.title ?? frame.message ?? "Confirm",
+                method: method,
+                options: ["Confirm", "Cancel"]
+            ))
+        case "input",
+             "editor":
             setQuestion(KajiAgentQuestion(
                 id: id,
                 title: frame.title ?? "Kaji needs input",
@@ -766,7 +838,11 @@ final class KajiAgentStore {
         case "cancel":
             if let targetID = frame.targetId { clearQuestion(id: targetID) }
         case "notify":
-            appendSystem(title: frame.notifyType == "error" ? "Error" : "Notice", detail: frame.message ?? "", kind: frame.notifyType == "error" ? .error : .event)
+            appendSystem(
+                title: frame.notifyType == "error" ? "Error" : "Notice",
+                detail: frame.message ?? "",
+                kind: frame.notifyType == "error" ? .error : .event
+            )
         case "open_url":
             loginURL = frame.url
             loginInstructions = frame.instructions ?? frame.url
@@ -786,7 +862,13 @@ final class KajiAgentStore {
         case "setStatus":
             setStatus(key: frame.statusKey ?? "default", text: frame.statusText)
         case "set_editor_text":
-            editorQuestion = KajiAgentQuestion(id: id, title: "Runtime updated editor text", method: method, prefill: frame.text, options: [])
+            editorQuestion = KajiAgentQuestion(
+                id: id,
+                title: "Runtime updated editor text",
+                method: method,
+                prefill: frame.text,
+                options: []
+            )
         case "setTitle":
             if let title = frame.title { statusMessage = title }
         default:
@@ -797,14 +879,24 @@ final class KajiAgentStore {
     private func handleHostToolCall(_ frame: KajiAgentRPCFrame) {
         guard let id = frame.id else { return }
         Task { @MainActor in
-            let result = await KajiAgentHostToolRegistry.execute(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            let result = await KajiAgentHostToolRegistry.execute(
+                frame,
+                appState: appState,
+                projectStore: projectStore,
+                worktreeStore: worktreeStore
+            )
             send(KajiAgentRPCFrame(id: id, type: "host_tool_result", result: result, isError: result.isError))
         }
     }
 
     private func handleHostURIRequest(_ frame: KajiAgentRPCFrame) {
         guard let id = frame.id else { return }
-        let result = KajiAgentHostToolRegistry.resolveURI(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+        let result = KajiAgentHostToolRegistry.resolveURI(
+            frame,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
         send(result.response(id: id))
     }
 
@@ -1059,9 +1151,9 @@ enum KajiAgentResponseBlock: Identifiable, Hashable {
     var debugName: String {
         switch self {
         case let .message(message):
-            return "message:\(message.kind)"
+            "message:\(message.kind)"
         case let .toolGroup(group):
-            return "toolGroup:\(group.tools.count)"
+            "toolGroup:\(group.tools.count)"
         }
     }
 }
@@ -1107,12 +1199,12 @@ struct KajiAgentQuestion: Hashable {
     let id: String
     let title: String
     var method: String = "input"
-    var placeholder: String? = nil
-    var prefill: String? = nil
+    var placeholder: String?
+    var prefill: String?
     var promptStyle = false
     var isSecure = false
     var allowEmpty = false
-    var timeout: Double? = nil
+    var timeout: Double?
     let options: [String]
 }
 

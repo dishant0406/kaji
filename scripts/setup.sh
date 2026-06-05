@@ -142,5 +142,13 @@ cp -R "$SOURCE_TERMINFO_DIR" "$RUNTIME_RESOURCES_DIR/terminfo"
 printf "%s\n" "$EXPECTED_STAMP" > "$STAMP_FILE"
 invalidate_swiftpm_ghostty_products
 
+
+echo "==> Building Kaji Agent runtime"
+if command -v bun >/dev/null 2>&1; then
+    bash "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
+else
+    echo "    Bun not found; skipping agent runtime build (install: curl -fsSL https://bun.sh/install | bash)"
+fi
+
 echo "==> Done"
 echo "    Run 'swift build' to build the project"
