@@ -71,12 +71,16 @@ final class SleepPreventionController {
     func setBatteryLidCloseEnabled(_ enabled: Bool) {
         guard isBatteryLidCloseEnabled != enabled else { return }
         if enabled {
-            batteryLidCloseSleepStatus = batteryLidCloseSleepManager.begin()
-            isBatteryLidCloseEnabled = batteryLidCloseSleepStatus == .active
-            SleepPreventionPreferences.setBatteryLidCloseEnabled(isBatteryLidCloseEnabled, defaults: defaults)
+            Task { await enableBatteryLidCloseSleep() }
             return
         }
         releaseBatteryLidCloseSleep(preservePreference: false)
+    }
+
+    private func enableBatteryLidCloseSleep() async {
+        batteryLidCloseSleepStatus = await batteryLidCloseSleepManager.begin()
+        isBatteryLidCloseEnabled = batteryLidCloseSleepStatus == .active
+        SleepPreventionPreferences.setBatteryLidCloseEnabled(isBatteryLidCloseEnabled, defaults: defaults)
     }
 
     func stop() {
@@ -104,21 +108,25 @@ final class SleepPreventionController {
 
     private func updateBatteryLidCloseSleep() {
         guard isBatteryLidCloseEnabled else { return }
-        batteryLidCloseSleepStatus = batteryLidCloseSleepManager.begin()
+        Task { await applyBatteryLidCloseSleep() }
+    }
+
+    private func applyBatteryLidCloseSleep() async {
+        batteryLidCloseSleepStatus = await batteryLidCloseSleepManager.begin()
         isBatteryLidCloseEnabled = batteryLidCloseSleepStatus == .active
         SleepPreventionPreferences.setBatteryLidCloseEnabled(isBatteryLidCloseEnabled, defaults: defaults)
     }
 
     private func releaseBatteryLidCloseSleep(preservePreference: Bool) {
         let shouldPreservePreference = preservePreference && isBatteryLidCloseEnabled
-        batteryLidCloseSleepStatus = batteryLidCloseSleepManager.end()
-        let didRelease = batteryLidCloseSleepStatus == .inactive
-        if didRelease {
-            isBatteryLidCloseEnabled = false
+        Task {
+            batteryLidCloseSleepStatus = await batteryLidCloseSleepManager.end()
+            let didRelease = batteryLidCloseSleepStatus == .inactive
+            if didRelease { isBatteryLidCloseEnabled = false }
+            SleepPreventionPreferences.setBatteryLidCloseEnabled(
+                shouldPreservePreference ? true : !didRelease,
+                defaults: defaults
+            )
         }
-        SleepPreventionPreferences.setBatteryLidCloseEnabled(
-            shouldPreservePreference ? true : !didRelease,
-            defaults: defaults
-        )
     }
 }

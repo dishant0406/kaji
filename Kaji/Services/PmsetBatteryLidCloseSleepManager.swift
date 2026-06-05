@@ -15,13 +15,13 @@ final class PmsetBatteryLidCloseSleepManager: BatteryLidCloseSleepManaging {
         self.isExecutableFile = isExecutableFile
     }
 
-    func begin() -> SystemSleepAssertionStatus {
+    func begin() async -> SystemSleepAssertionStatus {
         guard status != .active else { return status }
         guard isExecutableFile("/usr/bin/pmset"), isExecutableFile("/usr/bin/osascript") else {
             status = .unavailable
             return status
         }
-        guard commandRunner.runPmset(arguments: ["-b", "disablesleep", "1"]) else {
+        guard await commandRunner.runPmset(arguments: ["-b", "disablesleep", "1"]) else {
             status = .failed
             return status
         }
@@ -30,12 +30,12 @@ final class PmsetBatteryLidCloseSleepManager: BatteryLidCloseSleepManaging {
         return status
     }
 
-    func end() -> SystemSleepAssertionStatus {
+    func end() async -> SystemSleepAssertionStatus {
         guard didDisableSleep else {
             status = .inactive
             return status
         }
-        guard commandRunner.runPmset(arguments: ["-b", "disablesleep", "0"]) else {
+        guard await commandRunner.runPmset(arguments: ["-b", "disablesleep", "0"]) else {
             status = .failed
             return status
         }

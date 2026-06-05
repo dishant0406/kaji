@@ -107,25 +107,27 @@ enum OpenCodeAgentHistory {
     }
 
     private static func runSQLite(databasePath: String, sql: String) -> Data? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
-        process.arguments = ["-json", databasePath, sql]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
+        DispatchQueue.global(qos: .userInitiated).sync {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+            process.arguments = ["-json", databasePath, sql]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = Pipe()
 
-        let finished = DispatchSemaphore(value: 0)
-        process.terminationHandler = { _ in finished.signal() }
+            let finished = DispatchSemaphore(value: 0)
+            process.terminationHandler = { _ in finished.signal() }
 
-        do { try process.run() } catch { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let timedOut = finished.wait(timeout: .now() + 3) == .timedOut
-        if timedOut {
-            process.terminate()
-            process.waitUntilExit()
-            return nil
+            do { try process.run() } catch { return nil }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let timedOut = finished.wait(timeout: .now() + 3) == .timedOut
+            if timedOut {
+                process.terminate()
+                process.waitUntilExit()
+                return nil
+            }
+            return process.terminationStatus == 0 ? data : nil
         }
-        return process.terminationStatus == 0 ? data : nil
     }
 
     private static func databaseTitle(_ row: DatabaseRow) -> String {

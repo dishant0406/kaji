@@ -35,46 +35,48 @@ enum AIUsageTokenReader {
     }
 
     static func fromKeychain(service: String, account: String? = nil) -> String? {
-        var arguments = ["find-generic-password"]
-        if let account, !account.isEmpty {
-            arguments += ["-a", account]
+        DispatchQueue.global(qos: .userInitiated).sync {
+            var arguments = ["find-generic-password"]
+            if let account, !account.isEmpty {
+                arguments += ["-a", account]
+            }
+            arguments += ["-s", service, "-w"]
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+            process.arguments = arguments
+
+            let stdout = Pipe()
+            let stderr = Pipe()
+            process.standardOutput = stdout
+            process.standardError = stderr
+
+            let finished = DispatchSemaphore(value: 0)
+            process.terminationHandler = { _ in finished.signal() }
+
+            do {
+                try process.run()
+            } catch {
+                return nil
+            }
+
+            let outputData = stdout.fileHandleForReading.readDataToEndOfFile()
+            _ = stderr.fileHandleForReading.readDataToEndOfFile()
+            let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
+            if timedOut {
+                process.terminate()
+                process.waitUntilExit()
+                return nil
+            }
+
+            guard process.terminationStatus == 0,
+                  let output = String(data: outputData, encoding: .utf8)
+            else {
+                return nil
+            }
+
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
         }
-        arguments += ["-s", service, "-w"]
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        process.arguments = arguments
-
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-
-        let finished = DispatchSemaphore(value: 0)
-        process.terminationHandler = { _ in finished.signal() }
-
-        do {
-            try process.run()
-        } catch {
-            return nil
-        }
-
-        let outputData = stdout.fileHandleForReading.readDataToEndOfFile()
-        _ = stderr.fileHandleForReading.readDataToEndOfFile()
-        let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
-        if timedOut {
-            process.terminate()
-            process.waitUntilExit()
-            return nil
-        }
-
-        guard process.terminationStatus == 0,
-              let output = String(data: outputData, encoding: .utf8)
-        else {
-            return nil
-        }
-
-        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 }

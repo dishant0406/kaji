@@ -12,27 +12,29 @@ enum CodingAgentCommandRunner {
             extraDirectories: extraDirectories
         )
         else { return [] }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = arguments
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = Pipe()
+        return DispatchQueue.global(qos: .userInitiated).sync {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: path)
+            process.arguments = arguments
+            let output = Pipe()
+            process.standardOutput = output
+            process.standardError = Pipe()
 
-        let finished = DispatchSemaphore(value: 0)
-        process.terminationHandler = { _ in finished.signal() }
+            let finished = DispatchSemaphore(value: 0)
+            process.terminationHandler = { _ in finished.signal() }
 
-        do { try process.run() } catch { return [] }
-        let timedOut = finished.wait(timeout: .now() + timeout) == .timedOut
-        if timedOut {
-            process.terminate()
-            process.waitUntilExit()
-            return []
+            do { try process.run() } catch { return [] }
+            let timedOut = finished.wait(timeout: .now() + timeout) == .timedOut
+            if timedOut {
+                process.terminate()
+                process.waitUntilExit()
+                return []
+            }
+
+            guard process.terminationStatus == 0,
+                  let text = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+            else { return [] }
+            return text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
         }
-
-        guard process.terminationStatus == 0,
-              let text = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
-        else { return [] }
-        return text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
     }
 }

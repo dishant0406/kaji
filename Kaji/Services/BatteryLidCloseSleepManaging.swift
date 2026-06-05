@@ -4,6 +4,6 @@ import Foundation
 protocol BatteryLidCloseSleepManaging {
     var status: SystemSleepAssertionStatus { get }
 
-    func begin() -> SystemSleepAssertionStatus
-    func end() -> SystemSleepAssertionStatus
+    func begin() async -> SystemSleepAssertionStatus
+    func end() async -> SystemSleepAssertionStatus
 }
