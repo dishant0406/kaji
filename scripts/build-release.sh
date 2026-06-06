@@ -150,6 +150,7 @@ strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
 if [[ -d "$SPM_BUILD_DIR/Kaji_Kaji.bundle" ]]; then
     cp -R "$SPM_BUILD_DIR/Kaji_Kaji.bundle" "$APP_BUNDLE/Contents/Resources/Kaji_Kaji.bundle"
 fi
+"$SCRIPT_DIR/stage-kaji-agent-native-addon.sh" --arch "$ARCH" --destination "$APP_BUNDLE/Contents/Resources/native"
 
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 if [[ -d "$CEF_ROOT/Release/Chromium Embedded Framework.framework" ]]; then
@@ -187,6 +188,12 @@ fi
 
 sign_sparkle
 sign_cef_runtime
+
+echo "==> Signing Kaji Agent native addon"
+for addon in "$APP_BUNDLE"/Contents/Resources/native/*.node; do
+    [[ -f "$addon" ]] || continue
+    sign_code "$addon"
+done
 
 echo "==> Signing KajiHookClient"
 sign_code "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
