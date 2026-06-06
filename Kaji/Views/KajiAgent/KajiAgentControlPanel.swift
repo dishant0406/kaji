@@ -33,7 +33,11 @@ struct KajiAgentControlPanel: View {
         case .login:
             optionList(store.loginProviders) { provider in
                 Button { store.login(providerID: provider.id) } label: {
-                    row(title: provider.name, detail: provider.authenticated ? "Connected" : "Not connected", icon: provider.authenticated ? "checkmark.circle" : "person.badge.key")
+                    row(
+                        title: provider.name,
+                        detail: provider.authenticated ? "Connected" : "Not connected",
+                        icon: provider.authenticated ? "checkmark.circle" : "person.badge.key"
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -93,7 +97,10 @@ struct KajiAgentControlPanel: View {
         .frame(maxHeight: 320)
     }
 
-    private func optionList<Data: RandomAccessCollection, Row: View>(_ data: Data, @ViewBuilder rowBuilder: @escaping (Data.Element) -> Row) -> some View where Data.Element: Identifiable {
+    private func optionList<Data: RandomAccessCollection>(
+        _ data: Data,
+        @ViewBuilder rowBuilder: @escaping (Data.Element) -> some View
+    ) -> some View where Data.Element: Identifiable {
         ScrollView(.vertical, showsIndicators: data.count > 5) {
             LazyVStack(spacing: 4) {
                 ForEach(Array(data), id: \.id) { item in

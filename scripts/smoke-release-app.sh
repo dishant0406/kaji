@@ -31,6 +31,24 @@ INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
 [[ -x "$EXECUTABLE" ]] || fail "Kaji executable missing"
 plutil -lint "$INFO_PLIST" >/dev/null
 
+RESOURCE_BUNDLE=$(find "$APP_BUNDLE/Contents/Resources" -maxdepth 1 -type d -name "*_Kaji.bundle" -print -quit)
+if [[ -z "$RESOURCE_BUNDLE" ]]; then
+    RESOURCE_BUNDLE=$(find "$APP_BUNDLE/Contents/Resources" -maxdepth 1 -type d -name "Kaji_Kaji.bundle" -print -quit)
+fi
+[[ -n "$RESOURCE_BUNDLE" ]] || fail "Kaji resource bundle missing"
+RUNTIME_FILE=""
+for candidate in \
+    "$RESOURCE_BUNDLE/kaji-agent-runtime.mjs" \
+    "$RESOURCE_BUNDLE/KajiAgentRuntime/kaji-agent-runtime.mjs"; do
+    if [[ -f "$candidate" ]]; then
+        RUNTIME_FILE="$candidate"
+        break
+    fi
+done
+[[ -n "$RUNTIME_FILE" ]] || fail "Kaji Agent runtime missing from resource bundle"
+RUNTIME_SIZE=$(stat -f%z "$RUNTIME_FILE")
+[[ "$RUNTIME_SIZE" -gt 1000000 ]] || fail "Kaji Agent runtime is unexpectedly small"
+
 if otool -L "$EXECUTABLE" | grep -q ".dev-support"; then
     fail "Kaji binary links to .dev-support"
 fi

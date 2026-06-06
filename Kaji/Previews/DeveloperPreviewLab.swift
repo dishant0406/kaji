@@ -11,10 +11,10 @@ private struct DeveloperPreviewLab: View {
     var body: some View {
         HStack(spacing: 0) {
             Sidebar()
-            .environment(stores.appState)
-            .environment(stores.projectStore)
-            .environment(stores.worktreeStore)
-            .frame(width: SidebarLayout.expandedWidth)
+                .environment(stores.appState)
+                .environment(stores.projectStore)
+                .environment(stores.worktreeStore)
+                .frame(width: SidebarLayout.expandedWidth)
 
             Rectangle()
                 .fill(KajiTheme.border)

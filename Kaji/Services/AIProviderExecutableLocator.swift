@@ -65,6 +65,7 @@ enum AIProviderExecutableLocator {
             directory.hasPrefix("/") ? directory : "\(homeDirectory)/\(directory)"
         } + [
             "\(homeDirectory)/.opencode/bin",
+            "\(homeDirectory)/.bun/bin",
             "\(homeDirectory)/.local/bin",
             "\(homeDirectory)/.volta/bin",
             "\(homeDirectory)/.asdf/shims",

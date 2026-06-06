@@ -24,34 +24,34 @@ struct NotificationDestinationRow: View {
 
                 Spacer(minLength: 0)
 
-                    if let status {
-                        Text(status)
-                            .kajiFont(size: SettingsMetrics.footnoteFontSize)
-                            .foregroundStyle(KajiTheme.fgDim)
-                            .kajiChangeFeedback(status == "Sent" ? KajiMotion.successFeedback : KajiMotion.invalidFeedback, value: status)
-                    }
+                if let status {
+                    Text(status)
+                        .kajiFont(size: SettingsMetrics.footnoteFontSize)
+                        .foregroundStyle(KajiTheme.fgDim)
+                        .kajiChangeFeedback(status == "Sent" ? KajiMotion.successFeedback : KajiMotion.invalidFeedback, value: status)
+                }
 
-                    Button {
-                        runTest()
-                    } label: {
-                        HStack(spacing: 6) {
-                            if isTesting {
-                                KajiSpinner(size: 10, lineWidth: 1.4)
-                            }
-                            Text(isTesting ? "Sending" : "Test")
+                Button {
+                    runTest()
+                } label: {
+                    HStack(spacing: 6) {
+                        if isTesting {
+                            KajiSpinner(size: 10, lineWidth: 1.4)
                         }
+                        Text(isTesting ? "Sending" : "Test")
                     }
-                    .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+                }
+                .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                 .disabled(isTesting)
 
                 Button("Edit", action: onEdit)
                     .buttonStyle(KajiButtonStyle(.ghost, size: .small))
 
-                    Button("Delete") {
-                        onDelete()
-                    }
-                        .buttonStyle(KajiButtonStyle(.ghost, size: .small))
-                        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: destination.id)
+                Button("Delete") {
+                    onDelete()
+                }
+                .buttonStyle(KajiButtonStyle(.ghost, size: .small))
+                .kajiChangeFeedback(KajiMotion.attentionFeedback, value: destination.id)
 
                 KajiSwitch(
                     isOn: Binding(

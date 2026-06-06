@@ -131,7 +131,12 @@ struct KajiAgentSidebarHistorySection: View {
         if store != nil { return }
         let scope = KajiAgentScope(agentID: worktree.id, projectID: project.id, worktreeID: worktree.id, projectPath: worktree.path)
         let scopedStore = KajiAgentStoreRegistry.shared.store(for: scope)
-        scopedStore.configure(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore, projectPathOverride: worktree.path)
+        scopedStore.configure(
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            projectPathOverride: worktree.path
+        )
         store = scopedStore
     }
 

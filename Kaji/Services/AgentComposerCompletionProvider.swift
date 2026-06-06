@@ -82,7 +82,8 @@ enum AgentComposerCompletionProvider {
         if parts.count > 1 { return AgentComposerCompletionState() }
 
         let commandSuggestions = slashCommands.compactMap { command -> (AgentComposerSuggestion, Int)? in
-            guard let score = slashScore(commandQuery, name: command.name, detail: command.detail, source: command.source) else { return nil }
+            guard let score = slashScore(commandQuery, name: command.name, detail: command.detail, source: command.source)
+            else { return nil }
             let suggestion = AgentComposerSuggestion(
                 id: "slash:\(command.id)",
                 title: "/\(command.name)",
@@ -99,7 +100,8 @@ enum AgentComposerCompletionProvider {
         .sorted { lhs, rhs in lhs.1 == rhs.1 ? lhs.0.title < rhs.0.title : lhs.1 > rhs.1 }
         .map(\.0)
         let skillSuggestions = skills.compactMap { skill -> (AgentComposerSuggestion, Int)? in
-            guard let score = slashScore(commandQuery, name: "skill:\(skill.name)", detail: skill.detail, source: "skill") else { return nil }
+            guard let score = slashScore(commandQuery, name: "skill:\(skill.name)", detail: skill.detail, source: "skill")
+            else { return nil }
             return (AgentComposerSuggestion(
                 id: "skill:\(skill.id)",
                 title: "/skill:\(skill.name)",
@@ -163,15 +165,18 @@ enum AgentComposerCompletionProvider {
 
     private static func slashScore(_ query: String, name: String, detail: String, source: String) -> Int? {
         let query = query.lowercased()
-        guard !query.isEmpty else { return nativePanelCommands.contains(name) ? 1_200 : 1_000 }
+        guard !query.isEmpty else { return nativePanelCommands.contains(name) ? 1200 : 1000 }
         let name = name.lowercased()
         let detail = detail.lowercased()
-        if name == query { return 2_000 }
-        if name.hasPrefix(query) { return 1_800 - name.count }
-        if name.split(whereSeparator: { "-_/:".contains($0) }).contains(where: { $0.hasPrefix(query) }) { return 1_600 - name.count }
-        if name.contains(query) { return 1_300 - name.count }
-        if fuzzy(query, in: name) { return 1_000 - name.count }
-        if detail.contains(query) { return 500 - detail.distance(from: detail.startIndex, to: detail.range(of: query)?.lowerBound ?? detail.startIndex) }
+        if name == query { return 2000 }
+        if name.hasPrefix(query) { return 1800 - name.count }
+        if name.split(whereSeparator: { "-_/:".contains($0) }).contains(where: { $0.hasPrefix(query) }) { return 1600 - name.count }
+        if name.contains(query) { return 1300 - name.count }
+        if fuzzy(query, in: name) { return 1000 - name.count }
+        if detail.contains(query) { return 500 - detail.distance(
+            from: detail.startIndex,
+            to: detail.range(of: query)?.lowerBound ?? detail.startIndex
+        ) }
         if source.contains(query) { return 250 }
         return nil
     }
@@ -189,14 +194,43 @@ enum AgentComposerCompletionProvider {
     }
 
     private static let promptActions: [AgentComposerSuggestion] = [
-        AgentComposerSuggestion(id: "action:copy-prompt", title: "Copy whole prompt", detail: "Copy composer text", annotation: "#", replacement: nil, kind: .promptAction),
-        AgentComposerSuggestion(id: "action:clear", title: "Clear prompt", detail: "Remove all composer text", annotation: "#", replacement: "", kind: .promptAction),
-        AgentComposerSuggestion(id: "action:end", title: "Move cursor to end", detail: "Native text field action", annotation: "#", replacement: nil, kind: .promptAction),
-        AgentComposerSuggestion(id: "action:start", title: "Move cursor to start", detail: "Native text field action", annotation: "#", replacement: nil, kind: .promptAction),
+        AgentComposerSuggestion(
+            id: "action:copy-prompt",
+            title: "Copy whole prompt",
+            detail: "Copy composer text",
+            annotation: "#",
+            replacement: nil,
+            kind: .promptAction
+        ),
+        AgentComposerSuggestion(
+            id: "action:clear",
+            title: "Clear prompt",
+            detail: "Remove all composer text",
+            annotation: "#",
+            replacement: "",
+            kind: .promptAction
+        ),
+        AgentComposerSuggestion(
+            id: "action:end",
+            title: "Move cursor to end",
+            detail: "Native text field action",
+            annotation: "#",
+            replacement: nil,
+            kind: .promptAction
+        ),
+        AgentComposerSuggestion(
+            id: "action:start",
+            title: "Move cursor to start",
+            detail: "Native text field action",
+            annotation: "#",
+            replacement: nil,
+            kind: .promptAction
+        ),
     ]
 
     private static let nativePanelCommands: Set<String> = [
-        "model", "models", "settings", "login", "auth", "session", "sessions", "tools", "new", "compact", "handoff", "bash", "ask", "read", "bypass"
+        "model", "models", "settings", "login", "auth", "session", "sessions", "tools", "new", "compact", "handoff", "bash", "ask", "read",
+        "bypass",
     ]
 }
 

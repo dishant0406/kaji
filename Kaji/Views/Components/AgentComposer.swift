@@ -148,7 +148,10 @@ private struct AgentComposerSuggestionList: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(index == highlightedIndex ? KajiTheme.secondaryBackground : .clear, in: RoundedRectangle(cornerRadius: 9))
+                        .background(
+                            index == highlightedIndex ? KajiTheme.secondaryBackground : .clear,
+                            in: RoundedRectangle(cornerRadius: 9)
+                        )
                     }
                     .buttonStyle(.plain)
                     .kajiPointer()

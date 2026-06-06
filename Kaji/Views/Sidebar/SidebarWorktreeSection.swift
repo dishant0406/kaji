@@ -8,7 +8,7 @@ struct SidebarWorktreeSection: View {
     let onRename: (Worktree, String) -> Void
     let onRemove: (Worktree) -> Void
     let onCreate: () -> Void
-    var accessory: AnyView = AnyView(EmptyView())
+    var accessory: AnyView = .init(EmptyView())
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

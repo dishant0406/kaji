@@ -17,7 +17,9 @@ enum KajiAgentToolOutputPreview {
         switch toolName {
         case "bash": 10
         case "read": 12
-        case "write", "edit", "ast_edit": 14
+        case "write",
+             "edit",
+             "ast_edit": 14
         default: 8
         }
     }

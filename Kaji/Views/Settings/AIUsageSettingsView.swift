@@ -95,7 +95,11 @@ struct AIUsageSettingsView: View {
                 }
                 .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                 .disabled(usageService.isRefreshing)
-                .kajiChangeFeedback(KajiMotion.successFeedback, value: usageService.lastRefreshDate, isEnabled: usageService.lastRefreshDate != nil)
+                .kajiChangeFeedback(
+                    KajiMotion.successFeedback,
+                    value: usageService.lastRefreshDate,
+                    isEnabled: usageService.lastRefreshDate != nil
+                )
             }
 
             AIUsageProviderTrackingGrid(

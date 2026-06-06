@@ -10,6 +10,7 @@ final class KajiAgentStore {
     var isReady = false
     var isRunning = false
     var statusMessage = "Starting Kaji Agent"
+    var readiness: KajiAgentReadiness = .checking
     var sessionID: String?
     var modelLabel = "Model not selected"
     var thinkingLevel = "off"
@@ -45,6 +46,9 @@ final class KajiAgentStore {
     weak var worktreeStore: WorktreeStore?
 
     private var pendingResponses: [String: (KajiAgentRPCFrame) -> Void] = [:]
+    private var pendingSends: [PendingKajiAgentSend] = []
+    private var readinessTask: Task<Void, Never>?
+    private var readinessSignature: String?
     private var projectPath: String?
     private var hasRequestedState = false
     private var hasConfiguredHostTools = false
@@ -55,19 +59,6 @@ final class KajiAgentStore {
         self.scope = scope
         process.onMessage = { [weak self] frame in self?.handle(frame) }
         process.onError = { [weak self] error in self?.handleRuntimeError(error) }
-
-        Task.detached { KajiAgentRuntimeLocator.clearCache()
-            _ = KajiAgentRuntimeLocator.bunExecutablePath()
-        }
-    }
-
-    var readiness: KajiAgentReadiness {
-        guard KajiAgentRuntimeLocator.bunExecutablePath() != nil else { return .missingBun }
-        guard KajiAgentRuntimeLocator.sourceLaunch(projectPath: projectPath) != nil || KajiAgentRuntimeLocator.bundledScriptURL() != nil
-        else {
-            return .missingRuntime
-        }
-        return .ready
     }
 
     func configure(appState: AppState, projectStore: ProjectStore, worktreeStore: WorktreeStore, projectPathOverride: String? = nil) {
@@ -82,6 +73,7 @@ final class KajiAgentStore {
         process.projectPath = projectPath
         process.sessionDirectory = scope.map(KajiAgentSessionDirectory.path(for:))
         process.approvalMode = sessionPermissionMode?.rawValue ?? settings.selectedPermissionMode.rawValue
+        refreshRuntimeReadiness(force: true)
         send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in
             self?.applyState(frame.data)
         }
@@ -94,6 +86,7 @@ final class KajiAgentStore {
     func setSessionPermissionMode(_ mode: KajiAgentPermissionMode) {
         sessionPermissionMode = mode
         process.approvalMode = mode.rawValue
+        refreshRuntimeReadiness(force: true)
         send(KajiAgentRPCFrame(type: "set_approval_mode", data: .object(["mode": .string(mode.rawValue)]))) { [weak self] frame in
             if frame.success == true {
                 self?.appendSystem(title: "Permissions", detail: "\(mode.title) for this chat", kind: .event)
@@ -101,6 +94,12 @@ final class KajiAgentStore {
                 self?.appendSystem(title: "Permissions failed", detail: error, kind: .error)
             }
         }
+    }
+
+    func retryRuntimeReadiness() {
+        guard !readiness.isReady else { return }
+        KajiAgentRuntimeLocator.clearCache()
+        refreshRuntimeReadiness(force: true)
     }
 
     func submit(_ prompt: String, attachments: [AskAttachment]) {
@@ -323,7 +322,91 @@ final class KajiAgentStore {
         if let id = frame.id, let onResponse {
             pendingResponses[id] = onResponse
         }
+        guard readiness.isReady else {
+            if readiness == .checking {
+                pendingSends.append(PendingKajiAgentSend(frame: frame))
+                refreshRuntimeReadiness(force: false)
+            } else {
+                discardPendingResponse(for: frame)
+                appendSystem(title: "Runtime", detail: readiness.detail, kind: .error)
+            }
+            return
+        }
         process.send(frame)
+    }
+
+    private func refreshRuntimeReadiness(force: Bool) {
+        let signature = runtimeConfigurationSignature()
+        if !force, readinessSignature == signature, readiness.isReady { return }
+        if !force, readinessTask != nil { return }
+        readinessTask?.cancel()
+        readiness = .checking
+        readinessSignature = signature
+        statusMessage = "Checking Kaji Agent runtime"
+        let projectPath = projectPath
+        let sessionDirectory = process.sessionDirectory
+        let approvalMode = process.approvalMode
+        readinessTask = Task.detached { [weak self] in
+            let resolution = KajiAgentRuntimeLocator.resolveLaunch(
+                projectPath: projectPath,
+                sessionDirectory: sessionDirectory,
+                approvalMode: approvalMode
+            )
+            await MainActor.run {
+                self?.applyRuntimeResolution(resolution, signature: signature)
+            }
+        }
+    }
+
+    private func applyRuntimeResolution(_ resolution: KajiAgentLaunchResolution, signature: String) {
+        guard readinessSignature == signature else { return }
+        readinessTask = nil
+        readiness = resolution.readiness
+        switch resolution {
+        case let .ready(launch):
+            process.launch = launch
+            statusMessage = isReady ? "Ready" : "Starting Kaji Agent"
+            drainPendingSends()
+        case .missingRuntime,
+             .missingBun,
+             .unsupportedBunVersion:
+            process.launch = nil
+            statusMessage = readiness.detail
+            failPendingSends(readiness.detail)
+        }
+    }
+
+    private func drainPendingSends() {
+        let sends = pendingSends
+        pendingSends = []
+        for send in sends {
+            process.send(send.frame)
+        }
+    }
+
+    private func failPendingSends(_ detail: String) {
+        let sends = pendingSends
+        pendingSends = []
+        for send in sends {
+            discardPendingResponse(for: send.frame)
+        }
+        if sends.contains(where: { $0.frame.type != "get_state" }) {
+            appendSystem(title: "Runtime", detail: detail, kind: .error)
+        }
+    }
+
+    private func discardPendingResponse(for frame: KajiAgentRPCFrame) {
+        if let id = frame.id {
+            pendingResponses.removeValue(forKey: id)
+        }
+    }
+
+    private func runtimeConfigurationSignature() -> String {
+        [
+            projectPath ?? "",
+            process.sessionDirectory ?? "",
+            process.approvalMode,
+        ].joined(separator: "\u{1f}")
     }
 
     private func handle(_ frame: KajiAgentRPCFrame) {
@@ -1090,6 +1173,10 @@ final class KajiAgentStore {
         guard let key = appState.activeWorktreeKey(for: project.id) else { return project.path }
         return worktreeStore.worktree(projectID: project.id, worktreeID: key.worktreeID)?.path ?? project.path
     }
+}
+
+struct PendingKajiAgentSend {
+    let frame: KajiAgentRPCFrame
 }
 
 struct KajiAgentMessage: Identifiable, Hashable {

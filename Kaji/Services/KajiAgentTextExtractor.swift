@@ -31,7 +31,10 @@ enum KajiAgentTextExtractor {
                 return [.init(kind: .image, text: "[Image: \(label)]", index: nil)]
             }
             return []
-        case .number, .bool, .null, .none:
+        case .number,
+             .bool,
+             .null,
+             .none:
             return []
         }
     }

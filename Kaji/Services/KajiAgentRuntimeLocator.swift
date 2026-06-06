@@ -4,28 +4,47 @@ enum KajiAgentRuntimeLocator {
     private static let cache = KajiAgentRuntimeLocatorCache()
     private static let bunLookupTTL: TimeInterval = 30
 
+    static func resolveLaunch(
+        projectPath: String?,
+        sessionDirectory: String? = nil,
+        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+    ) -> KajiAgentLaunchResolution {
+        guard let script = sourceScriptURL() ?? bundledRuntimeScript() else { return .missingRuntime }
+        switch bunLookup() {
+        case let .found(path, _):
+            return .ready(KajiAgentLaunch(
+                arguments: [path, script.url.path] + launchArguments(
+                    projectPath: projectPath,
+                    sessionDirectory: sessionDirectory,
+                    approvalMode: approvalMode
+                ),
+                directory: script.directory
+            ))
+        case .missing:
+            return .missingBun
+        case let .unsupported(version):
+            return .unsupportedBunVersion(version)
+        }
+    }
+
     static func sourceLaunch(
         projectPath: String?,
         sessionDirectory: String? = nil,
         approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
     ) -> KajiAgentLaunch? {
-        guard let root = projectRoot() else { return nil }
-        let runtimeRoot = root.appending(path: "KajiAgentRuntime")
-        let script = runtimeRoot.appending(path: "src/kaji-rpc.ts")
-        guard FileManager.default.fileExists(atPath: script.path), let bun = bunExecutablePath() else { return nil }
+        guard let script = sourceScriptURL(), case let .found(path, _) = bunLookup() else { return nil }
         return KajiAgentLaunch(
-            arguments: [bun, script.path] + launchArguments(
+            arguments: [path, script.url.path] + launchArguments(
                 projectPath: projectPath,
                 sessionDirectory: sessionDirectory,
                 approvalMode: approvalMode
             ),
-            directory: runtimeRoot
+            directory: script.directory
         )
     }
 
     static func bundledScriptURL() -> URL? {
-        bundledResourceURL(named: "kaji-agent-runtime")
-            ?? bundledDevScriptURL()
+        bundledRuntimeScript()?.url
     }
 
     static func bundledLaunch(
@@ -33,29 +52,41 @@ enum KajiAgentRuntimeLocator {
         sessionDirectory: String? = nil,
         approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
     ) -> KajiAgentLaunch? {
-        guard let script = bundledScriptURL(), let bun = bunExecutablePath() else { return nil }
+        guard let script = bundledRuntimeScript(), case let .found(path, _) = bunLookup() else { return nil }
         return KajiAgentLaunch(
-            arguments: [bun, script.path] + launchArguments(
+            arguments: [path, script.url.path] + launchArguments(
                 projectPath: projectPath,
                 sessionDirectory: sessionDirectory,
                 approvalMode: approvalMode
             ),
-            directory: nil
+            directory: script.directory
         )
     }
 
     static func bunExecutablePath() -> String? {
-        if let cached = cache.bunExecutablePath(ttl: bunLookupTTL) { return cached }
-        guard let path = AIProviderExecutableLocator.resolvePath(for: "bun"), bunVersion(at: path).supportsKajiAgentRuntime else {
-            cache.updateBunExecutablePath(nil)
-            return nil
-        }
-        cache.updateBunExecutablePath(path)
+        guard case let .found(path, _) = bunLookup() else { return nil }
         return path
     }
 
     static func clearCache() {
         cache.clear()
+    }
+
+    private static func bunLookup() -> KajiAgentBunLookupResult {
+        if let cached = cache.bunLookup(ttl: bunLookupTTL) { return cached }
+        guard let path = AIProviderExecutableLocator.resolvePath(for: "bun") else {
+            cache.updateBunLookup(.missing)
+            return .missing
+        }
+        let version = KajiAgentBunVersion.read(at: path)
+        guard version.supportsKajiAgentRuntime else {
+            let result = KajiAgentBunLookupResult.unsupported(version.rawValue)
+            cache.updateBunLookup(result)
+            return result
+        }
+        let result = KajiAgentBunLookupResult.found(path: path, version: version.rawValue)
+        cache.updateBunLookup(result)
+        return result
     }
 
     private static func launchArguments(projectPath: String?, sessionDirectory: String?, approvalMode: String) -> [String] {
@@ -69,48 +100,31 @@ enum KajiAgentRuntimeLocator {
         return args
     }
 
-    private static func bunVersion(at path: String) -> KajiAgentBunVersion {
-        guard FileManager.default.isExecutableFile(atPath: path) else { return KajiAgentBunVersion() }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: path)
+    private static func sourceScriptURL() -> KajiAgentRuntimeScript? {
+        guard let root = projectRoot() else { return nil }
+        let runtimeRoot = root.appending(path: "KajiAgentRuntime")
+        let script = runtimeRoot.appending(path: "src/kaji-rpc.ts")
+        guard FileManager.default.fileExists(atPath: script.path) else { return nil }
+        return KajiAgentRuntimeScript(url: script, directory: runtimeRoot)
+    }
 
-        process.arguments = ["--version"]
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = Pipe()
-
-        let semaphore = DispatchSemaphore(value: 0)
-        nonisolated(unsafe) var exitCode: Int32 = -1
-        nonisolated(unsafe) var outputData = Data()
-        do {
-            try process.run()
-        } catch {
-            return KajiAgentBunVersion()
-        }
-        process.terminationHandler = { proc in
-            exitCode = proc.terminationStatus
-            outputData = output.fileHandleForReading.readDataToEndOfFile()
-            semaphore.signal()
-        }
-        _ = semaphore.wait(timeout: .now() + 3)
-        if process.isRunning {
-            process.terminate()
-            return KajiAgentBunVersion()
-        }
-        guard exitCode == 0 else { return KajiAgentBunVersion() }
-        return KajiAgentBunVersion(String(data: outputData, encoding: .utf8) ?? "")
+    private static func bundledRuntimeScript() -> KajiAgentRuntimeScript? {
+        guard let url = bundledResourceURL(named: "kaji-agent-runtime") ?? bundledDevScriptURL() else { return nil }
+        return KajiAgentRuntimeScript(url: url, directory: nil)
     }
 
     private static func bundledResourceURL(named name: String) -> URL? {
         Bundle.appResources.url(forResource: name, withExtension: "mjs", subdirectory: "KajiAgentRuntime")
+            ?? Bundle.appResources.url(forResource: name, withExtension: "mjs")
             ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "KajiAgentRuntime")
+            ?? Bundle.main.url(forResource: name, withExtension: "mjs")
             ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "Kaji_Kaji.bundle/KajiAgentRuntime")
+            ?? Bundle.main.url(forResource: name, withExtension: "mjs", subdirectory: "Kaji_Kaji.bundle")
     }
 
     private static func bundledDevScriptURL() -> URL? {
         guard let root = projectRoot() else { return nil }
-        let url = root
-            .appending(path: "Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs")
+        let url = root.appending(path: "Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
@@ -120,7 +134,6 @@ enum KajiAgentRuntimeLocator {
             ProcessInfo.processInfo.environment["KAJI_PROJECT_ROOT"].map { URL(fileURLWithPath: $0, isDirectory: true) },
             URL(fileURLWithPath: fileManager.currentDirectoryPath, isDirectory: true),
             Bundle.main.executableURL?.deletingLastPathComponent(),
-
             Bundle.main.bundleURL,
         ].compactMap(\.self)
 
@@ -146,63 +159,36 @@ enum KajiAgentRuntimeLocator {
     }
 }
 
-private final class KajiAgentRuntimeLocatorCache: @unchecked Sendable {
-    private let lock = NSLock()
-    private var cachedBunExecutablePath: String?
-    private var cachedBunLookupDate: Date?
+struct KajiAgentLaunch: Equatable {
+    let arguments: [String]
+    let directory: URL?
 
-    func bunExecutablePath(ttl: TimeInterval) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard let cachedBunExecutablePath,
-              let cachedBunLookupDate,
-              Date().timeIntervalSince(cachedBunLookupDate) < ttl
-        else { return nil }
-        return cachedBunExecutablePath
-    }
-
-    func updateBunExecutablePath(_ path: String?) {
-        lock.lock()
-        cachedBunExecutablePath = path
-        cachedBunLookupDate = Date()
-        lock.unlock()
-    }
-
-    func clear() {
-        lock.lock()
-        cachedBunExecutablePath = nil
-        cachedBunLookupDate = nil
-        lock.unlock()
+    var signature: String {
+        ([directory?.path ?? ""] + arguments).joined(separator: "\u{1f}")
     }
 }
 
-struct KajiAgentLaunch {
-    let arguments: [String]
+struct KajiAgentRuntimeScript {
+    let url: URL
     let directory: URL?
 }
 
-private struct KajiAgentBunVersion: Comparable {
-    let major: Int
-    let minor: Int
-    let patch: Int
+enum KajiAgentLaunchResolution: Equatable {
+    case ready(KajiAgentLaunch)
+    case missingRuntime
+    case missingBun
+    case unsupportedBunVersion(String?)
 
-    init(_ value: String = "") {
-        let parts = value
-            .trimmingCharacters(in: CharacterSet(charactersIn: "v \n\t"))
-            .split(separator: ".")
-            .map { Int($0.prefix { $0.isNumber }) ?? 0 }
-        major = parts.indices.contains(0) ? parts[0] : 0
-        minor = parts.indices.contains(1) ? parts[1] : 0
-        patch = parts.indices.contains(2) ? parts[2] : 0
-    }
-
-    var supportsKajiAgentRuntime: Bool {
-        self >= KajiAgentBunVersion("1.3.14")
-    }
-
-    static func < (lhs: KajiAgentBunVersion, rhs: KajiAgentBunVersion) -> Bool {
-        if lhs.major != rhs.major { return lhs.major < rhs.major }
-        if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }
-        return lhs.patch < rhs.patch
+    var readiness: KajiAgentReadiness {
+        switch self {
+        case .ready:
+            .ready
+        case .missingRuntime:
+            .missingRuntime
+        case .missingBun:
+            .missingBun
+        case let .unsupportedBunVersion(version):
+            .unsupportedBunVersion(version)
+        }
     }
 }

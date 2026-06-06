@@ -54,7 +54,12 @@ struct KajiAgentHome: View {
         .overlay { attachmentPreview }
         .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })
         .onAppear {
-            store.configure(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore, projectPathOverride: projectPathOverride)
+            store.configure(
+                appState: appState,
+                projectStore: projectStore,
+                worktreeStore: worktreeStore,
+                projectPathOverride: projectPathOverride
+            )
             openInitialSessionIfNeeded()
             requestFocus()
         }
@@ -76,12 +81,18 @@ struct KajiAgentHome: View {
             .kajiPopover(isPresented: $showingModelPopover, preferredEdge: .bottom) {
                 modelPopover
             }
-                .help(store.statusMessage)
+            .help(store.statusMessage)
             KajiPill(title: store.effectivePermissionMode.title, leadingIcon: "lock", variant: .plain) {}
                 .help(store.effectivePermissionMode.detail)
             KajiPill(title: "New thread", leadingIcon: "plus", variant: .plain, action: startNewThread)
-            KajiPill(title: store.readiness.title, leadingIcon: store.readiness.isReady ? "checkmark.circle" : "exclamationmark.triangle", variant: .plain) {}
-                .help(store.readiness.detail)
+            KajiPill(
+                title: store.readiness.title,
+                leadingIcon: store.readiness.isReady ? "checkmark.circle" : "exclamationmark.triangle",
+                variant: .plain
+            ) {
+                store.retryRuntimeReadiness()
+            }
+            .help(store.readiness.detail)
             Spacer(minLength: 0)
         }
     }
@@ -181,7 +192,7 @@ struct KajiAgentHome: View {
                             expandedToolGroups: $expandedToolGroups,
                             collapsedToolGroups: $collapsedToolGroups
                         )
-                            .id(turn.id)
+                        .id(turn.id)
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -210,7 +221,7 @@ struct KajiAgentHome: View {
             guard let id else { return }
             scrollCoordinator.scrollToTurn(id)
         }
-        .onChange(of: store.tailVersion) { _, version in
+        .onChange(of: store.tailVersion) { _, _ in
             expandNewToolGroups()
             scrollCoordinator.handleTailChanged()
         }
@@ -417,11 +428,13 @@ struct KajiAgentHome: View {
         let command = parts.first.map { String($0).lowercased() } ?? ""
         let args = parts.count > 1 ? String(parts[1]) : ""
         switch command {
-        case "model", "models":
+        case "model",
+             "models":
             store.requestAvailableModels { _ in }
             activePanel = .models
             return true
-        case "login", "auth":
+        case "login",
+             "auth":
             store.requestLoginProviders { _ in }
             activePanel = .login
             return true
@@ -429,7 +442,9 @@ struct KajiAgentHome: View {
             store.requestTools()
             activePanel = .tools
             return true
-        case "session", "sessions", "resume":
+        case "session",
+             "sessions",
+             "resume":
             store.requestSessions(all: args == "all")
             activePanel = .sessions
             return true
@@ -439,7 +454,8 @@ struct KajiAgentHome: View {
         case "ask":
             store.setSessionPermissionMode(.ask)
             return true
-        case "read", "read-allow":
+        case "read",
+             "read-allow":
             store.setSessionPermissionMode(.readAllow)
             return true
         case "bypass":
@@ -477,5 +493,4 @@ struct KajiAgentHome: View {
         didOpenInitialSession = true
         store.switchSession(path: sessionPath)
     }
-
 }

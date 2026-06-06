@@ -44,7 +44,7 @@ struct KajiAgentTodoPanel: View {
     }
 
     private var openCount: Int {
-        phases.flatMap(\.tasks).filter { $0.status != "completed" && $0.status != "abandoned" }.count
+        phases.flatMap(\.tasks).count(where: { $0.status != "completed" && $0.status != "abandoned" })
     }
 
     private func icon(for status: String) -> String {

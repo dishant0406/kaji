@@ -92,9 +92,9 @@ extension View {
         modifier(KajiHoverEffect(isActive: isActive, scale: scale))
     }
 
-    func kajiChangeFeedback<Value: Equatable>(
+    func kajiChangeFeedback(
         _ effect: AnyChangeEffect,
-        value: Value,
+        value: some Equatable,
         isEnabled: Bool = true
     ) -> some View {
         modifier(KajiChangeFeedback(value: value, effect: effect, isEnabled: isEnabled))

@@ -54,5 +54,4 @@ struct KajiAgentToolGroupView: View {
             expandedGroups.insert(group.id)
         }
     }
-
 }

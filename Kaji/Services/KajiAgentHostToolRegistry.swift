@@ -44,7 +44,10 @@ enum KajiAgentHostToolRegistry {
         KajiAgentHostToolDefinition(
             name: "kaji_fff_find",
             label: "FFF File Search",
-            description: "Fast Kaji-native fuzzy file search powered by FFF. Prefer this over broad find/glob when you need to locate files by fuzzy path, symbol-like names, or partial filenames in the active worktree.",
+            description: [
+                "Fast Kaji-native fuzzy file search powered by FFF.",
+                "Prefer this over broad find/glob for fuzzy paths, symbol-like names, or partial filenames.",
+            ].joined(separator: " "),
             parameters: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -60,7 +63,10 @@ enum KajiAgentHostToolRegistry {
         KajiAgentHostToolDefinition(
             name: "kaji_fff_search",
             label: "FFF Text Search",
-            description: "Fast Kaji-native repository content search powered by FFF live grep. Prefer this for broad codebase text search in the active worktree when exact grep flags are not required.",
+            description: [
+                "Fast Kaji-native repository content search powered by FFF live grep.",
+                "Prefer this for broad active-worktree text search when exact grep flags are not required.",
+            ].joined(separator: " "),
             parameters: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -92,21 +98,26 @@ enum KajiAgentHostToolRegistry {
     ) async -> KajiAgentToolResult {
         switch frame.toolName {
         case "kaji_get_active_context":
-            return activeContext(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            activeContext(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         case "kaji_open_file":
-            return openFile(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            openFile(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         case "kaji_open_terminal":
-            return openTerminal(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            openTerminal(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         case "kaji_fff_find":
-            return await fffFind(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            await fffFind(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         case "kaji_fff_search":
-            return await fffSearch(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+            await fffSearch(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         default:
-            return error("Unsupported Kaji host tool: \(frame.toolName ?? "unknown")")
+            error("Unsupported Kaji host tool: \(frame.toolName ?? "unknown")")
         }
     }
 
-    static func resolveURI(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) -> KajiAgentHostURIResult {
+    static func resolveURI(
+        _ frame: KajiAgentRPCFrame,
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) -> KajiAgentHostURIResult {
         guard frame.operation == "read", let url = frame.url, url.hasPrefix("kaji-file://") else {
             return .failure("Unsupported Kaji URI request.")
         }
@@ -126,14 +137,28 @@ enum KajiAgentHostToolRegistry {
         }
     }
 
-    private static func activeContext(appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) -> KajiAgentToolResult {
+    private static func activeContext(
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) -> KajiAgentToolResult {
         guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
             return error("No active Kaji project.")
         }
-        return text("Active project: \(context.project.name)\nProject path: \(context.project.path)\nWorktree: \(context.worktree.name)\nWorktree path: \(context.worktree.path)")
+        return text([
+            "Active project: \(context.project.name)",
+            "Project path: \(context.project.path)",
+            "Worktree: \(context.worktree.name)",
+            "Worktree path: \(context.worktree.path)",
+        ].joined(separator: "\n"))
     }
 
-    private static func openFile(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) -> KajiAgentToolResult {
+    private static func openFile(
+        _ frame: KajiAgentRPCFrame,
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) -> KajiAgentToolResult {
         guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
             return error("No active Kaji project.")
         }
@@ -148,7 +173,12 @@ enum KajiAgentHostToolRegistry {
         return text("Opened \(path).")
     }
 
-    private static func openTerminal(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) -> KajiAgentToolResult {
+    private static func openTerminal(
+        _ frame: KajiAgentRPCFrame,
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) -> KajiAgentToolResult {
         guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
             return error("No active Kaji project.")
         }
@@ -163,7 +193,12 @@ enum KajiAgentHostToolRegistry {
         return text(command.isEmpty ? "Opened terminal." : "Opened command terminal.")
     }
 
-    private static func fffFind(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) async -> KajiAgentToolResult {
+    private static func fffFind(
+        _ frame: KajiAgentRPCFrame,
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) async -> KajiAgentToolResult {
         guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
             return error("No active Kaji project.")
         }
@@ -189,7 +224,12 @@ enum KajiAgentHostToolRegistry {
         }
     }
 
-    private static func fffSearch(_ frame: KajiAgentRPCFrame, appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) async -> KajiAgentToolResult {
+    private static func fffSearch(
+        _ frame: KajiAgentRPCFrame,
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) async -> KajiAgentToolResult {
         guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
             return error("No active Kaji project.")
         }
@@ -222,7 +262,11 @@ enum KajiAgentHostToolRegistry {
         }
     }
 
-    private static func activeWorkspace(appState: AppState?, projectStore: ProjectStore?, worktreeStore: WorktreeStore?) -> KajiAgentWorkspaceContext? {
+    private static func activeWorkspace(
+        appState: AppState?,
+        projectStore: ProjectStore?,
+        worktreeStore: WorktreeStore?
+    ) -> KajiAgentWorkspaceContext? {
         guard let appState, let projectStore, let worktreeStore,
               let projectID = appState.activeProjectID,
               let project = projectStore.projects.first(where: { $0.id == projectID })

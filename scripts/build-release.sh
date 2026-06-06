@@ -116,6 +116,13 @@ rm -rf "$APP_BUNDLE"
 
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
+if $SKIP_NATIVE_DEPS; then
+    [[ -f "$PROJECT_ROOT/Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs" ]] || { echo "Error: Kaji Agent runtime is missing; run scripts/build-kaji-agent-runtime.sh" >&2; exit 1; }
+    [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/kaji-agent.mjs" ]] || { echo "Error: Parent agent runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
+    [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/oauth-login.mjs" ]] || { echo "Error: Parent agent OAuth runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
+    [[ -f "$PROJECT_ROOT/Kaji/Resources/Zlob/zlob" ]] || { echo "Error: Zlob runtime is missing; run scripts/build-zlob.sh" >&2; exit 1; }
+fi
+rm -rf "$PROJECT_ROOT/.build/$TRIPLE/release/Kaji_Kaji.bundle"
 if ! $SKIP_NATIVE_DEPS; then
     "$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
     "$SCRIPT_DIR/build-parent-agent.sh"

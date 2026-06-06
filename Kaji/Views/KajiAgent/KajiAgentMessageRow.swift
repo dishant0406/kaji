@@ -47,7 +47,10 @@ struct KajiAgentMessageRow: View {
     }
 
     private var toolRow: some View {
-        iconRow(icon: message.isError ? "xmark" : "wrench.and.screwdriver", color: message.isError ? KajiTheme.diffRemoveFg : KajiTheme.fgMuted) {
+        iconRow(
+            icon: message.isError ? "xmark" : "wrench.and.screwdriver",
+            color: message.isError ? KajiTheme.diffRemoveFg : KajiTheme.fgMuted
+        ) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text(message.title)
@@ -124,7 +127,7 @@ struct KajiAgentMessageRow: View {
         }
     }
 
-    private func iconRow<Content: View>(icon: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
+    private func iconRow(icon: String, color: Color, @ViewBuilder content: () -> some View) -> some View {
         HStack(alignment: .top, spacing: 12) {
             KajiIcon(systemName: icon, size: 12)
                 .foregroundStyle(color)

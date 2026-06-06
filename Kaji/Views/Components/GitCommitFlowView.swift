@@ -22,7 +22,11 @@ struct GitCommitFlowView: View {
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .animation(KajiMotion.panel, value: state.stage)
-        .kajiChangeFeedback(state.errorText == nil ? KajiMotion.successFeedback : KajiMotion.invalidFeedback, value: state.stage, isEnabled: state.stage == .result)
+        .kajiChangeFeedback(
+            state.errorText == nil ? KajiMotion.successFeedback : KajiMotion.invalidFeedback,
+            value: state.stage,
+            isEnabled: state.stage == .result
+        )
     }
 
     private var header: some View {

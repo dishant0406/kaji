@@ -109,7 +109,6 @@ struct EditorPane: View {
         }
     }
 
-    @ViewBuilder
     private var editorMainContent: some View {
         Group {
             if state.isMarkdownFile {

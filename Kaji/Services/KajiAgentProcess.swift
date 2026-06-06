@@ -15,6 +15,7 @@ final class KajiAgentProcess {
     var projectPath: String?
     var sessionDirectory: String?
     var approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+    var launch: KajiAgentLaunch?
     var onMessage: ((KajiAgentRPCFrame) -> Void)?
     var onError: ((String) -> Void)?
 
@@ -53,10 +54,8 @@ final class KajiAgentProcess {
         let signature = configurationSignature(for: environment)
         if process?.isRunning == true, configurationSignature == signature { return }
         if process?.isRunning == true { stop() }
-        guard let launch = KajiAgentRuntimeLocator.sourceLaunch(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode)
-            ?? KajiAgentRuntimeLocator.bundledLaunch(projectPath: projectPath, sessionDirectory: sessionDirectory, approvalMode: approvalMode)
-        else {
-            throw KajiAgentProcessError.runtimeMissing
+        guard let launch else {
+            throw KajiAgentProcessError.launchNotResolved
         }
 
         let inputPipe = Pipe()
@@ -122,6 +121,7 @@ final class KajiAgentProcess {
             environment["KAJI_AGENT_ENABLE_AUTORESEARCH"] ?? "",
             environment["KAJI_AGENT_ENABLE_MOCK"] ?? "",
             environment["KAJI_ZLOB_BIN"] ?? "",
+            launch?.signature ?? "",
         ].joined(separator: "\u{1f}")
     }
 
@@ -145,9 +145,9 @@ final class KajiAgentProcess {
 }
 
 enum KajiAgentProcessError: LocalizedError {
-    case runtimeMissing
+    case launchNotResolved
 
     var errorDescription: String? {
-        "Kaji Agent runtime is missing or Bun is unavailable."
+        "Kaji Agent runtime launch is not ready yet."
     }
 }

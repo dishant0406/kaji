@@ -109,7 +109,6 @@ struct KajiButtonStyle: ButtonStyle {
         )
     }
 
-
     private var effectiveMode: EffectiveAppearanceMode {
         appearanceContext.effectiveMode
     }

@@ -71,7 +71,8 @@ struct KajiBadge: View {
             KajiMotion.tapFeedback
         case .accent:
             KajiMotion.selectionFeedback
-        case .warning, .danger:
+        case .warning,
+             .danger:
             KajiMotion.attentionFeedback
         }
     }

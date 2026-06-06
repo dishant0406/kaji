@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct SleepPreventionBatteryLidCloseControllerTests {
     @Test
-    func enablingBatteryLidCloseSleepRunsPmsetAndPersistsPreference() {
+    func enablingBatteryLidCloseSleepRunsPmsetAndPersistsPreference() async {
         let suiteName = "SleepPreventionControllerTests.BatteryLidClose.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Unable to create isolated UserDefaults suite")
@@ -23,6 +23,7 @@ struct SleepPreventionBatteryLidCloseControllerTests {
         )
 
         controller.setBatteryLidCloseEnabled(true)
+        await Task.yield()
 
         #expect(controller.isBatteryLidCloseEnabled)
         #expect(SleepPreventionPreferences.batteryLidCloseIsEnabled(defaults: defaults))
@@ -32,7 +33,7 @@ struct SleepPreventionBatteryLidCloseControllerTests {
     }
 
     @Test
-    func failedBatteryLidCloseSleepEnableDoesNotPersistEnabledPreference() {
+    func failedBatteryLidCloseSleepEnableDoesNotPersistEnabledPreference() async {
         let suiteName = "SleepPreventionControllerTests.BatteryLidCloseFailed.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Unable to create isolated UserDefaults suite")
@@ -49,6 +50,7 @@ struct SleepPreventionBatteryLidCloseControllerTests {
         )
 
         controller.setBatteryLidCloseEnabled(true)
+        await Task.yield()
 
         #expect(!controller.isBatteryLidCloseEnabled)
         #expect(!SleepPreventionPreferences.batteryLidCloseIsEnabled(defaults: defaults))
@@ -57,7 +59,7 @@ struct SleepPreventionBatteryLidCloseControllerTests {
     }
 
     @Test
-    func disablingBatteryLidCloseSleepRestoresPmsetAndPersistsPreference() {
+    func disablingBatteryLidCloseSleepRestoresPmsetAndPersistsPreference() async {
         let suiteName = "SleepPreventionControllerTests.BatteryLidCloseDisable.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Unable to create isolated UserDefaults suite")
@@ -74,7 +76,9 @@ struct SleepPreventionBatteryLidCloseControllerTests {
             batteryLidCloseSleepManager: batteryLidCloseManager
         )
 
+        await Task.yield()
         controller.setBatteryLidCloseEnabled(false)
+        await Task.yield()
 
         #expect(!controller.isBatteryLidCloseEnabled)
         #expect(!SleepPreventionPreferences.batteryLidCloseIsEnabled(defaults: defaults))

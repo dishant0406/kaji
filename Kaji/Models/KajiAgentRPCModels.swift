@@ -65,12 +65,70 @@ struct KajiAgentRPCFrame: Codable {
     var limit: Int?
 
     enum CodingKeys: String, CodingKey {
-        case id, type, command, success, data, error, method, title, message, placeholder, notifyType, pending, allowEmpty, isSecure, options
-        case value, prefill, promptStyle, timeout, timedOut, confirmed, cancelled, url, instructions, targetId, widgetKey, widgetLines, widgetPlacement
-        case statusKey, statusText, sessionID, sessionId, model, thinkingLevel, isStreaming, messages, phases, tools
-        case schemes, provider, modelId, level, promptMessage, images, providerId, providers, toolCallId, toolName
-        case arguments, result, partialResult, isError, operation, content, contentType, notes, immutable, event
-        case assistantMessageEvent, args, text, name, query, limit
+        case id
+        case type
+        case command
+        case success
+        case data
+        case error
+        case method
+        case title
+        case message
+        case placeholder
+        case notifyType
+        case pending
+        case allowEmpty
+        case isSecure
+        case options
+        case value
+        case prefill
+        case promptStyle
+        case timeout
+        case timedOut
+        case confirmed
+        case cancelled
+        case url
+        case instructions
+        case targetId
+        case widgetKey
+        case widgetLines
+        case widgetPlacement
+        case statusKey
+        case statusText
+        case sessionID
+        case sessionId
+        case model
+        case thinkingLevel
+        case isStreaming
+        case messages
+        case phases
+        case tools
+        case schemes
+        case provider
+        case modelId
+        case level
+        case promptMessage
+        case images
+        case providerId
+        case providers
+        case toolCallId
+        case toolName
+        case arguments
+        case result
+        case partialResult
+        case isError
+        case operation
+        case content
+        case contentType
+        case notes
+        case immutable
+        case event
+        case assistantMessageEvent
+        case args
+        case text
+        case name
+        case query
+        case limit
     }
 
     init(
@@ -135,7 +193,7 @@ struct KajiAgentRPCFrame: Codable {
         text: String? = nil,
         name: String? = nil,
         query: String? = nil,
-        limit: Int? = nil,
+        limit: Int? = nil
     ) {
         self.id = id
         self.type = type
@@ -536,7 +594,7 @@ enum KajiAgentJSONValue: Codable, Hashable {
         } else if let value = try? container.decode([KajiAgentJSONValue].self) {
             self = .array(value)
         } else {
-            self = .object(try container.decode([String: KajiAgentJSONValue].self))
+            self = try .object(container.decode([String: KajiAgentJSONValue].self))
         }
     }
 
@@ -563,7 +621,9 @@ enum KajiAgentJSONValue: Codable, Hashable {
         case let .string(value): value
         case let .number(value): String(value)
         case let .bool(value): String(value)
-        case .object, .array, .null: nil
+        case .object,
+             .array,
+             .null: nil
         }
     }
 

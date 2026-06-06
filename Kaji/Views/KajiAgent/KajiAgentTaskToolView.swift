@@ -29,9 +29,9 @@ struct KajiAgentTaskToolView: View {
 
     private var summary: String {
         let agents = details.visibleAgents
-        let running = agents.filter { $0.status == "running" || $0.status == "pending" }.count
-        let completed = agents.filter { $0.status == "completed" }.count
-        let failed = agents.filter { $0.status == "failed" || $0.status == "aborted" }.count
+        let running = agents.count(where: { $0.status == "running" || $0.status == "pending" })
+        let completed = agents.count(where: { $0.status == "completed" })
+        let failed = agents.count(where: { $0.status == "failed" || $0.status == "aborted" })
         return "\(running) running · \(completed) done · \(failed) failed"
     }
 }
@@ -77,7 +77,8 @@ private struct KajiAgentSubagentRow: View {
     private var icon: String {
         switch agent.status {
         case "completed": "checkmark.circle.fill"
-        case "failed", "aborted": "xmark.circle.fill"
+        case "failed",
+             "aborted": "xmark.circle.fill"
         default: "circle.dotted"
         }
     }
@@ -85,7 +86,8 @@ private struct KajiAgentSubagentRow: View {
     private var color: Color {
         switch agent.status {
         case "completed": KajiTheme.diffAddFg
-        case "failed", "aborted": KajiTheme.diffRemoveFg
+        case "failed",
+             "aborted": KajiTheme.diffRemoveFg
         default: KajiTheme.fgMuted
         }
     }
