@@ -80,6 +80,8 @@ jobs:
             Kaji/Resources/pi/kaji-agent.mjs
             Kaji/Resources/pi/oauth-login.mjs
             Kaji/Resources/Zlob/zlob
+            KajiAgentRuntime/node_modules/@oh-my-pi/pi-natives/native/pi_natives.darwin-arm64.node
+            KajiAgentRuntime/node_modules/@oh-my-pi/pi-natives/native/pi_natives.darwin-x64-baseline.node
           retention-days: 1
 
   release:
