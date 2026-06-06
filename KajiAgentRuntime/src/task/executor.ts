@@ -1466,6 +1466,8 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 			exitCode = 1;
 			if (!abortSignal.aborted) {
 				error = err instanceof Error ? err.stack || err.message : String(err);
+				progress.failureText = error;
+				progress.stderr = error;
 			}
 		} finally {
 			if (abortSignal.aborted) {
@@ -1520,6 +1522,8 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 	let exitCode = done.exitCode;
 	if (done.error) {
 		stderr = done.error;
+		progress.failureText = done.error;
+		progress.stderr = done.error;
 	}
 
 	// Use final output if available, otherwise accumulated output
@@ -1583,6 +1587,10 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				: (done.abortReason ?? (signal?.aborted ? resolveSignalAbortReason() : resolveAbortReasonText()))
 		: undefined;
 	progress.status = wasAborted ? "aborted" : exitCode === 0 ? "completed" : "failed";
+	if (exitCode !== 0 && stderr) {
+		progress.failureText = stderr;
+		progress.stderr = stderr;
+	}
 	scheduleProgress(true);
 
 	// Emit lifecycle end event after finalization so yield status is reflected

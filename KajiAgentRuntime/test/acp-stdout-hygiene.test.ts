@@ -12,8 +12,8 @@ import * as path from "node:path";
 
 type AcpProc = Bun.Subprocess<"pipe", "pipe", "pipe">;
 
-const repoRoot = path.resolve(import.meta.dir, "..", "..", "..");
-const cliEntry = path.join(repoRoot, "packages", "coding-agent", "src", "cli.ts");
+const repoRoot = path.resolve(import.meta.dir, "..");
+const cliEntry = path.join(repoRoot, "src", "cli.ts");
 
 const cleanupRoots: string[] = [];
 let activeProc: AcpProc | undefined;

@@ -29,7 +29,7 @@ import { selectSession } from "./cli/session-picker";
 import { findConfigFile } from "./config";
 import { ModelRegistry, ModelsConfigFile } from "./config/model-registry";
 import { resolveCliModel, resolveModelRoleValue, resolveModelScope, type ScopedModel } from "./config/model-resolver";
-import { getDefault, type SettingPath, Settings, settings } from "./config/settings";
+import { Settings, settings } from "./config/settings";
 import { initializeWithSettings } from "./discovery";
 import {
 	clearPluginRootsAndCaches,
@@ -51,6 +51,7 @@ import type { MCPManager } from "./mcp";
 import { InteractiveMode, runAcpMode, runPrintMode, runRpcMode } from "./modes";
 import { initTheme, stopThemeWatcher } from "./modes/theme/theme";
 import type { SubmittedUserInput } from "./modes/types";
+import { applyRuntimeProfileDefaultSettings, kajiRpcRuntimeProfile } from "./runtime/profile";
 import {
 	type CreateAgentSessionOptions,
 	type CreateAgentSessionResult,
@@ -87,35 +88,8 @@ async function checkForNewVersion(currentVersion: string): Promise<string | unde
 	}
 }
 
-const RPC_DEFAULTED_SETTING_PATHS: SettingPath[] = [
-	"todo.enabled",
-	"todo.reminders",
-	"todo.reminders.max",
-	"todo.eager",
-	"async.enabled",
-	"async.maxJobs",
-	"bash.autoBackground.enabled",
-	"bash.autoBackground.thresholdMs",
-	"task.isolation.mode",
-	"task.isolation.merge",
-	"task.isolation.commits",
-	"task.eager",
-	"task.simple",
-	"task.maxConcurrency",
-	"task.maxRecursionDepth",
-	"task.disabledAgents",
-	"task.agentModelOverrides",
-	"disabledProviders",
-	// Memory subsystems are off-by-default for RPC hosts; embedders that want
-	// memory should opt in explicitly through their own settings layer.
-	"memory.backend",
-	"memories.enabled",
-];
-
 export function applyRpcDefaultSettingOverrides(targetSettings: Settings = settings): void {
-	for (const settingPath of RPC_DEFAULTED_SETTING_PATHS) {
-		targetSettings.override(settingPath, getDefault(settingPath));
-	}
+	applyRuntimeProfileDefaultSettings(targetSettings, kajiRpcRuntimeProfile());
 }
 
 async function readPipedInput(): Promise<string | undefined> {

@@ -30,10 +30,10 @@ export type GlobCallback = (error: Error | null, match: GlobMatch | null) => voi
 
 export async function glob(options: GlobOptions, onMatch?: GlobCallback): Promise<{ matches: GlobMatch[] }> {
 	const executable = await resolveZlobExecutable();
-	if (!executable) {
-		throw new Error("zlob executable not found. Kaji should bundle it at Kaji/Resources/Zlob/zlob or set KAJI_ZLOB_BIN.");
-	}
 	const cwd = path.resolve(String(options.path || process.cwd()));
+	if (!executable) {
+		return fallbackGlob(options, cwd, onMatch);
+	}
 	const pattern = normalizePatternForCwd(String(options.pattern || "**/*"), cwd);
 	const maxResults = Number(options.maxResults ?? 200);
 	const patterns = expandBraces(pattern);
@@ -116,6 +116,83 @@ function splitBraceAlternatives(value: string): string[] {
 	}
 	alternatives.push(value.slice(start));
 	return alternatives;
+}
+
+async function fallbackGlob(
+	options: GlobOptions,
+	cwd: string,
+	onMatch?: GlobCallback,
+): Promise<{ matches: GlobMatch[] }> {
+	const pattern = normalizePatternForCwd(String(options.pattern || "**/*"), cwd);
+	const maxResults = Number(options.maxResults ?? 200);
+	const ignored = options.gitignore === false ? [] : await readGitignorePatterns(cwd);
+	let matches = await collectFallbackMatches(pattern, cwd, options, ignored);
+	matches = dedupeMatches(matches);
+	if (options.fileType !== undefined) {
+		matches = matches.filter(match => match.fileType === options.fileType);
+	}
+	if (options.sortByMtime) {
+		matches.sort((a, b) => (b.mtime ?? 0) - (a.mtime ?? 0));
+	} else {
+		matches.sort((a, b) => a.path.localeCompare(b.path));
+	}
+	matches = matches.slice(0, maxResults);
+	for (const match of matches) onMatch?.(null, match);
+	return { matches };
+}
+
+async function collectFallbackMatches(
+	pattern: string,
+	cwd: string,
+	options: GlobOptions,
+	ignored: string[],
+): Promise<GlobMatch[]> {
+	const out: GlobMatch[] = [];
+	for (const expandedPattern of expandBraces(pattern)) {
+		const scanner = new Bun.Glob(expandedPattern);
+		for await (const entry of scanner.scan({ cwd, dot: options.hidden === true, onlyFiles: false })) {
+			const normalized = entry.replace(/\\/g, "/");
+			if (isIgnoredByPatterns(normalized, ignored)) continue;
+			const match = await toGlobMatch(cwd, normalized);
+			if (match) out.push(match);
+		}
+	}
+	return out;
+}
+
+async function readGitignorePatterns(cwd: string): Promise<string[]> {
+	try {
+		const info = await stat(path.join(cwd, ".git"));
+		if (!info.isDirectory()) return [];
+		const text = await Bun.file(path.join(cwd, ".gitignore")).text();
+		return text
+			.split(/\r?\n/g)
+			.map(line => line.trim())
+			.filter(line => line.length > 0 && !line.startsWith("#"));
+	} catch {
+		return [];
+	}
+}
+
+function isIgnoredByPatterns(relativePath: string, patterns: string[]): boolean {
+	return patterns.some(pattern => isIgnoredByPattern(relativePath, pattern));
+}
+
+function isIgnoredByPattern(relativePath: string, pattern: string): boolean {
+	const normalized = pattern.replace(/\\/g, "/");
+	if (normalized.endsWith("/")) {
+		const dir = normalized.slice(0, -1);
+		return relativePath === dir || relativePath.startsWith(`${dir}/`);
+	}
+	if (normalized.includes("*")) {
+		const escaped = normalized.split("*").map(escapeRegex).join(".*");
+		return new RegExp(`(^|/)${escaped}$`).test(relativePath);
+	}
+	return relativePath === normalized || relativePath.endsWith(`/${normalized}`);
+}
+
+function escapeRegex(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function buildArgs(pattern: string, cwd: string, options: GlobOptions, maxResults: number): string[] {

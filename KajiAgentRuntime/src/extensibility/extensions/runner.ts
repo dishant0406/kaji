@@ -1,13 +1,15 @@
 /**
  * Extension runner - executes extensions and manages their lifecycle.
  */
-import type { AgentMessage } from "@oh-my-pi/pi-agent-core";
+import type { AgentMessage, AgentTool } from "@oh-my-pi/pi-agent-core";
 import type { CredentialDisabledEvent, ImageContent, Model, ProviderResponseMetadata } from "@oh-my-pi/pi-ai";
 import type { KeyId } from "@oh-my-pi/pi-tui";
 import { logger } from "@oh-my-pi/pi-utils";
 import type { ModelRegistry } from "../../config/model-registry";
 import { type Theme, theme } from "../../modes/theme/theme";
+import { PermissionService } from "../../permissions/permission-service";
 import type { SessionManager } from "../../session/session-manager";
+import { authorizeExtensionToolCall } from "./permission-authorizer";
 import type {
 	AfterProviderResponseEvent,
 	BeforeAgentStartEvent,
@@ -203,8 +205,26 @@ export class ExtensionRunner {
 		private readonly cwd: string,
 		private readonly sessionManager: SessionManager,
 		private readonly modelRegistry: ModelRegistry,
+		private readonly permissionService = new PermissionService(),
 	) {
 		this.#uiContext = noOpUIContext;
+	}
+
+	getPermissionService(): PermissionService {
+		return this.permissionService;
+	}
+
+	async authorizeToolCall(
+		tool: Pick<AgentTool, "name" | "approval" | "formatApprovalDetails">,
+		params: unknown,
+		context?: Parameters<typeof authorizeExtensionToolCall>[3],
+	): Promise<void> {
+		await authorizeExtensionToolCall(
+			{ permissionService: this.permissionService, hasUI: this.hasUI(), uiContext: this.#uiContext },
+			tool,
+			params,
+			context,
+		);
 	}
 
 	initialize(

@@ -67,16 +67,17 @@ describe("tools.approvalMode setting", () => {
 		}
 	});
 
-	it("yolo mode (default) bypasses approval for non-overriding tool calls", async () => {
+	it("read-allow mode (default) rejects exec tools when no UI is available", async () => {
 		const { tempDir, session, settings } = await makeSession();
 		tempDirs.push(tempDir);
 		try {
 			const bash = session.getToolByName("bash");
 			if (!bash) throw new Error("Expected bash tool");
-			const result = await bash.execute("yolo", { command: "echo ok" }, undefined, undefined, {
-				settings,
-			} as AgentToolContext);
-			expect(textOf(result)).toContain("ok");
+			await expect(
+				bash.execute("read-allow", { command: "echo blocked" }, undefined, undefined, {
+					settings,
+				} as AgentToolContext),
+			).rejects.toThrow(/requires approval but no interactive UI available/);
 		} finally {
 			await session.dispose();
 		}

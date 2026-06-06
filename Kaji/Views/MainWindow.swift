@@ -873,6 +873,10 @@ struct MainWindow: View {
                     KajiAgentSubagentDetailView(agent: agent) {
                         modalCoordinator.dismiss()
                     }
+                case let .subagents(agents):
+                    KajiAgentSubagentListDetailView(agents: agents) {
+                        modalCoordinator.dismiss()
+                    }
                 }
             }
         }

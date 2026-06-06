@@ -310,7 +310,7 @@ export function isInternalUrlPath(filePath: string): boolean {
 	for (const prefix of TOP_LEVEL_INTERNAL_URL_PREFIXES) {
 		if (expandedAndNormalized.startsWith(prefix)) return true;
 	}
-	return false;
+	return InternalUrlRouter.instance().canHandle(expandedAndNormalized);
 }
 
 /**

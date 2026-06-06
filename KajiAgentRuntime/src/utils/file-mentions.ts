@@ -100,7 +100,7 @@ async function listMentionCandidates(cwd: string): Promise<MentionCandidate[]> {
 		});
 		entries = result.matches.map(match => match.path);
 	} catch {
-		return [];
+		entries = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd, dot: true, onlyFiles: false }));
 	}
 
 	entries.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));

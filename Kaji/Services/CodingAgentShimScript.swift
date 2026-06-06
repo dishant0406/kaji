@@ -120,8 +120,9 @@ struct CodingAgentShimScript {
               printf '%s\\n\\n' "# Kaji Project Instructions"
               printf '%s\\n\\n' "These instructions are owned by Kaji and apply only to agent sessions launched from Kaji."
               printf '%s\\n\\n' "## Kaji Code Graph"
-              printf '%s%s%s\\n' "- Read " "$report_path" " before answering architecture, dependency, or codebase navigation questions."
-              printf '%s%s%s\\n' "- Use " "$graph_path" " for exact graph nodes, edges, communities, or source files."
+              printf '%s%s%s\\n' "- If " "$report_path" " exists, read it before architecture or dependency questions."
+              printf '%s%s%s\\n' "- If " "$graph_path" " exists, use it for exact graph nodes, edges, communities, or source files."
+              printf '%s\\n' "- If either file is missing, continue with normal repo tools and mention Code Graph must be built first."
             } > "$KAJI_CODE_GRAPH_INSTRUCTIONS"
             unset report_path graph_path
             chmod 600 "$KAJI_CODE_GRAPH_INSTRUCTIONS" 2>/dev/null || true

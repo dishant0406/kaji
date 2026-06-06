@@ -34,6 +34,7 @@ struct KajiAgentSubagentProgress: Identifiable, Hashable {
     let currentTool: String?
     let currentToolArgs: String?
     let recentOutput: [String]
+    let failureText: String?
     let toolCount: Int
     let tokens: Int
     let durationMs: Int
@@ -57,6 +58,7 @@ struct KajiAgentSubagentProgress: Identifiable, Hashable {
         self.currentTool = object["currentTool"]?.stringValue
         self.currentToolArgs = object["currentToolArgs"]?.stringValue
         self.recentOutput = object["recentOutput"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        self.failureText = object["failureText"]?.stringValue ?? object["error"]?.stringValue ?? object["stderr"]?.stringValue
         self.toolCount = object["toolCount"]?.numberValue.map(Int.init) ?? 0
         self.tokens = object["tokens"]?.numberValue.map(Int.init) ?? 0
         self.durationMs = object["durationMs"]?.numberValue.map(Int.init) ?? 0
@@ -74,7 +76,8 @@ struct KajiAgentSubagentProgress: Identifiable, Hashable {
         description = result.description
         currentTool = nil
         currentToolArgs = nil
-        recentOutput = result.output.isEmpty ? [] : [result.output]
+        recentOutput = result.output.nilIfEmpty.map { [$0] } ?? []
+        failureText = result.error ?? result.stderr.nilIfEmpty
         toolCount = 0
         tokens = result.tokens
         durationMs = result.durationMs
@@ -92,6 +95,7 @@ struct KajiAgentSubagentResult: Identifiable, Hashable {
     let description: String?
     let exitCode: Int
     let output: String
+    let stderr: String
     let error: String?
     let durationMs: Int
     let tokens: Int
@@ -111,6 +115,7 @@ struct KajiAgentSubagentResult: Identifiable, Hashable {
         self.description = object["description"]?.stringValue
         self.exitCode = object["exitCode"]?.numberValue.map(Int.init) ?? 1
         self.output = object["output"]?.stringValue ?? ""
+        self.stderr = object["stderr"]?.stringValue ?? ""
         self.error = object["error"]?.stringValue
         self.durationMs = object["durationMs"]?.numberValue.map(Int.init) ?? 0
         self.tokens = object["tokens"]?.numberValue.map(Int.init) ?? 0

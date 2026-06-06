@@ -191,6 +191,8 @@ export interface AgentProgress {
 	lastIntent?: string;
 	currentTool?: string;
 	currentToolArgs?: string;
+	failureText?: string;
+	stderr?: string;
 	currentToolStartMs?: number;
 	recentTools: Array<{ tool: string; args: string; endMs: number }>;
 	recentOutput: string[];

@@ -3,8 +3,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
-const repoRoot = path.resolve(import.meta.dir, "..", "..", "..");
-const cliEntry = path.join(repoRoot, "packages", "coding-agent", "src", "cli.ts");
+const repoRoot = path.resolve(import.meta.dir, "..");
+const cliEntry = path.join(repoRoot, "src", "cli.ts");
 
 let cleanupRoot: string | undefined;
 

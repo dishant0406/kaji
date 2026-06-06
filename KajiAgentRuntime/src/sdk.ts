@@ -20,7 +20,6 @@ import {
 	getOpenAICodexTransportDetails,
 	prewarmOpenAICodexResponses,
 } from "@oh-my-pi/pi-ai/providers/openai-codex-responses";
-import type { Component } from "@oh-my-pi/pi-tui";
 import {
 	$env,
 	$flag,
@@ -52,7 +51,7 @@ import { CursorExecHandlers } from "./cursor";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
 import { initializeWithSettings } from "./discovery";
-import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./eval/py/executor";
+import { disposeKernelSessionsByOwner } from "./eval/py/executor";
 import { defaultEvalSessionId } from "./eval/session-id";
 import { TtsrManager } from "./export/ttsr";
 import {
@@ -61,10 +60,10 @@ import {
 	loadCustomCommands as loadCustomCommandsInternal,
 } from "./extensibility/custom-commands";
 import { discoverAndLoadCustomTools } from "./extensibility/custom-tools";
-import type { CustomTool, CustomToolContext, CustomToolSessionEvent } from "./extensibility/custom-tools/types";
+import { createCustomToolsExtension, customToolToDefinition, isCustomTool } from "./extensibility/custom-tools/extension";
+import type { CustomTool } from "./extensibility/custom-tools/types";
 import {
 	discoverAndLoadExtensions,
-	type ExtensionContext,
 	type ExtensionFactory,
 	ExtensionRunner,
 	ExtensionToolWrapper,
@@ -86,8 +85,10 @@ import type { HindsightSessionState } from "./hindsight/state";
 import { LocalProtocolHandler, type LocalProtocolOptions } from "./internal-urls";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
 import { discoverAndLoadMCPTools, MCPManager, type MCPToolsLoadResult } from "./mcp";
+import { appendMcpInstructionBlocks, truncateMcpInstructionMap } from "./mcp-instructions";
 
 import { resolveMemoryBackend } from "./memory-backend";
+import { emptyPermissionServiceSnapshot } from "./permissions";
 import asyncResultTemplate from "./prompts/tools/async-result.md" with { type: "text" };
 import { AgentRegistry, MAIN_AGENT_ID } from "./registry/agent-registry";
 import {
@@ -100,10 +101,9 @@ import {
 import { AgentSession } from "./session/agent-session";
 import { resolveAuthBrokerConfig } from "./session/auth-broker-config";
 import { AuthBrokerClient, AuthStorage, RemoteAuthCredentialStore } from "./session/auth-storage";
+import { registerPythonCleanup, registerSshCleanup, resolveAppendOnlyMode } from "./sdk-runtime";
 import { type CustomMessage, convertToLlm } from "./session/messages";
 import { SessionManager } from "./session/session-manager";
-import { closeAllConnections } from "./ssh/connection-manager";
-import { unmountAll } from "./ssh/sshfs-mount";
 import {
 	type BuildSystemPromptResult,
 	buildSystemPrompt as buildSystemPromptInternal,
@@ -550,189 +550,6 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 }
 
 // Internal Helpers
-
-function createCustomToolContext(ctx: ExtensionContext): CustomToolContext {
-	return {
-		sessionManager: ctx.sessionManager,
-		modelRegistry: ctx.modelRegistry,
-		model: ctx.model,
-		isIdle: ctx.isIdle,
-		hasQueuedMessages: ctx.hasPendingMessages,
-		abort: ctx.abort,
-	};
-}
-
-function isCustomTool(tool: CustomTool | ToolDefinition): tool is CustomTool {
-	// To distinguish, we mark converted tools with a hidden symbol property.
-	// If the tool doesn't have this marker, it's a CustomTool that needs conversion.
-	return !(tool as any).__isToolDefinition;
-}
-
-const TOOL_DEFINITION_MARKER = Symbol("__isToolDefinition");
-
-/** Matches the truncation applied to per-server instructions inside `rebuildSystemPrompt`. */
-const MAX_MCP_INSTRUCTIONS_LENGTH = 4000;
-
-let sshCleanupRegistered = false;
-
-async function cleanupSshResources(): Promise<void> {
-	const results = await Promise.allSettled([closeAllConnections(), unmountAll()]);
-	for (const result of results) {
-		if (result.status === "rejected") {
-			logger.warn("SSH cleanup failed", { error: String(result.reason) });
-		}
-	}
-}
-
-function registerSshCleanup(): void {
-	if (sshCleanupRegistered) return;
-	sshCleanupRegistered = true;
-	postmortem.register("ssh-cleanup", cleanupSshResources);
-}
-
-let pythonCleanupRegistered = false;
-
-function registerPythonCleanup(): void {
-	if (pythonCleanupRegistered) return;
-	pythonCleanupRegistered = true;
-	postmortem.register("python-cleanup", disposeAllKernelSessions);
-}
-
-/**
- * Resolve whether to enable append-only context mode based on the setting and provider.
- *
- * - `"on"` → always enable
- * - `"off"` → never enable
- * - `"auto"` → enable for DeepSeek (prefix-caching provider)
- */
-function resolveAppendOnlyMode(setting: "auto" | "on" | "off" | undefined, provider: string): boolean {
-	switch (setting ?? "auto") {
-		case "on":
-			return true;
-		case "off":
-			return false;
-		default:
-			return provider === "deepseek";
-	}
-}
-
-function customToolToDefinition(tool: CustomTool): ToolDefinition {
-	const definition: ToolDefinition & { [TOOL_DEFINITION_MARKER]: true } = {
-		name: tool.name,
-		label: tool.label,
-		description: tool.description,
-		parameters: tool.parameters,
-		hidden: tool.hidden,
-		deferrable: tool.deferrable,
-		mcpServerName: tool.mcpServerName,
-		mcpToolName: tool.mcpToolName,
-		execute: (toolCallId, params, signal, onUpdate, ctx) =>
-			tool.execute(toolCallId, params, onUpdate, createCustomToolContext(ctx), signal),
-		onSession: tool.onSession ? (event, ctx) => tool.onSession?.(event, createCustomToolContext(ctx)) : undefined,
-		renderCall: tool.renderCall,
-		renderResult: tool.renderResult
-			? (result, options, theme): Component => {
-					const component = tool.renderResult?.(
-						result,
-						{ expanded: options.expanded, isPartial: options.isPartial, spinnerFrame: options.spinnerFrame },
-						theme,
-					);
-					// Return empty component if undefined to match Component type requirement
-					return component ?? ({ render: () => [] } as unknown as Component);
-				}
-			: undefined,
-		[TOOL_DEFINITION_MARKER]: true,
-	};
-	return definition;
-}
-
-function createCustomToolsExtension(tools: CustomTool[]): ExtensionFactory {
-	return api => {
-		for (const tool of tools) {
-			api.registerTool(customToolToDefinition(tool));
-		}
-
-		const runOnSession = async (event: CustomToolSessionEvent, ctx: ExtensionContext) => {
-			for (const tool of tools) {
-				if (!tool.onSession) continue;
-				try {
-					await tool.onSession(event, createCustomToolContext(ctx));
-				} catch (err) {
-					logger.warn("Custom tool onSession error", { tool: tool.name, error: String(err) });
-				}
-			}
-		};
-
-		api.on("session_start", async (_event, ctx) =>
-			runOnSession({ reason: "start", previousSessionFile: undefined }, ctx),
-		);
-		api.on("session_switch", async (event, ctx) =>
-			runOnSession({ reason: "switch", previousSessionFile: event.previousSessionFile }, ctx),
-		);
-		api.on("session_branch", async (event, ctx) =>
-			runOnSession({ reason: "branch", previousSessionFile: event.previousSessionFile }, ctx),
-		);
-		api.on("session_tree", async (_event, ctx) =>
-			runOnSession({ reason: "tree", previousSessionFile: undefined }, ctx),
-		);
-		api.on("session_shutdown", async (_event, ctx) =>
-			runOnSession({ reason: "shutdown", previousSessionFile: undefined }, ctx),
-		);
-		api.on("auto_compaction_start", async (event, ctx) =>
-			runOnSession({ reason: "auto_compaction_start", trigger: event.reason, action: event.action }, ctx),
-		);
-		api.on("auto_compaction_end", async (event, ctx) =>
-			runOnSession(
-				{
-					reason: "auto_compaction_end",
-					action: event.action,
-					result: event.result,
-					aborted: event.aborted,
-					willRetry: event.willRetry,
-					errorMessage: event.errorMessage,
-				},
-				ctx,
-			),
-		);
-		api.on("auto_retry_start", async (event, ctx) =>
-			runOnSession(
-				{
-					reason: "auto_retry_start",
-					attempt: event.attempt,
-					maxAttempts: event.maxAttempts,
-					delayMs: event.delayMs,
-					errorMessage: event.errorMessage,
-				},
-				ctx,
-			),
-		);
-		api.on("auto_retry_end", async (event, ctx) =>
-			runOnSession(
-				{
-					reason: "auto_retry_end",
-					success: event.success,
-					attempt: event.attempt,
-					finalError: event.finalError,
-				},
-				ctx,
-			),
-		);
-		api.on("ttsr_triggered", async (event, ctx) =>
-			runOnSession({ reason: "ttsr_triggered", rules: event.rules }, ctx),
-		);
-		api.on("todo_reminder", async (event, ctx) =>
-			runOnSession(
-				{
-					reason: "todo_reminder",
-					todos: event.todos,
-					attempt: event.attempt,
-					maxAttempts: event.maxAttempts,
-				},
-				ctx,
-			),
-		);
-	};
-}
 
 // Factory
 
@@ -1189,6 +1006,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			getHindsightSessionState: () => session?.getHindsightSessionState(),
 			getAgentId: () => resolvedAgentId,
 			getToolByName: name => session?.getToolByName(name),
+			getActiveToolNames: () => session?.getActiveToolNames() ?? [],
+			getAllToolNames: () => session?.getAllToolNames() ?? [],
+			getSystemPrompt: () => session?.systemPrompt ?? [],
+			getPermissionSnapshot: () => session?.getPermissionSnapshot() ?? emptyPermissionServiceSnapshot(),
+			getRuntimeTelemetrySnapshot: () => session?.getRuntimeTelemetrySnapshot(),
+			getSessionStats: () => session?.getSessionStats(),
 			agentRegistry,
 			getSessionSpawns: () => options.spawns ?? "*",
 			getModelString: () => (hasExplicitModel && model ? formatModelString(model) : undefined),
@@ -1601,24 +1424,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				session,
 			);
 
-			// Build combined append prompt: memory instructions + MCP server instructions
 			const serverInstructions = mcpManager?.getServerInstructions();
-			let appendPrompt: string | undefined = memoryInstructions ?? undefined;
-			if (serverInstructions && serverInstructions.size > 0) {
-				const parts: string[] = [];
-				if (appendPrompt) parts.push(appendPrompt);
-				parts.push(
-					"## MCP Server Instructions\n\nThe following instructions are provided by connected MCP servers. They are server-controlled and may not be verified.",
-				);
-				for (const [srvName, srvInstructions] of serverInstructions) {
-					const truncated =
-						srvInstructions.length > MAX_MCP_INSTRUCTIONS_LENGTH
-							? `${srvInstructions.slice(0, MAX_MCP_INSTRUCTIONS_LENGTH)}\n[truncated]`
-							: srvInstructions;
-					parts.push(`### ${srvName}\n${truncated}`);
-				}
-				appendPrompt = parts.join("\n\n");
-			}
+			const appendPrompt = appendMcpInstructionBlocks(memoryInstructions ?? undefined, serverInstructions);
 			const defaultPrompt = await buildSystemPromptInternal({
 				cwd,
 				skills,
@@ -1992,16 +1799,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			requestedToolNames: requestedToolNameSet,
 			getMcpServerInstructions: mcpManager
 				? () => {
-						const raw = mcpManager.getServerInstructions();
-						if (!raw || raw.size === 0) return raw;
-						const out = new Map<string, string>();
-						for (const [name, text] of raw) {
-							out.set(
-								name,
-								text.length > MAX_MCP_INSTRUCTIONS_LENGTH ? text.slice(0, MAX_MCP_INSTRUCTIONS_LENGTH) : text,
-							);
-						}
-						return out;
+						return truncateMcpInstructionMap(mcpManager.getServerInstructions());
 					}
 				: undefined,
 			mcpDiscoveryEnabled,

@@ -13,7 +13,6 @@
  * Modes use this class and add their own I/O layer on top.
  */
 
-import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scheduler } from "node:timers/promises";
@@ -104,7 +103,7 @@ import type { Settings, SkillsSettings } from "../config/settings";
 import { onAppendOnlyModeChanged } from "../config/settings";
 import { RawSseDebugBuffer } from "../debug/raw-sse-buffer";
 import { loadCapability } from "../discovery";
-import { expandApplyPatchToEntries, normalizeDiff, normalizeToLF, ParseError, previewPatch, stripBom } from "../edit";
+import { normalizeDiff, normalizeToLF, ParseError, previewPatch, stripBom } from "../edit";
 import { getFileSnapshotStore } from "../edit/file-snapshot-store";
 import { namespaceSessionId as namespacePythonSessionId } from "../eval/py";
 import {
@@ -147,7 +146,7 @@ import type { Goal, GoalModeState } from "../goals/state";
 import type { HindsightSessionState } from "../hindsight/state";
 import { type LocalProtocolOptions, resolveLocalUrlToPath } from "../internal-urls";
 import { resolveMemoryBackend } from "../memory-backend";
-import { getCurrentThemeName, theme } from "../modes/theme/theme";
+import { getCurrentThemeName } from "../modes/theme/theme";
 import { containsUltrathink, ULTRATHINK_NOTICE } from "../modes/ultrathink";
 import type { PlanModeState } from "../plan-mode/state";
 import autoContinuePrompt from "../prompts/system/auto-continue.md" with { type: "text" };
@@ -179,7 +178,7 @@ import { outputMeta } from "../tools/output-meta";
 import { normalizeLocalScheme, resolveToCwd } from "../tools/path-utils";
 import { isAutoQaEnabled } from "../tools/report-tool-issue";
 import { getLatestTodoPhasesFromEntries, type TodoItem, type TodoPhase } from "../tools/todo-write";
-import { ToolAbortError, ToolError } from "../tools/tool-errors";
+import { ToolError } from "../tools/tool-errors";
 import { clampTimeout } from "../tools/tool-timeouts";
 import { parseCommandArgs } from "../utils/command-args";
 import { type EditMode, resolveEditMode } from "../utils/edit-mode";
@@ -187,7 +186,14 @@ import { resolveFileDisplayMode } from "../utils/file-display-mode";
 import { extractFileMentions, generateFileMentionMessages } from "../utils/file-mentions";
 import { buildNamedToolChoice } from "../utils/tool-choice";
 import type { AuthStorage } from "./auth-storage";
-import type { ClientBridge, ClientBridgePermissionOption, ClientBridgePermissionOutcome } from "./client-bridge";
+import { createSessionPermissionDecisionPersistence, PermissionService, type PermissionServiceSnapshot } from "../permissions";
+import { RuntimeTelemetry, type RuntimeTelemetrySnapshot } from "../runtime/telemetry";
+import type { ClientBridge } from "./client-bridge";
+import { createHandoffContext, createHandoffFileName } from "./handoff";
+import { dedupeIrcReply } from "./irc-reply";
+import { noOpUIContext } from "./no-op-ui-context";
+import { buildSessionMetadata } from "./session-metadata";
+import { resolveToolCallBatchCapForModel } from "./tool-call-batch-cap";
 import {
 	type BashExecutionMessage,
 	type CompactionSummaryMessage,
@@ -452,294 +458,6 @@ function formatRetryFallbackBaseSelector(selector: RetryFallbackSelector): strin
 	return `${selector.provider}/${selector.id}`;
 }
 
-const IRC_REPLY_MAX_BYTES = 4096;
-export const ANTHROPIC_TOOL_CALL_BATCH_CAP = 4;
-const CLAUDE_OPUS_4_8_MODEL_ID = /(?:^|[./_-])claude-opus-4[.-]8\b/i;
-
-export function resolveToolCallBatchCapForModel(model: Model | undefined): number | undefined {
-	if (!model) return undefined;
-	return model.provider === "anthropic" && CLAUDE_OPUS_4_8_MODEL_ID.test(model.id)
-		? ANTHROPIC_TOOL_CALL_BATCH_CAP
-		: undefined;
-}
-
-/**
- * Collapse degenerate IRC ephemeral replies before they hit the relay.
- * Models occasionally loop on a single line (~16 reports of N-times-repeated
- * replies); compress runs longer than 3 down to one instance + `[…N×]`, then
- * cap at 4 KiB so a runaway reply can't flood the channel.
- */
-function dedupeIrcReply(text: string): string {
-	if (!text) return text;
-	const lines = text.split("\n");
-	const out: string[] = [];
-	let i = 0;
-	while (i < lines.length) {
-		let j = i + 1;
-		while (j < lines.length && lines[j] === lines[i]) j++;
-		const runLen = j - i;
-		if (runLen > 3) {
-			out.push(lines[i], `[…${runLen}×]`);
-		} else {
-			for (let k = 0; k < runLen; k++) out.push(lines[i]);
-		}
-		i = j;
-	}
-	let result = out.join("\n");
-	if (Buffer.byteLength(result, "utf8") > IRC_REPLY_MAX_BYTES) {
-		// Trim by characters until we're under the byte budget — handles multi-byte
-		// glyphs at the boundary without splitting them.
-		const suffix = "\n[…truncated]";
-		const budget = IRC_REPLY_MAX_BYTES - Buffer.byteLength(suffix, "utf8");
-		while (Buffer.byteLength(result, "utf8") > budget) {
-			result = result.slice(0, -1);
-		}
-		result += suffix;
-	}
-	return result;
-}
-
-/**
- * Build the per-request `metadata` payload for the Anthropic provider, shaped
- * like real Claude Code's `getAPIMetadata` output (`{ session_id, account_uuid,
- * device_id }`) so the backend buckets requests under one session and attributes
- * them to the authenticated OAuth account when available. Resolved at request
- * time so token refreshes and login/logout transitions don't strand a stale
- * account UUID in memory. `account_uuid` and `device_id` are omitted for
- * non-Anthropic providers to avoid leaking the user's Claude identity to
- * third-party APIs (including Anthropic-format-compatible proxies such as
- * cloudflare-ai-gateway or gitlab-duo).
- *
- * `provider` is the target provider string (e.g. `"anthropic"`) and gates the
- * `account_uuid` and `device_id` lookups — only `"anthropic"` requests carry them.
- *
- * `sessionId` is forwarded to the auth-storage session-sticky lookup so that
- * multi-credential setups attribute to the same OAuth account used for the
- * actual API request rather than always picking the first credential.
- *
- * `authStorage` is treated as optional so test fixtures that stub `modelRegistry`
- * without a real storage layer still work; the resolver simply skips the lookup
- * and emits `{ session_id }` alone, matching the no-OAuth-credential path.
- */
-function buildSessionMetadata(
-	sessionId: string,
-	provider: string,
-	authStorage: AuthStorage | undefined,
-): Record<string, unknown> {
-	const userId: Record<string, string> = { session_id: sessionId };
-	// Only look up account_uuid when the request is going to Anthropic. Injecting
-	// a Claude OAuth account_uuid into requests bound for other providers (including
-	// Anthropic-format-compatible proxies like cloudflare-ai-gateway or gitlab-duo)
-	// would leak the user's Anthropic identity to unrelated third-party APIs.
-	if (provider === "anthropic") {
-		const accountUuid = authStorage?.getOAuthAccountId("anthropic", sessionId);
-		if (typeof accountUuid === "string" && accountUuid.length > 0) {
-			userId.account_uuid = accountUuid;
-			// Derive device_id from account_uuid so the payload matches the real CC
-			// getAPIMetadata shape without hardware fingerprinting. A SHA-256 of a
-			// namespaced account UUID produces a stable 64-hex value that is
-			// indistinguishable from a randomly generated device ID on the wire, is
-			// deterministic per account (survives reinstalls), and is auditable: it
-			// is derived solely from the OAuth UUID the user already consented to
-			// share with Anthropic. Omitted when no OAuth credential is available
-			// (API-key callers) to avoid sending a hash of an empty string.
-			userId.device_id = crypto.createHash("sha256").update(`omp-device-id-v1:${accountUuid}`).digest("hex");
-		}
-	}
-	return { user_id: JSON.stringify(userId) };
-}
-
-const noOpUIContext: ExtensionUIContext = {
-	select: async (_title, _options, _dialogOptions) => undefined,
-	confirm: async (_title, _message, _dialogOptions) => false,
-	input: async (_title, _placeholder, _dialogOptions) => undefined,
-	notify: () => {},
-	onTerminalInput: () => () => {},
-	setStatus: () => {},
-	setWorkingMessage: () => {},
-	setWidget: () => {},
-	setTitle: () => {},
-	custom: async () => undefined as never,
-	setEditorText: () => {},
-	pasteToEditor: () => {},
-	getEditorText: () => "",
-	editor: async () => undefined,
-	get theme() {
-		return theme;
-	},
-	getAllThemes: () => Promise.resolve([]),
-	getTheme: () => Promise.resolve(undefined),
-	setTheme: _theme => Promise.resolve({ success: false, error: "UI not available" }),
-	setFooter: () => {},
-	setHeader: () => {},
-	setEditorComponent: () => {},
-	getToolsExpanded: () => false,
-	setToolsExpanded: () => {},
-};
-
-function createHandoffContext(document: string): string {
-	return `<handoff-context>\n${document}\n</handoff-context>\n\nThe above is a handoff document from a previous session. Use this context to continue the work seamlessly.`;
-}
-
-function createHandoffFileName(date = new Date()): string {
-	const fileTimestamp = date.toISOString().replace(/[:.]/g, "-");
-	return `handoff-${fileTimestamp}.md`;
-}
-
-// ============================================================================
-// ACP Permission Gate
-// ============================================================================
-
-/** Tools that require user permission before execution when an ACP client is connected. */
-const PERMISSION_REQUIRED_TOOLS = new Set(["bash", "edit", "delete", "move"]);
-
-/** Permission options presented to the client on each gated tool call. */
-const PERMISSION_OPTIONS: ClientBridgePermissionOption[] = [
-	{ optionId: "allow_once", name: "Allow once", kind: "allow_once" },
-	{ optionId: "allow_always", name: "Always allow", kind: "allow_always" },
-	{ optionId: "reject_once", name: "Reject", kind: "reject_once" },
-	{ optionId: "reject_always", name: "Always reject", kind: "reject_always" },
-];
-
-const PERMISSION_OPTIONS_BY_ID = new Map(PERMISSION_OPTIONS.map(option => [option.optionId, option]));
-
-function getStringProperty(value: Record<string, unknown>, key: string): string | undefined {
-	const candidate = value[key];
-	return typeof candidate === "string" ? candidate : undefined;
-}
-
-function collectStringPaths(value: unknown): string[] {
-	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function getEditDestructiveIntent(args: unknown): { kind: "delete" | "move"; paths: string[] } | undefined {
-	if (!args || typeof args !== "object" || Array.isArray(args)) return undefined;
-	const a = args as Record<string, unknown>;
-
-	const edits = Array.isArray(a.edits) ? a.edits : undefined;
-	if (edits) {
-		const path = getStringProperty(a, "path");
-		if (path) {
-			for (const edit of edits) {
-				if (!edit || typeof edit !== "object" || Array.isArray(edit)) continue;
-				const op = getStringProperty(edit as Record<string, unknown>, "op");
-				if (op === "delete") return { kind: "delete", paths: [path] };
-			}
-		}
-		for (const edit of edits) {
-			if (!edit || typeof edit !== "object" || Array.isArray(edit)) continue;
-			const entry = edit as Record<string, unknown>;
-			const op = getStringProperty(entry, "op");
-			const rename = getStringProperty(entry, "rename");
-			if (op !== "create" && rename) return { kind: "move", paths: path ? [path, rename] : [rename] };
-		}
-	}
-
-	const input = getStringProperty(a, "input");
-	if (input) {
-		try {
-			const entries = expandApplyPatchToEntries({ input });
-			const deleteEntry = entries.find(entry => entry.op === "delete");
-			if (deleteEntry) return { kind: "delete", paths: [deleteEntry.path] };
-			const moveEntry = entries.find(entry => entry.rename);
-			if (moveEntry?.rename) return { kind: "move", paths: [moveEntry.path, moveEntry.rename] };
-		} catch {
-			// If the edit input is not an apply_patch envelope, it is not a delete/move operation.
-		}
-	}
-
-	return undefined;
-}
-
-function getPermissionIntent(
-	toolName: string,
-	args: unknown,
-): { toolName: string; title: string; paths?: string[]; cacheKey: string } | undefined {
-	const a = args && typeof args === "object" && !Array.isArray(args) ? (args as Record<string, unknown>) : {};
-	if (toolName === "bash") {
-		const cmd = getStringProperty(a, "command")?.slice(0, 80);
-		return { toolName, title: cmd || toolName, cacheKey: toolName };
-	}
-	if (toolName === "delete") {
-		const p = getStringProperty(a, "path");
-		return { toolName, title: p ? `Delete ${p}` : toolName, paths: p ? [p] : undefined, cacheKey: toolName };
-	}
-	if (toolName === "move") {
-		const from = getStringProperty(a, "oldPath") ?? getStringProperty(a, "path") ?? getStringProperty(a, "from");
-		const to = getStringProperty(a, "newPath") ?? getStringProperty(a, "to") ?? getStringProperty(a, "destination");
-		if (from && to) return { toolName, title: `Move ${from} to ${to}`, paths: [from, to], cacheKey: toolName };
-		return {
-			toolName,
-			title: from ? `Move ${from}` : toolName,
-			paths: from ? [from] : undefined,
-			cacheKey: toolName,
-		};
-	}
-	if (toolName === "edit") {
-		const intent = getEditDestructiveIntent(args);
-		if (!intent) return undefined;
-		if (intent.kind === "delete") {
-			return {
-				toolName,
-				title: `Delete ${intent.paths[0] ?? "edit target"}`,
-				paths: intent.paths,
-				cacheKey: "edit:delete",
-			};
-		}
-		const from = intent.paths[0];
-		const to = intent.paths[1];
-		return {
-			toolName,
-			title: from && to ? `Move ${from} to ${to}` : `Move ${from ?? to ?? "edit target"}`,
-			paths: intent.paths,
-			cacheKey: "edit:move",
-		};
-	}
-	return undefined;
-}
-
-function extractPermissionLocations(
-	args: unknown,
-	cwd: string,
-	explicitPaths?: string[],
-): { path: string; line?: number }[] {
-	if (!args || typeof args !== "object") return [];
-	const a = args as Record<string, unknown>;
-	const out: { path: string; line?: number }[] = [];
-	const pushPath = (value: unknown) => {
-		if (typeof value !== "string" || value.length === 0) return;
-		// ACP locations carry file paths that the editor host will open or focus;
-		// they must be absolute or the client cannot resolve them. Resolve raw
-		// tool args (often cwd-relative) against the session cwd before sending.
-		let resolved: string;
-		try {
-			resolved = resolveToCwd(value, cwd);
-		} catch {
-			return;
-		}
-		if (out.some(location => location.path === resolved)) return;
-		out.push({ path: resolved });
-	};
-	if (explicitPaths) {
-		for (const p of explicitPaths) {
-			pushPath(p);
-		}
-		return out;
-	}
-	pushPath(a.path);
-	pushPath(a.file);
-	for (const p of collectStringPaths(a.paths)) {
-		pushPath(p);
-	}
-	pushPath(a.oldPath);
-	pushPath(a.newPath);
-	pushPath(a.from);
-	pushPath(a.to);
-	pushPath(a.source);
-	pushPath(a.destination);
-	return out;
-}
-
 // ============================================================================
 // AgentSession Class
 // ============================================================================
@@ -794,8 +512,8 @@ export class AgentSession {
 	#planReferencePath = "local://PLAN.md";
 	#clientBridge: ClientBridge | undefined;
 	#allowAcpAgentInitiatedTurns = false;
-	/** Per-session memory of allow_always / reject_always decisions for gated tools. */
-	#acpPermissionDecisions: Map<string, "allow_always" | "reject_always"> = new Map();
+	#permissionService = new PermissionService();
+	#runtimeTelemetry = new RuntimeTelemetry();
 
 	// Compaction state
 	#compactionAbortController: AbortController | undefined = undefined;
@@ -1032,6 +750,8 @@ export class AgentSession {
 		this.#skillsSettings = config.skillsSettings;
 		this.#modelRegistry = config.modelRegistry;
 		this.#validateRetryFallbackChains();
+		this.#permissionService = config.extensionRunner?.getPermissionService() ?? this.#permissionService;
+		this.#permissionService.setPersistentDecisionPersistence(createSessionPermissionDecisionPersistence(this.sessionManager));
 		this.#toolRegistry = config.toolRegistry ?? new Map();
 		this.#requestedToolNames = config.requestedToolNames;
 		this.#transformContext = config.transformContext ?? (messages => messages);
@@ -1379,6 +1099,7 @@ export class AgentSession {
 	}
 
 	async #emitSessionEvent(event: AgentSessionEvent): Promise<void> {
+		this.#runtimeTelemetry.recordEvent(event);
 		if (event.type === "message_update") {
 			this.#emit(event);
 			void this.#queueExtensionEvent(event);
@@ -2941,6 +2662,14 @@ export class AgentSession {
 		return this.agent.state.systemPrompt;
 	}
 
+	getPermissionSnapshot(): PermissionServiceSnapshot {
+		return this.#permissionService.snapshot();
+	}
+
+	getRuntimeTelemetrySnapshot(): RuntimeTelemetrySnapshot {
+		return this.#runtimeTelemetry.snapshot();
+	}
+
 	/** Current retry attempt (0 if not retrying) */
 	get retryAttempt(): number {
 		return this.#retryAttempt;
@@ -3083,6 +2812,7 @@ export class AgentSession {
 		if (activated.length === 0) {
 			return [];
 		}
+		this.#runtimeTelemetry.recordActivatedTools(activated);
 		const nextActive = [
 			...this.#getActiveNonMCPToolNames(),
 			...this.#filterSelectableMCPToolNames(nextSelectedMCPToolNames),
@@ -3188,16 +2918,10 @@ export class AgentSession {
 		return [...new Set(activated)];
 	}
 
-	/**
-	 * Wrap a tool with a permission-gate proxy when an ACP client is connected.
-	 * Only wraps tools whose name is in PERMISSION_REQUIRED_TOOLS and only when
-	 * the bridge exposes `requestPermission`. No-ops for all other cases.
-	 */
 	#wrapToolForAcpPermission<T extends AgentTool>(tool: T): T {
 		const bridge = this.#clientBridge;
-		// Match the capability+method gating pattern used by read/write/bash.
 		if (!bridge?.capabilities.requestPermission || !bridge.requestPermission) return tool;
-		if (!PERMISSION_REQUIRED_TOOLS.has(tool.name)) return tool;
+		if (!this.#permissionService.shouldGateAcpTool(tool.name)) return tool;
 		return new Proxy(tool, {
 			get: (target, prop) => {
 				if (prop !== "execute") return Reflect.get(target, prop, target);
@@ -3208,77 +2932,14 @@ export class AgentSession {
 					onUpdate: never,
 					ctx: never,
 				) => {
-					const permissionIntent = getPermissionIntent(target.name, args);
-					if (!permissionIntent) {
-						return await target.execute(toolCallId, args as never, signal, onUpdate, ctx);
-					}
-					const command =
-						target.name === "bash" && args && typeof args === "object" && !Array.isArray(args)
-							? getStringProperty(args as Record<string, unknown>, "command")
-							: undefined;
-					const commandContent = command
-						? [{ type: "content" as const, content: { type: "text" as const, text: `$ ${command}` } }]
-						: undefined;
-					// Short-circuit on persisted decisions.
-					const persisted = this.#acpPermissionDecisions.get(permissionIntent.cacheKey);
-					if (persisted === "allow_always") {
-						return await target.execute(toolCallId, args as never, signal, onUpdate, ctx);
-					}
-					if (persisted === "reject_always") {
-						throw new ToolError(`Tool call rejected by user (preference)`);
-					}
-					if (signal?.aborted) {
-						throw new ToolAbortError("Permission request cancelled");
-					}
-					type PermissionRaceResult =
-						| { kind: "permission"; outcome: ClientBridgePermissionOutcome }
-						| { kind: "aborted" };
-					const { promise: abortPromise, resolve: resolveAbort } = Promise.withResolvers<PermissionRaceResult>();
-					const onAbort = () => resolveAbort({ kind: "aborted" });
-					signal?.addEventListener("abort", onAbort, { once: true });
-					let raced: PermissionRaceResult;
-					try {
-						const permissionPromise = bridge.requestPermission!(
-							{
-								toolCallId,
-								toolName: target.name,
-								title: permissionIntent.title,
-								...(target.name === "bash" ? { kind: "execute" } : {}),
-								status: "pending",
-								rawInput: args,
-								...(commandContent ? { content: commandContent } : {}),
-								locations: extractPermissionLocations(
-									args,
-									this.sessionManager.getCwd(),
-									permissionIntent.paths,
-								),
-							},
-							PERMISSION_OPTIONS,
-							signal,
-						).then(outcome => ({ kind: "permission" as const, outcome }));
-						raced = await Promise.race([permissionPromise, abortPromise]);
-					} finally {
-						signal?.removeEventListener("abort", onAbort);
-					}
-					if (raced.kind === "aborted" || signal?.aborted) {
-						throw new ToolAbortError("Permission request cancelled");
-					}
-					const outcome = raced.outcome;
-					if (outcome.outcome === "cancelled") {
-						throw new ToolAbortError("Permission request cancelled");
-					}
-					const selectedOption = PERMISSION_OPTIONS_BY_ID.get(outcome.optionId);
-					if (!selectedOption) {
-						throw new ToolError(`Tool permission response used unknown option ID: ${outcome.optionId}`);
-					}
-					if (selectedOption.kind === "allow_always") {
-						this.#acpPermissionDecisions.set(permissionIntent.cacheKey, "allow_always");
-					} else if (selectedOption.kind === "reject_always") {
-						this.#acpPermissionDecisions.set(permissionIntent.cacheKey, "reject_always");
-					}
-					if (selectedOption.kind === "reject_once" || selectedOption.kind === "reject_always") {
-						throw new ToolError(`Tool call rejected by user (${target.name})`);
-					}
+					await this.#permissionService.authorizeAcpToolCall({
+						bridge,
+						toolCallId,
+						toolName: target.name,
+						args,
+						cwd: this.sessionManager.getCwd(),
+						signal,
+					});
 					return await target.execute(toolCallId, args as never, signal, onUpdate, ctx);
 				};
 			},
@@ -3336,6 +2997,7 @@ export class AgentSession {
 			const signature = this.#computeAppliedToolSignature(validToolNames, tools);
 			if (signature !== this.#lastAppliedToolSignature) {
 				const built = await this.#rebuildSystemPrompt(validToolNames, this.#toolRegistry);
+				this.#runtimeTelemetry.recordPromptRebuild(built.systemPrompt);
 				this.#baseSystemPrompt = built.systemPrompt;
 				this.agent.setSystemPrompt(this.#baseSystemPrompt);
 				this.#lastAppliedToolSignature = signature;
@@ -3419,6 +3081,7 @@ export class AgentSession {
 		if (!this.#rebuildSystemPrompt) return;
 		const activeToolNames = this.getActiveToolNames();
 		const built = await this.#rebuildSystemPrompt(activeToolNames, this.#toolRegistry);
+		this.#runtimeTelemetry.recordPromptRebuild(built.systemPrompt);
 		this.#baseSystemPrompt = built.systemPrompt;
 		this.agent.setSystemPrompt(this.#baseSystemPrompt);
 		// Refresh the cached signature so a subsequent `#applyActiveToolsByName` with
@@ -3800,7 +3463,7 @@ export class AgentSession {
 
 	setClientBridge(bridge: ClientBridge | undefined): void {
 		this.#clientBridge = bridge;
-		this.#acpPermissionDecisions.clear();
+		this.#permissionService.clearSessionDecisions();
 		const activeToolNames = this.getActiveToolNames();
 		const activeTools = activeToolNames
 			.map(name => this.#toolRegistry.get(name))

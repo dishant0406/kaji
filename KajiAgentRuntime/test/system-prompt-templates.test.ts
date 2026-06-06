@@ -57,6 +57,21 @@ const baseRenderContext: prompt.TemplateContext = {
 	skills: [{ name: "system-prompts", description: "Prompt design skill" }],
 	systemPromptCustomization: "System customization",
 	toolInfo: [{ name: "read", label: "Read", description: "Reads files" }],
+	promptContext: {
+		environment: { cwd: "/tmp/pi-issue-147", date: "2026-02-24", entries: [{ label: "OS", value: "Darwin" }] },
+		tools: [{ name: "read", wireName: "read", label: "Read", description: "Reads files" }],
+		workspace: { rootPath: "/tmp/pi-issue-147", truncated: false, totalLines: 0, agentsMdFiles: [] },
+		mcp: { discoveryMode: false, servers: [] },
+		host: {
+			hasNativeTools: false,
+			hasCodeGraphTools: false,
+			hasWorkspaceTools: false,
+			nativeTools: [],
+			codeGraphTools: [],
+			workspaceTools: [],
+		},
+		debug: { hasDebugTools: false, tools: [] },
+	},
 	toolRefs: {
 		read: "read",
 		search: "search",
@@ -72,6 +87,17 @@ const baseRenderContext: prompt.TemplateContext = {
 		ast_edit: "ast_edit",
 		grep: "grep",
 		write: "write",
+		kaji_code_graph_search: "kaji_code_graph_search",
+		kaji_code_graph_report: "kaji_code_graph_report",
+		kaji_get_open_tabs: "kaji_get_open_tabs",
+		todo_verify: "todo_verify",
+		runtime_profile_dump: "runtime_profile_dump",
+		runtime_telemetry_dump: "runtime_telemetry_dump",
+		tool_catalog_dump: "tool_catalog_dump",
+		prompt_preview: "prompt_preview",
+		permission_rules_dump: "permission_rules_dump",
+		subagent_tree_dump: "subagent_tree_dump",
+		undo: "undo",
 	},
 	tools: ["read", "search", "find", "edit", "task", "web_search", "todo_write"],
 	worktree: "/tmp/pi-issue-147",
@@ -353,6 +379,43 @@ describe("system Handlebars prompt templates", () => {
 		expect(promptText).toContain("Edit: `apply_patch`");
 		expect(promptText).toContain("surgical text edits → `apply_patch`");
 		expect(promptText).not.toContain("Edit: `edit`");
+	});
+
+	test("buildSystemPrompt renders Kaji harness prompt sections from typed context", async () => {
+		const { systemPrompt } = await buildSystemPrompt({
+			cwd: os.tmpdir(),
+			contextFiles: [],
+			skills: [],
+			rules: [],
+			toolNames: [
+				"read",
+				"kaji_code_graph_report",
+				"kaji_code_graph_search",
+				"kaji_get_open_tabs",
+				"todo_verify",
+				"runtime_profile_dump",
+				"runtime_telemetry_dump",
+				"tool_catalog_dump",
+				"prompt_preview",
+				"permission_rules_dump",
+				"subagent_tree_dump",
+				"undo",
+			],
+		});
+
+		const promptText = systemPrompt.join("\n\n");
+
+		expect(promptText).toContain("## Kaji Code Graph");
+		expect(promptText).toContain("use `kaji_code_graph_search` or `kaji_code_graph_report`");
+		expect(promptText).toContain("## Kaji Workspace Context");
+		expect(promptText).toContain("## Todo Verification");
+		expect(promptText).toContain("call `todo_verify`");
+		expect(promptText).toContain("## Runtime Debugging");
+		expect(promptText).toContain("Use `prompt_preview` when debugging prompt composition.");
+		expect(promptText).toContain("Use `permission_rules_dump` when debugging permission decisions.");
+		expect(promptText).toContain("Use `subagent_tree_dump` when debugging task/subagent lifecycle.");
+		expect(promptText).toContain("## Edit Safety");
+		expect(promptText).toContain("Use `undo` with `preview: true`");
 	});
 
 	test("buildSystemPrompt omits CPU info when os.cpus fails", async () => {

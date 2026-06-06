@@ -84,6 +84,10 @@ struct KajiAgentHome: View {
             .help(store.statusMessage)
             KajiPill(title: store.effectivePermissionMode.title, leadingIcon: "lock", variant: .plain) {}
                 .help(store.effectivePermissionMode.detail)
+            if let todoIndicator = KajiAgentTodoIndicator.active(phases: store.todoPhases) {
+                KajiPill(title: todoIndicator.title, leadingIcon: todoIndicator.icon, variant: .bordered) {}
+                    .help(todoIndicator.detail)
+            }
             KajiPill(title: "New thread", leadingIcon: "plus", variant: .plain, action: startNewThread)
             KajiPill(
                 title: store.readiness.title,

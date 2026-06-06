@@ -15,6 +15,7 @@ import patchDescription from "../prompts/tools/patch.md" with { type: "text" };
 import replaceDescription from "../prompts/tools/replace.md" with { type: "text" };
 import type { ToolSession } from "../tools";
 import { truncateForPrompt } from "../tools/approval";
+import { getEditSafetyLog } from "../tools/edit-safety";
 import { isInternalUrlPath } from "../tools/path-utils";
 import { type EditMode, normalizeEditMode, resolveEditMode } from "../utils/edit-mode";
 import { executeHashlineSingle, type HashlineParams, hashlineEditParamsSchema } from "./hashline";
@@ -275,6 +276,30 @@ function extractApprovalPath(args: unknown): string {
 	return typeof targetPath === "string" && targetPath.length > 0 ? targetPath : "(unknown)";
 }
 
+function extractEditSafetyPaths(params: EditParams): string[] {
+	const record = params as Record<string, unknown>;
+	const path = typeof record.path === "string" ? record.path : undefined;
+	if (path) return [path];
+	const input = typeof record.input === "string" ? record.input : undefined;
+	if (!input) return [];
+	const paths = new Set<string>();
+	for (const match of input.matchAll(/^(?:¶|§|@)([^\s#]+)/gm)) {
+		if (match[1]) paths.add(match[1]);
+	}
+	for (const entry of expandApplyPatchToEntriesSafe(input)) {
+		paths.add(entry.path);
+	}
+	return [...paths];
+}
+
+function expandApplyPatchToEntriesSafe(input: string): Array<{ path: string }> {
+	try {
+		return expandApplyPatchToEntries({ input });
+	} catch {
+		return [];
+	}
+}
+
 export class EditTool implements AgentTool<TInput> {
 	readonly approval = (args: unknown) => {
 		const targetPath = extractApprovalPath(args);
@@ -353,7 +378,9 @@ export class EditTool implements AgentTool<TInput> {
 		context?: AgentToolContext,
 	): Promise<AgentToolResult<EditToolDetails, TInput>> {
 		const modeDefinition = this.#getModeDefinition();
-		return modeDefinition.execute(this, params, signal, getLspBatchRequest(context?.toolCall), onUpdate);
+		return getEditSafetyLog(this.session).recordAround(this.session, this.name, extractEditSafetyPaths(params), () =>
+			modeDefinition.execute(this, params, signal, getLspBatchRequest(context?.toolCall), onUpdate),
+		);
 	}
 
 	#getModeDefinition(): EditModeDefinition {

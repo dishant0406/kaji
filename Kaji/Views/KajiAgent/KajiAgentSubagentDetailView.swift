@@ -36,6 +36,16 @@ struct KajiAgentSubagentDetailView: View {
                         info("Duration", "\(agent.durationMs / 1000)s")
                         if let sessionFile = agent.sessionFile { info("Transcript", sessionFile) }
                     }
+                    if let failureText = agent.failureText?.nilIfEmpty {
+                        Text("Failure")
+                            .kajiFont(size: 12, weight: .semibold)
+                            .foregroundStyle(KajiTheme.fg)
+                        Text(failureText)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(KajiTheme.diffRemoveFg)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     if !agent.recentOutput.isEmpty {
                         Text("Recent output")
                             .kajiFont(size: 12, weight: .semibold)

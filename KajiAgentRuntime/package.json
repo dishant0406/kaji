@@ -31,7 +31,7 @@
 		"kaji-agent": "src/cli.ts"
 	},
 	"scripts": {
-		"build": "bun build --target=bun --format=esm --outdir=dist src/kaji-rpc.ts",
+		"build": "bun build --target=bun --format=esm --outdir=dist src/kaji-rpc.ts --external mupdf",
 		"check": "bun run check:types",
 		"check:types": "tsc -p tsconfig.json --noEmit",
 		"start": "bun src/kaji-rpc.ts",
@@ -72,7 +72,8 @@
 	},
 	"devDependencies": {
 		"@types/bun": "1.3.14",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"@oh-my-pi/pi-coding-agent": "file:."
 	},
 	"engines": {
 		"bun": ">=1.3.14"
@@ -449,9 +450,21 @@
 			"types": "./src/modes/utils/*.ts",
 			"import": "./src/modes/utils/*.ts"
 		},
+		"./runtime": {
+			"types": "./src/runtime/index.ts",
+			"import": "./src/runtime/index.ts"
+		},
+		"./runtime/*": {
+			"types": "./src/runtime/*.ts",
+			"import": "./src/runtime/*.ts"
+		},
 		"./plan-mode/*": {
 			"types": "./src/plan-mode/*.ts",
 			"import": "./src/plan-mode/*.ts"
+		},
+		"./prompts/prompt-context": {
+			"types": "./src/prompts/prompt-context.ts",
+			"import": "./src/prompts/prompt-context.ts"
 		},
 		"./prompts/*": "./src/prompts/*.md",
 		"./secrets": {

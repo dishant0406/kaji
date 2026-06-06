@@ -30,6 +30,7 @@ import {
 	parseConflictUri,
 	spliceConflict,
 } from "./conflict-detect";
+import { getEditSafetyLog } from "./edit-safety";
 import { invalidateFsScanAfterWrite } from "./fs-cache-invalidation";
 import { type OutputMeta, outputMeta } from "./output-meta";
 import { formatPathRelativeToCwd, isInternalUrlPath } from "./path-utils";
@@ -746,7 +747,7 @@ export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails
 		_onUpdate?: AgentToolUpdateCallback<WriteToolDetails>,
 		context?: AgentToolContext,
 	): Promise<AgentToolResult<WriteToolDetails>> {
-		return untilAborted(signal, async () => {
+		return getEditSafetyLog(this.session).recordAround(this.session, this.name, [path], () => untilAborted(signal, async () => {
 			// Strip hashline display prefixes (¶PATH#HASH + LINE:) if the model copied them from read output
 			const { text: cleanContent, stripped } = stripWriteContent(this.session, content);
 			const internalRouter = InternalUrlRouter.instance();
@@ -839,6 +840,13 @@ export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails
 				} catch (error) {
 					throw new ToolError(error instanceof Error ? error.message : String(error));
 				}
+				getEditSafetyLog(this.session).recordExternalWrite(
+					this.name,
+					path,
+					cleanContent,
+					"client-bridge",
+					"The client bridge owns the writable buffer, so the runtime cannot restore its previous content.",
+				);
 				invalidateFsScanAfterWrite(absolutePath);
 				const displayPath = formatPathRelativeToCwd(absolutePath, this.session.cwd);
 				const header = maybeWriteSnapshotHeader(this.session, absolutePath, cleanContent);
@@ -878,7 +886,7 @@ export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails
 						.get(),
 				},
 			};
-		});
+		}));
 	}
 }
 
