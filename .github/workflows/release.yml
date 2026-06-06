@@ -47,6 +47,7 @@ jobs:
             if [[ -d "$CACHE_DIR/GhosttyKit.xcframework" && -f "$CACHE_DIR/.ghostty-source" && "$(cat "$CACHE_DIR/.ghostty-source")" == "$EXPECTED_STAMP" ]]; then
               rm -rf GhosttyKit.xcframework
               cp -R "$CACHE_DIR/GhosttyKit.xcframework" GhosttyKit.xcframework
+              cp "$CACHE_DIR/GhosttyKit.xcframework/macos-arm64_x86_64/Headers/ghostty.h" GhosttyKit/ghostty.h
               exit 0
             fi
             echo "Cached GhosttyKit does not match .ghostty-source; rebuilding from source"
