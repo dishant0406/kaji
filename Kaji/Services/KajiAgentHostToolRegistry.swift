@@ -2,93 +2,8 @@ import Foundation
 
 @MainActor
 enum KajiAgentHostToolRegistry {
-    static let definitions: [KajiAgentHostToolDefinition] = [
-        KajiAgentHostToolDefinition(
-            name: "kaji_get_active_context",
-            label: "Kaji Context",
-            description: "Get the active Kaji project and worktree.",
-            parameters: .object([
-                "type": .string("object"),
-                "properties": .object([:]),
-                "additionalProperties": .bool(false),
-            ]),
-            hidden: false,
-            approval: "read"
-        ),
-        KajiAgentHostToolDefinition(
-            name: "kaji_open_file",
-            label: "Open File",
-            description: "Open a file in Kaji's native editor. Pass path as an absolute path or project-relative path.",
-            parameters: .object([
-                "type": .string("object"),
-                "properties": .object(["path": .object(["type": .string("string")])]),
-                "required": .array([.string("path")]),
-            ]),
-            hidden: false,
-            approval: "read"
-        ),
-        KajiAgentHostToolDefinition(
-            name: "kaji_open_terminal",
-            label: "Open Terminal",
-            description: "Open a native Kaji terminal or command tab in the active project.",
-            parameters: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "title": .object(["type": .string("string")]),
-                    "command": .object(["type": .string("string")]),
-                ]),
-            ]),
-            hidden: false,
-            approval: "exec"
-        ),
-        KajiAgentHostToolDefinition(
-            name: "kaji_fff_find",
-            label: "FFF File Search",
-            description: [
-                "Fast Kaji-native fuzzy file search powered by FFF.",
-                "Prefer this over broad find/glob for fuzzy paths, symbol-like names, or partial filenames.",
-            ].joined(separator: " "),
-            parameters: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "query": .object(["type": .string("string"), "description": .string("Fuzzy file query")]),
-                    "limit": .object(["type": .string("number"), "description": .string("Maximum results, default 30")]),
-                ]),
-                "required": .array([.string("query")]),
-                "additionalProperties": .bool(false),
-            ]),
-            hidden: false,
-            approval: "read"
-        ),
-        KajiAgentHostToolDefinition(
-            name: "kaji_fff_search",
-            label: "FFF Text Search",
-            description: [
-                "Fast Kaji-native repository content search powered by FFF live grep.",
-                "Prefer this for broad active-worktree text search when exact grep flags are not required.",
-            ].joined(separator: " "),
-            parameters: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "query": .object(["type": .string("string"), "description": .string("Text query to search for")]),
-                    "limit": .object(["type": .string("number"), "description": .string("Maximum matches, default 120")]),
-                ]),
-                "required": .array([.string("query")]),
-                "additionalProperties": .bool(false),
-            ]),
-            hidden: false,
-            approval: "read"
-        ),
-    ]
-
-    static let uriSchemes: [KajiAgentHostURISchemeDefinition] = [
-        KajiAgentHostURISchemeDefinition(
-            scheme: "kaji-file",
-            description: "Read files from the active Kaji workspace.",
-            writable: false,
-            immutable: false
-        ),
-    ]
+    static let definitions = KajiAgentHostToolCatalog.definitions
+    static let uriSchemes = KajiAgentHostToolCatalog.uriSchemes
 
     static func execute(
         _ frame: KajiAgentRPCFrame,
@@ -118,23 +33,8 @@ enum KajiAgentHostToolRegistry {
         projectStore: ProjectStore?,
         worktreeStore: WorktreeStore?
     ) -> KajiAgentHostURIResult {
-        guard frame.operation == "read", let url = frame.url, url.hasPrefix("kaji-file://") else {
-            return .failure("Unsupported Kaji URI request.")
-        }
-        guard let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore) else {
-            return .failure("No active Kaji project.")
-        }
-        let path = String(url.dropFirst("kaji-file://".count)).removingPercentEncoding ?? ""
-        guard !path.isEmpty else { return .failure("Missing file path.") }
-        guard let safePath = safeWorkspacePath(path, rootPath: context.worktree.path) else {
-            return .failure("File path is outside the active Kaji worktree.")
-        }
-        do {
-            let text = try String(contentsOfFile: safePath, encoding: .utf8)
-            return .success(content: text, contentType: "text/plain")
-        } catch {
-            return .failure(error.localizedDescription)
-        }
+        let context = activeWorkspace(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
+        return KajiAgentHostURIResolver.resolve(frame, rootPath: context?.worktree.path)
     }
 
     private static func activeContext(
@@ -165,7 +65,7 @@ enum KajiAgentHostToolRegistry {
         guard let rawPath = frame.arguments?["path"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !rawPath.isEmpty else {
             return error("path is required.")
         }
-        guard let path = safeWorkspacePath(rawPath, rootPath: context.worktree.path) else {
+        guard let path = KajiAgentWorkspacePathResolver.resolve(rawPath, rootPath: context.worktree.path) else {
             return error("File path is outside the active Kaji worktree.")
         }
         context.appState.selectProject(context.project, worktree: context.worktree)
@@ -286,45 +186,10 @@ enum KajiAgentHostToolRegistry {
     private static func error(_ value: String) -> KajiAgentToolResult {
         KajiAgentToolResult(content: [KajiAgentContentBlock(type: "text", text: value)], details: nil, isError: true)
     }
-
-    private static func safeWorkspacePath(_ rawPath: String, rootPath: String) -> String? {
-        let root = URL(fileURLWithPath: rootPath, isDirectory: true).standardizedFileURL.resolvingSymlinksInPath()
-        let candidate = rawPath.hasPrefix("/")
-            ? URL(fileURLWithPath: rawPath)
-            : root.appendingPathComponent(rawPath)
-        let resolved = candidate.standardizedFileURL.resolvingSymlinksInPath()
-        guard resolved.path == root.path || resolved.path.hasPrefix(root.path + "/") else { return nil }
-        return resolved.path
-    }
 }
 
 private struct KajiAgentWorkspaceContext {
     let appState: AppState
     let project: Project
     let worktree: Worktree
-}
-
-struct KajiAgentHostURIResult {
-    let content: String?
-    let contentType: String?
-    let error: String?
-
-    static func success(content: String, contentType: String) -> Self {
-        Self(content: content, contentType: contentType, error: nil)
-    }
-
-    static func failure(_ error: String) -> Self {
-        Self(content: nil, contentType: nil, error: error)
-    }
-
-    func response(id: String) -> KajiAgentRPCFrame {
-        KajiAgentRPCFrame(
-            id: id,
-            type: "host_uri_result",
-            error: error,
-            isError: error != nil,
-            content: content,
-            contentType: contentType
-        )
-    }
 }
