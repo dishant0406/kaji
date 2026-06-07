@@ -44,7 +44,7 @@ final class KajiAgentScrollCoordinator {
             hasUnseenTail = true
             return
         }
-        scheduleScrollToBottom(force: false)
+        scheduleScrollToBottom(force: false, animated: false)
     }
 
     func scrollToBottom(force: Bool) {
@@ -52,7 +52,7 @@ final class KajiAgentScrollCoordinator {
             isLocked = false
             hasUnseenTail = false
         }
-        scheduleScrollToBottom(force: force)
+        scheduleScrollToBottom(force: force, animated: force)
     }
 
     func scrollToTurn(_ id: UUID) {
@@ -71,12 +71,12 @@ final class KajiAgentScrollCoordinator {
         }
     }
 
-    private func scheduleScrollToBottom(force: Bool) {
+    private func scheduleScrollToBottom(force: Bool, animated: Bool) {
         pendingScroll?.cancel()
         pendingScroll = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(force ? 0 : 90))
+            try? await Task.sleep(for: .milliseconds(force ? 0 : 16))
             guard !Task.isCancelled, let self, let scrollView = self.scrollView else { return }
-            self.performScrollToBottom(scrollView)
+            self.performScrollToBottom(scrollView, animated: animated)
         }
     }
 
@@ -89,14 +89,18 @@ final class KajiAgentScrollCoordinator {
         }
     }
 
-    private func performScrollToBottom(_ scrollView: NSScrollView) {
+    private func performScrollToBottom(_ scrollView: NSScrollView, animated: Bool) {
         let documentHeight = scrollView.documentView?.frame.height ?? 0
         let visibleHeight = scrollView.documentVisibleRect.height
         let y = max(0, documentHeight - visibleHeight)
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.22
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            scrollView.contentView.animator().setBoundsOrigin(NSPoint(x: 0, y: y))
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.18
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                scrollView.contentView.animator().setBoundsOrigin(NSPoint(x: 0, y: y))
+            }
+        } else {
+            scrollView.contentView.setBoundsOrigin(NSPoint(x: 0, y: y))
         }
         scrollView.reflectScrolledClipView(scrollView.contentView)
         lastProgrammaticScrollAt = Date()
@@ -108,7 +112,7 @@ final class KajiAgentScrollCoordinator {
         guard let document = scrollView.documentView,
               let target = findView(withIdentifier: id.uuidString, in: document)
         else {
-            performScrollToBottom(scrollView)
+            performScrollToBottom(scrollView, animated: false)
             return
         }
         let rect = target.convert(target.bounds, to: document)

@@ -22,6 +22,20 @@ struct KajiAgentToolTimelineApplierTests {
     }
 
     @Test
+    func startBumpsTailOnce() {
+        var state = State()
+
+        KajiAgentToolTimelineApplier.start(
+            event: KajiAgentSessionEvent(type: "tool_execution_start", toolCallId: "tool-1", toolName: "bash"),
+            turns: &state.turns,
+            activeTurnID: &state.activeTurnID,
+            tailVersion: &state.tailVersion
+        )
+
+        #expect(state.tailVersion == 1)
+    }
+
+    @Test
     func updateAppliesStreamingPreviewAndTaskDetails() throws {
         var state = State.started(toolName: "task")
         let result = KajiAgentToolResult(

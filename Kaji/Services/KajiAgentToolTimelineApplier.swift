@@ -8,7 +8,6 @@ enum KajiAgentToolTimelineApplier {
         tailVersion: inout Int
     ) {
         let id = event.toolCallId ?? UUID().uuidString
-        KajiAgentTimeline.bumpTail(tailVersion: &tailVersion)
         KajiAgentEventLog.record("tool_start", fields: [
             "toolName": .string(event.toolName ?? ""),
             "toolCallId": .string(id),

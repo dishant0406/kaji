@@ -1,8 +1,12 @@
 import SwiftUI
 
-struct KajiAgentMessageRow: View {
+struct KajiAgentMessageRow: View, Equatable {
     let message: KajiAgentMessage
     @State private var expanded = false
+
+    nonisolated static func == (lhs: KajiAgentMessageRow, rhs: KajiAgentMessageRow) -> Bool {
+        lhs.message == rhs.message
+    }
 
     var body: some View {
         switch message.kind {
@@ -14,8 +18,10 @@ struct KajiAgentMessageRow: View {
             iconRow(icon: "sparkles", color: KajiTheme.fgMuted) {
                 if message.isComplete {
                     ParentAgentMarkdownText(content: message.detail, color: KajiTheme.fgMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
                     KajiAgentStreamingMarkdownText(content: message.detail, color: KajiTheme.fgMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.top, 4)
@@ -39,6 +45,7 @@ struct KajiAgentMessageRow: View {
         HStack(alignment: .top) {
             Spacer(minLength: 90)
             ParentAgentMarkdownText(content: message.detail, color: KajiTheme.fg)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
@@ -122,6 +129,7 @@ struct KajiAgentMessageRow: View {
                     .foregroundStyle(color)
                 if !message.detail.isEmpty {
                     ParentAgentMarkdownText(content: message.detail, size: 12, color: KajiTheme.fgDim)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

@@ -41,6 +41,7 @@ final class KajiAgentStore {
     var todoPhases: [KajiAgentTodoPhase] = []
     var queuedMessageCount = 0
     var tailVersion = 0
+    var isRestoringTranscript = false
     weak var appState: AppState?
     weak var projectStore: ProjectStore?
     weak var worktreeStore: WorktreeStore?
@@ -52,6 +53,8 @@ final class KajiAgentStore {
     private var hasConfiguredHostTools = false
     private var runtimeErrorGate = KajiAgentRuntimeErrorGate()
     private var activeTurnID: KajiAgentTurn.ID?
+    private var timelineUpdateCoalescer = KajiAgentTimelineUpdateCoalescer()
+    private var timelineFlushTask: Task<Void, Never>?
 
     init(scope: KajiAgentScope? = nil) {
         let process = KajiAgentProcess()
@@ -113,16 +116,21 @@ final class KajiAgentStore {
     }
 
     func stop() {
+        flushPendingTimelineUpdates()
         send(KajiAgentRPCFrame(type: "abort"))
         isRunning = false
     }
 
     func stopProcess() {
+        cancelPendingTimelineUpdates()
         process.stop()
     }
 
     func clear() {
+        cancelPendingTimelineUpdates()
         turns = []
+        activeTurnID = nil
+        isRestoringTranscript = false
         pendingQuestion = nil
         send(KajiAgentRPCFrame(type: "new_session")) { [weak self] frame in
             self?.applyState(frame.data)
@@ -247,15 +255,18 @@ final class KajiAgentStore {
     }
 
     func switchSession(path: String) {
+        flushPendingTimelineUpdates()
+        isRestoringTranscript = true
         send(KajiAgentRPCFrame(type: "switch_session", data: .object(["sessionPath": .string(path)]))) { [weak self] frame in
             guard let self else { return }
-            if frame.success == true {
-                turns = []
-                send(KajiAgentRPCFrame(type: "get_messages")) { [weak self] frame in
-                    self?.restoreMessages(frame.data)
-                }
-                send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in self?.applyState(frame.data) }
+            guard frame.success == true else {
+                isRestoringTranscript = false
+                return
             }
+            send(KajiAgentRPCFrame(type: "get_messages")) { [weak self] frame in
+                self?.restoreMessages(frame.data)
+            }
+            send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in self?.applyState(frame.data) }
         }
     }
 
@@ -466,6 +477,8 @@ final class KajiAgentStore {
             "turnCount": .number(Double(turns.count)),
             "activeTurn": .string(activeTurnID?.uuidString ?? ""),
         ])
+        if enqueuePendingTimelineUpdate(event) { return }
+        flushPendingTimelineUpdates()
         switch event.type {
         case "message_start":
             guard let message = event.message else { return }
@@ -522,6 +535,69 @@ final class KajiAgentStore {
         default:
             break
         }
+    }
+
+    private func enqueuePendingTimelineUpdate(_ event: KajiAgentSessionEvent) -> Bool {
+        if event.type == "message_update", let update = event.assistantMessageEvent, update.isTimelineTextDelta {
+            flushPendingToolUpdates()
+            guard timelineUpdateCoalescer.enqueueAssistantDelta(update) else { return false }
+            schedulePendingTimelineFlush()
+            return true
+        }
+        if event.type == "tool_execution_update" {
+            flushPendingAssistantDeltas()
+            guard timelineUpdateCoalescer.enqueueToolUpdate(event) else { return false }
+            schedulePendingTimelineFlush()
+            return true
+        }
+        return false
+    }
+
+    private func schedulePendingTimelineFlush() {
+        guard timelineFlushTask == nil else { return }
+        timelineFlushTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(40))
+            guard !Task.isCancelled else { return }
+            self?.flushPendingTimelineUpdates()
+        }
+    }
+
+    private func flushPendingTimelineUpdates() {
+        timelineFlushTask?.cancel()
+        timelineFlushTask = nil
+        flushPendingAssistantDeltas()
+        flushPendingToolUpdates()
+    }
+
+    private func flushPendingAssistantDeltas() {
+        for update in timelineUpdateCoalescer.drainAssistantDeltas() {
+            KajiAgentAssistantTimelineApplier.apply(
+                update: update,
+                turns: &turns,
+                activeTurnID: &activeTurnID,
+                tailVersion: &tailVersion
+            )
+        }
+    }
+
+    private func flushPendingToolUpdates() {
+        for event in timelineUpdateCoalescer.drainToolUpdates() {
+            if let message = KajiAgentToolTimelineApplier.update(
+                event: event,
+                turns: &turns,
+                activeTurnID: activeTurnID,
+                tailVersion: &tailVersion,
+                todoPhases: &todoPhases
+            ) {
+                appendSystem(message)
+            }
+        }
+    }
+
+    private func cancelPendingTimelineUpdates() {
+        timelineFlushTask?.cancel()
+        timelineFlushTask = nil
+        timelineUpdateCoalescer.removeAll()
     }
 
     private func append(_ message: KajiAgentRPCMessage) {
@@ -652,6 +728,7 @@ final class KajiAgentStore {
     }
 
     private func restoreMessages(_ value: KajiAgentJSONValue?) {
+        defer { isRestoringTranscript = false }
         guard let restoration = KajiAgentTranscriptRestorer.restore(from: value) else { return }
         turns = restoration.turns
         activeTurnID = restoration.activeTurnID

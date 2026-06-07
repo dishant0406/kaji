@@ -2,7 +2,6 @@ import SwiftUI
 
 struct KajiAgentTurnView: View {
     let turn: KajiAgentTurn
-    var minimumHeight: CGFloat?
     @Binding var expandedToolGroups: Set<UUID>
     @Binding var collapsedToolGroups: Set<UUID>
 
@@ -12,11 +11,13 @@ struct KajiAgentTurnView: View {
                 .frame(height: 0)
             if let user = turn.user {
                 KajiAgentMessageRow(message: user)
+                    .equatable()
             }
             ForEach(turn.blocks) { block in
                 switch block {
                 case let .message(message):
                     KajiAgentMessageRow(message: message)
+                        .equatable()
                 case let .toolGroup(group):
                     KajiAgentToolGroupView(
                         group: group,
@@ -26,7 +27,6 @@ struct KajiAgentTurnView: View {
                 }
             }
         }
-        .frame(minHeight: minimumHeight, alignment: .top)
         .id(turn.id)
     }
 }

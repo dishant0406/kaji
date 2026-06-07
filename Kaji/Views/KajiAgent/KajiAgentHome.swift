@@ -21,7 +21,7 @@ struct KajiAgentHome: View {
     @State private var scrollCoordinator = KajiAgentScrollCoordinator()
     @State private var expandedToolGroups: Set<UUID> = []
     @State private var collapsedToolGroups: Set<UUID> = []
-    @State private var timelineHeight: CGFloat = 0
+    @State private var observedToolGroups: Set<UUID> = []
     @FocusState private var focused
 
     init(scope: KajiAgentScope? = nil, projectPathOverride: String? = nil, initialSessionPath: String? = nil) {
@@ -39,11 +39,7 @@ struct KajiAgentHome: View {
                 .frame(maxWidth: 760, alignment: .leading)
                 .background(KajiTheme.bg)
                 .zIndex(1)
-            if store.turns.isEmpty {
-                emptyState
-            } else {
-                timeline
-            }
+            transcriptSurface
             composer
                 .frame(maxWidth: 720)
         }
@@ -173,8 +169,36 @@ struct KajiAgentHome: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var restoringState: some View {
+        VStack(spacing: 12) {
+            Spacer(minLength: 0)
+            KajiSpinner(size: 14)
+            Text("Loading thread")
+                .kajiFont(size: 13, weight: .medium)
+                .foregroundStyle(KajiTheme.fgMuted)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var transcriptSurface: some View {
+        ZStack {
+            timeline
+                .opacity(store.turns.isEmpty ? 0 : 1)
+                .allowsHitTesting(!store.turns.isEmpty)
+            if store.turns.isEmpty {
+                if store.isRestoringTranscript {
+                    restoringState
+                } else {
+                    emptyState
+                }
+            }
+        }
+    }
+
     private var timeline: some View {
-        ZStack(alignment: .bottomTrailing) {
+        let sections = KajiAgentTranscriptVirtualizationPolicy.split(store.turns)
+        return ZStack(alignment: .bottomTrailing) {
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if !store.widgetLines.isEmpty {
@@ -189,26 +213,38 @@ struct KajiAgentHome: View {
                         queuedMessages
                             .padding(.bottom, 12)
                     }
-                    ForEach(store.turns) { turn in
+                    ForEach(sections.history) { turn in
                         KajiAgentTurnView(
                             turn: turn,
-                            minimumHeight: turn.id == store.turns.last?.id ? max(0, timelineHeight - 24) : nil,
                             expandedToolGroups: $expandedToolGroups,
                             collapsedToolGroups: $collapsedToolGroups
                         )
-                        .id(turn.id)
                     }
+                }
+                .transaction { transaction in
+                    transaction.disablesAnimations = true
+                }
+                .frame(maxWidth: 760, alignment: .leading)
+                .scrollTargetLayout()
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(sections.liveTail) { turn in
+                        KajiAgentTurnView(
+                            turn: turn,
+                            expandedToolGroups: $expandedToolGroups,
+                            collapsedToolGroups: $collapsedToolGroups
+                        )
+                    }
+                    Color.clear
+                        .frame(height: 1)
+                        .id(KajiAgentScrollTarget.bottom)
+                }
+                .transaction { transaction in
+                    transaction.disablesAnimations = true
                 }
                 .frame(maxWidth: 760, alignment: .leading)
                 .padding(.bottom, 8)
+                .scrollTargetLayout()
             }
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .onAppear { timelineHeight = proxy.size.height }
-                        .onChange(of: proxy.size.height) { _, height in timelineHeight = height }
-                }
-            )
             .introspect(.scrollView, on: .macOS(.v14, .v15, .v26)) { scrollView in
                 scrollCoordinator.attach(scrollView)
             }
@@ -270,7 +306,8 @@ struct KajiAgentHome: View {
     }
 
     private func expandNewToolGroups() {
-        for group in store.turns.flatMap(\.toolGroups) where !collapsedToolGroups.contains(group.id) {
+        let groups = KajiAgentTranscriptVirtualizationPolicy.split(store.turns).liveTail.flatMap(\.toolGroups)
+        for group in groups where observedToolGroups.insert(group.id).inserted && !collapsedToolGroups.contains(group.id) {
             expandedToolGroups.insert(group.id)
         }
     }
@@ -497,4 +534,8 @@ struct KajiAgentHome: View {
         didOpenInitialSession = true
         store.switchSession(path: sessionPath)
     }
+}
+
+private enum KajiAgentScrollTarget {
+    static let bottom = "kaji-agent-bottom"
 }

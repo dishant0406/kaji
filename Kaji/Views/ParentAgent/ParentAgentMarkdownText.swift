@@ -4,6 +4,7 @@ struct ParentAgentMarkdownText: View {
     let content: String
     var size: CGFloat = 13
     var color: Color = KajiTheme.fgMuted
+    @State private var cache = ParentAgentMarkdownViewCache()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -15,7 +16,7 @@ struct ParentAgentMarkdownText: View {
     }
 
     private var blocks: [ParentAgentMarkdownBlock] {
-        ParentAgentMarkdownParser.parse(content)
+        cache.blocks(for: content)
     }
 
     @ViewBuilder
@@ -171,5 +172,18 @@ enum ParentAgentMarkdownParser {
     private static func orderedText(_ line: String) -> String {
         guard let dot = line.firstIndex(of: ".") else { return line }
         return String(line[line.index(dot, offsetBy: 2)...])
+    }
+}
+
+@MainActor
+private final class ParentAgentMarkdownViewCache {
+    private var content: String?
+    private var blocks: [ParentAgentMarkdownBlock] = []
+
+    func blocks(for newContent: String) -> [ParentAgentMarkdownBlock] {
+        guard content != newContent else { return blocks }
+        content = newContent
+        blocks = ParentAgentMarkdownParser.parse(newContent)
+        return blocks
     }
 }

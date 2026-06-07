@@ -36,6 +36,7 @@ struct KajiAgentToolGroupView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(group.tools) { tool in
                             KajiAgentMessageRow(message: tool)
+                                .equatable()
                         }
                     }
                 }
