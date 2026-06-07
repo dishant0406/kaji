@@ -115,8 +115,12 @@ struct OpenCodeAgentModule: CodingAgentModule {
         let configPath = Self.configPath(homeDirectory: homeDirectory)
         var config = try Self.loadConfig(path: configPath, fileManager: fileManager)
         let pluginURL = URL(fileURLWithPath: pluginPath).absoluteString
-        var plugins = config["plugin"] as? [String] ?? []
-        guard !plugins.contains(pluginURL) else { return }
+        let kajiPluginURLs = Set(Self.pluginPaths(homeDirectory: homeDirectory).map { URL(fileURLWithPath: $0).absoluteString })
+        var seen = Set<String>()
+        var plugins = (config["plugin"] as? [String] ?? []).compactMap { plugin -> String? in
+            guard !kajiPluginURLs.contains(plugin), seen.insert(plugin).inserted else { return nil }
+            return plugin
+        }
         plugins.append(pluginURL)
         config["plugin"] = plugins
         try Self.saveConfig(config, path: configPath, fileManager: fileManager)

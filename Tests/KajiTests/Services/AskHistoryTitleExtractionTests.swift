@@ -53,6 +53,29 @@ struct AskHistoryTitleExtractionTests {
         #expect(options.first?.title == "fix opencode history titles")
     }
 
+    @Test
+    func opencodeDatabaseHistoryScansBoundedRecentSessions() throws {
+        let root = try temporaryDirectory()
+        let database = root.appendingPathComponent("opencode.db")
+        try createOpenCodeDatabase(at: database)
+        try runSQLite(database, sql: """
+        insert into session (id, directory, title, time_updated, time_archived)
+        values
+          ('old-session', '/tmp/muxy', 'Old work', 1, null),
+          ('middle-session', '/tmp/muxy', 'Middle work', 2, null),
+          ('new-session', '/tmp/muxy', 'New work', 3, null);
+        """)
+
+        let options = AskHistoryCatalog.options(
+            provider: .opencode,
+            projectPath: "/tmp/muxy",
+            query: "",
+            env: ["HOME": root.path, "OPENCODE_DB_PATH": database.path, "OPENCODE_HISTORY_SCAN_LIMIT": "2"]
+        )
+
+        #expect(options.map(\.sessionID) == ["new-session", "middle-session"])
+    }
+
     private func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

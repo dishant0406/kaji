@@ -80,10 +80,6 @@ struct KajiAgentHome: View {
             .help(store.statusMessage)
             KajiPill(title: store.effectivePermissionMode.title, leadingIcon: "lock", variant: .plain) {}
                 .help(store.effectivePermissionMode.detail)
-            if let todoIndicator = KajiAgentTodoIndicator.active(phases: store.todoPhases) {
-                KajiPill(title: todoIndicator.title, leadingIcon: todoIndicator.icon, variant: .bordered) {}
-                    .help(todoIndicator.detail)
-            }
             KajiPill(title: "New thread", leadingIcon: "plus", variant: .plain, action: startNewThread)
             KajiPill(
                 title: store.readiness.title,
@@ -161,9 +157,6 @@ struct KajiAgentHome: View {
             if !store.widgetLines.isEmpty {
                 widget
             }
-            if !store.todoPhases.isEmpty {
-                KajiAgentTodoPanel(phases: store.todoPhases)
-            }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -182,7 +175,7 @@ struct KajiAgentHome: View {
     }
 
     private var transcriptSurface: some View {
-        ZStack {
+        ZStack(alignment: .bottomTrailing) {
             timeline
                 .opacity(store.turns.isEmpty ? 0 : 1)
                 .allowsHitTesting(!store.turns.isEmpty)
@@ -193,6 +186,7 @@ struct KajiAgentHome: View {
                     emptyState
                 }
             }
+            bottomTrailingControls
         }
     }
 
@@ -203,10 +197,6 @@ struct KajiAgentHome: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if !store.widgetLines.isEmpty {
                         widget
-                            .padding(.bottom, 12)
-                    }
-                    if !store.todoPhases.isEmpty {
-                        KajiAgentTodoPanel(phases: store.todoPhases)
                             .padding(.bottom, 12)
                     }
                     if store.queuedMessageCount > 0 {
@@ -248,14 +238,6 @@ struct KajiAgentHome: View {
             .introspect(.scrollView, on: .macOS(.v14, .v15, .v26)) { scrollView in
                 scrollCoordinator.attach(scrollView)
             }
-            if scrollCoordinator.hasUnseenTail {
-                Button("Jump to latest") {
-                    scrollCoordinator.scrollToBottom(force: true)
-                }
-                .buttonStyle(KajiButtonStyle(.secondary, size: .small))
-                .padding(.trailing, 14)
-                .padding(.bottom, 14)
-            }
         }
         .onChange(of: store.turns.last?.id) { _, id in
             guard let id else { return }
@@ -263,8 +245,28 @@ struct KajiAgentHome: View {
         }
         .onChange(of: store.tailVersion) { _, _ in
             expandNewToolGroups()
+        }
+        .onChange(of: store.autoScrollVersion) { _, _ in
             scrollCoordinator.handleTailChanged()
         }
+    }
+
+    private var bottomTrailingControls: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            if scrollCoordinator.hasUnseenTail {
+                Button("Jump to latest") {
+                    scrollCoordinator.scrollToBottom(force: true)
+                }
+                .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+            }
+            KajiAgentFloatingTaskButton(state: floatingTaskState)
+        }
+        .padding(.trailing, 14)
+        .padding(.bottom, 14)
+    }
+
+    private var floatingTaskState: KajiAgentFloatingTaskState {
+        KajiAgentFloatingTaskState(todoPhases: store.todoPhases, turns: store.turns, isAgentRunning: store.isRunning)
     }
 
     private var composer: some View {

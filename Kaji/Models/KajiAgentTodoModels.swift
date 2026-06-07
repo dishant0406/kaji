@@ -3,6 +3,11 @@ struct KajiAgentTodoPhase: Identifiable, Hashable {
     let name: String
     let tasks: [KajiAgentTodoItem]
 
+    init(name: String, tasks: [KajiAgentTodoItem]) {
+        self.name = name
+        self.tasks = tasks
+    }
+
     init?(json: KajiAgentJSONValue) {
         guard let object = json.objectValue,
               let name = object["name"]?.stringValue
@@ -17,6 +22,12 @@ struct KajiAgentTodoItem: Identifiable, Hashable {
     let content: String
     let status: String
     let notes: [String]
+
+    init(content: String, status: String, notes: [String] = []) {
+        self.content = content
+        self.status = status
+        self.notes = notes
+    }
 
     init?(json: KajiAgentJSONValue) {
         guard let object = json.objectValue,

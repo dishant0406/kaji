@@ -17,9 +17,10 @@ final class AgentRunPersistence {
 
     func loadRuns() -> [AgentRun] {
         if let snapshot = loadIndex() {
+            try? AgentRunLegacyFileMaintenance().finalize(legacyURL: legacyURL)
             return snapshot.runs.map { record in
                 var run = record.run
-                run.changedFiles = loadChangedFiles(runID: run.id)
+                run.changedFiles = loadChangedFiles(record: record)
                 return run
             }
         }
@@ -31,12 +32,15 @@ final class AgentRunPersistence {
             return []
         }
 
-        backupLegacyFile()
-        return runs.map { run in
+        let migratedRuns = runs.map { run in
             var run = run
             run.changedFiles = AgentChangedFilesSnapshotPolicy.default.capturedFiles(from: run.changedFiles)
             return run
         }
+        if (try? AgentRunPersistenceDiskWriter(rootURL: rootURL, chunkSize: 200).write(migratedRuns)) != nil {
+            try? AgentRunLegacyFileMaintenance().finalize(legacyURL: legacyURL)
+        }
+        return migratedRuns
     }
 
     func scheduleSave(_ runs: [AgentRun]) {
@@ -60,12 +64,13 @@ final class AgentRunPersistence {
         return try? JSONDecoder().decode(AgentRunIndexSnapshot.self, from: data)
     }
 
-    private func loadChangedFiles(runID: UUID) -> [AgentChangedFile] {
+    private func loadChangedFiles(record: AgentRunIndexRecord) -> [AgentChangedFile] {
+        let runID = record.run.id
         let manifestURL = changedFilesDirectory(runID: runID).appendingPathComponent("manifest.json")
         guard let data = try? Data(contentsOf: manifestURL),
               let manifest = try? JSONDecoder().decode(AgentRunChangedFilesManifest.self, from: data)
         else {
-            return []
+            return record.run.changedFiles
         }
 
         var files: [AgentChangedFile] = []
@@ -79,21 +84,13 @@ final class AgentRunPersistence {
             }
             files.append(contentsOf: chunk)
         }
-        return files
+        return files.isEmpty && record.changedFilesManifest.storedCount > 0 ? record.run.changedFiles : files
     }
 
     private func changedFilesDirectory(runID: UUID) -> URL {
         rootURL
             .appendingPathComponent("ChangedFiles", isDirectory: true)
             .appendingPathComponent(runID.uuidString, isDirectory: true)
-    }
-
-    private func backupLegacyFile() {
-        let formatter = ISO8601DateFormatter()
-        let stamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
-        let backupURL = legacyURL.deletingLastPathComponent()
-            .appendingPathComponent("agent-runs.legacy-\(stamp).json")
-        try? FileManager.default.copyItem(at: legacyURL, to: backupURL)
     }
 
     static func chunkName(_ index: Int) -> String {

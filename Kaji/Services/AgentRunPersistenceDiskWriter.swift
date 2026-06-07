@@ -13,6 +13,7 @@ struct AgentRunPersistenceDiskWriter {
         let snapshot = AgentRunIndexSnapshot(version: 1, runs: records)
         let data = try JSONEncoder().encode(snapshot)
         try data.write(to: rootURL.appendingPathComponent("index.json"), options: .atomic)
+        try? pruneChangedFilesDirectories(keeping: Set(runs.map(\.id)))
     }
 
     private func writeRecord(_ run: AgentRun) throws -> AgentRunIndexRecord {
@@ -54,5 +55,19 @@ struct AgentRunPersistenceDiskWriter {
         let data = try JSONEncoder().encode(manifest)
         try data.write(to: directory.appendingPathComponent("manifest.json"), options: .atomic)
         return manifest
+    }
+
+    private func pruneChangedFilesDirectories(keeping activeRunIDs: Set<UUID>) throws {
+        let root = rootURL.appendingPathComponent("ChangedFiles", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: root.path) else { return }
+        let directories = try FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        )
+        for directory in directories {
+            guard (try? directory.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { continue }
+            guard let id = UUID(uuidString: directory.lastPathComponent), !activeRunIDs.contains(id) else { continue }
+            try FileManager.default.removeItem(at: directory)
+        }
     }
 }

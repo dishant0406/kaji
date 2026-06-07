@@ -48,11 +48,68 @@ struct AgentRunPersistenceTests {
         })
     }
 
+    @Test
+    func legacyLoadWritesIndexAndRemovesOriginal() throws {
+        let directory = tempDirectory()
+        let legacyURL = directory.appendingPathComponent("agent-runs.json")
+        let rootURL = directory.appendingPathComponent("AgentRuns", isDirectory: true)
+        let run = makeRun(files: (0 ..< 40).map { changedFile("Sources/File\($0).swift") })
+        try JSONEncoder().encode([run]).write(to: legacyURL)
+
+        let persistence = AgentRunPersistence(rootURL: rootURL, legacyURL: legacyURL)
+        let loaded = persistence.loadRuns()
+
+        #expect(loaded.first?.changedFiles.count == 40)
+        #expect(FileManager.default.fileExists(atPath: rootURL.appendingPathComponent("index.json").path))
+        #expect(!FileManager.default.fileExists(atPath: legacyURL.path))
+        #expect(try backupNames(directory: directory).count == 1)
+    }
+
+    @Test
+    func indexLoadPrunesRepeatedLegacyBackups() throws {
+        let directory = tempDirectory()
+        let legacyURL = directory.appendingPathComponent("agent-runs.json")
+        let rootURL = directory.appendingPathComponent("AgentRuns", isDirectory: true)
+        let run = makeRun(files: [])
+        try AgentRunPersistenceDiskWriter(rootURL: rootURL, chunkSize: 200).write([run])
+        try JSONEncoder().encode([run]).write(to: legacyURL)
+        try Data("old".utf8).write(to: directory.appendingPathComponent("agent-runs.legacy-old.json"))
+        try Data("new".utf8).write(to: directory.appendingPathComponent("agent-runs.legacy-new.json"))
+
+        let persistence = AgentRunPersistence(rootURL: rootURL, legacyURL: legacyURL)
+        _ = persistence.loadRuns()
+
+        #expect(!FileManager.default.fileExists(atPath: legacyURL.path))
+        #expect(try backupNames(directory: directory).count == 1)
+    }
+
+    @Test
+    func savePrunesChangedFilesForRunsMissingFromIndex() throws {
+        let directory = tempDirectory()
+        let rootURL = directory.appendingPathComponent("AgentRuns", isDirectory: true)
+        let kept = makeRun(files: [changedFile("Sources/Kept.swift")])
+        let removed = makeRun(files: [changedFile("Sources/Removed.swift")])
+        let writer = AgentRunPersistenceDiskWriter(rootURL: rootURL, chunkSize: 200)
+        try writer.write([kept, removed])
+
+        try writer.write([kept])
+
+        let keptManifest = rootURL.appendingPathComponent("ChangedFiles/\(kept.id.uuidString)/manifest.json")
+        let removedManifest = rootURL.appendingPathComponent("ChangedFiles/\(removed.id.uuidString)/manifest.json")
+        #expect(FileManager.default.fileExists(atPath: keptManifest.path))
+        #expect(!FileManager.default.fileExists(atPath: removedManifest.path))
+    }
+
     private func tempDirectory() -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
+    }
+
+    private func backupNames(directory: URL) throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            .filter { $0.hasPrefix("agent-runs.legacy-") }
     }
 
     private func makeRun(files: [AgentChangedFile]) -> AgentRun {

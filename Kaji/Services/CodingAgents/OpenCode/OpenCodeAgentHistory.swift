@@ -25,7 +25,7 @@ enum OpenCodeAgentHistory {
         fileManager: FileManager
     ) -> [AskHistoryOption] {
         let options = merged(
-            databaseOptions(env: env, fileManager: fileManager) + legacyOptions(env: env, fileManager: fileManager)
+            databaseOptions(limit: limit, env: env, fileManager: fileManager) + legacyOptions(env: env, fileManager: fileManager)
         )
         return CodingAgentHistoryTools.filter(options, projectPath: projectPath, query: query, limit: limit)
     }
@@ -46,33 +46,53 @@ enum OpenCodeAgentHistory {
         }
     }
 
-    private static func databaseOptions(env: [String: String], fileManager: FileManager) -> [AskHistoryOption] {
+    private static func databaseOptions(limit: Int, env: [String: String], fileManager: FileManager) -> [AskHistoryOption] {
         let databasePath = env["OPENCODE_DB_PATH"] ?? URL(fileURLWithPath: env["HOME"] ?? NSHomeDirectory())
             .appendingPathComponent(".local/share/opencode/opencode.db")
             .path
         guard fileManager.fileExists(atPath: databasePath) else { return [] }
+        let configuredLimit = Int(env["OPENCODE_HISTORY_SCAN_LIMIT"] ?? "")
+        let sessionLimit = max(1, min(500, configuredLimit ?? max(100, max(limit, 1) * 20)))
         let sql = """
-        select
-          s.id,
-          s.directory,
-          s.title,
-          s.time_updated,
-          (
-            select json_extract(p.data, '$.text')
-            from message m
+        with recent as (
+          select id, directory, title, time_updated
+          from session
+          where time_archived is null
+          order by time_updated desc
+          limit \(sessionLimit)
+        ),
+        first_prompt as (
+          select session_id, prompt from (
+            select
+              m.session_id,
+              substr(json_extract(p.data, '$.text'), 1, 500) as prompt,
+              row_number() over (partition by m.session_id order by p.time_created) as row_number
+            from recent r
+            join message m on m.session_id = r.id
             join part p on p.message_id = m.id
-            where m.session_id = s.id
+            where r.title like 'New session - %'
               and json_extract(m.data, '$.role') = 'user'
               and json_extract(p.data, '$.type') = 'text'
               and coalesce(json_extract(p.data, '$.text'), '') <> ''
-            order by p.time_created
-            limit 1
-          ) as prompt
-        from session s
-        where s.time_archived is null
-        order by s.time_updated desc
+          )
+          where row_number = 1
+        )
+        select
+          recent.id,
+          recent.directory,
+          recent.title,
+          recent.time_updated,
+          first_prompt.prompt
+        from recent
+        left join first_prompt on first_prompt.session_id = recent.id
         """
-        let fallbackSQL = "select id, directory, title, time_updated from session where time_archived is null order by time_updated desc"
+        let fallbackSQL = """
+        select id, directory, title, time_updated
+        from session
+        where time_archived is null
+        order by time_updated desc
+        limit \(sessionLimit)
+        """
         guard let data = runSQLite(databasePath: databasePath, sql: sql) ?? runSQLite(databasePath: databasePath, sql: fallbackSQL),
               let rows = try? JSONDecoder().decode([DatabaseRow].self, from: data)
         else { return [] }
@@ -119,13 +139,13 @@ enum OpenCodeAgentHistory {
             process.terminationHandler = { _ in finished.signal() }
 
             do { try process.run() } catch { return nil }
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
             let timedOut = finished.wait(timeout: .now() + 3) == .timedOut
             if timedOut {
                 process.terminate()
                 process.waitUntilExit()
                 return nil
             }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
             return process.terminationStatus == 0 ? data : nil
         }
     }

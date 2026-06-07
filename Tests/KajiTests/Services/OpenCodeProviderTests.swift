@@ -118,4 +118,40 @@ struct OpenCodeProviderTests {
 
         #expect(!fileManager.fileExists(atPath: obsoletePlugin.path))
     }
+
+    @Test
+    func installDeduplicatesKajiPluginReferences() throws {
+        let fileManager = FileManager.default
+        let tempRoot = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let scriptsDir = tempRoot.appendingPathComponent("scripts")
+        let homeDir = tempRoot.appendingPathComponent("home")
+        try fileManager.createDirectory(at: scriptsDir, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: homeDir, withIntermediateDirectories: true)
+
+        let hookClient = scriptsDir.appendingPathComponent("KajiHookClient")
+        let pluginScript = scriptsDir.appendingPathComponent("opencode-kaji-plugin.js")
+        let currentPlugin = URL(fileURLWithPath: OpenCodeProvider.pluginPaths(homeDirectory: homeDir.path)[0]).absoluteString
+        let legacyPlugin = URL(fileURLWithPath: OpenCodeProvider.pluginPaths(homeDirectory: homeDir.path)[1]).absoluteString
+        let droidPlugin = "file://\(homeDir.path)/.config/opencode/plugins/droid-notify.js"
+        let configURL = URL(fileURLWithPath: OpenCodeProvider.configPath(homeDirectory: homeDir.path))
+
+        try "native helper\n".write(to: hookClient, atomically: true, encoding: .utf8)
+        try "export const KajiNotificationPlugin = async () => ({})\n".write(to: pluginScript, atomically: true, encoding: .utf8)
+        try fileManager.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONSerialization.data(withJSONObject: [
+            "$schema": "https://opencode.ai/config.json",
+            "plugin": ["existing-plugin", currentPlugin, legacyPlugin, currentPlugin, droidPlugin, droidPlugin],
+        ]).write(to: configURL)
+
+        try OpenCodeProvider().install(
+            hookClientPath: hookClient.path,
+            homeDirectory: homeDir.path,
+            fileManager: fileManager
+        )
+
+        let data = try Data(contentsOf: configURL)
+        let config = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let plugins = try #require(config["plugin"] as? [String])
+        #expect(plugins == ["existing-plugin", droidPlugin, currentPlugin])
+    }
 }

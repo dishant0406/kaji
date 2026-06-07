@@ -6,6 +6,18 @@ struct KajiAgentTaskToolDetails: Hashable {
     var asyncState: String?
     var jobID: String?
 
+
+    init(
+        progress: [KajiAgentSubagentProgress] = [],
+        results: [KajiAgentSubagentResult] = [],
+        asyncState: String? = nil,
+        jobID: String? = nil
+    ) {
+        self.progress = progress
+        self.results = results
+        self.asyncState = asyncState
+        self.jobID = jobID
+    }
     init?(json: KajiAgentJSONValue?) {
         guard let object = json?.objectValue else { return nil }
         progress = object["progress"]?.arrayValue?.compactMap(KajiAgentSubagentProgress.init(json:)) ?? []
@@ -41,6 +53,42 @@ struct KajiAgentSubagentProgress: Identifiable, Hashable {
     let cost: Double
     let sessionFile: String?
 
+
+    init(
+        id: String,
+        index: Int = 0,
+        agent: String,
+        status: String,
+        task: String,
+        assignment: String? = nil,
+        description: String? = nil,
+        currentTool: String? = nil,
+        currentToolArgs: String? = nil,
+        recentOutput: [String] = [],
+        failureText: String? = nil,
+        toolCount: Int = 0,
+        tokens: Int = 0,
+        durationMs: Int = 0,
+        cost: Double = 0,
+        sessionFile: String? = nil
+    ) {
+        self.id = id
+        self.index = index
+        self.agent = agent
+        self.status = status
+        self.task = task
+        self.assignment = assignment
+        self.description = description
+        self.currentTool = currentTool
+        self.currentToolArgs = currentToolArgs
+        self.recentOutput = recentOutput
+        self.failureText = failureText
+        self.toolCount = toolCount
+        self.tokens = tokens
+        self.durationMs = durationMs
+        self.cost = cost
+        self.sessionFile = sessionFile
+    }
     init?(json: KajiAgentJSONValue) {
         guard let object = json.objectValue,
               let id = object["id"]?.stringValue,

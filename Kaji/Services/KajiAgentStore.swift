@@ -41,6 +41,7 @@ final class KajiAgentStore {
     var todoPhases: [KajiAgentTodoPhase] = []
     var queuedMessageCount = 0
     var tailVersion = 0
+    var autoScrollVersion = 0
     var isRestoringTranscript = false
     weak var appState: AppState?
     weak var projectStore: ProjectStore?
@@ -53,6 +54,7 @@ final class KajiAgentStore {
     private var hasConfiguredHostTools = false
     private var runtimeErrorGate = KajiAgentRuntimeErrorGate()
     private var activeTurnID: KajiAgentTurn.ID?
+    private var awaitingAbortStateReconciliation = false
     private var timelineUpdateCoalescer = KajiAgentTimelineUpdateCoalescer()
     private var timelineFlushTask: Task<Void, Never>?
 
@@ -117,16 +119,20 @@ final class KajiAgentStore {
 
     func stop() {
         flushPendingTimelineUpdates()
+        awaitingAbortStateReconciliation = true
+        KajiAgentTimeline.reconcileAbortedWork(turns: &turns, todoPhases: &todoPhases, tailVersion: &tailVersion)
         send(KajiAgentRPCFrame(type: "abort"))
         isRunning = false
     }
 
     func stopProcess() {
+        awaitingAbortStateReconciliation = false
         cancelPendingTimelineUpdates()
         process.stop()
     }
 
     func clear() {
+        awaitingAbortStateReconciliation = false
         cancelPendingTimelineUpdates()
         turns = []
         activeTurnID = nil
@@ -430,6 +436,7 @@ final class KajiAgentStore {
         case "host_uri_request":
             handleHostURIRequest(frame)
         case "agent_start":
+            awaitingAbortStateReconciliation = false
             isRunning = true
         case "agent_end":
             isRunning = false
@@ -463,6 +470,10 @@ final class KajiAgentStore {
         send(KajiAgentRPCFrame(type: "set_host_uri_schemes", schemes: KajiAgentHostToolRegistry.uriSchemes))
     }
 
+    private func bumpAutoScrollVersion() {
+        autoScrollVersion &+= 1
+    }
+
     private func handleEvent(_ event: KajiAgentSessionEvent) {
         KajiAgentEventLog.record("store_event", fields: [
             "type": .string(event.type),
@@ -483,6 +494,7 @@ final class KajiAgentStore {
         case "message_start":
             guard let message = event.message else { return }
             append(message)
+            bumpAutoScrollVersion()
         case "message_update":
             KajiAgentAssistantTimelineApplier.apply(
                 update: event.assistantMessageEvent,
@@ -490,6 +502,7 @@ final class KajiAgentStore {
                 activeTurnID: &activeTurnID,
                 tailVersion: &tailVersion
             )
+            bumpAutoScrollVersion()
         case "message_end":
             guard let message = event.message, message.role == "assistant" else { return }
             KajiAgentAssistantTimelineApplier.finishAssistant(
@@ -499,6 +512,7 @@ final class KajiAgentStore {
                 activeTurnID: &activeTurnID,
                 tailVersion: &tailVersion
             )
+            bumpAutoScrollVersion()
         case "tool_execution_start":
             KajiAgentToolTimelineApplier.start(
                 event: event,
@@ -506,6 +520,7 @@ final class KajiAgentStore {
                 activeTurnID: &activeTurnID,
                 tailVersion: &tailVersion
             )
+            bumpAutoScrollVersion()
         case "tool_execution_update":
             if let message = KajiAgentToolTimelineApplier.update(
                 event: event,
@@ -516,6 +531,7 @@ final class KajiAgentStore {
             ) {
                 appendSystem(message)
             }
+            reconcileAbortStateIfNeeded()
         case "tool_execution_end":
             if let message = KajiAgentToolTimelineApplier.finish(
                 event: event,
@@ -526,8 +542,11 @@ final class KajiAgentStore {
             ) {
                 appendSystem(message)
             }
+            reconcileAbortStateIfNeeded()
+            bumpAutoScrollVersion()
         case "notice":
             appendSystem(title: "Notice", detail: event.message?.textContent ?? "", kind: .event)
+            bumpAutoScrollVersion()
         case "auto_compaction_start":
             statusMessage = "Compacting context"
         case "auto_compaction_end":
@@ -535,6 +554,11 @@ final class KajiAgentStore {
         default:
             break
         }
+    }
+
+    private func reconcileAbortStateIfNeeded() {
+        guard awaitingAbortStateReconciliation, !isRunning else { return }
+        KajiAgentTimeline.reconcileAbortedWork(turns: &turns, todoPhases: &todoPhases, tailVersion: &tailVersion)
     }
 
     private func enqueuePendingTimelineUpdate(_ event: KajiAgentSessionEvent) -> Bool {
@@ -591,6 +615,7 @@ final class KajiAgentStore {
             ) {
                 appendSystem(message)
             }
+            reconcileAbortStateIfNeeded()
         }
     }
 
@@ -721,6 +746,10 @@ final class KajiAgentStore {
         todoPhases = snapshot.todoPhases ?? todoPhases
         modelLabel = snapshot.modelLabel ?? modelLabel
         isRunning = snapshot.isRunning ?? isRunning
+        if awaitingAbortStateReconciliation, !isRunning {
+            KajiAgentTimeline.reconcileAbortedWork(turns: &turns, todoPhases: &todoPhases, tailVersion: &tailVersion)
+            awaitingAbortStateReconciliation = false
+        }
     }
 
     private func applySelectedModel(_ value: KajiAgentJSONValue?) {

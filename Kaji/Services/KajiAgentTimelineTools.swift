@@ -75,3 +75,105 @@ extension KajiAgentTimeline {
         turns[location.turn].blocks[location.block] = .toolGroup(group)
     }
 }
+
+extension KajiAgentTimeline {
+    @discardableResult
+    static func reconcileAbortedWork(
+        turns: inout [KajiAgentTurn],
+        todoPhases: inout [KajiAgentTodoPhase],
+        tailVersion: inout Int
+    ) -> Bool {
+        var didChange = false
+
+        for turnIndex in turns.indices {
+            for blockIndex in turns[turnIndex].blocks.indices {
+                guard case var .toolGroup(group) = turns[turnIndex].blocks[blockIndex] else { continue }
+                var groupChanged = false
+                for toolIndex in group.tools.indices {
+                    var tool = group.tools[toolIndex]
+                    let reconciledTaskDetails = tool.taskDetails?.reconciledForAbort()
+                    if let reconciledTaskDetails, reconciledTaskDetails != tool.taskDetails {
+                        tool.taskDetails = reconciledTaskDetails
+                        groupChanged = true
+                    }
+                    if !tool.isComplete {
+                        tool.isComplete = true
+                        groupChanged = true
+                    }
+                    if groupChanged {
+                        group.tools[toolIndex] = tool
+                    }
+                }
+                if groupChanged {
+                    turns[turnIndex].blocks[blockIndex] = .toolGroup(group)
+                    didChange = true
+                }
+            }
+        }
+
+        let reconciledTodoPhases = todoPhases.reconciledForAbort()
+        if reconciledTodoPhases != todoPhases {
+            todoPhases = reconciledTodoPhases
+            didChange = true
+        }
+
+        if didChange {
+            bumpTail(tailVersion: &tailVersion)
+        }
+
+        return didChange
+    }
+}
+
+private extension Array where Element == KajiAgentTodoPhase {
+    func reconciledForAbort() -> [KajiAgentTodoPhase] {
+        map { phase in
+            KajiAgentTodoPhase(
+                name: phase.name,
+                tasks: phase.tasks.map { task in
+                    KajiAgentTodoItem(
+                        content: task.content,
+                        status: task.status == "in_progress" ? "pending" : task.status,
+                        notes: task.notes
+                    )
+                }
+            )
+        }
+    }
+}
+
+private extension KajiAgentTaskToolDetails {
+    func reconciledForAbort() -> KajiAgentTaskToolDetails {
+        KajiAgentTaskToolDetails(
+            progress: progress.map(\.abortedCopy),
+            results: results,
+            asyncState: asyncState.map { state in
+                ["running", "pending", "in_progress"].contains(state.lowercased()) ? "aborted" : state
+            },
+            jobID: jobID
+        )
+    }
+}
+
+private extension KajiAgentSubagentProgress {
+    var abortedCopy: KajiAgentSubagentProgress {
+        KajiAgentSubagentProgress(
+            id: id,
+            index: index,
+            agent: agent,
+            status: ["running", "pending", "in_progress"].contains(status) ? "aborted" : status,
+            task: task,
+            assignment: assignment,
+            description: description,
+            currentTool: currentTool,
+            currentToolArgs: currentToolArgs,
+            recentOutput: recentOutput,
+            failureText: failureText,
+            toolCount: toolCount,
+            tokens: tokens,
+            durationMs: durationMs,
+            cost: cost,
+            sessionFile: sessionFile
+        )
+    }
+}
