@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ShortcutReferencePopover: View {
     @State private var keyBindings = KeyBindingStore.shared
+    @State private var userCommandShortcuts = UserCommandShortcutStore.shared
     @State private var searchText = ""
 
     var body: some View {
@@ -29,6 +30,9 @@ struct ShortcutReferencePopover: View {
                     }
                     if !filteredCommandKReferences.isEmpty {
                         commandKSection
+                    }
+                    if !filteredUserCommandShortcuts.isEmpty {
+                        UserCommandShortcutReferenceSection(shortcuts: filteredUserCommandShortcuts)
                     }
                 }
                 .padding(.trailing, 4)
@@ -150,6 +154,16 @@ struct ShortcutReferencePopover: View {
     private var filteredLocalGroups: [(key: String, value: [LocalShortcutReference])] {
         Dictionary(grouping: filteredLocalShortcuts, by: \.category)
             .sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }
+    }
+
+    private var filteredUserCommandShortcuts: [UserCommandShortcut] {
+        let query = normalizedSearch
+        guard !query.isEmpty else { return userCommandShortcuts.sortedShortcuts }
+        return userCommandShortcuts.sortedShortcuts.filter {
+            $0.name.localizedCaseInsensitiveContains(query) ||
+                $0.slug.localizedCaseInsensitiveContains(query) ||
+                $0.command.localizedCaseInsensitiveContains(query)
+        }
     }
 
     private var normalizedSearch: String {

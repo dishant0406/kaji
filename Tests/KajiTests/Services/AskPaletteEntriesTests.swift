@@ -156,6 +156,82 @@ struct AskPaletteEntriesTests {
 
     @Test
     @MainActor
+    func userCommandShortcutEntriesFilterByDoubleColonSlug() {
+        let shortcut = UserCommandShortcut(name: "Run Tests", slug: "runtests", command: "swift test")
+        let entries = AskPaletteEntries.build(
+            .init(
+                fieldText: "::run",
+                prompt: "::run",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                historyOptions: [],
+                skillOptions: [],
+                userCommandShortcuts: [shortcut],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
+        )
+
+        #expect(entries.count == 1)
+        #expect(entries.first?.action == .userCommandShortcut(shortcut))
+        #expect(entries.first?.annotation == "Enter")
+    }
+
+    @Test
+    @MainActor
+    func userCommandShortcutEntryShowsMissingVariableState() {
+        let shortcut = UserCommandShortcut(name: "Push", slug: "push", command: "git push origin {branchName}")
+        let entries = AskPaletteEntries.build(
+            .init(
+                fieldText: "::push",
+                prompt: "::push",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                historyOptions: [],
+                skillOptions: [],
+                userCommandShortcuts: [shortcut],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
+        )
+
+        #expect(entries.first?.detail == "Needs branchName.")
+        #expect(entries.first?.annotation == "Missing")
+    }
+
+    @Test
+    @MainActor
+    func userCommandShortcutParsingTakesPrecedenceOverColonCommands() {
+        let shortcut = UserCommandShortcut(name: "Git Status", slug: "gitstatus", command: "git status")
+        let entries = AskPaletteEntries.build(
+            .init(
+                fieldText: "::git",
+                prompt: "::git",
+                projects: [],
+                worktrees: [],
+                provider: .terminal,
+                sessionMode: .bestMatch,
+                sessions: [],
+                historyOptions: [],
+                skillOptions: [],
+                userCommandShortcuts: [shortcut],
+                gitBranches: ["main"],
+                projectName: "muxy",
+                worktreeName: "main"
+            )
+        )
+
+        #expect(entries.first?.action == .userCommandShortcut(shortcut))
+    }
+
+    @Test
+    @MainActor
     func historyAnnotationShowsHistoryOptions() {
         let history = AskHistoryOption(
             provider: .codex,

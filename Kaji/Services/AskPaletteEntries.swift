@@ -102,6 +102,9 @@ enum AskPaletteEntries {
         if AskMentionParser.activeMention(in: context.fieldText) != nil {
             return mentionEntries(context.mentionOptions)
         }
+        if let userCommandState = UserCommandShortcutParser.state(for: context.fieldText) {
+            return userCommandShortcutEntries(state: userCommandState, shortcuts: context.userCommandShortcuts)
+        }
         if let gitState = GitCommandParser.state(for: context.fieldText) {
             return AskGitPaletteEntries.build(state: gitState, context: context)
         }
@@ -258,6 +261,29 @@ enum AskPaletteEntries {
         scripts.filter { script in
             query.isEmpty || script.slug.localizedCaseInsensitiveContains(query) || script.title.localizedCaseInsensitiveContains(query)
         }
+    }
+
+    private static func userCommandShortcutEntries(
+        state: UserCommandShortcutState,
+        shortcuts: [UserCommandShortcut]
+    ) -> [AskPaletteEntry] {
+        shortcuts
+            .filter { shortcut in
+                state.slug.isEmpty ||
+                    shortcut.slug.hasPrefix(state.slug) ||
+                    shortcut.name.localizedCaseInsensitiveContains(state.slug) ||
+                    shortcut.command.localizedCaseInsensitiveContains(state.slug)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .map { shortcut in
+                let preview = UserCommandShortcutPreviewBuilder.preview(shortcut: shortcut, state: state)
+                return AskPaletteEntry(
+                    action: .userCommandShortcut(shortcut),
+                    title: shortcut.name,
+                    detail: preview.detail,
+                    annotation: state.slug.isEmpty && state.arguments.isEmpty ? "::\(shortcut.slug)" : preview.annotation
+                )
+            }
     }
 
     private static func filteredBookmarks(_ bookmarks: [AgentSessionBookmark], folder: String?, query: String) -> [AskPaletteEntry] {

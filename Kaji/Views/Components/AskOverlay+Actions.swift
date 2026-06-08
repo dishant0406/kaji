@@ -55,6 +55,10 @@ extension AskOverlay {
             confirmHighlight()
             return
         }
+        if UserCommandShortcutParser.state(for: latestFieldText) != nil {
+            confirmHighlight()
+            return
+        }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
         fieldText = latestFieldText
         prompt = parsed.prompt
@@ -284,6 +288,8 @@ extension AskOverlay {
         case let .deleteScript(script):
             scriptStore.delete(script)
             highlightedIndex = entries.isEmpty ? nil : 0
+        case let .userCommandShortcut(shortcut):
+            runUserCommandShortcut(shortcut)
         case .toggleSleepPrevention:
             SleepPreventionController.shared.toggle()
             onDismiss()
@@ -614,6 +620,7 @@ extension AskOverlay {
             skillOptions: skillOptions,
             taskRecipes: taskRecipeStore.recipes(for: projectID),
             scripts: scriptStore.visibleScripts(projectID: projectID),
+            userCommandShortcuts: userCommandShortcutStore.shortcuts,
             bookmarks: bookmarkStore.bookmarks,
             bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
@@ -687,6 +694,7 @@ extension AskOverlay {
              .runScript,
              .openScriptForm,
              .deleteScript,
+             .userCommandShortcut,
              .toggleSleepPrevention,
              .toggleBatteryLidCloseSleepPrevention,
              .mention,

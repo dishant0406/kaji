@@ -30,6 +30,7 @@ extension AskOverlay {
             skillOptions: skillOptions,
             taskRecipes: taskRecipeStore.recipes(for: projectID),
             scripts: scriptStore.visibleScripts(projectID: projectID),
+            userCommandShortcuts: userCommandShortcutStore.shortcuts,
             bookmarks: bookmarkStore.bookmarks,
             bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
@@ -68,6 +69,9 @@ extension AskOverlay {
         }
         if activeAnnotation?.key == .diff {
             return "No changed files"
+        }
+        if isUserCommandShortcutMode {
+            return "No matching command shortcuts"
         }
         if activeAnnotation != nil {
             return "No matching options"
@@ -124,6 +128,14 @@ extension AskOverlay {
 
     var isSlashMode: Bool {
         AskPaletteEntries.slashState(for: fieldText) != nil
+    }
+
+    var isUserCommandShortcutMode: Bool {
+        UserCommandShortcutParser.state(for: fieldText) != nil
+    }
+
+    var isCommandInputMode: Bool {
+        isSlashMode || isGitCommandMode || isUserCommandShortcutMode
     }
 
     var activeAnnotation: AskActiveAnnotation? {
@@ -198,6 +210,9 @@ extension AskOverlay {
         }
         if isGitCommandMode {
             return "Previewed Git results open directly. Enter runs commands that are not previews. Esc closes."
+        }
+        if isUserCommandShortcutMode {
+            return "Enter runs the highlighted command shortcut. Esc closes."
         }
         if isBookmarkFolderPickerVisible {
             return "Enter chooses an existing folder. Shift Enter creates/uses the typed folder. Esc closes."

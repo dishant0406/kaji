@@ -13,14 +13,19 @@ struct ShortcutReferenceCatalogTests {
     func commandKReferenceIncludesAskRoutingTokens() {
         let tokens = Set(ShortcutReferenceCatalog.commandKReferences.map(\.token))
 
-        #expect(tokens.contains(":h:"))
-        #expect(tokens.contains(":t:"))
-        #expect(tokens.contains(":pa:"))
-        #expect(tokens.contains(":git"))
-        #expect(tokens.contains(":switch"))
-        #expect(tokens.contains("/session"))
-        #expect(tokens.contains("/bookmark"))
-        #expect(tokens.contains("/lid"))
+        for token in AskAnnotationKey.allCases.map(\.token) {
+            #expect(tokens.contains(token))
+        }
+
+        for token in GitPaletteCommand.allCases.map(\.trigger) {
+            #expect(tokens.contains(token))
+        }
+
+        for token in AskSlashCommand.allCases.map(\.trigger) {
+            #expect(tokens.contains(token))
+        }
+
+        #expect(tokens.contains("::name"))
     }
 
     @Test

@@ -37,6 +37,7 @@ struct AskOverlay: View {
     @State var scriptDraft = KajiKitScriptDraft()
     @State var scriptPlan: KajiKitScriptRunPlan?
     @State var pendingRiskyScript: KajiKitScript?
+    @State var userCommandShortcutStore = UserCommandShortcutStore.shared
     @State var bookmarkStore = AgentSessionBookmarkStore.shared
     @State var selectedBookmarkIDs: Set<UUID> = []
     @State var fallbackBookmarkCandidates: [AgentSessionBookmarkCandidate] = []
@@ -203,7 +204,7 @@ struct AskOverlay: View {
 
     private var searchField: some View {
         HStack(spacing: 10) {
-            KajiIcon(systemName: isSlashMode || isGitCommandMode ? "command" : "magnifyingglass", size: 12)
+            KajiIcon(systemName: isCommandInputMode ? "command" : "magnifyingglass", size: 12)
                 .foregroundStyle(KajiTheme.fgDim)
                 .accessibilityHidden(true)
             IconButton(symbol: "paperclip", size: 12, accessibilityLabel: "Attach Image") {
@@ -211,7 +212,7 @@ struct AskOverlay: View {
             }
             PaletteSearchField(
                 text: $fieldText,
-                placeholder: isSlashMode || isGitCommandMode ? "Type a command or option" : "Ask anything or type /",
+                placeholder: isCommandInputMode ? "Type a command or option" : "Ask anything or type /",
                 fontSize: 14,
                 onSubmit: handleSubmit,
                 onSubmitText: handleSubmit,

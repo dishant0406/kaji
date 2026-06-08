@@ -38,6 +38,7 @@ enum AskPaletteAction: Hashable {
     case runScript(KajiKitScript)
     case openScriptForm(KajiKitScript?)
     case deleteScript(KajiKitScript)
+    case userCommandShortcut(UserCommandShortcut)
     case toggleSleepPrevention
     case toggleBatteryLidCloseSleepPrevention
     case launchProvider(AskProvider)
@@ -126,6 +127,8 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "script-form:\(script?.id.uuidString ?? "new")"
         case let .deleteScript(script):
             "delete-script:\(script.id.uuidString)"
+        case let .userCommandShortcut(shortcut):
+            "user-command-shortcut:\(shortcut.id.uuidString)"
         case .toggleSleepPrevention:
             "toggle-sleep-prevention"
         case .toggleBatteryLidCloseSleepPrevention:

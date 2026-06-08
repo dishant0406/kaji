@@ -15,6 +15,7 @@ struct AskPaletteContext {
     let skillOptions: [AskSkillOption]
     let taskRecipes: [AskTaskRecipe]
     let scripts: [KajiKitScript]
+    let userCommandShortcuts: [UserCommandShortcut]
     let bookmarks: [AgentSessionBookmark]
     let bookmarkFolders: [String]
     let mentionOptions: [AskMentionOption]
@@ -45,6 +46,7 @@ struct AskPaletteContext {
         skillOptions: [AskSkillOption],
         taskRecipes: [AskTaskRecipe] = AskTaskRecipe.builtIns,
         scripts: [KajiKitScript] = [],
+        userCommandShortcuts: [UserCommandShortcut] = [],
         bookmarks: [AgentSessionBookmark] = [],
         bookmarkFolders: [String] = [],
         mentionOptions: [AskMentionOption] = [],
@@ -74,6 +76,7 @@ struct AskPaletteContext {
         self.skillOptions = skillOptions
         self.taskRecipes = taskRecipes
         self.scripts = scripts
+        self.userCommandShortcuts = userCommandShortcuts
         self.bookmarks = bookmarks
         self.bookmarkFolders = bookmarkFolders
         self.mentionOptions = mentionOptions
