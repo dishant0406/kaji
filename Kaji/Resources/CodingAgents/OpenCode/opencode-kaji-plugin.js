@@ -3,6 +3,7 @@ export const KajiNotificationPlugin = async ({ client }) => {
   let completedAt = 0
   let activeSessionID = ""
   let lastSessionSignature = ""
+  let lastCompletionSignature = ""
 
   return {
     event: async ({ event }) => {
@@ -41,14 +42,7 @@ export const KajiNotificationPlugin = async ({ client }) => {
         const signature = `${sessionID}|${title}|${source}`
         if (lastSessionSignature === signature) return
         lastSessionSignature = signature
-        await send("opencode_session", "session", JSON.stringify({
-          sessionID: sanitize(sessionID),
-          source,
-          title,
-          projectID,
-          worktreeID,
-          worktreePath,
-        }))
+        await send("opencode_session", "session", JSON.stringify({ sessionID: sanitize(sessionID), source, title, projectID, worktreeID, worktreePath }))
       }
 
       const sendTranscript = async (kind, text) => {
@@ -74,13 +68,25 @@ export const KajiNotificationPlugin = async ({ client }) => {
 
       const stop = async () => {
         const sessionID = findSessionID(event)
-        if (activeSessionID && sessionID && activeSessionID !== sessionID) return
+        if (activeSessionID && sessionID && activeSessionID !== sessionID) return false
         await sendSession()
-        if (activityState === "stop") return
+        if (activityState === "stop") return true
         activityState = "stop"
         completedAt = Date.now()
         await send("opencode_activity", "stop", context(sessionID || activeSessionID))
         activeSessionID = ""
+        return true
+      }
+
+      const complete = async () => {
+        const sessionID = findSessionID(event) || activeSessionID
+        const signature = sessionID || "pane"
+        const now = Date.now()
+        if (lastCompletionSignature === signature && now - completedAt < 2000) return
+        lastCompletionSignature = signature
+        if (!(await stop())) return
+        completedAt = now
+        await sendCompletion(client, event, send, sendTranscript)
       }
 
       const observe = async () => {
@@ -103,7 +109,8 @@ export const KajiNotificationPlugin = async ({ client }) => {
       if (event.type === "session.status") {
         const status = sessionStatus(event)
         if (["active", "busy", "running", "loading", "retry"].includes(status)) return await start()
-        if (["idle", "error"].includes(status)) await stop()
+        if (status === "idle") await complete()
+        if (status === "error") await stop()
         return
       }
 
@@ -111,8 +118,7 @@ export const KajiNotificationPlugin = async ({ client }) => {
       if (event.type === "question.asked") return await sendAttention("question")
       if (event.type === "session.error") return await sendAttention("error")
 
-      await stop()
-      await sendCompletion(client, event, send, sendTranscript)
+      await complete()
     },
   }
 }
@@ -135,38 +141,31 @@ function sessionStatus(event) {
 
 function attentionDetail(event) {
   const properties = event.properties || {}
-  return sanitize(
-    properties.question ||
-      properties.message ||
-      properties.permission ||
-      properties.tool ||
-      properties.command ||
-      properties.description ||
-      event.type,
-  )
+  const detail = ["question", "message", "permission", "tool", "command", "description"].map((key) => properties[key]).find(Boolean)
+  return sanitize(detail || event.type)
 }
 
 async function sendCompletion(client, event, send, sendTranscript) {
-  const sessionID = event.properties.sessionID
+  const sessionID = findSessionID(event)
   let body = "Session completed"
-  try {
-    const result = await client.session.messages({ path: { id: sessionID }, query: { limit: 3 } })
-    const lastAssistant = [...(result.data || [])]
-      .reverse()
-      .find((message) => message.info.role === "assistant")
-    const text = (lastAssistant?.parts || []).filter((part) => part.type === "text").map((part) => part.text || "").join("")
-    if (text) {
-      body = sanitize(text).slice(0, 200)
-      await sendTranscript("assistant", text)
-    }
-  } catch {}
+  if (sessionID) {
+    try {
+      const result = await client.session.messages({ path: { id: sessionID }, query: { limit: 3 } })
+      const lastAssistant = [...(result.data || [])]
+        .reverse()
+        .find((message) => message.info.role === "assistant")
+      const text = (lastAssistant?.parts || []).filter((part) => part.type === "text").map((part) => part.text || "").join("")
+      if (text) {
+        body = sanitize(text).slice(0, 200)
+        await sendTranscript("assistant", text)
+      }
+    } catch {}
+  }
   await send("opencode", "OpenCode", body)
 }
 
 function sanitize(value) {
-  return String(value || "").replace(/[
-
-|]+/g, " ").trim().slice(0, 500)
+  return String(value || "").replace(/[\n\r|]+/g, " ").trim().slice(0, 500)
 }
 
 function findSessionID(value) {

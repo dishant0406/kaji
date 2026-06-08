@@ -1,6 +1,15 @@
 import Foundation
 
 final class AgentRunPersistence {
+    private struct VersionProbe: Decodable {
+        let version: Int
+    }
+
+    private struct LoadedIndex {
+        let runs: [AgentRun]
+        let needsRewrite: Bool
+    }
+
     private let rootURL: URL
     private let legacyURL: URL
     private let writer: AgentRunPersistenceWriter
@@ -16,13 +25,12 @@ final class AgentRunPersistence {
     }
 
     func loadRuns() -> [AgentRun] {
-        if let snapshot = loadIndex() {
+        if let loaded = loadIndex() {
             try? AgentRunLegacyFileMaintenance().finalize(legacyURL: legacyURL)
-            return snapshot.runs.map { record in
-                var run = record.run
-                run.changedFiles = loadChangedFiles(record: record)
-                return run
+            if loaded.needsRewrite {
+                try? AgentRunPersistenceDiskWriter(rootURL: rootURL, chunkSize: 200).write(loaded.runs)
             }
+            return loaded.runs
         }
 
         guard FileManager.default.fileExists(atPath: legacyURL.path),
@@ -58,23 +66,79 @@ final class AgentRunPersistence {
         try? AgentRunPersistenceDiskWriter(rootURL: rootURL, chunkSize: 200).write(runs)
     }
 
-    private func loadIndex() -> AgentRunIndexSnapshot? {
+    private func loadIndex() -> LoadedIndex? {
         let url = rootURL.appendingPathComponent("index.json")
         guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(AgentRunIndexSnapshot.self, from: data)
+        let version = (try? JSONDecoder().decode(VersionProbe.self, from: data))?.version ?? 1
+        if version == 2, let snapshot = try? JSONDecoder().decode(AgentRunIndexSnapshotV2.self, from: data) {
+            return LoadedIndex(runs: snapshot.runs.map(loadRun), needsRewrite: false)
+        }
+        guard let snapshot = try? JSONDecoder().decode(AgentRunIndexSnapshot.self, from: data) else { return nil }
+        let runs = snapshot.runs.map { record in
+            var run = record.run
+            run.changedFiles = loadChangedFiles(record: record)
+            return run
+        }
+        return LoadedIndex(runs: runs, needsRewrite: true)
+    }
+
+    private func loadRun(summary: AgentRunIndexSummary) -> AgentRun {
+        let detail = loadDetail(runID: summary.id)
+        var run = AgentRun(
+            id: summary.id,
+            providerID: summary.providerID,
+            paneID: summary.paneID,
+            projectID: summary.projectID,
+            worktreeID: summary.worktreeID,
+            worktreePath: summary.worktreePath,
+            sessionID: summary.sessionID,
+            transcriptPath: summary.transcriptPath,
+            sessionUpdatedAt: summary.sessionUpdatedAt,
+            title: summary.title,
+            status: summary.status,
+            sourceConfidence: summary.sourceConfidence,
+            changedFiles: detail?.changedFilesPreview ?? [],
+            changedFilesAttribution: summary.changedFilesAttribution,
+            verification: detail?.verification ?? summary.verification.verification,
+            startedAt: summary.startedAt,
+            lastEventAt: summary.lastEventAt,
+            events: detail?.events ?? [],
+            actions: detail?.actions ?? []
+        )
+        run.changedFiles = loadChangedFiles(
+            runID: summary.id,
+            manifest: summary.changedFilesManifest,
+            fallback: detail?.changedFilesPreview ?? []
+        )
+        return run
+    }
+
+    private func loadDetail(runID: UUID) -> AgentRunDetailSnapshot? {
+        let url = rootURL
+            .appendingPathComponent("Details", isDirectory: true)
+            .appendingPathComponent("\(runID.uuidString).json")
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(AgentRunDetailSnapshot.self, from: data)
     }
 
     private func loadChangedFiles(record: AgentRunIndexRecord) -> [AgentChangedFile] {
-        let runID = record.run.id
+        loadChangedFiles(runID: record.run.id, manifest: record.changedFilesManifest, fallback: record.run.changedFiles)
+    }
+
+    private func loadChangedFiles(
+        runID: UUID,
+        manifest: AgentRunChangedFilesManifest,
+        fallback: [AgentChangedFile]
+    ) -> [AgentChangedFile] {
         let manifestURL = changedFilesDirectory(runID: runID).appendingPathComponent("manifest.json")
         guard let data = try? Data(contentsOf: manifestURL),
-              let manifest = try? JSONDecoder().decode(AgentRunChangedFilesManifest.self, from: data)
+              let storedManifest = try? JSONDecoder().decode(AgentRunChangedFilesManifest.self, from: data)
         else {
-            return record.run.changedFiles
+            return fallback
         }
 
         var files: [AgentChangedFile] = []
-        for index in 0 ..< manifest.chunkCount {
+        for index in 0 ..< storedManifest.chunkCount {
             let url = changedFilesDirectory(runID: runID)
                 .appendingPathComponent(Self.chunkName(index))
             guard let data = try? Data(contentsOf: url),
@@ -84,7 +148,7 @@ final class AgentRunPersistence {
             }
             files.append(contentsOf: chunk)
         }
-        return files.isEmpty && record.changedFilesManifest.storedCount > 0 ? record.run.changedFiles : files
+        return files.isEmpty && manifest.storedCount > 0 ? fallback : files
     }
 
     private func changedFilesDirectory(runID: UUID) -> URL {
