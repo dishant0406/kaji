@@ -186,6 +186,7 @@
   windowInfo.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
   CefBrowserSettings browserSettings;
   CefBrowserHost::CreateBrowser(windowInfo, _client, std::string([_initialURL UTF8String]), browserSettings, nullptr, nullptr);
+  NSLog(@"Kaji CEF browser create requested url=%@ width=%d height=%d", _initialURL, rect.width, rect.height);
   [KajiCEFRuntime pumpMessageLoop];
 }
 

@@ -53,6 +53,8 @@ CefRefPtr<CefLifeSpanHandler> KajiCEFClient::GetLifeSpanHandler() { return this;
 
 CefRefPtr<CefLoadHandler> KajiCEFClient::GetLoadHandler() { return this; }
 
+CefRefPtr<CefRequestHandler> KajiCEFClient::GetRequestHandler() { return this; }
+
 void KajiCEFClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
   browser_ = browser;
@@ -66,6 +68,11 @@ void KajiCEFClient::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
     browser_->GetMainFrame()->LoadURL(pending_url_);
     pending_url_.clear();
   }
+}
+
+bool KajiCEFClient::DoClose(CefRefPtr<CefBrowser> browser) {
+  CEF_REQUIRE_UI_THREAD();
+  return false;
 }
 
 bool KajiCEFClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
@@ -95,11 +102,19 @@ bool KajiCEFClient::OnBeforePopup(CefRefPtr<CefBrowser> browser,
 
 void KajiCEFClient::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();
+  NSLog(@"Kaji CEF browser before close id=%d", browser->GetIdentifier());
   if (browser_.get() == browser.get()) {
     browser_ = nullptr;
   }
   pending_url_.clear();
   ReleaseClosingClient(this);
+}
+
+void KajiCEFClient::OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser, TerminationStatus status, int error_code, const CefString& error_string) {
+  CEF_REQUIRE_UI_THREAD();
+  std::string value(error_string);
+  NSString* reason = [NSString stringWithUTF8String:value.c_str()] ?: @"";
+  NSLog(@"Kaji CEF render process terminated id=%d status=%d error=%d reason=%@", browser->GetIdentifier(), status, error_code, reason);
 }
 
 void KajiCEFClient::OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) {
@@ -232,8 +247,7 @@ void KajiCEFClient::CloseBrowser() {
   }
   browser_->GetHost()->CloseDevTools();
   devtools_client_ = nullptr;
-  browser_->GetHost()->CloseBrowser(true);
-  browser_ = nullptr;
+  browser_->GetHost()->CloseBrowser(false);
 }
 
 void KajiCEFClient::RetainUntilClose() {

@@ -8,6 +8,7 @@ extension BrowserWebController {
 
     func applyDeviceProfile(_ profile: BrowserDeviceProfile) {
         guard let browserView else { return }
+        guard BrowserDeviceProfileApplicationPolicy.shouldApply(current: appliedDeviceProfile, next: profile) else { return }
         browserView.applyDeviceProfile(
             withWidth: Int32(profile.width),
             height: Int32(profile.height),
@@ -17,5 +18,6 @@ extension BrowserWebController {
             touch: profile.hasTouch,
             platform: profile.family.rawValue
         )
+        appliedDeviceProfile = profile
     }
 }

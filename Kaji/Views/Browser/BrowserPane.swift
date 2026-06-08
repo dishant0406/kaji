@@ -46,6 +46,7 @@ struct BrowserPane: View {
         .background(KajiTheme.bg)
         .clipped()
         .task {
+            state.controllers.cancelScheduledDiscard()
             pendingURL = state.url
             if managesBrowserControl {
                 registerBrowserControl()
@@ -58,6 +59,8 @@ struct BrowserPane: View {
             state.controllers.setActive(false)
             if closeOnDisappear {
                 state.controllers.closeAll()
+            } else {
+                state.controllers.scheduleDiscard()
             }
         }
         .onChange(of: state.url) { _, newValue in
@@ -81,8 +84,15 @@ struct BrowserPane: View {
         .onChange(of: paneIsVisible) { _, visible in
             guard visible else {
                 state.controllers.setActive(false)
+                if BrowserInactiveDiscardPolicy.shouldScheduleDiscard(
+                    closeOnDisappear: closeOnDisappear,
+                    paneIsVisible: visible
+                ) {
+                    state.controllers.scheduleDiscard()
+                }
                 return
             }
+            state.controllers.cancelScheduledDiscard()
             startSelectedPageIfVisible()
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
         }

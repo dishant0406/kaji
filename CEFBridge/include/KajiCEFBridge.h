@@ -9,7 +9,9 @@ typedef void (^KajiCEFTextHandler)(NSString *text);
 @interface KajiCEFRuntime : NSObject
 + (BOOL)startWithRootPath:(NSString *)rootPath profilePath:(NSString *)profilePath helperPath:(NSString *)helperPath error:(NSError **)error;
 + (BOOL)startWithRootPath:(NSString *)rootPath profilePath:(NSString *)profilePath helperPath:(NSString *)helperPath remoteDebuggingPort:(int)remoteDebuggingPort error:(NSError **)error;
++ (BOOL)startWithRootPath:(NSString *)rootPath profilePath:(NSString *)profilePath rootCachePath:(NSString *)rootCachePath helperPath:(NSString *)helperPath remoteDebuggingPort:(int)remoteDebuggingPort error:(NSError **)error;
 + (void)pumpMessageLoop;
++ (void)shutdown;
 @end
 
 @interface KajiCEFBrowserView : NSView

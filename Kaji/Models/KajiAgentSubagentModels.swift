@@ -6,7 +6,6 @@ struct KajiAgentTaskToolDetails: Hashable {
     var asyncState: String?
     var jobID: String?
 
-
     init(
         progress: [KajiAgentSubagentProgress] = [],
         results: [KajiAgentSubagentResult] = [],
@@ -52,7 +51,6 @@ struct KajiAgentSubagentProgress: Identifiable, Hashable {
     let durationMs: Int
     let cost: Double
     let sessionFile: String?
-
 
     init(
         id: String,

@@ -9,6 +9,9 @@ class KajiCEFApp : public CefApp, public CefBrowserProcessHandler {
   void OnBeforeCommandLineProcessing(
       const CefString& process_type,
       CefRefPtr<CefCommandLine> command_line) override;
+  bool OnAlreadyRunningAppRelaunch(
+      CefRefPtr<CefCommandLine> command_line,
+      const CefString& current_directory) override;
   void OnScheduleMessagePumpWork(int64_t delay_ms) override;
  private:
   IMPLEMENT_REFCOUNTING(KajiCEFApp);

@@ -3,6 +3,7 @@ import Foundation
 struct KajiBrowserRuntimeInfo: Equatable {
     let rootPath: String
     let profilePath: String
+    let rootCachePath: String
     let helperPath: String
     let remoteDebuggingPort: Int
 

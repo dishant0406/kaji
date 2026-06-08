@@ -32,6 +32,22 @@ struct KajiCEFProfileRecoveryTests {
         KajiCEFProfileRecovery.markStarted(profileURL: profileURL)
 
         #expect(!fixture.exists(".kaji-cef-starting"))
+        #expect(fixture.exists(".kaji-cef-runtime-active"))
+        #expect(!fixture.exists(".kaji-cef-clean-shutdown"))
+    }
+
+    @Test
+    func markCleanShutdownClearsRuntimeActiveMarker() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+
+        let profileURL = try KajiCEFProfileRecovery.prepareProfile(at: fixture.profileURL)
+        KajiCEFProfileRecovery.markStarted(profileURL: profileURL)
+        KajiCEFProfileRecovery.markCleanShutdown(profileURL: profileURL)
+
+        #expect(!fixture.exists(".kaji-cef-starting"))
+        #expect(!fixture.exists(".kaji-cef-runtime-active"))
+        #expect(fixture.exists(".kaji-cef-clean-shutdown"))
     }
 
     @Test
@@ -39,6 +55,21 @@ struct KajiCEFProfileRecoveryTests {
         let fixture = try Fixture()
         defer { fixture.cleanup() }
         try fixture.writeProfileFile(".kaji-cef-starting")
+        try fixture.writeProfileFile("Default/Preferences")
+
+        let profileURL = try KajiCEFProfileRecovery.prepareProfile(at: fixture.profileURL)
+
+        #expect(profileURL == fixture.profileURL)
+        #expect(fixture.exists(".kaji-cef-starting"))
+        #expect(!fixture.exists("Default/Preferences"))
+        #expect(try fixture.quarantineDirectories().count == 1)
+    }
+
+    @Test
+    func quarantinesProfileWhenPreviousRuntimeWasNotCleanlyClosed() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+        try fixture.writeProfileFile(".kaji-cef-runtime-active")
         try fixture.writeProfileFile("Default/Preferences")
 
         let profileURL = try KajiCEFProfileRecovery.prepareProfile(at: fixture.profileURL)

@@ -14,6 +14,7 @@ struct BrowserStartupCompletionPolicyTests {
         let runtimeInfo = KajiBrowserRuntimeInfo(
             rootPath: "/runtime",
             profilePath: "/profile",
+            rootCachePath: "/profile",
             helperPath: "/helper",
             remoteDebuggingPort: 9222
         )

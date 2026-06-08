@@ -15,6 +15,7 @@ final class BrowserWebController {
     private var startURL = ""
     private var startTask: Task<Void, Never>?
     private var deviceProfile = BrowserDeviceProfiles.profile(for: BrowserDeviceProfiles.desktopID)
+    var appliedDeviceProfile: BrowserDeviceProfile?
     private var isClosed = false
 
     var isReady: Bool { browserView != nil }
@@ -116,6 +117,7 @@ final class BrowserWebController {
         browserView?.popupRequested = nil
         browserView?.closeBrowser()
         browserView = nil
+        appliedDeviceProfile = nil
         surface = nil
         page = nil
         pageChanged = nil

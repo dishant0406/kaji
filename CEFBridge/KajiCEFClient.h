@@ -2,18 +2,22 @@
 #import "KajiCEFBridge.h"
 
 #include "include/cef_client.h"
+#include "include/cef_request_handler.h"
 #include <string>
 
 class KajiCEFClient : public CefClient,
-                       public CefDisplayHandler,
-                       public CefLifeSpanHandler,
-                       public CefLoadHandler {
+                        public CefDisplayHandler,
+                        public CefLifeSpanHandler,
+                        public CefLoadHandler,
+                        public CefRequestHandler {
  public:
   explicit KajiCEFClient(KajiCEFBrowserView* owner);
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override;
   CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override;
   CefRefPtr<CefLoadHandler> GetLoadHandler() override;
+  CefRefPtr<CefRequestHandler> GetRequestHandler() override;
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
+  bool DoClose(CefRefPtr<CefBrowser> browser) override;
   bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
                      CefRefPtr<CefFrame> frame,
                      int popup_id,
@@ -30,6 +34,7 @@ class KajiCEFClient : public CefClient,
   void OnBeforeClose(CefRefPtr<CefBrowser> browser) override;
   void OnTitleChange(CefRefPtr<CefBrowser> browser, const CefString& title) override;
   void OnAddressChange(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, const CefString& url) override;
+  void OnRenderProcessTerminated(CefRefPtr<CefBrowser> browser, TerminationStatus status, int error_code, const CefString& error_string) override;
   void LoadURL(NSString* url);
   void GoBack();
   void GoForward();

@@ -10,6 +10,7 @@
 static BOOL kajiCEFHandlingSendEvent = NO;
 static BOOL kajiCEFStarted = NO;
 static BOOL kajiCEFLibraryLoaded = NO;
+static BOOL kajiCEFShutdown = NO;
 
 @interface KajiCEFApplication : NSApplication <CefAppProtocol>
 @end
@@ -32,10 +33,18 @@ static BOOL kajiCEFLibraryLoaded = NO;
 }
 
 + (BOOL)startWithRootPath:(NSString*)rootPath profilePath:(NSString*)profilePath helperPath:(NSString*)helperPath error:(NSError**)error {
-  return [self startWithRootPath:rootPath profilePath:profilePath helperPath:helperPath remoteDebuggingPort:0 error:error];
+  return [self startWithRootPath:rootPath profilePath:profilePath rootCachePath:profilePath helperPath:helperPath remoteDebuggingPort:0 error:error];
 }
 
 + (BOOL)startWithRootPath:(NSString*)rootPath profilePath:(NSString*)profilePath helperPath:(NSString*)helperPath remoteDebuggingPort:(int)remoteDebuggingPort error:(NSError**)error {
+  return [self startWithRootPath:rootPath profilePath:profilePath rootCachePath:profilePath helperPath:helperPath remoteDebuggingPort:remoteDebuggingPort error:error];
+}
+
++ (BOOL)startWithRootPath:(NSString*)rootPath profilePath:(NSString*)profilePath rootCachePath:(NSString*)rootCachePath helperPath:(NSString*)helperPath remoteDebuggingPort:(int)remoteDebuggingPort error:(NSError**)error {
+  if (kajiCEFShutdown) {
+    [self assignError:error message:@"CEF has already shut down for this process."];
+    return NO;
+  }
   if (kajiCEFStarted) {
     return YES;
   }
@@ -46,6 +55,7 @@ static BOOL kajiCEFLibraryLoaded = NO;
   if (![self loadLibraryAtRootPath:rootPath error:error]) {
     return NO;
   }
+  KajiCEFResetMessagePump();
   CefMainArgs mainArgs(*_NSGetArgc(), *_NSGetArgv());
   CefSettings settings;
   settings.no_sandbox = true;
@@ -55,6 +65,7 @@ static BOOL kajiCEFLibraryLoaded = NO;
   NSString* mainBundlePath = [self mainBundlePathForRootPath:rootPath];
   NSString* logPath = [self logPathForProfilePath:profilePath];
   CefString(&settings.cache_path).FromString(std::string([profilePath UTF8String]));
+  CefString(&settings.root_cache_path).FromString(std::string([rootCachePath UTF8String]));
   CefString(&settings.log_file).FromString(std::string([logPath UTF8String]));
   settings.log_severity = LOGSEVERITY_INFO;
   CefString(&settings.browser_subprocess_path).FromString(std::string([helperPath UTF8String]));
@@ -70,10 +81,31 @@ static BOOL kajiCEFLibraryLoaded = NO;
     [self assignError:error message:@"CEF initialization failed."];
     return NO;
   }
+  NSLog(@"Kaji CEF started root=%@ profile=%@ rootCache=%@ helper=%@ debugPort=%d", rootPath, profilePath, rootCachePath, helperPath, remoteDebuggingPort);
   [self installApplicationHooks];
   kajiCEFStarted = YES;
   KajiCEFPumpMessageLoopNow();
   return YES;
+}
+
++ (void)shutdown {
+  if (!kajiCEFStarted || kajiCEFShutdown) {
+    return;
+  }
+  [self drainMessageLoopBeforeShutdown];
+  KajiCEFCancelMessagePump();
+  CefShutdown();
+  kajiCEFStarted = NO;
+  kajiCEFShutdown = YES;
+  NSLog(@"Kaji CEF shut down");
+}
+
++ (void)drainMessageLoopBeforeShutdown {
+  NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:1.0];
+  while ([deadline timeIntervalSinceNow] > 0) {
+    CefDoMessageLoopWork();
+    [[NSRunLoop mainRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+  }
 }
 
 + (void)installApplicationHooks {
