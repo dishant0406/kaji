@@ -114,6 +114,34 @@ struct WorkspaceSnapshotTests {
         #expect(decoded.browserDeviceProfileID == "iphone-15-pro")
     }
 
+    @Test("TerminalTabSnapshot Codable round-trip for parent agent identity")
+    func parentAgentSnapshotRoundTrip() throws {
+        let agentID = UUID()
+        let projectID = UUID()
+        let worktreeID = UUID()
+        let snapshot = TerminalTabSnapshot(
+            kind: .parentAgent,
+            customTitle: nil,
+            colorID: nil,
+            isPinned: false,
+            projectPath: testPath,
+            paneTitle: "Kaji",
+            parentAgentID: agentID,
+            parentAgentProjectID: projectID,
+            parentAgentWorktreeID: worktreeID,
+            parentAgentInitialSessionPath: "/tmp/session.jsonl"
+        )
+
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(TerminalTabSnapshot.self, from: data)
+
+        #expect(decoded.kind == .parentAgent)
+        #expect(decoded.parentAgentID == agentID)
+        #expect(decoded.parentAgentProjectID == projectID)
+        #expect(decoded.parentAgentWorktreeID == worktreeID)
+        #expect(decoded.parentAgentInitialSessionPath == "/tmp/session.jsonl")
+    }
+
     @Test("legacy root snapshot upgrades hidden pane tabs into workspace tabs")
     func legacySnapshotUpgrade() throws {
         let areaID = UUID()
@@ -162,5 +190,41 @@ struct WorkspaceSnapshotTests {
         #expect(restored.count == 1)
         #expect(restored[0].workspace.tabs.count == 1)
         #expect(restored[0].workspace.activeTab?.focusedAreaID == area.id)
+    }
+
+    @Test("WorkspaceRestorer preserves parent agent scope")
+    func parentAgentScopeRestores() throws {
+        let project = Project(name: "Test", path: testPath)
+        let worktree = Worktree(name: "main", path: testPath, isPrimary: true)
+        let key = WorktreeKey(projectID: project.id, worktreeID: worktree.id)
+        let agentID = UUID()
+        let agent = TerminalTab(parentAgentState: ParentAgentTabState(
+            id: agentID,
+            projectID: project.id,
+            worktreeID: worktree.id,
+            projectPath: testPath,
+            initialSessionPath: "/tmp/session.jsonl"
+        ))
+        let area = TabArea(projectPath: testPath, existingTab: agent)
+        let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        let workspace = WorktreeWorkspace(tabs: [tab], activeTabID: tab.id)
+
+        let snapshots = WorkspaceRestorer.snapshotAll(workspaces: [key: workspace])
+        let restored = WorkspaceRestorer.restoreAll(
+            from: snapshots,
+            projects: [project],
+            worktrees: [project.id: [worktree]]
+        )
+        let restoredTab = try #require(restored.first?.workspace.activeTab?.activeContent)
+        guard case let .parentAgent(restoredState) = restoredTab.content else {
+            Issue.record("Expected parent agent tab")
+            return
+        }
+
+        #expect(restoredState.id == agentID)
+        #expect(restoredState.projectID == project.id)
+        #expect(restoredState.worktreeID == worktree.id)
+        #expect(restoredState.initialSessionPath == "/tmp/session.jsonl")
+        #expect(restoredState.scope != nil)
     }
 }

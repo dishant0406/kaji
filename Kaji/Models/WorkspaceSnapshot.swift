@@ -132,6 +132,10 @@ struct TerminalTabSnapshot: Codable {
     let browserPages: [BrowserPageSnapshot]?
     let selectedBrowserPageID: UUID?
     let browserDeviceProfileID: String?
+    let parentAgentID: UUID?
+    let parentAgentProjectID: UUID?
+    let parentAgentWorktreeID: UUID?
+    let parentAgentInitialSessionPath: String?
 
     init(
         kind: TerminalTab.Kind,
@@ -144,7 +148,11 @@ struct TerminalTabSnapshot: Codable {
         browserURL: String? = nil,
         browserPages: [BrowserPageSnapshot]? = nil,
         selectedBrowserPageID: UUID? = nil,
-        browserDeviceProfileID: String? = nil
+        browserDeviceProfileID: String? = nil,
+        parentAgentID: UUID? = nil,
+        parentAgentProjectID: UUID? = nil,
+        parentAgentWorktreeID: UUID? = nil,
+        parentAgentInitialSessionPath: String? = nil
     ) {
         self.kind = kind
         self.customTitle = customTitle
@@ -157,6 +165,10 @@ struct TerminalTabSnapshot: Codable {
         self.browserPages = browserPages
         self.selectedBrowserPageID = selectedBrowserPageID
         self.browserDeviceProfileID = browserDeviceProfileID
+        self.parentAgentID = parentAgentID
+        self.parentAgentProjectID = parentAgentProjectID
+        self.parentAgentWorktreeID = parentAgentWorktreeID
+        self.parentAgentInitialSessionPath = parentAgentInitialSessionPath
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -171,6 +183,10 @@ struct TerminalTabSnapshot: Codable {
         case browserPages
         case selectedBrowserPageID
         case browserDeviceProfileID
+        case parentAgentID
+        case parentAgentProjectID
+        case parentAgentWorktreeID
+        case parentAgentInitialSessionPath
     }
 
     init(from decoder: Decoder) throws {
@@ -186,6 +202,10 @@ struct TerminalTabSnapshot: Codable {
         browserPages = try container.decodeIfPresent([BrowserPageSnapshot].self, forKey: .browserPages)
         selectedBrowserPageID = try container.decodeIfPresent(UUID.self, forKey: .selectedBrowserPageID)
         browserDeviceProfileID = try container.decodeIfPresent(String.self, forKey: .browserDeviceProfileID)
+        parentAgentID = try container.decodeIfPresent(UUID.self, forKey: .parentAgentID)
+        parentAgentProjectID = try container.decodeIfPresent(UUID.self, forKey: .parentAgentProjectID)
+        parentAgentWorktreeID = try container.decodeIfPresent(UUID.self, forKey: .parentAgentWorktreeID)
+        parentAgentInitialSessionPath = try container.decodeIfPresent(String.self, forKey: .parentAgentInitialSessionPath)
     }
 }
 
@@ -215,7 +235,9 @@ enum WorkspaceRestorer {
             let worktreeList = worktrees[snapshot.projectID] ?? []
             guard let targetWorktree = resolveWorktree(for: snapshot, in: worktreeList) else { continue }
 
-            let restoredTabs = snapshot.tabs.compactMap(restoreWorkspaceTab(from:))
+            let restoredTabs = snapshot.tabs.compactMap {
+                restoreWorkspaceTab(from: $0, projectID: snapshot.projectID, worktreeID: targetWorktree.id)
+            }
             guard !restoredTabs.isEmpty else { continue }
 
             let workspace = WorktreeWorkspace(
@@ -291,8 +313,8 @@ enum WorkspaceRestorer {
         return worktrees.first(where: { $0.isPrimary }) ?? worktrees.first
     }
 
-    private static func restoreWorkspaceTab(from snapshot: WorkspaceTabSnapshot) -> WorkspaceTab? {
-        let root = restoreSplitNode(from: snapshot.root)
+    private static func restoreWorkspaceTab(from snapshot: WorkspaceTabSnapshot, projectID: UUID, worktreeID: UUID) -> WorkspaceTab? {
+        let root = restoreSplitNode(from: snapshot.root, projectID: projectID, worktreeID: worktreeID)
         guard root.findArea(id: snapshot.focusedAreaID) != nil || !root.allAreas().isEmpty else { return nil }
         let focusedAreaID = root.findArea(id: snapshot.focusedAreaID)?.id ?? root.allAreas()[0].id
         return WorkspaceTab(
@@ -305,13 +327,13 @@ enum WorkspaceRestorer {
         )
     }
 
-    private static func restoreSplitNode(from snapshot: SplitNodeSnapshot) -> SplitNode {
+    private static func restoreSplitNode(from snapshot: SplitNodeSnapshot, projectID: UUID, worktreeID: UUID) -> SplitNode {
         switch snapshot {
         case let .tabArea(areaSnapshot):
-            return .tabArea(TabArea(restoring: areaSnapshot))
+            return .tabArea(TabArea(restoring: areaSnapshot, projectID: projectID, worktreeID: worktreeID))
         case let .split(branchSnapshot):
-            let first = restoreSplitNode(from: branchSnapshot.first)
-            let second = restoreSplitNode(from: branchSnapshot.second)
+            let first = restoreSplitNode(from: branchSnapshot.first, projectID: projectID, worktreeID: worktreeID)
+            let second = restoreSplitNode(from: branchSnapshot.second, projectID: projectID, worktreeID: worktreeID)
             let direction: SplitDirection = branchSnapshot.direction == .horizontal ? .horizontal : .vertical
             return .split(SplitBranch(
                 direction: direction,

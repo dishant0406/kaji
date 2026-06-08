@@ -1,5 +1,7 @@
 struct KajiAgentRuntimeStateSnapshot: Equatable {
     let sessionID: String?
+    let sessionFile: String?
+    let messageCount: Int?
     let thinkingLevel: String?
     let queuedMessageCount: Int?
     let todoPhases: [KajiAgentTodoPhase]?
@@ -9,6 +11,8 @@ struct KajiAgentRuntimeStateSnapshot: Equatable {
     init?(json: KajiAgentJSONValue?) {
         guard let data = json?.objectValue else { return nil }
         sessionID = data["sessionId"]?.stringValue ?? data["sessionID"]?.stringValue
+        sessionFile = data["sessionFile"]?.stringValue
+        messageCount = data["messageCount"]?.intValue
         thinkingLevel = data["thinkingLevel"]?.stringValue
         queuedMessageCount = data["queuedMessageCount"]?.intValue
         todoPhases = data["todoPhases"]?.arrayValue?.compactMap(KajiAgentTodoPhase.init(json:))

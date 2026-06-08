@@ -74,7 +74,11 @@ struct KajiAgentSidebarHistorySection: View {
                     ForEach(filteredSessions.prefix(limit)) { session in
                         Button {
                             appState.selectProject(project, worktree: worktree)
-                            appState.openParentAgentTab(projectID: project.id, sessionPath: session.path)
+                            appState.openParentAgentTab(
+                                projectID: project.id,
+                                sessionPath: session.path,
+                                agentID: store?.scope?.agentID
+                            )
                             showingPopover = false
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
@@ -129,7 +133,8 @@ struct KajiAgentSidebarHistorySection: View {
 
     private func ensureStore() {
         if store != nil { return }
-        let scope = KajiAgentScope(agentID: worktree.id, projectID: project.id, worktreeID: worktree.id, projectPath: worktree.path)
+        let scope = appState.parentAgentScope(projectID: project.id, worktreeID: worktree.id)
+            ?? KajiAgentScope(agentID: worktree.id, projectID: project.id, worktreeID: worktree.id, projectPath: worktree.path)
         let scopedStore = KajiAgentStoreRegistry.shared.store(for: scope)
         scopedStore.configure(
             appState: appState,

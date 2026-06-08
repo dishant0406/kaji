@@ -27,10 +27,10 @@ final class TabArea: Identifiable {
         activeTabID = tab.id
     }
 
-    init(restoring snapshot: TabAreaSnapshot) {
+    init(restoring snapshot: TabAreaSnapshot, projectID: UUID? = nil, worktreeID: UUID? = nil) {
         id = snapshot.id
         projectPath = snapshot.projectPath
-        tabs = snapshot.tabs.map { TerminalTab(restoring: $0) }
+        tabs = snapshot.tabs.map { TerminalTab(restoring: $0, projectID: projectID, worktreeID: worktreeID) }
         contentIndex = TabAreaContentIndex(tabs: tabs)
         if let index = snapshot.activeTabIndex, index >= 0, index < tabs.count {
             activeTabID = tabs[index].id

@@ -57,6 +57,8 @@ final class KajiAgentStore {
     private var awaitingAbortStateReconciliation = false
     private var timelineUpdateCoalescer = KajiAgentTimelineUpdateCoalescer()
     private var timelineFlushTask: Task<Void, Never>?
+    private var restoredTranscriptSessionKey: String?
+    private var restoringTranscriptSessionKey: String?
 
     init(scope: KajiAgentScope? = nil) {
         let process = KajiAgentProcess()
@@ -137,6 +139,8 @@ final class KajiAgentStore {
         turns = []
         activeTurnID = nil
         isRestoringTranscript = false
+        restoredTranscriptSessionKey = nil
+        restoringTranscriptSessionKey = nil
         pendingQuestion = nil
         send(KajiAgentRPCFrame(type: "new_session")) { [weak self] frame in
             self?.applyState(frame.data)
@@ -263,14 +267,16 @@ final class KajiAgentStore {
     func switchSession(path: String) {
         flushPendingTimelineUpdates()
         isRestoringTranscript = true
+        restoringTranscriptSessionKey = path
         send(KajiAgentRPCFrame(type: "switch_session", data: .object(["sessionPath": .string(path)]))) { [weak self] frame in
             guard let self else { return }
             guard frame.success == true else {
                 isRestoringTranscript = false
+                restoringTranscriptSessionKey = nil
                 return
             }
             send(KajiAgentRPCFrame(type: "get_messages")) { [weak self] frame in
-                self?.restoreMessages(frame.data)
+                self?.restoreMessages(frame.data, sessionKey: path)
             }
             send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in self?.applyState(frame.data) }
         }
@@ -746,6 +752,7 @@ final class KajiAgentStore {
         todoPhases = snapshot.todoPhases ?? todoPhases
         modelLabel = snapshot.modelLabel ?? modelLabel
         isRunning = snapshot.isRunning ?? isRunning
+        restoreTranscriptIfNeeded(snapshot)
         if awaitingAbortStateReconciliation, !isRunning {
             KajiAgentTimeline.reconcileAbortedWork(turns: &turns, todoPhases: &todoPhases, tailVersion: &tailVersion)
             awaitingAbortStateReconciliation = false
@@ -756,11 +763,27 @@ final class KajiAgentStore {
         modelLabel = KajiAgentRuntimeStateSnapshot.modelLabel(from: value) ?? modelLabel
     }
 
-    private func restoreMessages(_ value: KajiAgentJSONValue?) {
+    private func restoreTranscriptIfNeeded(_ snapshot: KajiAgentRuntimeStateSnapshot) {
+        guard let messageCount = snapshot.messageCount, messageCount > 0 else { return }
+        guard turns.isEmpty, !isRestoringTranscript else { return }
+        let sessionKey = snapshot.sessionFile ?? snapshot.sessionID ?? "current"
+        guard restoredTranscriptSessionKey != sessionKey, restoringTranscriptSessionKey != sessionKey else { return }
+        isRestoringTranscript = true
+        restoringTranscriptSessionKey = sessionKey
+        send(KajiAgentRPCFrame(type: "get_messages")) { [weak self] frame in
+            self?.restoreMessages(frame.data, sessionKey: sessionKey)
+        }
+    }
+
+    private func restoreMessages(_ value: KajiAgentJSONValue?, sessionKey: String? = nil) {
         defer { isRestoringTranscript = false }
+        if restoringTranscriptSessionKey == sessionKey || sessionKey == nil {
+            restoringTranscriptSessionKey = nil
+        }
         guard let restoration = KajiAgentTranscriptRestorer.restore(from: value) else { return }
         turns = restoration.turns
         activeTurnID = restoration.activeTurnID
+        restoredTranscriptSessionKey = sessionKey ?? restoredTranscriptSessionKey
         if let restoredTodoPhases = restoration.todoPhases {
             todoPhases = restoredTodoPhases
         }

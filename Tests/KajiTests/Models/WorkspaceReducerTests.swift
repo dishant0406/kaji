@@ -339,6 +339,30 @@ struct WorkspaceReducerTests {
         #expect(activeTab.title == "Kaji")
     }
 
+    @Test("createParentAgentSessionTab preserves requested agent identity")
+    func createParentAgentSessionTabPreservesAgentIdentity() throws {
+        let projectID = UUID()
+        let worktreeID = UUID()
+        let agentID = UUID()
+        var state = makeState(projectID: projectID, worktreeID: worktreeID)
+        let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
+
+        _ = WorkspaceReducer.reduce(
+            action: .createParentAgentSessionTab(projectID: projectID, sessionPath: "/tmp/session.jsonl", agentID: agentID),
+            state: &state
+        )
+
+        let workspace = try #require(state.workspaces[key])
+        let activeContent = try #require(workspace.activeTab?.activeContent)
+        guard case let .parentAgent(agentState) = activeContent.content else {
+            Issue.record("Expected parent agent tab")
+            return
+        }
+
+        #expect(agentState.id == agentID)
+        #expect(agentState.initialSessionPath == "/tmp/session.jsonl")
+    }
+
     @Test("createCodeGraphTab opens a graph as a top-level workspace tab")
     func createCodeGraphTabCreatesWorkspaceTab() throws {
         let projectID = UUID()

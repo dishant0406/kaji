@@ -22,6 +22,7 @@ struct KajiAgentHome: View {
     @State private var expandedToolGroups: Set<UUID> = []
     @State private var collapsedToolGroups: Set<UUID> = []
     @State private var observedToolGroups: Set<UUID> = []
+    @State private var pendingSessionSwitchPath: String?
     @FocusState private var focused
 
     init(scope: KajiAgentScope? = nil, projectPathOverride: String? = nil, initialSessionPath: String? = nil) {
@@ -60,11 +61,16 @@ struct KajiAgentHome: View {
             requestFocus()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openKajiAgentSession)) { notification in
-            guard let sessionProjectID = notification.userInfo?["projectID"] as? UUID,
-                  sessionProjectID == scope?.projectID,
+            guard matchesSessionNotification(notification),
                   let sessionPath = notification.userInfo?["sessionPath"] as? String
             else { return }
-            store.switchSession(path: sessionPath)
+            requestSessionSwitch(path: sessionPath)
+        }
+        .alert("Stop current Kaji Agent run?", isPresented: confirmsSessionSwitch) {
+            Button("Cancel", role: .cancel) { pendingSessionSwitchPath = nil }
+            Button("Stop and Open", role: .destructive) { confirmSessionSwitch() }
+        } message: {
+            Text("Opening this history session will stop the current Kaji Agent run.")
         }
     }
 
@@ -285,7 +291,12 @@ struct KajiAgentHome: View {
                 AskAttachmentStrip(attachments: attachments, onRemove: removeAttachment, onPreview: { previewAttachment = $0 })
             }
             if let activePanel {
-                KajiAgentControlPanel(panel: activePanel, store: store) { self.activePanel = nil }
+                KajiAgentControlPanel(
+                    panel: activePanel,
+                    store: store,
+                    onSelectSession: { requestSessionSwitch(path: $0.path) },
+                    onClose: { self.activePanel = nil }
+                )
             }
             AgentComposer(
                 prompt: $prompt,
@@ -354,6 +365,43 @@ struct KajiAgentHome: View {
         completionState.clear()
         store.clear()
         requestFocus()
+    }
+
+    private var confirmsSessionSwitch: Binding<Bool> {
+        Binding(
+            get: { pendingSessionSwitchPath != nil },
+            set: { isPresented in
+                if !isPresented { pendingSessionSwitchPath = nil }
+            }
+        )
+    }
+
+    private func matchesSessionNotification(_ notification: Notification) -> Bool {
+        guard let scope else { return false }
+        guard let sessionProjectID = notification.userInfo?["projectID"] as? UUID,
+              sessionProjectID == scope.projectID
+        else { return false }
+        if let worktreeID = notification.userInfo?["worktreeID"] as? UUID, worktreeID != scope.worktreeID {
+            return false
+        }
+        if let agentID = notification.userInfo?["agentID"] as? UUID, agentID != scope.agentID {
+            return false
+        }
+        return true
+    }
+
+    private func requestSessionSwitch(path: String) {
+        guard !store.isRunning else {
+            pendingSessionSwitchPath = path
+            return
+        }
+        store.switchSession(path: path)
+    }
+
+    private func confirmSessionSwitch() {
+        guard let path = pendingSessionSwitchPath else { return }
+        pendingSessionSwitchPath = nil
+        store.switchSession(path: path)
     }
 
     private func attach(_ newAttachments: [AskAttachment]) {
@@ -534,7 +582,7 @@ struct KajiAgentHome: View {
     private func openInitialSessionIfNeeded() {
         guard !didOpenInitialSession, let sessionPath = initialSessionPath else { return }
         didOpenInitialSession = true
-        store.switchSession(path: sessionPath)
+        requestSessionSwitch(path: sessionPath)
     }
 }
 

@@ -8,6 +8,8 @@ struct KajiAgentRuntimeStateSnapshotTests {
         let snapshot = try #require(KajiAgentRuntimeStateSnapshot(json: .object([
             "sessionId": .string("new-session"),
             "sessionID": .string("legacy-session"),
+            "sessionFile": .string("/tmp/session.jsonl"),
+            "messageCount": .number(12),
             "thinkingLevel": .string("high"),
             "queuedMessageCount": .number(3),
             "isStreaming": .bool(true),
@@ -30,6 +32,8 @@ struct KajiAgentRuntimeStateSnapshotTests {
         ])))
 
         #expect(snapshot.sessionID == "new-session")
+        #expect(snapshot.sessionFile == "/tmp/session.jsonl")
+        #expect(snapshot.messageCount == 12)
         #expect(snapshot.thinkingLevel == "high")
         #expect(snapshot.queuedMessageCount == 3)
         #expect(snapshot.isRunning == true)

@@ -31,7 +31,13 @@ enum TabReducer {
         }
     }
 
-    static func createParentAgentTab(projectID: UUID, areaID _: UUID?, initialSessionPath: String? = nil, state: inout WorkspaceState) {
+    static func createParentAgentTab(
+        projectID: UUID,
+        areaID _: UUID?,
+        agentID: UUID? = nil,
+        initialSessionPath: String? = nil,
+        state: inout WorkspaceState
+    ) {
         guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
               let path = WorkspaceReducerShared.activeProjectPath(projectID: projectID, state: state)
         else { return }
@@ -39,6 +45,7 @@ enum TabReducer {
         let area = TabArea(
             projectPath: path,
             existingTab: TerminalTab(parentAgentState: ParentAgentTabState(
+                id: agentID ?? UUID(),
                 projectID: projectID,
                 worktreeID: key.worktreeID,
                 projectPath: path,

@@ -3,6 +3,7 @@ import SwiftUI
 struct KajiAgentControlPanel: View {
     let panel: KajiAgentPanel
     @Bindable var store: KajiAgentStore
+    let onSelectSession: (KajiAgentSessionOption) -> Void
     let onClose: () -> Void
     @State private var bashCommand = ""
 
@@ -87,7 +88,7 @@ struct KajiAgentControlPanel: View {
             emptyActionDetail: nil,
             onEmptyAction: nil,
             onSelect: { session in
-                store.switchSession(path: session.path)
+                onSelectSession(session)
                 onClose()
             },
             row: { session, highlighted in

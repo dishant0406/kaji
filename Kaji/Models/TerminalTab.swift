@@ -75,6 +75,11 @@ final class TerminalTab: Identifiable {
             return state
         }
 
+        var parentAgentState: ParentAgentTabState? {
+            guard case let .parentAgent(state) = self else { return nil }
+            return state
+        }
+
         var projectPath: String {
             switch self {
             case let .terminal(pane): pane.projectPath
@@ -160,7 +165,7 @@ final class TerminalTab: Identifiable {
         content = .browser(browserState)
     }
 
-    init(restoring snapshot: TerminalTabSnapshot) {
+    init(restoring snapshot: TerminalTabSnapshot, projectID: UUID? = nil, worktreeID: UUID? = nil) {
         customTitle = snapshot.customTitle
         colorID = snapshot.colorID
         isPinned = snapshot.isPinned
@@ -190,7 +195,13 @@ final class TerminalTab: Identifiable {
         case .problems:
             content = .problems(ProblemsTabState(projectPath: snapshot.projectPath))
         case .parentAgent:
-            content = .parentAgent(ParentAgentTabState(projectPath: snapshot.projectPath))
+            content = .parentAgent(ParentAgentTabState(
+                id: snapshot.parentAgentID ?? UUID(),
+                projectID: snapshot.parentAgentProjectID ?? projectID,
+                worktreeID: snapshot.parentAgentWorktreeID ?? worktreeID,
+                projectPath: snapshot.projectPath,
+                initialSessionPath: snapshot.parentAgentInitialSessionPath
+            ))
         case .codeGraph:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         case .browser:
@@ -210,7 +221,11 @@ final class TerminalTab: Identifiable {
             browserURL: content.browserState?.url,
             browserPages: content.browserState?.pageSnapshots,
             selectedBrowserPageID: content.browserState?.selectedPageID,
-            browserDeviceProfileID: content.browserState?.selectedDeviceProfileID
+            browserDeviceProfileID: content.browserState?.selectedDeviceProfileID,
+            parentAgentID: content.parentAgentState?.id,
+            parentAgentProjectID: content.parentAgentState?.projectID,
+            parentAgentWorktreeID: content.parentAgentState?.worktreeID,
+            parentAgentInitialSessionPath: content.parentAgentState?.initialSessionPath
         )
     }
 }

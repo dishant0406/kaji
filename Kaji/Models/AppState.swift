@@ -43,6 +43,13 @@ final class AppState {
         let graphURL: URL
     }
 
+    private struct ParentAgentTabMatch {
+        let workspaceTabID: UUID
+        let area: TabArea
+        let terminalTabID: UUID
+        let state: ParentAgentTabState
+    }
+
     enum Action {
         case selectProject(projectID: UUID, worktreeID: UUID, worktreePath: String)
         case selectWorktree(projectID: UUID, worktreeID: UUID, worktreePath: String)
@@ -60,7 +67,7 @@ final class AppState {
         case createCommandSplit(projectID: UUID, title: String, command: String)
         case createVCSTab(projectID: UUID, areaID: UUID?)
         case createParentAgentTab(projectID: UUID, areaID: UUID?)
-        case createParentAgentSessionTab(projectID: UUID, sessionPath: String)
+        case createParentAgentSessionTab(projectID: UUID, sessionPath: String, agentID: UUID?)
         case createParentAgentSplit(projectID: UUID)
         case createCodeGraphTab(CodeGraphTabRequest)
         case createBrowserSplit(projectID: UUID)
@@ -256,6 +263,10 @@ final class AppState {
         workspaceTabs(for: projectID).flatMap { $0.root.allAreas() }
     }
 
+    func parentAgentScope(projectID: UUID, worktreeID: UUID) -> KajiAgentScope? {
+        parentAgentTabMatch(in: WorktreeKey(projectID: projectID, worktreeID: worktreeID))?.state.scope
+    }
+
     func splitFocusedArea(direction: SplitDirection, projectID: UUID) {
         guard let area = focusedArea(for: projectID) else { return }
         dispatch(.splitArea(.init(
@@ -279,11 +290,20 @@ final class AppState {
     }
 
     func openParentAgentTab(projectID: UUID) {
+        if activateExistingParentAgentTab(projectID: projectID) != nil { return }
         dispatch(.createParentAgentTab(projectID: projectID, areaID: nil))
     }
 
     func openParentAgentTab(projectID: UUID, sessionPath: String) {
-        dispatch(.createParentAgentSessionTab(projectID: projectID, sessionPath: sessionPath))
+        openParentAgentTab(projectID: projectID, sessionPath: sessionPath, agentID: nil)
+    }
+
+    func openParentAgentTab(projectID: UUID, sessionPath: String, agentID: UUID?) {
+        if let match = activateExistingParentAgentTab(projectID: projectID) {
+            postOpenKajiAgentSession(projectID: projectID, state: match.state, sessionPath: sessionPath)
+            return
+        }
+        dispatch(.createParentAgentSessionTab(projectID: projectID, sessionPath: sessionPath, agentID: agentID))
     }
 
     func createParentAgentSplit(projectID: UUID) {
@@ -804,6 +824,60 @@ final class AppState {
     private func recordCurrentNavigationEntry() {
         guard let entry = currentNavigationEntry() else { return }
         navigation.record(entry)
+    }
+
+    private func parentAgentTabMatch(in key: WorktreeKey) -> ParentAgentTabMatch? {
+        guard let workspace = workspaces[key] else { return nil }
+        for workspaceTab in workspace.tabs {
+            for area in workspaceTab.root.allAreas() {
+                for tab in area.tabs {
+                    guard case let .parentAgent(state) = tab.content else { continue }
+                    return ParentAgentTabMatch(
+                        workspaceTabID: workspaceTab.id,
+                        area: area,
+                        terminalTabID: tab.id,
+                        state: state
+                    )
+                }
+            }
+        }
+        return nil
+    }
+
+    @discardableResult
+    private func activateExistingParentAgentTab(projectID: UUID) -> ParentAgentTabMatch? {
+        guard let key = activeWorktreeKey(for: projectID),
+              let workspace = workspaces[key],
+              let match = parentAgentTabMatch(in: key),
+              let workspaceTab = workspace.tabs.first(where: { $0.id == match.workspaceTabID })
+        else { return nil }
+        workspace.selectTab(match.workspaceTabID)
+        workspaceTab.focusedAreaID = match.area.id
+        match.area.selectTab(match.terminalTabID)
+        refreshWorkspaceMirrors()
+        pruneNavigationHistory()
+        recordCurrentNavigationEntry()
+        if let activeTabID = NotificationNavigator.activeTabID(appState: self) {
+            NotificationStore.shared.markAsRead(tabID: activeTabID)
+        }
+        saveWorkspaces()
+        saveSelection()
+        return match
+    }
+
+    private func postOpenKajiAgentSession(projectID: UUID, state: ParentAgentTabState, sessionPath: String) {
+        var userInfo: [String: Any] = [
+            "projectID": projectID,
+            "agentID": state.id,
+            "sessionPath": sessionPath,
+        ]
+        if let worktreeID = state.worktreeID {
+            userInfo["worktreeID"] = worktreeID
+        }
+        Task { @MainActor in
+            await Task.yield()
+            NotificationCenter.default.post(name: .openKajiAgentSession, object: nil, userInfo: userInfo)
+        }
     }
 
     private func pruneNavigationHistory() {
