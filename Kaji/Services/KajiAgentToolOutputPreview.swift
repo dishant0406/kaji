@@ -1,14 +1,17 @@
 enum KajiAgentToolOutputPreview {
+    private static let maxStoredOutputCharacters = 200_000
+
     static func make(from output: String, toolName: String, complete: Bool) -> KajiAgentToolOutputSummary {
-        let lines = output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let storedOutput = capped(output)
+        let lines = storedOutput.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let limit = limit(for: toolName)
         let previewLines = previewLines(from: lines, limit: limit, tail: toolName == "bash")
         let truncated = max(lines.count - previewLines.count, 0)
-        let summary = summary(for: output, lines: lines, complete: complete)
+        let summary = summary(for: output, lineCount: lineCount(in: output), complete: complete)
         return KajiAgentToolOutputSummary(
             summary: summary,
             preview: previewLines.joined(separator: "\n"),
-            fullOutput: output,
+            fullOutput: storedOutput,
             truncatedLineCount: truncated
         )
     }
@@ -29,9 +32,20 @@ enum KajiAgentToolOutputPreview {
         return tail ? Array(lines.suffix(limit)) : Array(lines.prefix(limit))
     }
 
-    private static func summary(for output: String, lines: [String], complete: Bool) -> String {
-        if lines.count > 1 { return complete ? "\(lines.count) lines" : "Streaming \(lines.count) lines" }
-        return output.count > 120 ? "\(output.count) characters" : output
+    private static func summary(for output: String, lineCount: Int, complete: Bool) -> String {
+        if lineCount > 1 { return complete ? "\(lineCount) lines" : "Streaming \(lineCount) lines" }
+        if !complete { return output.isEmpty ? "Streaming" : "Streaming result" }
+        return output.count > 120 ? "\(output.count) characters" : "1 line"
+    }
+
+    private static func lineCount(in output: String) -> Int {
+        output.reduce(1) { count, character in character == "\n" ? count + 1 : count }
+    }
+
+    private static func capped(_ output: String) -> String {
+        guard output.count > maxStoredOutputCharacters else { return output }
+        let omitted = output.count - maxStoredOutputCharacters
+        return String(output.prefix(maxStoredOutputCharacters)) + "\n\n... truncated \(omitted) characters"
     }
 }
 

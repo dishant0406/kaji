@@ -16,7 +16,7 @@ struct KajiAgentScrollLockPolicyTests {
     @Test
     func locksOnSmallIntentionalScrollAway() {
         let state = KajiAgentScrollLockPolicy.observedState(
-            distanceFromBottom: 10,
+            distanceFromBottom: 20,
             current: KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
         )
 
@@ -48,8 +48,8 @@ struct KajiAgentScrollLockPolicyTests {
             distanceFromBottom: 0,
             current: KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
         ))
-        #expect(!KajiAgentScrollLockPolicy.shouldPerformAutoScroll(
-            distanceFromBottom: 6,
+        #expect(KajiAgentScrollLockPolicy.shouldPerformAutoScroll(
+            distanceFromBottom: 40,
             current: KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
         ))
         #expect(!KajiAgentScrollLockPolicy.shouldPerformAutoScroll(
@@ -61,7 +61,7 @@ struct KajiAgentScrollLockPolicyTests {
     @Test
     func tailChangeMarksUnseenWhenAwayFromBottom() {
         let state = KajiAgentScrollLockPolicy.tailChangedState(
-            distanceFromBottom: 10,
+            distanceFromBottom: 80,
             current: KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
         )
 
@@ -71,10 +71,32 @@ struct KajiAgentScrollLockPolicyTests {
     @Test
     func tailChangeAllowsAutoscrollOnlyWhenPinned() {
         let state = KajiAgentScrollLockPolicy.tailChangedState(
-            distanceFromBottom: 0,
+            distanceFromBottom: 40,
             current: KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
         )
 
         #expect(state == nil)
+    }
+
+    @Test
+    func scrollingDownNearBottomUnlocksAndClearsUnseenTail() {
+        let state = KajiAgentScrollLockPolicy.observedState(
+            distanceFromBottom: 32,
+            isScrollingDown: true,
+            current: KajiAgentScrollLockState(isLocked: true, hasUnseenTail: true)
+        )
+
+        #expect(state == KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false))
+    }
+
+    @Test
+    func scrollingDownFarFromBottomStaysLocked() {
+        let state = KajiAgentScrollLockPolicy.observedState(
+            distanceFromBottom: 120,
+            isScrollingDown: true,
+            current: KajiAgentScrollLockState(isLocked: true, hasUnseenTail: true)
+        )
+
+        #expect(state == KajiAgentScrollLockState(isLocked: true, hasUnseenTail: true))
     }
 }

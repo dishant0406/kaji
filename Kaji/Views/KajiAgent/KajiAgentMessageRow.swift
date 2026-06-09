@@ -2,10 +2,12 @@ import SwiftUI
 
 struct KajiAgentMessageRow: View, Equatable {
     let message: KajiAgentMessage
-    @State private var expanded = false
+    var toolExpanded: Bool?
+    var onToggleToolExpanded: (() -> Void)?
+    @State private var localToolExpanded = false
 
     nonisolated static func == (lhs: KajiAgentMessageRow, rhs: KajiAgentMessageRow) -> Bool {
-        lhs.message == rhs.message
+        lhs.message == rhs.message && lhs.toolExpanded == rhs.toolExpanded
     }
 
     var body: some View {
@@ -17,8 +19,7 @@ struct KajiAgentMessageRow: View, Equatable {
         case .assistant:
             iconRow(icon: "sparkles", color: KajiTheme.fgMuted) {
                 if message.isComplete {
-                    ParentAgentMarkdownText(content: message.detail, color: KajiTheme.fgMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+                    KajiAgentLongTextView(content: message.detail, color: KajiTheme.fgMuted)
                 } else {
                     KajiAgentStreamingMarkdownText(content: message.detail, color: KajiTheme.fgMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -44,8 +45,7 @@ struct KajiAgentMessageRow: View, Equatable {
     private var userRow: some View {
         HStack(alignment: .top) {
             Spacer(minLength: 90)
-            ParentAgentMarkdownText(content: message.detail, color: KajiTheme.fg)
-                .fixedSize(horizontal: false, vertical: true)
+            KajiAgentLongTextView(content: message.detail, color: KajiTheme.fg)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
@@ -73,52 +73,83 @@ struct KajiAgentMessageRow: View, Equatable {
                         KajiSpinner(size: 10)
                     }
                 }
-                if !message.detail.isEmpty {
-                    toolOutput
+                if hasToolDetails {
+                    toolDisclosure
                 }
-                if let taskDetails = message.taskDetails {
-                    KajiAgentTaskToolView(details: taskDetails)
+                if isToolExpanded {
+                    expandedToolDetails
                 }
             }
         }
     }
 
-    private var toolOutput: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                expanded.toggle()
-            } label: {
-                HStack(spacing: 8) {
-                    KajiIcon(systemName: expanded ? "chevron.down" : "chevron.right", size: 10)
-                        .foregroundStyle(KajiTheme.fgDim)
-                    Text(message.detail)
-                        .kajiFont(size: 11, weight: .medium)
-                        .foregroundStyle(KajiTheme.fgMuted)
-                    if message.truncatedLineCount > 0, !expanded {
-                        Text("\(message.truncatedLineCount) more")
-                            .kajiFont(size: 11)
-                            .foregroundStyle(KajiTheme.fgDim)
-                    }
-                    Spacer(minLength: 0)
-                }
+    private var toolDisclosure: some View {
+        Button {
+            toggleToolExpanded()
+        } label: {
+            HStack(spacing: 8) {
+                KajiIcon(systemName: isToolExpanded ? "chevron.down" : "chevron.right", size: 10)
+                    .foregroundStyle(KajiTheme.fgDim)
+                Text(toolStatusText)
+                    .kajiFont(size: 11, weight: .medium)
+                    .foregroundStyle(message.isError ? KajiTheme.diffRemoveFg : KajiTheme.fgMuted)
+                Spacer(minLength: 0)
             }
-            .buttonStyle(.plain)
-            .kajiPointer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .kajiPointer()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            if let preview = expanded ? message.fullOutput : message.preview, !preview.isEmpty {
-                ScrollView(.vertical, showsIndicators: expanded) {
+    private var expandedToolDetails: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let preview = expandedOutput, !preview.isEmpty {
+                ScrollView(.vertical, showsIndicators: isToolExpanded) {
                     Text(preview)
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(KajiTheme.fgDim)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxHeight: expanded ? 360 : 180)
+                .frame(maxHeight: 360)
                 .padding(10)
                 .background(KajiTheme.bg.opacity(0.62), in: RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(KajiTheme.border.opacity(0.55)))
             }
+            if let taskDetails = message.taskDetails {
+                KajiAgentTaskToolView(details: taskDetails)
+            }
         }
+    }
+
+    private var hasToolDetails: Bool {
+        expandedOutput != nil || message.taskDetails != nil
+    }
+
+    private var expandedOutput: String? {
+        if let fullOutput = message.fullOutput, !fullOutput.isEmpty { return fullOutput }
+        if let preview = message.preview, !preview.isEmpty { return preview }
+        return nil
+    }
+
+    private var isToolExpanded: Bool {
+        toolExpanded ?? localToolExpanded
+    }
+
+    private func toggleToolExpanded() {
+        if let onToggleToolExpanded {
+            onToggleToolExpanded()
+            return
+        }
+        localToolExpanded.toggle()
+    }
+
+    private var toolStatusText: String {
+        if message.isError { return "Failed" }
+        if !message.isComplete { return expandedOutput == nil ? "Running" : "Streaming result" }
+        return expandedOutput == nil && message.taskDetails == nil ? "No output" : "Result ready"
     }
 
     private func systemRow(color: Color) -> some View {
@@ -128,8 +159,7 @@ struct KajiAgentMessageRow: View, Equatable {
                     .kajiFont(size: 12, weight: .medium)
                     .foregroundStyle(color)
                 if !message.detail.isEmpty {
-                    ParentAgentMarkdownText(content: message.detail, size: 12, color: KajiTheme.fgDim)
-                        .fixedSize(horizontal: false, vertical: true)
+                    KajiAgentLongTextView(content: message.detail, size: 12, color: KajiTheme.fgDim)
                 }
             }
         }

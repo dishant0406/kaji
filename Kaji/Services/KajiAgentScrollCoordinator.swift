@@ -14,6 +14,8 @@ final class KajiAgentScrollCoordinator {
     var isLocked = false
     var hasUnseenTail = false
     private var pendingTurnID: UUID?
+    private var pendingInitialBottomScroll = false
+    private var forceNextTurnScroll = false
 
     func attach(_ scrollView: NSScrollView) {
         guard self.scrollView !== scrollView else { return }
@@ -32,6 +34,10 @@ final class KajiAgentScrollCoordinator {
                 guard let self, let scrollView else { return }
                 self.observe(scrollView)
             }
+        }
+        if pendingInitialBottomScroll {
+            pendingInitialBottomScroll = false
+            scheduleScrollToBottom(force: true, animated: false, delayMilliseconds: 80)
         }
     }
 
@@ -58,24 +64,41 @@ final class KajiAgentScrollCoordinator {
             apply(state)
             return
         }
-        scheduleScrollToBottom(force: false, animated: false)
+        scheduleScrollToBottom(force: false, animated: false, delayMilliseconds: 16)
     }
 
     func scrollToBottom(force: Bool) {
+        guard scrollView != nil else {
+            if force { pendingInitialBottomScroll = true }
+            return
+        }
         if force {
             isLocked = false
             hasUnseenTail = false
         }
-        scheduleScrollToBottom(force: force, animated: force)
+        scheduleScrollToBottom(force: force, animated: force, delayMilliseconds: force ? 0 : 16)
+    }
+
+    func requestInitialBottomScroll() {
+        pendingInitialBottomScroll = true
+        guard scrollView != nil else { return }
+        pendingInitialBottomScroll = false
+        scheduleScrollToBottom(force: true, animated: false, delayMilliseconds: 80)
+    }
+
+    func prepareForUserSubmittedTurn() {
+        forceNextTurnScroll = true
     }
 
     func scrollToTurn(_ id: UUID) {
         pendingTurnID = id
-        if isLocked {
+        let force = forceNextTurnScroll
+        forceNextTurnScroll = false
+        if isLocked, !force {
             hasUnseenTail = true
             return
         }
-        scheduleScrollToTurn(force: false)
+        scheduleScrollToTurn(force: force)
     }
 
     private func observe(_ scrollView: NSScrollView) {
@@ -88,13 +111,18 @@ final class KajiAgentScrollCoordinator {
         }
 
         if Date().timeIntervalSince(lastProgrammaticScrollAt) < programmaticScrollSuppression { return }
-        apply(KajiAgentScrollLockPolicy.observedState(distanceFromBottom: distanceFromBottom(scrollView), current: scrollState))
+        let isScrollingDown = lastObservedOriginY.map { originY > $0 + 0.5 } ?? false
+        apply(KajiAgentScrollLockPolicy.observedState(
+            distanceFromBottom: distanceFromBottom(scrollView),
+            isScrollingDown: isScrollingDown,
+            current: scrollState
+        ))
     }
 
-    private func scheduleScrollToBottom(force: Bool, animated: Bool) {
+    private func scheduleScrollToBottom(force: Bool, animated: Bool, delayMilliseconds: Int) {
         pendingBottomScroll?.cancel()
         pendingBottomScroll = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(force ? 0 : 16))
+            try? await Task.sleep(for: .milliseconds(delayMilliseconds))
             guard !Task.isCancelled, let self, let scrollView = self.scrollView else { return }
             self.performScrollToBottom(scrollView, force: force, animated: animated)
         }
@@ -117,19 +145,8 @@ final class KajiAgentScrollCoordinator {
             return
         }
 
-        let documentHeight = scrollView.documentView?.frame.height ?? 0
-        let visibleHeight = scrollView.documentVisibleRect.height
-        let y = max(0, documentHeight - visibleHeight)
-        if animated {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.18
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                scrollView.contentView.animator().setBoundsOrigin(NSPoint(x: 0, y: y))
-            }
-        } else {
-            scrollView.contentView.setBoundsOrigin(NSPoint(x: 0, y: y))
-        }
-        scrollView.reflectScrolledClipView(scrollView.contentView)
+        let y = KajiAgentScrollViewOperations.bottomOriginY(scrollView)
+        KajiAgentScrollViewOperations.setOriginY(y, in: scrollView, animated: animated)
         markProgrammaticScroll(targetOriginY: y, animated: animated)
         isLocked = false
         hasUnseenTail = false
@@ -141,7 +158,7 @@ final class KajiAgentScrollCoordinator {
             return
         }
         guard let document = scrollView.documentView,
-              let target = findView(withIdentifier: id.uuidString, in: document)
+              let target = KajiAgentScrollViewOperations.findView(withIdentifier: id.uuidString, in: document)
         else {
             performScrollToBottom(scrollView, force: true, animated: false)
             return
@@ -163,14 +180,6 @@ final class KajiAgentScrollCoordinator {
         lastObservedOriginY = targetOriginY
     }
 
-    private func findView(withIdentifier identifier: String, in view: NSView) -> NSView? {
-        if view.identifier?.rawValue == identifier { return view }
-        for subview in view.subviews {
-            if let found = findView(withIdentifier: identifier, in: subview) { return found }
-        }
-        return nil
-    }
-
     private var scrollState: KajiAgentScrollLockState {
         KajiAgentScrollLockState(isLocked: isLocked, hasUnseenTail: hasUnseenTail)
     }
@@ -181,7 +190,6 @@ final class KajiAgentScrollCoordinator {
     }
 
     private func distanceFromBottom(_ scrollView: NSScrollView) -> CGFloat {
-        let documentHeight = scrollView.documentView?.frame.height ?? 0
-        return max(0, documentHeight - scrollView.documentVisibleRect.maxY)
+        KajiAgentScrollViewOperations.distanceFromBottom(scrollView)
     }
 }

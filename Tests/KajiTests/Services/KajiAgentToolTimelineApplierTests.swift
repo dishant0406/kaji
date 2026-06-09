@@ -80,9 +80,34 @@ struct KajiAgentToolTimelineApplierTests {
         )
 
         let tool = try #require(state.tool)
-        #expect(tool.detail == "done")
+        #expect(tool.detail == "1 line")
+        #expect(tool.fullOutput == "done")
         #expect(tool.isComplete)
         #expect(tool.isError)
+    }
+
+    @Test
+    func finishCapsLargeToolOutputInLiveModel() throws {
+        var state = State.started(toolName: "read")
+        let output = String(repeating: "x", count: 250_000)
+
+        _ = KajiAgentToolTimelineApplier.finish(
+            event: KajiAgentSessionEvent(
+                type: "tool_execution_end",
+                toolCallId: "tool-1",
+                toolName: "read",
+                result: KajiAgentToolResult(content: [.init(type: "text", text: output)])
+            ),
+            turns: &state.turns,
+            activeTurnID: state.activeTurnID,
+            tailVersion: &state.tailVersion,
+            todoPhases: &state.todoPhases
+        )
+
+        let tool = try #require(state.tool)
+        #expect(tool.fullOutput?.count ?? 0 < output.count)
+        #expect(tool.fullOutput?.contains("truncated 50000 characters") == true)
+        #expect(tool.detail == "250000 characters")
     }
 
     @Test

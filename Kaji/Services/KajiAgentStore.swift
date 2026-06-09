@@ -42,6 +42,8 @@ final class KajiAgentStore {
     var queuedMessageCount = 0
     var tailVersion = 0
     var autoScrollVersion = 0
+    var forceScrollVersion = 0
+    var userSubmittedScrollVersion = 0
     var isRestoringTranscript = false
     weak var appState: AppState?
     weak var projectStore: ProjectStore?
@@ -117,6 +119,10 @@ final class KajiAgentStore {
             return
         }
         send(KajiAgentRPCFrame(type: "prompt", message: content))
+    }
+
+    func markUserSubmittedScrollIntent() {
+        userSubmittedScrollVersion &+= 1
     }
 
     func stop() {
@@ -480,6 +486,10 @@ final class KajiAgentStore {
         autoScrollVersion &+= 1
     }
 
+    private func bumpForceScrollVersion() {
+        forceScrollVersion &+= 1
+    }
+
     private func handleEvent(_ event: KajiAgentSessionEvent) {
         KajiAgentEventLog.record("store_event", fields: [
             "type": .string(event.type),
@@ -787,6 +797,7 @@ final class KajiAgentStore {
         if let restoredTodoPhases = restoration.todoPhases {
             todoPhases = restoredTodoPhases
         }
+        bumpForceScrollVersion()
     }
 
     private func refreshMetadata() {

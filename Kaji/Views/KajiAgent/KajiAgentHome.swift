@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftUIIntrospect
 
 struct KajiAgentHome: View {
     let scope: KajiAgentScope?
@@ -15,13 +14,8 @@ struct KajiAgentHome: View {
     @State private var completionState = AgentComposerCompletionState()
     @State private var completionTask: Task<Void, Never>?
     @State private var activePanel: KajiAgentPanel?
-    @State private var slashBashCommand = ""
     @State private var didOpenInitialSession = false
     @State private var showingModelPopover = false
-    @State private var scrollCoordinator = KajiAgentScrollCoordinator()
-    @State private var expandedToolGroups: Set<UUID> = []
-    @State private var collapsedToolGroups: Set<UUID> = []
-    @State private var observedToolGroups: Set<UUID> = []
     @State private var pendingSessionSwitchPath: String?
     @FocusState private var focused
 
@@ -161,7 +155,7 @@ struct KajiAgentHome: View {
                 .kajiFont(size: 19, weight: .medium)
                 .foregroundStyle(KajiTheme.fg)
             if !store.widgetLines.isEmpty {
-                widget
+                KajiAgentWidgetLinesView(lines: store.widgetLines)
             }
             Spacer(minLength: 0)
         }
@@ -192,83 +186,11 @@ struct KajiAgentHome: View {
                     emptyState
                 }
             }
-            bottomTrailingControls
         }
     }
 
     private var timeline: some View {
-        let sections = KajiAgentTranscriptVirtualizationPolicy.split(store.turns)
-        return ZStack(alignment: .bottomTrailing) {
-            ScrollView(.vertical, showsIndicators: true) {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    if !store.widgetLines.isEmpty {
-                        widget
-                            .padding(.bottom, 12)
-                    }
-                    if store.queuedMessageCount > 0 {
-                        queuedMessages
-                            .padding(.bottom, 12)
-                    }
-                    ForEach(sections.history) { turn in
-                        KajiAgentTurnView(
-                            turn: turn,
-                            expandedToolGroups: $expandedToolGroups,
-                            collapsedToolGroups: $collapsedToolGroups
-                        )
-                    }
-                }
-                .transaction { transaction in
-                    transaction.disablesAnimations = true
-                }
-                .frame(maxWidth: 760, alignment: .leading)
-                .scrollTargetLayout()
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(sections.liveTail) { turn in
-                        KajiAgentTurnView(
-                            turn: turn,
-                            expandedToolGroups: $expandedToolGroups,
-                            collapsedToolGroups: $collapsedToolGroups
-                        )
-                    }
-                    Color.clear
-                        .frame(height: 1)
-                        .id(KajiAgentScrollTarget.bottom)
-                }
-                .transaction { transaction in
-                    transaction.disablesAnimations = true
-                }
-                .frame(maxWidth: 760, alignment: .leading)
-                .padding(.bottom, 8)
-                .scrollTargetLayout()
-            }
-            .introspect(.scrollView, on: .macOS(.v14, .v15, .v26)) { scrollView in
-                scrollCoordinator.attach(scrollView)
-            }
-        }
-        .onChange(of: store.turns.last?.id) { _, id in
-            guard let id else { return }
-            scrollCoordinator.scrollToTurn(id)
-        }
-        .onChange(of: store.tailVersion) { _, _ in
-            expandNewToolGroups()
-        }
-        .onChange(of: store.autoScrollVersion) { _, _ in
-            scrollCoordinator.handleTailChanged()
-        }
-    }
-
-    private var bottomTrailingControls: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            if scrollCoordinator.hasUnseenTail {
-                Button("Jump to latest") {
-                    scrollCoordinator.scrollToBottom(force: true)
-                }
-                .buttonStyle(KajiButtonStyle(.secondary, size: .small))
-            }
-            KajiAgentFloatingTaskButton(state: floatingTaskState)
-        }
-        .padding(.trailing, 14)
-        .padding(.bottom, 14)
+        KajiAgentTimelineView(store: store, floatingTaskState: floatingTaskState)
     }
 
     private var floatingTaskState: KajiAgentFloatingTaskState {
@@ -316,40 +238,6 @@ struct KajiAgentHome: View {
             )
         }
         .onChange(of: prompt) { _, _ in refreshCompletions() }
-    }
-
-    private func expandNewToolGroups() {
-        let groups = KajiAgentTranscriptVirtualizationPolicy.split(store.turns).liveTail.flatMap(\.toolGroups)
-        for group in groups where observedToolGroups.insert(group.id).inserted && !collapsedToolGroups.contains(group.id) {
-            expandedToolGroups.insert(group.id)
-        }
-    }
-
-    private var widget: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(Array(store.widgetLines.enumerated()), id: \.offset) { _, line in
-                Text(line)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(KajiTheme.fgDim)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: 760, alignment: .leading)
-        .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var queuedMessages: some View {
-        HStack(spacing: 8) {
-            KajiIcon(systemName: "tray.full", size: 12)
-                .foregroundStyle(KajiTheme.fgMuted)
-            Text("\(store.queuedMessageCount) queued message\(store.queuedMessageCount == 1 ? "" : "s")")
-                .kajiFont(size: 12, weight: .medium)
-                .foregroundStyle(KajiTheme.fgMuted)
-            Spacer(minLength: 0)
-        }
-        .padding(10)
-        .frame(maxWidth: 760, alignment: .leading)
-        .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 12))
     }
 
     @ViewBuilder
@@ -434,6 +322,7 @@ struct KajiAgentHome: View {
             completionState.clear()
             store.buildSkillPrompt(name: slashSkill.name, args: slashSkill.args) { message in
                 guard let message else { return }
+                store.markUserSubmittedScrollIntent()
                 store.submit(message, attachments: submittedAttachments)
             }
             return
@@ -441,6 +330,7 @@ struct KajiAgentHome: View {
         prompt = ""
         attachments = []
         completionState.clear()
+        store.markUserSubmittedScrollIntent()
         store.submit(text, attachments: submittedAttachments)
     }
 
@@ -584,8 +474,4 @@ struct KajiAgentHome: View {
         didOpenInitialSession = true
         requestSessionSwitch(path: sessionPath)
     }
-}
-
-private enum KajiAgentScrollTarget {
-    static let bottom = "kaji-agent-bottom"
 }

@@ -5,12 +5,20 @@ struct KajiAgentScrollLockState: Equatable {
     var hasUnseenTail: Bool
 }
 
-struct KajiAgentScrollLockPolicy {
+enum KajiAgentScrollLockPolicy {
     static let pinnedThreshold: CGFloat = 4
-    static let awayThreshold: CGFloat = 8
+    static let awayThreshold: CGFloat = 16
+    static let resumeThreshold: CGFloat = 56
 
-    static func observedState(distanceFromBottom: CGFloat, current: KajiAgentScrollLockState) -> KajiAgentScrollLockState {
+    static func observedState(
+        distanceFromBottom: CGFloat,
+        isScrollingDown: Bool = false,
+        current: KajiAgentScrollLockState
+    ) -> KajiAgentScrollLockState {
         if distanceFromBottom <= pinnedThreshold {
+            return KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
+        }
+        if current.isLocked, isScrollingDown, distanceFromBottom <= resumeThreshold {
             return KajiAgentScrollLockState(isLocked: false, hasUnseenTail: false)
         }
         if distanceFromBottom >= awayThreshold {
@@ -24,11 +32,11 @@ struct KajiAgentScrollLockPolicy {
     }
 
     static func shouldPerformAutoScroll(distanceFromBottom: CGFloat, current: KajiAgentScrollLockState) -> Bool {
-        !current.isLocked && distanceFromBottom <= pinnedThreshold
+        !current.isLocked && distanceFromBottom <= resumeThreshold
     }
 
     static func tailChangedState(distanceFromBottom: CGFloat, current: KajiAgentScrollLockState) -> KajiAgentScrollLockState? {
-        guard !current.isLocked, distanceFromBottom <= pinnedThreshold else {
+        guard !current.isLocked, distanceFromBottom <= resumeThreshold else {
             return KajiAgentScrollLockState(isLocked: true, hasUnseenTail: true)
         }
         return nil
