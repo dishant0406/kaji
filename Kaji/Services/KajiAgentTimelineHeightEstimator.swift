@@ -1,20 +1,22 @@
 import CoreGraphics
 
 enum KajiAgentTimelineHeightEstimator {
-    static func estimate(_ row: KajiAgentTimelineRow, width: CGFloat = 760) -> CGFloat {
+    static func estimate(_ row: KajiAgentTimelineRow, width: CGFloat = KajiAgentTranscriptMetrics.columnWidth) -> CGFloat {
         switch row.kind {
         case let .widget(lines):
             CGFloat(max(lines.count, 1)) * 17 + 24
         case .queuedMessages:
             42
         case let .user(message):
-            textHeight(message.detail, width: min(width, 520)) + 28
+            textHeight(message.detail, width: min(width, KajiAgentTranscriptMetrics.userWidth)) + 34
         case let .message(message):
             messageHeight(message, width: width)
+        case let .thinking(message, expanded):
+            thinkingHeight(message, expanded: expanded)
         case .toolGroupHeader:
             36
-        case let .tool(message):
-            toolHeight(message)
+        case let .tool(message, expanded):
+            toolHeight(message, expanded: expanded)
         case let .latestTurnSpacer(height):
             height
         case .bottom:
@@ -25,22 +27,31 @@ enum KajiAgentTimelineHeightEstimator {
     private static func messageHeight(_ message: KajiAgentMessage, width: CGFloat) -> CGFloat {
         switch message.kind {
         case .assistant:
-            textHeight(message.detail, width: width) + 26
-        case .thinking,
-             .event,
+            textHeight(message.detail, width: KajiAgentTranscriptMetrics.proseWidth) + 34
+        case .thinking:
+            thinkingHeight(message, expanded: false)
+        case .event,
              .error:
             textHeight(message.detail, width: width) + 34
         case .tool:
-            toolHeight(message)
+            toolHeight(message, expanded: false)
         case .user:
-            textHeight(message.detail, width: min(width, 520)) + 28
+            textHeight(message.detail, width: min(width, KajiAgentTranscriptMetrics.userWidth)) + 34
         }
     }
 
-    private static func toolHeight(_ message: KajiAgentMessage) -> CGFloat {
-        var height: CGFloat = 34
+    private static func thinkingHeight(_ message: KajiAgentMessage, expanded: Bool) -> CGFloat {
+        guard expanded || !message.isComplete else { return 36 }
+        return min(textHeight(message.detail, width: KajiAgentTranscriptMetrics.proseWidth), 220) + 46
+    }
+
+    private static func toolHeight(_ message: KajiAgentMessage, expanded: Bool) -> CGFloat {
+        var height: CGFloat = 42
         if message.preview != nil || message.fullOutput != nil || message.taskDetails != nil {
-            height += 20
+            height += 24
+        }
+        if expanded {
+            height += min(textHeight(message.fullOutput ?? message.preview ?? "", width: KajiAgentTranscriptMetrics.columnWidth), 420)
         }
         return height
     }
@@ -51,6 +62,6 @@ enum KajiAgentTimelineHeightEstimator {
         let visualLines = text.split(separator: "\n", omittingEmptySubsequences: false).reduce(0) { count, line in
             count + max(1, Int(ceil(Double(line.count) / Double(averageCharactersPerLine))))
         }
-        return min(CGFloat(visualLines) * 19 + 8, 1200)
+        return min(CGFloat(visualLines) * 22 + 10, 1200)
     }
 }

@@ -18,12 +18,22 @@ final class KajiAgentTimelineHeightIndex {
 
     func sync(rows nextRows: [KajiAgentTimelineRow]) {
         guard rowIDs != nextRows.map(\.id) || rows != nextRows else { return }
+        let oldRowsByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
+        for row in nextRows where oldRowsByID[row.id] != nil && oldRowsByID[row.id] != row {
+            measuredHeights.removeValue(forKey: row.id)
+        }
         rows = nextRows
         rowIDs = nextRows.map(\.id)
         let liveIDs = Set(rowIDs)
         measuredHeights = measuredHeights.filter { liveIDs.contains($0.key) }
         heights = nextRows.map { measuredHeights[$0.id] ?? KajiAgentTimelineHeightEstimator.estimate($0) }
         rebuildPrefixSums()
+        version &+= 1
+    }
+
+    func invalidate(_ id: KajiAgentTimelineRowID?) {
+        guard let id else { return }
+        measuredHeights.removeValue(forKey: id)
         version &+= 1
     }
 

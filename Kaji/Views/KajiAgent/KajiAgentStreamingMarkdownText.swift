@@ -9,7 +9,7 @@ struct KajiAgentStreamingMarkdownText: View {
     @State private var renderTask: Task<Void, Never>?
 
     var body: some View {
-        ParentAgentMarkdownText(
+        KajiAgentMarkdownText(
             content: renderedContent.isEmpty ? content : renderedContent,
             size: size,
             color: color

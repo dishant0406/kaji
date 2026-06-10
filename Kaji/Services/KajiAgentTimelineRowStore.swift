@@ -10,13 +10,18 @@ final class KajiAgentTimelineRowStore {
     private var rowIndexByID: [KajiAgentTimelineRowID: Int] = [:]
     private var expandedToolGroups: Set<UUID> = []
     private var expandedTools: Set<UUID> = []
+    private var expandedThinking: Set<UUID> = []
 
     func rebuild(turns: [KajiAgentTurn], widgetLines: [String], queuedMessageCount: Int) {
         let nextRows = KajiAgentTimelineFlattener.rows(
             turns: turns,
             widgetLines: widgetLines,
             queuedMessageCount: queuedMessageCount,
-            expandedToolGroups: expandedToolGroups
+            expansion: KajiAgentTimelineExpansionState(
+                toolGroups: expandedToolGroups,
+                thinking: expandedThinking,
+                tools: expandedTools
+            )
         )
         replaceRows(nextRows)
     }
@@ -46,6 +51,10 @@ final class KajiAgentTimelineRowStore {
         expandedTools.contains(id)
     }
 
+    func isThinkingExpanded(_ id: UUID) -> Bool {
+        expandedThinking.contains(id)
+    }
+
     func toggleToolGroup(_ id: UUID) {
         if expandedToolGroups.contains(id) {
             expandedToolGroups.remove(id)
@@ -62,6 +71,49 @@ final class KajiAgentTimelineRowStore {
         } else {
             expandedTools.insert(id)
         }
+        updateToolRow(id)
+    }
+
+    func toggleThinking(_ id: UUID) {
+        if expandedThinking.contains(id) {
+            expandedThinking.remove(id)
+        } else {
+            expandedThinking.insert(id)
+        }
+        updateThinkingRow(id)
+    }
+
+    func rowID(forTool id: UUID) -> KajiAgentTimelineRowID? {
+        rows.first { row in
+            if case let .tool(message, _) = row.kind { return message.id == id }
+            return false
+        }?.id
+    }
+
+    func rowID(forThinking id: UUID) -> KajiAgentTimelineRowID? {
+        rows.first { row in
+            if case let .thinking(message, _) = row.kind { return message.id == id }
+            return false
+        }?.id
+    }
+
+    private func updateToolRow(_ id: UUID) {
+        guard let index = rows.firstIndex(where: { row in
+            if case let .tool(message, _) = row.kind { return message.id == id }
+            return false
+        }), case let .tool(message, _) = rows[index].kind else { return }
+        rows[index] = rows[index].copy(kind: .tool(message, expanded: expandedTools.contains(id)))
+        rebuildIndex()
+        version &+= 1
+    }
+
+    private func updateThinkingRow(_ id: UUID) {
+        guard let index = rows.firstIndex(where: { row in
+            if case let .thinking(message, _) = row.kind { return message.id == id }
+            return false
+        }), case let .thinking(message, _) = rows[index].kind else { return }
+        rows[index] = rows[index].copy(kind: .thinking(message, expanded: expandedThinking.contains(id)))
+        rebuildIndex()
         version &+= 1
     }
 
@@ -82,7 +134,7 @@ final class KajiAgentTimelineRowStore {
                 turnID: rows[headerIndex].turnID,
                 startsTurn: false,
                 isLatestTurn: rows[headerIndex].isLatestTurn,
-                kind: .tool(tool),
+                kind: .tool(tool, expanded: expandedTools.contains(tool.id)),
                 depth: 1,
                 parentID: parentID
             )

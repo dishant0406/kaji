@@ -6,12 +6,14 @@ struct KajiAgentTimelineRowView: View {
     let toggleToolGroup: (UUID) -> Void
     let isToolExpanded: (UUID) -> Bool
     let toggleTool: (UUID) -> Void
+    let toggleThinking: (UUID) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if row.startsTurn, let turnID = row.turnID {
                 KajiAgentTurnAnchor(id: turnID)
                     .frame(height: 0)
+                Color.clear.frame(height: KajiAgentTimelineRowSpacingPolicy.topSpacing(for: row))
             }
             if row.depth > 0 {
                 nestedContent
@@ -21,19 +23,28 @@ struct KajiAgentTimelineRowView: View {
         }
         .id(row.id.rawValue)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, KajiAgentTimelineRowSpacingPolicy.bottomSpacing(for: row))
     }
 
     private var nestedContent: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Rectangle()
-                .fill(KajiTheme.border.opacity(0.5))
-                .frame(width: 1)
-                .padding(.leading, CGFloat(row.depth) * 28)
-                .padding(.vertical, 8)
-            content
-                .padding(.leading, 2)
-        }
+        content
+            .padding(.leading, nestedContentLeadingPadding)
+            .overlay(alignment: .topLeading) {
+                Rectangle()
+                    .fill(KajiTheme.borderStrong.opacity(0.48))
+                    .frame(width: KajiAgentTranscriptMetrics.nestedRailWidth)
+                    .padding(.leading, nestedRailLeadingPadding)
+                    .padding(.vertical, 7)
+            }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var nestedRailLeadingPadding: CGFloat {
+        CGFloat(row.depth) * KajiAgentTranscriptMetrics.nestedIndent
+    }
+
+    private var nestedContentLeadingPadding: CGFloat {
+        nestedRailLeadingPadding + KajiAgentTranscriptMetrics.nestedRailWidth + 12
     }
 
     @ViewBuilder
@@ -46,19 +57,26 @@ struct KajiAgentTimelineRowView: View {
             KajiAgentQueuedMessagesRow(count: count)
                 .padding(.bottom, 12)
         case let .user(message),
-             let .message(message):
+              let .message(message):
             KajiAgentMessageRow(message: message)
                 .equatable()
+        case let .thinking(message, expanded):
+            KajiAgentThinkingRow(
+                message: message,
+                isExpanded: expanded,
+                onToggle: { toggleThinking(message.id) }
+            )
+            .equatable()
         case let .toolGroupHeader(group):
             KajiAgentToolGroupHeaderView(
                 group: group,
                 isExpanded: isToolGroupExpanded(group.id),
                 onToggle: { toggleToolGroup(group.id) }
             )
-        case let .tool(message):
+        case let .tool(message, expanded):
             KajiAgentMessageRow(
                 message: message,
-                toolExpanded: isToolExpanded(message.id),
+                toolExpanded: expanded,
                 onToggleToolExpanded: { toggleTool(message.id) }
             )
             .equatable()
@@ -78,13 +96,13 @@ struct KajiAgentQueuedMessagesRow: View {
             KajiIcon(systemName: "tray.full", size: 12)
                 .foregroundStyle(KajiTheme.fgMuted)
             Text("\(count) queued message\(count == 1 ? "" : "s")")
-                .kajiFont(size: 12, weight: .medium)
+                .kajiFont(size: KajiAgentTranscriptMetrics.metadataFont, weight: .medium)
                 .foregroundStyle(KajiTheme.fgMuted)
             Spacer(minLength: 0)
         }
         .padding(10)
-        .frame(maxWidth: 760, alignment: .leading)
-        .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: KajiAgentTranscriptMetrics.columnWidth, alignment: .leading)
+        .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: KajiAgentTranscriptMetrics.controlRadius))
     }
 }
 

@@ -6,7 +6,7 @@ enum KajiAgentTimelineFlattener {
         turns: [KajiAgentTurn],
         widgetLines: [String],
         queuedMessageCount: Int,
-        expandedToolGroups: Set<UUID>,
+        expansion: KajiAgentTimelineExpansionState = .empty,
         latestTurnSpacerHeight: CGFloat = 0
     ) -> [KajiAgentTimelineRow] {
         var rows: [KajiAgentTimelineRow] = []
@@ -35,7 +35,12 @@ enum KajiAgentTimelineFlattener {
 
         let latestTurnID = turns.last?.id
         for turn in turns {
-            append(turn: turn, latestTurnID: latestTurnID, expandedToolGroups: expandedToolGroups, rows: &rows)
+            append(
+                turn: turn,
+                latestTurnID: latestTurnID,
+                expansion: expansion,
+                rows: &rows
+            )
         }
 
         if let latestTurnID, latestTurnSpacerHeight > 0 {
@@ -64,7 +69,7 @@ enum KajiAgentTimelineFlattener {
     private static func append(
         turn: KajiAgentTurn,
         latestTurnID: UUID?,
-        expandedToolGroups: Set<UUID>,
+        expansion: KajiAgentTimelineExpansionState,
         rows: inout [KajiAgentTimelineRow]
     ) {
         let isLatestTurn = turn.id == latestTurnID
@@ -82,12 +87,17 @@ enum KajiAgentTimelineFlattener {
         for block in turn.blocks {
             switch block {
             case let .message(message):
+                let kind: KajiAgentTimelineRow.Kind = if message.kind == .thinking {
+                    .thinking(message, expanded: expansion.thinking.contains(message.id))
+                } else {
+                    .message(message)
+                }
                 rows.append(row(
                     id: "message.\(message.id.uuidString)",
                     turnID: turn.id,
                     startsTurn: startsTurn,
                     isLatestTurn: isLatestTurn,
-                    kind: .message(message)
+                    kind: kind
                 ))
                 startsTurn = false
             case let .toolGroup(group):
@@ -100,14 +110,14 @@ enum KajiAgentTimelineFlattener {
                     kind: .toolGroupHeader(group)
                 ))
                 startsTurn = false
-                if expandedToolGroups.contains(group.id) {
+                if expansion.toolGroups.contains(group.id) {
                     rows.append(contentsOf: group.tools.map { tool in
                         row(
                             id: "tool.\(tool.id.uuidString)",
                             turnID: turn.id,
                             startsTurn: false,
                             isLatestTurn: isLatestTurn,
-                            kind: .tool(tool),
+                            kind: .tool(tool, expanded: expansion.tools.contains(tool.id)),
                             depth: 1,
                             parentID: groupRowID
                         )

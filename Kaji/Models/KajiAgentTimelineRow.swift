@@ -8,6 +8,20 @@ struct KajiAgentTimelineRowID: Hashable, CustomStringConvertible {
 }
 
 extension KajiAgentTimelineRow {
+    func copy(kind nextKind: Kind) -> KajiAgentTimelineRow {
+        KajiAgentTimelineRow(
+            id: id,
+            turnID: turnID,
+            startsTurn: startsTurn,
+            isLatestTurn: isLatestTurn,
+            kind: nextKind,
+            depth: depth,
+            parentID: parentID
+        )
+    }
+}
+
+extension KajiAgentTimelineRow {
     var isSpacer: Bool {
         if case .latestTurnSpacer = kind { return true }
         return false
@@ -20,8 +34,9 @@ struct KajiAgentTimelineRow: Identifiable, Hashable {
         case queuedMessages(Int)
         case user(KajiAgentMessage)
         case message(KajiAgentMessage)
+        case thinking(KajiAgentMessage, expanded: Bool)
         case toolGroupHeader(KajiAgentToolGroup)
-        case tool(KajiAgentMessage)
+        case tool(KajiAgentMessage, expanded: Bool)
         case latestTurnSpacer(CGFloat)
         case bottom
     }

@@ -11,7 +11,6 @@ struct AgentMissionControlRow: View {
     let onOpenFile: ((AgentChangedFile) -> Void)?
     let onOpenDiff: ((AgentChangedFile) -> Void)?
     let onSelect: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
     @State private var expanded = false
 
@@ -27,17 +26,24 @@ struct AgentMissionControlRow: View {
             .buttonStyle(.plain)
             .kajiPointer()
             if item.hasChangedFileEvidence {
-                evidenceToggle
-                if expanded {
-                    AgentMissionControlChangedFilesView(
-                        item: item,
-                        onOpenFile: onOpenFile,
-                        onOpenDiff: onOpenDiff
-                    )
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
-                    .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
-                }
+                KajiAccordionItem(
+                    isExpanded: expanded,
+                    accessibilityLabel: changedFilesToggleTitle,
+                    style: .missionControlEvidence,
+                    onToggle: { expanded.toggle() },
+                    header: { expanded in
+                        evidenceLabel(expanded: expanded)
+                    },
+                    content: {
+                        AgentMissionControlChangedFilesView(
+                            item: item,
+                            onOpenFile: onOpenFile,
+                            onOpenDiff: onOpenDiff
+                        )
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                    }
+                )
             }
             AgentMissionControlControlsView(
                 item: item,
@@ -83,24 +89,16 @@ struct AgentMissionControlRow: View {
         }
     }
 
-    private var evidenceToggle: some View {
-        Button {
-            expanded.toggle()
-        } label: {
-            HStack(spacing: 5) {
-                KajiIcon(systemName: expanded ? "chevron.down" : "chevron.right", size: 9)
-                Text(changedFilesToggleTitle)
-                    .kajiFont(size: 10, weight: .medium)
-                Spacer()
-            }
-            .foregroundStyle(KajiTheme.fgMuted)
-            .padding(.horizontal, 45)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
+    private func evidenceLabel(expanded: Bool) -> some View {
+        HStack(spacing: 5) {
+            KajiIcon(systemName: expanded ? "chevron.down" : "chevron.right", size: 9)
+            Text(changedFilesToggleTitle)
+                .kajiFont(size: 10, weight: .medium)
+            Spacer()
         }
-        .buttonStyle(.plain)
-        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: expanded)
-        .kajiPointer()
+        .foregroundStyle(KajiTheme.fgMuted)
+        .padding(.horizontal, 45)
+        .padding(.vertical, 4)
     }
 
     private var changedFilesToggleTitle: String {

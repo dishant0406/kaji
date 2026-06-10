@@ -34,15 +34,41 @@ struct KajiAgentTimelineRowStoreTests {
 
         #expect(store.rows.map(\.kindName) == ["toolGroup", "tool", "bottom"])
     }
+
+    @Test
+    func togglesThinkingRowWithoutRebuildingTimeline() throws {
+        let thinking = KajiAgentMessage(kind: .thinking, title: "Thinking", detail: "Analyzing")
+        let store = KajiAgentTimelineRowStore()
+        let turns = [KajiAgentTurn(blocks: [.message(thinking)])]
+        store.rebuild(turns: turns, widgetLines: [], queuedMessageCount: 0)
+
+        #expect(store.rows.map(\.kindName) == ["thinking", "bottom"])
+        #expect(store.rows[0].isThinkingExpanded == false)
+
+        store.toggleThinking(thinking.id)
+
+        #expect(store.rows.map(\.kindName) == ["thinking", "bottom"])
+        #expect(store.rows[0].isThinkingExpanded)
+
+        store.rebuild(turns: turns, widgetLines: [], queuedMessageCount: 0)
+
+        #expect(store.rows[0].isThinkingExpanded)
+    }
 }
 
 private extension KajiAgentTimelineRow {
+    var isThinkingExpanded: Bool {
+        if case let .thinking(_, expanded) = kind { return expanded }
+        return false
+    }
+
     var kindName: String {
         switch kind {
         case .widget: "widget"
         case .queuedMessages: "queued"
         case .user: "user"
         case .message: "message"
+        case .thinking: "thinking"
         case .toolGroupHeader: "toolGroup"
         case .tool: "tool"
         case .latestTurnSpacer: "spacer"

@@ -26,13 +26,18 @@ struct KajiAgentVirtualTimelineView: View {
                             isToolGroupExpanded: rowStore.isToolGroupExpanded,
                             toggleToolGroup: toggleToolGroup,
                             isToolExpanded: rowStore.isToolExpanded,
-                            toggleTool: toggleTool
+                            toggleTool: toggleTool,
+                            toggleThinking: toggleThinking
                         )
                         .kajiAgentTimelineRowHeight(id: rows[index].id)
                     }
                     Color.clear.frame(height: layout.bottomSpacerHeight)
                 }
-                .frame(maxWidth: 760, minHeight: max(layout.totalHeight, effectiveViewportHeight), alignment: .topLeading)
+                .frame(
+                    maxWidth: KajiAgentTranscriptMetrics.columnWidth,
+                    minHeight: max(layout.totalHeight, effectiveViewportHeight),
+                    alignment: .topLeading
+                )
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: max(layout.totalHeight, effectiveViewportHeight), alignment: .top)
@@ -58,7 +63,16 @@ struct KajiAgentVirtualTimelineView: View {
     }
 
     private func toggleTool(_ id: UUID) {
+        let rowID = rowStore.rowID(forTool: id)
         rowStore.toggleTool(id)
+        heightIndex.invalidate(rowID)
+        onStructureChanged()
+    }
+
+    private func toggleThinking(_ id: UUID) {
+        let rowID = rowStore.rowID(forThinking: id)
+        rowStore.toggleThinking(id)
+        heightIndex.invalidate(rowID)
         onStructureChanged()
     }
 

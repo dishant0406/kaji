@@ -52,6 +52,29 @@ struct KajiAgentTimelineHeightIndexTests {
         #expect(index.layout(scrollOffset: 0, viewportHeight: 100).totalHeight < 180)
     }
 
+    @Test
+    func syncDropsMeasuredHeightWhenExpansionStateChanges() {
+        let thinking = KajiAgentMessage(
+            kind: .thinking,
+            title: "Thinking",
+            detail: String(repeating: "reasoning ", count: 120)
+        )
+        let store = KajiAgentTimelineRowStore()
+        store.rebuild(turns: [KajiAgentTurn(blocks: [.message(thinking)])], widgetLines: [], queuedMessageCount: 0)
+        let index = KajiAgentTimelineHeightIndex()
+        index.sync(rows: store.rows)
+        _ = index.applyMeasurements(
+            [KajiAgentTimelineRowHeightValue(id: store.rows[0].id, height: 300)],
+            rowStore: store,
+            scrollOffset: 0
+        )
+
+        store.toggleThinking(thinking.id)
+        index.sync(rows: store.rows)
+
+        #expect(index.layout(scrollOffset: 0, viewportHeight: 100).totalHeight < 300)
+    }
+
     private func rows(count: Int) -> [KajiAgentTimelineRow] {
         (0 ..< count).map { item in
             KajiAgentTimelineRow(
