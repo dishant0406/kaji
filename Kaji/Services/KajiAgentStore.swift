@@ -24,6 +24,8 @@ final class KajiAgentStore {
     var loginInstructions: String?
     var loginCode: String?
     var loginProviders: [KajiAgentLoginProvider] = []
+    var customProvidersState = KajiAgentCustomProvidersState(json: nil)
+    var customProviderStatus = ""
     var modelOptions: [KajiAgentModelOption] = []
     var modelRoles: [KajiAgentModelRoleAssignment] = []
     var cycleOrder: [String] = []
@@ -189,6 +191,66 @@ final class KajiAgentStore {
             let options = KajiAgentModelOption.options(from: frame.data)
             self.modelOptions = options
             onResult(options)
+        }
+    }
+
+    func requestCustomProviders(_ onResult: ((KajiAgentCustomProvidersState) -> Void)? = nil) {
+        send(KajiAgentRPCFrame(type: "get_custom_providers")) { [weak self] frame in
+            guard let self else { return }
+            if frame.success == false {
+                customProviderStatus = frame.error ?? "Unable to load custom providers."
+                onResult?(customProvidersState)
+                return
+            }
+            let state = KajiAgentCustomProvidersState(json: frame.data)
+            customProvidersState = state
+            customProviderStatus = ""
+            onResult?(state)
+        }
+    }
+
+    func saveCustomProvider(_ provider: KajiAgentCustomProvider, onResult: ((Bool) -> Void)? = nil) {
+        send(KajiAgentRPCFrame(type: "save_custom_provider", data: provider.json)) { [weak self] frame in
+            guard let self else { return }
+            if frame.success == false {
+                customProviderStatus = frame.error ?? "Unable to save custom provider."
+                onResult?(false)
+                return
+            }
+            applyCustomProviderMutation(frame.data)
+            customProviderStatus = "Custom provider saved."
+            onResult?(true)
+        }
+    }
+
+    func deleteCustomProvider(id: String, onResult: ((Bool) -> Void)? = nil) {
+        send(KajiAgentRPCFrame(type: "delete_custom_provider", providerId: id)) { [weak self] frame in
+            guard let self else { return }
+            if frame.success == false {
+                customProviderStatus = frame.error ?? "Unable to delete custom provider."
+                onResult?(false)
+                return
+            }
+            applyCustomProviderMutation(frame.data)
+            customProviderStatus = "Custom provider deleted."
+            onResult?(true)
+        }
+    }
+
+    func previewCustomProviderModels(
+        _ provider: KajiAgentCustomProvider,
+        onResult: @escaping (KajiAgentCustomProviderAutoMatch?) -> Void
+    ) {
+        send(KajiAgentRPCFrame(type: "preview_custom_provider_models", data: provider.json)) { [weak self] frame in
+            guard let self else { return }
+            if frame.success == false {
+                customProviderStatus = frame.error ?? "Unable to auto-match provider models."
+                onResult(nil)
+                return
+            }
+            let result = KajiAgentCustomProviderAutoMatch(json: frame.data)
+            customProviderStatus = result.models.isEmpty ? "No matching models found." : "Auto-matched \(result.models.count) models."
+            onResult(result)
         }
     }
 
@@ -480,6 +542,14 @@ final class KajiAgentStore {
         hasConfiguredHostTools = true
         send(KajiAgentRPCFrame(type: "set_host_tools", tools: KajiAgentHostToolRegistry.definitions))
         send(KajiAgentRPCFrame(type: "set_host_uri_schemes", schemes: KajiAgentHostToolRegistry.uriSchemes))
+    }
+
+    private func applyCustomProviderMutation(_ data: KajiAgentJSONValue?) {
+        customProvidersState = KajiAgentCustomProvidersState(json: data)
+        if let models = data?.objectValue?["models"] {
+            modelOptions = KajiAgentModelOption.options(from: .object(["models": models]))
+        }
+        requestModelConfig { _ in }
     }
 
     private func bumpAutoScrollVersion() {

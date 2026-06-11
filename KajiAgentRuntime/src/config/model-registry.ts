@@ -33,6 +33,7 @@ import { isRecord, logger } from "@oh-my-pi/pi-utils";
 import { parseModelString, resolveProviderModelReference } from "../config/model-resolver";
 import { isValidThemeColor, type ThemeColor } from "../modes/theme/theme";
 import type { AuthStorage, OAuthCredential } from "../session/auth-storage";
+import { discoverAzureOpenAIDeployments } from "./azure-openai-deployment-discovery";
 import { type ConfigError, ConfigFile } from "./config-file";
 import {
 	buildCanonicalModelIndex,
@@ -218,28 +219,30 @@ function validateProviderConfiguration(
 	}
 }
 
+export function validateModelsConfig(config: ModelsConfig): void {
+	for (const [providerName, providerConfig] of Object.entries(config.providers ?? {})) {
+		validateProviderConfiguration(
+			providerName,
+			{
+				baseUrl: providerConfig.baseUrl,
+				headers: providerConfig.headers,
+				apiKey: providerConfig.apiKey,
+				api: providerConfig.api as Api | undefined,
+				auth: (providerConfig.auth ?? "apiKey") as ProviderAuthMode,
+				discovery: providerConfig.discovery as ProviderDiscovery | undefined,
+				compat: providerConfig.compat,
+				disableStrictTools: providerConfig.disableStrictTools,
+				modelOverrides: providerConfig.modelOverrides,
+				models: (providerConfig.models ?? []) as ProviderValidationModel[],
+			},
+			"models-config",
+		);
+	}
+}
+
 export const ModelsConfigFile = new ConfigFile<ModelsConfig>("models", ModelsConfigSchema).withValidation(
 	"models",
-	config => {
-		for (const [providerName, providerConfig] of Object.entries(config.providers ?? {})) {
-			validateProviderConfiguration(
-				providerName,
-				{
-					baseUrl: providerConfig.baseUrl,
-					headers: providerConfig.headers,
-					apiKey: providerConfig.apiKey,
-					api: providerConfig.api as Api | undefined,
-					auth: (providerConfig.auth ?? "apiKey") as ProviderAuthMode,
-					discovery: providerConfig.discovery as ProviderDiscovery | undefined,
-					compat: providerConfig.compat,
-					disableStrictTools: providerConfig.disableStrictTools,
-					modelOverrides: providerConfig.modelOverrides,
-					models: (providerConfig.models ?? []) as ProviderValidationModel[],
-				},
-				"models-config",
-			);
-		}
-	},
+	validateModelsConfig,
 );
 
 /** Provider override config (baseUrl, headers, apiKey, compat, transport) without custom models */
@@ -299,9 +302,10 @@ const AUTHORITATIVE_RUNTIME_CATALOG_PROVIDERS = new Set<string>(
 
 function isAuthoritativeProjectCatalogModel(model: Model<Api>): boolean {
 	return (
-		model.provider === "google-vertex" &&
-		model.api === "openai-completions" &&
-		model.baseUrl.includes("/endpoints/openapi")
+		(model.provider === "google-vertex" &&
+			model.api === "openai-completions" &&
+			model.baseUrl.includes("/endpoints/openapi")) ||
+		model.api === "azure-openai-responses"
 	);
 }
 
@@ -1391,7 +1395,14 @@ export class ModelRegistry {
 				return this.#discoverOpenAIModelsList(providerConfig);
 			case "proxy":
 				return this.#discoverProxyModels(providerConfig);
+			case "azure-openai-deployments":
+				return this.#discoverAzureOpenAIDeployments(providerConfig);
 		}
+	}
+
+	async #discoverAzureOpenAIDeployments(providerConfig: DiscoveryProviderConfig): Promise<Model<Api>[]> {
+		const result = await discoverAzureOpenAIDeployments(providerConfig);
+		return this.#applyProviderModelOverrides(providerConfig.provider, result.models);
 	}
 
 	#warnProviderDiscoveryFailure(providerConfig: DiscoveryProviderConfig, error: string): void {

@@ -12,6 +12,7 @@ import type { ContextUsage } from "../../extensibility/extensions/types";
 import type { SessionStats } from "../../session/agent-session";
 import type { SessionInfo } from "../../session/session-manager";
 import type { TodoPhase } from "../../tools/todo-write";
+import type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProvidersResult } from "../../config/custom-provider-config";
 
 export interface RpcSlashCommandInfo {
 	name: string;
@@ -68,6 +69,10 @@ export type RpcCommand =
 	| { id?: string; type: "set_model_role"; role?: string; provider?: string; modelId?: string; thinkingLevel?: string; temporary?: boolean }
 	| { id?: string; type: "cycle_model" }
 	| { id?: string; type: "get_available_models" }
+	| { id?: string; type: "get_custom_providers" }
+	| { id?: string; type: "save_custom_provider"; data: CustomProviderInput }
+	| { id?: string; type: "delete_custom_provider"; providerId: string }
+	| { id?: string; type: "preview_custom_provider_models"; data: CustomProviderInput }
 
 	// Thinking
 	| { id?: string; type: "set_thinking_level"; level: ThinkingLevel }
@@ -202,6 +207,27 @@ export type RpcResponse =
 			command: "get_available_models";
 			success: true;
 			data: { models: Model[] };
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "get_custom_providers";
+			success: true;
+			data: CustomProvidersResult;
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "save_custom_provider" | "delete_custom_provider";
+			success: true;
+			data: CustomProvidersResult & { models: Model[] };
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "preview_custom_provider_models";
+			success: true;
+			data: CustomProviderAutoMatchResult;
 	  }
 
 	// Thinking

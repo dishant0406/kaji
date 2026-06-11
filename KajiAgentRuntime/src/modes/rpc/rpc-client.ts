@@ -10,6 +10,7 @@ import type { CompactionResult } from "@oh-my-pi/pi-agent-core/compaction";
 import type { ImageContent, Model } from "@oh-my-pi/pi-ai";
 import { isRecord, ptree, readJsonl } from "@oh-my-pi/pi-utils";
 import type { BashResult } from "../../exec/bash-executor";
+import type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProvidersResult } from "../../config/custom-provider-config";
 import type { SessionStats } from "../../session/agent-session";
 import type {
 	RpcCommand,
@@ -384,6 +385,26 @@ export class RpcClient {
 	async getAvailableModels(): Promise<ModelInfo[]> {
 		const response = await this.#send({ type: "get_available_models" });
 		return this.#getData<{ models: ModelInfo[] }>(response).models;
+	}
+
+	async getCustomProviders(): Promise<CustomProvidersResult> {
+		const response = await this.#send({ type: "get_custom_providers" });
+		return this.#getData(response);
+	}
+
+	async saveCustomProvider(provider: CustomProviderInput): Promise<CustomProvidersResult & { models: ModelInfo[] }> {
+		const response = await this.#send({ type: "save_custom_provider", data: provider });
+		return this.#getData(response);
+	}
+
+	async deleteCustomProvider(providerId: string): Promise<CustomProvidersResult & { models: ModelInfo[] }> {
+		const response = await this.#send({ type: "delete_custom_provider", providerId });
+		return this.#getData(response);
+	}
+
+	async previewCustomProviderModels(provider: CustomProviderInput): Promise<CustomProviderAutoMatchResult> {
+		const response = await this.#send({ type: "preview_custom_provider_models", data: provider });
+		return this.#getData(response);
 	}
 
 	/**

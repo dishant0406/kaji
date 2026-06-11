@@ -109,6 +109,8 @@ struct AgentSettingsView: View {
                 }
             }
 
+            KajiAgentCustomProvidersSection(store: kajiAgent)
+
             CommitMessageSettingsSection(settings: commitMessageSettings)
 
             SettingsSection(
@@ -227,6 +229,7 @@ struct AgentSettingsView: View {
         kajiAgent.requestAvailableModels { _ in }
         kajiAgent.requestModelConfig { _ in }
         kajiAgent.requestLoginProviders { _ in }
+        kajiAgent.requestCustomProviders()
     }
 
     private func modelRoleOptions(for role: KajiAgentModelRoleAssignment) -> [KajiSelectOption<String>] {

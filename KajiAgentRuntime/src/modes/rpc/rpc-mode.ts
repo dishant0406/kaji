@@ -12,6 +12,7 @@
  */
 import { getOAuthProviders } from "@oh-my-pi/pi-ai/utils/oauth";
 import { $env, readJsonl, Snowflake } from "@oh-my-pi/pi-utils";
+import { deleteCustomProvider, listCustomProviders, previewCustomProviderModels, saveCustomProvider } from "../../config/custom-provider-config";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "../../slash-commands/builtin-registry";
 import { getKnownRoleIds, getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
@@ -673,6 +674,42 @@ export async function runRpcMode(
 			case "get_available_models": {
 				const models = session.getAvailableModels();
 				return success(id, "get_available_models", { models });
+			}
+
+			case "get_custom_providers": {
+				try {
+					return success(id, "get_custom_providers", await listCustomProviders());
+				} catch (err) {
+					return error(id, "get_custom_providers", err instanceof Error ? err.message : String(err));
+				}
+			}
+
+			case "save_custom_provider": {
+				try {
+					const providers = await saveCustomProvider(command.data);
+					await session.modelRegistry.refresh();
+					return success(id, "save_custom_provider", { ...providers, models: session.getAvailableModels() });
+				} catch (err) {
+					return error(id, "save_custom_provider", err instanceof Error ? err.message : String(err));
+				}
+			}
+
+			case "delete_custom_provider": {
+				try {
+					const providers = await deleteCustomProvider(command.providerId);
+					await session.modelRegistry.refresh();
+					return success(id, "delete_custom_provider", { ...providers, models: session.getAvailableModels() });
+				} catch (err) {
+					return error(id, "delete_custom_provider", err instanceof Error ? err.message : String(err));
+				}
+			}
+
+			case "preview_custom_provider_models": {
+				try {
+					return success(id, "preview_custom_provider_models", await previewCustomProviderModels(command.data));
+				} catch (err) {
+					return error(id, "preview_custom_provider_models", err instanceof Error ? err.message : String(err));
+				}
 			}
 
 			// =================================================================
