@@ -15,6 +15,10 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
     var models: [KajiAgentCustomProviderModel]
     var isOverrideOnly: Bool
     var modelCount: Int
+    var apiKeyConfigured: Bool
+    var apiKeySource: String
+    var apiKeyResolved: Bool
+    var apiKeyName: String
 
     init(
         id: String = "",
@@ -30,7 +34,11 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
         disableStrictTools: Bool = false,
         models: [KajiAgentCustomProviderModel] = [KajiAgentCustomProviderModel()],
         isOverrideOnly: Bool = false,
-        modelCount: Int = 0
+        modelCount: Int = 0,
+        apiKeyConfigured: Bool = false,
+        apiKeySource: String = "none",
+        apiKeyResolved: Bool = false,
+        apiKeyName: String = ""
     ) {
         self.id = id
         self.baseUrl = baseUrl
@@ -46,6 +54,10 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
         self.models = models
         self.isOverrideOnly = isOverrideOnly
         self.modelCount = modelCount
+        self.apiKeyConfigured = apiKeyConfigured
+        self.apiKeySource = apiKeySource
+        self.apiKeyResolved = apiKeyResolved
+        self.apiKeyName = apiKeyName
     }
 
     init?(json: KajiAgentJSONValue) {
@@ -67,6 +79,10 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
         models = object["models"]?.arrayValue?.map(KajiAgentCustomProviderModel.init(json:)) ?? []
         isOverrideOnly = object["isOverrideOnly"]?.boolValue ?? models.isEmpty
         modelCount = object["modelCount"]?.numberAsInt ?? models.count
+        apiKeyConfigured = object["apiKeyConfigured"]?.boolValue ?? !apiKey.isEmpty
+        apiKeySource = object["apiKeySource"]?.stringValue ?? (apiKeyConfigured ? "literal" : "none")
+        apiKeyResolved = object["apiKeyResolved"]?.boolValue ?? apiKeyConfigured
+        apiKeyName = object["apiKeyName"]?.stringValue ?? ""
     }
 
     var json: KajiAgentJSONValue {
@@ -101,7 +117,7 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
         if hasConfiguredModels, baseUrl.trimmed.isEmpty {
             errors.append("Base URL is required when adding manual models.")
         }
-        if auth == .apiKey, apiKey.trimmed.isEmpty, hasConfiguredModels || discovery != .none {
+        if auth == .apiKey, apiKey.trimmed.isEmpty, !apiKeyConfigured, hasConfiguredModels || discovery != .none {
             errors.append("API key env var or token is required for API key auth.")
         }
         if api == .providerDefault, discovery != .proxy, hasConfiguredModels || discovery != .none {
@@ -126,6 +142,14 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
             && api == .azureOpenAIResponses
             && !id.trimmed.isEmpty
             && !baseUrl.trimmed.isEmpty
+    }
+
+    var canValidateConnection: Bool {
+        api == .azureOpenAIResponses
+            && !id.trimmed.isEmpty
+            && !baseUrl.trimmed.isEmpty
+            && (apiKeyConfigured || !apiKey.trimmed.isEmpty)
+            && (discovery == .azureOpenAIDeployments || models.contains { !$0.modelID.trimmed.isEmpty })
     }
 
     private var discoveryJSON: KajiAgentJSONValue {

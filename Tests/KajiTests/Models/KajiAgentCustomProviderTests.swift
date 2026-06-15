@@ -46,6 +46,10 @@ struct KajiAgentCustomProviderTests {
                     "api": .string("openai-responses"),
                     "auth": .string("none"),
                     "discovery": .object(["type": .string("llama.cpp")]),
+                    "apiKeyConfigured": .bool(true),
+                    "apiKeySource": .string("environment"),
+                    "apiKeyResolved": .bool(false),
+                    "apiKeyName": .string("LLAMA_CPP_API_KEY"),
                     "modelCount": .number(0),
                     "isOverrideOnly": .bool(true),
                 ]),
@@ -57,6 +61,8 @@ struct KajiAgentCustomProviderTests {
         #expect(state.providers[0].id == "llama.cpp")
         #expect(state.providers[0].auth == .none)
         #expect(state.providers[0].discovery == .llamaCpp)
+        #expect(state.providers[0].apiKeyConfigured)
+        #expect(state.providers[0].apiKeyName == "LLAMA_CPP_API_KEY")
     }
 
     @Test
@@ -92,6 +98,7 @@ struct KajiAgentCustomProviderTests {
         let discovery = provider.json.objectValue?["discovery"]?.objectValue
         #expect(provider.canSave)
         #expect(provider.canAutoMatchModels)
+        #expect(provider.canValidateConnection)
         #expect(discovery?["type"]?.stringValue == "azure-openai-deployments")
         #expect(discovery?["resourceGroup"]?.stringValue == "DefaultResourceGroup-eastus2")
         #expect(discovery?["accountName"]?.stringValue == "zerocarbon-codex")
@@ -120,5 +127,28 @@ struct KajiAgentCustomProviderTests {
         #expect(result.models.count == 1)
         #expect(result.models[0].modelID == "gpt-5.5")
         #expect(result.models[0].supportsImage)
+    }
+
+    @Test
+    func parsesProviderValidationResult() {
+        let result = KajiAgentCustomProviderValidation(json: .object([
+            "ok": .bool(false),
+            "severity": .string("error"),
+            "title": .string("Azure connection failed"),
+            "message": .string("Saved key does not match."),
+            "statusCode": .number(401),
+            "modelId": .string("gpt-5.5"),
+            "keyMatchesAzureResource": .bool(false),
+            "keyStatus": .object([
+                "source": .string("literal"),
+                "resolved": .bool(true),
+            ]),
+        ]))
+
+        #expect(!result.ok)
+        #expect(result.statusCode == 401)
+        #expect(result.keySource == "literal")
+        #expect(result.keyMatchesAzureResource == false)
+        #expect(result.summary.contains("gpt-5.5"))
     }
 }

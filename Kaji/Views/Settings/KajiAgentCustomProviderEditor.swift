@@ -4,8 +4,11 @@ struct KajiAgentCustomProviderEditor: View {
     @Binding var draft: KajiAgentCustomProvider
     let locksProviderID: Bool
     let isAutoMatching: Bool
+    let isValidating: Bool
     let matchedAccountText: String
+    let validationResult: KajiAgentCustomProviderValidation?
     let onAutoMatch: () -> Void
+    let onValidate: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
 
@@ -16,6 +19,7 @@ struct KajiAgentCustomProviderEditor: View {
             azureDiscoveryFields
             headersField
             modelFields
+            KajiAgentCustomProviderValidationStatusView(result: validationResult)
             validationMessages
             footer
         }
@@ -61,7 +65,7 @@ struct KajiAgentCustomProviderEditor: View {
             }
             if draft.auth == .apiKey {
                 NotificationFormRow("API key env var or token") {
-                    KajiInput(placeholder: "MYCO_API_KEY", text: $draft.apiKey, width: 338, monospaced: true, secure: true)
+                    KajiInput(placeholder: apiKeyPlaceholder, text: $draft.apiKey, width: 338, monospaced: true, secure: true)
                 }
             }
             VStack(alignment: .leading, spacing: 7) {
@@ -98,6 +102,9 @@ struct KajiAgentCustomProviderEditor: View {
                     Button(isAutoMatching ? "Matching..." : "Auto Match Models", action: onAutoMatch)
                         .buttonStyle(KajiButtonStyle(.secondary, size: .small))
                         .disabled(!draft.canAutoMatchModels || isAutoMatching)
+                    Button(isValidating ? "Validating..." : "Validate Connection", action: onValidate)
+                        .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+                        .disabled(!draft.canValidateConnection || isValidating)
                     Text(autoMatchHelpText)
                         .kajiFont(size: 10)
                         .foregroundStyle(KajiTheme.fgDim)
@@ -161,6 +168,11 @@ struct KajiAgentCustomProviderEditor: View {
         return "Uses Azure CLI login to list response-capable deployments."
     }
 
+    private var apiKeyPlaceholder: String {
+        draft.apiKeyConfigured
+            ? "Leave blank to keep saved key"
+            : draft.discovery == .azureOpenAIDeployments ? "AZURE_OPENAI_API_KEY" : "MYCO_API_KEY"
+    }
     private var footer: some View {
         HStack(spacing: 8) {
             Text("Literal API keys are saved in OMP models.yml. Env var names are safer.")
@@ -178,7 +190,6 @@ struct KajiAgentCustomProviderEditor: View {
     private var apiOptions: [KajiSelectOption<KajiAgentCustomProviderAPI>] {
         KajiAgentCustomProviderAPI.allCases.map { KajiSelectOption(id: $0.rawValue, title: $0.title, value: $0) }
     }
-
     private var authOptions: [KajiSelectOption<KajiAgentCustomProviderAuth>] {
         KajiAgentCustomProviderAuth.allCases.map { KajiSelectOption(id: $0.rawValue, title: $0.title, value: $0) }
     }

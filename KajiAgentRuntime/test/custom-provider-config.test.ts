@@ -56,6 +56,9 @@ describe("custom provider config", () => {
 		);
 
 		expect(result.providers.map(provider => provider.id)).toEqual(["anthropic", "myco"]);
+		expect(result.providers[1].apiKey).toBeUndefined();
+		expect(result.providers[1].apiKeyConfigured).toBe(true);
+		expect(result.providers[1].apiKeySource).toBe("environment");
 		const content = fs.readFileSync(modelsPath, "utf-8");
 		expect(content).toContain("equivalence:");
 		expect(content).toContain("myco-large");

@@ -11,6 +11,7 @@ import type { ImageContent, Model } from "@oh-my-pi/pi-ai";
 import { isRecord, ptree, readJsonl } from "@oh-my-pi/pi-utils";
 import type { BashResult } from "../../exec/bash-executor";
 import type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProvidersResult } from "../../config/custom-provider-config";
+import type { CustomProviderValidationResult } from "../../config/custom-provider-validation";
 import type { SessionStats } from "../../session/agent-session";
 import type {
 	RpcCommand,
@@ -404,6 +405,11 @@ export class RpcClient {
 
 	async previewCustomProviderModels(provider: CustomProviderInput): Promise<CustomProviderAutoMatchResult> {
 		const response = await this.#send({ type: "preview_custom_provider_models", data: provider });
+		return this.#getData(response);
+	}
+
+	async validateCustomProviderConnection(provider: CustomProviderInput): Promise<CustomProviderValidationResult> {
+		const response = await this.#send({ type: "validate_custom_provider_connection", data: provider });
 		return this.#getData(response);
 	}
 

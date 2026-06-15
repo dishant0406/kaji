@@ -2,50 +2,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { YAML } from "bun";
 import { isEnoent } from "@oh-my-pi/pi-utils";
-import { discoverAzureOpenAIDeployments, type AzureOpenAIDiscoveryAccount } from "./azure-openai-deployment-discovery";
+import { discoverAzureOpenAIDeployments } from "./azure-openai-deployment-discovery";
 import { cleanValue, normalizeHeaders, normalizeOptional, normalizeRequired, uniqueInput, validateProviderId } from "./custom-provider-config-normalize";
+import { providerApiKeyStatus } from "./custom-provider-secrets";
+import type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProviderSummary, ProviderConfig, ProviderModel } from "./custom-provider-types";
 import { ModelsConfigFile, validateModelsConfig } from "./model-registry";
 import { type ModelsConfig, ModelsConfigSchema } from "./models-config-schema";
 import { withFileLock } from "./file-lock";
-
-type ProviderConfig = NonNullable<ModelsConfig["providers"]>[string];
-type ProviderModel = NonNullable<ProviderConfig["models"]>[number];
-
-export interface CustomProviderModelInput {
-	id: string;
-	name?: string;
-	reasoning?: boolean;
-	input?: Array<"text" | "image">;
-	contextWindow?: number;
-	maxTokens?: number;
-}
-
-export interface CustomProviderInput {
-	id: string;
-	baseUrl?: string;
-	apiKey?: string;
-	api?: ProviderConfig["api"];
-	auth?: ProviderConfig["auth"];
-	discovery?: ProviderConfig["discovery"];
-	headers?: Record<string, string>;
-	disableStrictTools?: boolean;
-	models?: CustomProviderModelInput[];
-}
-
-export interface CustomProviderSummary extends CustomProviderInput {
-	isOverrideOnly: boolean;
-	modelCount: number;
-}
-
-export interface CustomProvidersResult {
-	path: string;
-	providers: CustomProviderSummary[];
-}
-
-export interface CustomProviderAutoMatchResult {
-	models: CustomProviderModelInput[];
-	account?: AzureOpenAIDiscoveryAccount;
-}
+export type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProviderModelInput, CustomProvidersResult } from "./custom-provider-types";
 
 export async function listCustomProviders(modelsPath = ModelsConfigFile.path()): Promise<CustomProvidersResult> {
 	const config = await readConfig(modelsPath);
@@ -172,10 +136,10 @@ function buildModels(inputs: CustomProviderModelInput[], existingModels: Provide
 }
 
 function summarizeProvider(id: string, provider: ProviderConfig): CustomProviderSummary {
+	const keyStatus = providerApiKeyStatus(provider.apiKey);
 	return {
 		id,
 		baseUrl: provider.baseUrl,
-		apiKey: provider.apiKey,
 		api: provider.api,
 		auth: provider.auth ?? "apiKey",
 		discovery: provider.discovery,
@@ -191,6 +155,10 @@ function summarizeProvider(id: string, provider: ProviderConfig): CustomProvider
 		})),
 		isOverrideOnly: !provider.models || provider.models.length === 0,
 		modelCount: provider.models?.length ?? 0,
+		apiKeyConfigured: keyStatus.configured,
+		apiKeySource: keyStatus.source,
+		apiKeyResolved: keyStatus.resolved,
+		apiKeyName: keyStatus.name,
 	};
 }
 

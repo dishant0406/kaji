@@ -6,7 +6,9 @@ struct KajiAgentCustomProvidersSection: View {
     @State private var editingID: String?
     @State private var isCreating = false
     @State private var isAutoMatching = false
+    @State private var isValidating = false
     @State private var matchedAccountText = ""
+    @State private var validationResult: KajiAgentCustomProviderValidation?
     @State private var pendingDelete: KajiAgentCustomProvider?
 
     var body: some View {
@@ -21,8 +23,11 @@ struct KajiAgentCustomProvidersSection: View {
                         draft: $draft,
                         locksProviderID: editingID != nil,
                         isAutoMatching: isAutoMatching,
+                        isValidating: isValidating,
                         matchedAccountText: matchedAccountText,
+                        validationResult: validationResult,
                         onAutoMatch: autoMatchModels,
+                        onValidate: validateConnection,
                         onSave: save,
                         onCancel: cancel
                     )
@@ -94,7 +99,9 @@ struct KajiAgentCustomProvidersSection: View {
         draft = KajiAgentCustomProvider()
         editingID = nil
         isCreating = true
+        isValidating = false
         matchedAccountText = ""
+        validationResult = nil
     }
 
     private func edit(_ provider: KajiAgentCustomProvider) {
@@ -102,7 +109,9 @@ struct KajiAgentCustomProvidersSection: View {
         if draft.models.isEmpty { draft.models = [KajiAgentCustomProviderModel()] }
         editingID = provider.id
         isCreating = false
+        isValidating = false
         matchedAccountText = ""
+        validationResult = nil
     }
 
     private func save() {
@@ -117,6 +126,7 @@ struct KajiAgentCustomProvidersSection: View {
         guard draft.canAutoMatchModels, !isAutoMatching else { return }
         isAutoMatching = true
         matchedAccountText = ""
+        validationResult = nil
         store.previewCustomProviderModels(draft) { result in
             isAutoMatching = false
             guard let result else { return }
@@ -129,12 +139,24 @@ struct KajiAgentCustomProvidersSection: View {
         }
     }
 
+    private func validateConnection() {
+        guard draft.canValidateConnection, !isValidating else { return }
+        isValidating = true
+        validationResult = nil
+        store.validateCustomProviderConnection(draft) { result in
+            isValidating = false
+            validationResult = result
+        }
+    }
+
     private func cancel() {
         draft = KajiAgentCustomProvider()
         editingID = nil
         isCreating = false
         isAutoMatching = false
+        isValidating = false
         matchedAccountText = ""
+        validationResult = nil
     }
 
     private func deletePendingProvider() {

@@ -37,7 +37,17 @@ struct KajiAgentCustomProviderRow: View {
     private var detail: String {
         let discovery = provider.discovery == .none ? "manual" : provider.discovery.title
         let modelText = provider.modelCount == 1 ? "1 model" : "\(provider.modelCount) models"
-        let auth = provider.auth == .none ? "no auth" : "API key"
+        let auth = provider.auth == .none ? "no auth" : apiKeyDetail
         return "\(discovery) · \(modelText) · \(auth) · \(provider.baseUrl)"
+    }
+
+    private var apiKeyDetail: String {
+        if provider.apiKeySource == "environment", !provider.apiKeyResolved {
+            return "missing \(provider.apiKeyName)"
+        }
+        if provider.apiKeySource == "environment", !provider.apiKeyName.isEmpty {
+            return provider.apiKeyName
+        }
+        return provider.apiKeyConfigured ? "saved API key" : "API key"
     }
 }

@@ -254,6 +254,23 @@ final class KajiAgentStore {
         }
     }
 
+    func validateCustomProviderConnection(
+        _ provider: KajiAgentCustomProvider,
+        onResult: @escaping (KajiAgentCustomProviderValidation?) -> Void
+    ) {
+        send(KajiAgentRPCFrame(type: "validate_custom_provider_connection", data: provider.json)) { [weak self] frame in
+            guard let self else { return }
+            if frame.success == false {
+                customProviderStatus = frame.error ?? "Unable to validate provider connection."
+                onResult(nil)
+                return
+            }
+            let result = KajiAgentCustomProviderValidation(json: frame.data)
+            customProviderStatus = result.summary
+            onResult(result)
+        }
+    }
+
     func requestModelConfig(_ onResult: @escaping (KajiAgentModelConfig) -> Void) {
         send(KajiAgentRPCFrame(type: "get_model_config")) { [weak self] frame in
             let config = KajiAgentModelConfig(json: frame.data)

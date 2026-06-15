@@ -13,6 +13,7 @@
 import { getOAuthProviders } from "@oh-my-pi/pi-ai/utils/oauth";
 import { $env, readJsonl, Snowflake } from "@oh-my-pi/pi-utils";
 import { deleteCustomProvider, listCustomProviders, previewCustomProviderModels, saveCustomProvider } from "../../config/custom-provider-config";
+import { validateCustomProviderConnection } from "../../config/custom-provider-validation";
 import { BUILTIN_SLASH_COMMAND_DEFS } from "../../slash-commands/builtin-registry";
 import { getKnownRoleIds, getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
@@ -709,6 +710,14 @@ export async function runRpcMode(
 					return success(id, "preview_custom_provider_models", await previewCustomProviderModels(command.data));
 				} catch (err) {
 					return error(id, "preview_custom_provider_models", err instanceof Error ? err.message : String(err));
+				}
+			}
+
+			case "validate_custom_provider_connection": {
+				try {
+					return success(id, "validate_custom_provider_connection", await validateCustomProviderConnection(command.data));
+				} catch (err) {
+					return error(id, "validate_custom_provider_connection", err instanceof Error ? err.message : String(err));
 				}
 			}
 

@@ -13,6 +13,7 @@ import type { SessionStats } from "../../session/agent-session";
 import type { SessionInfo } from "../../session/session-manager";
 import type { TodoPhase } from "../../tools/todo-write";
 import type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProvidersResult } from "../../config/custom-provider-config";
+import type { CustomProviderValidationResult } from "../../config/custom-provider-validation";
 
 export interface RpcSlashCommandInfo {
 	name: string;
@@ -73,6 +74,7 @@ export type RpcCommand =
 	| { id?: string; type: "save_custom_provider"; data: CustomProviderInput }
 	| { id?: string; type: "delete_custom_provider"; providerId: string }
 	| { id?: string; type: "preview_custom_provider_models"; data: CustomProviderInput }
+	| { id?: string; type: "validate_custom_provider_connection"; data: CustomProviderInput }
 
 	// Thinking
 	| { id?: string; type: "set_thinking_level"; level: ThinkingLevel }
@@ -228,6 +230,13 @@ export type RpcResponse =
 			command: "preview_custom_provider_models";
 			success: true;
 			data: CustomProviderAutoMatchResult;
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "validate_custom_provider_connection";
+			success: true;
+			data: CustomProviderValidationResult;
 	  }
 
 	// Thinking
