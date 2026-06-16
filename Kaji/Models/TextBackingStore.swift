@@ -80,6 +80,56 @@ final class TextBackingStore {
         fullTextCache = nil
     }
 
+
+    func applyMonacoEdits(_ edits: [MonacoTextEdit]) {
+        guard !edits.isEmpty else { return }
+        let orderedEdits = edits.sorted { lhs, rhs in
+            if lhs.range.startLineNumber != rhs.range.startLineNumber {
+                return lhs.range.startLineNumber > rhs.range.startLineNumber
+            }
+            return lhs.range.startColumn > rhs.range.startColumn
+        }
+        for edit in orderedEdits {
+            applyMonacoEdit(edit)
+        }
+    }
+
+    private func applyMonacoEdit(_ edit: MonacoTextEdit) {
+        let startLineIndex = min(max(0, edit.range.startLineNumber - 1), max(0, lines.count - 1))
+        let endLineIndex = min(max(startLineIndex, edit.range.endLineNumber - 1), max(0, lines.count - 1))
+        let startLine = line(at: startLineIndex)
+        let endLine = line(at: endLineIndex)
+        let startColumn = min(max(0, edit.range.startColumn - 1), startLine.utf16.count)
+        let endColumn = min(max(0, edit.range.endColumn - 1), endLine.utf16.count)
+        let prefix = Self.utf16Prefix(startLine, length: startColumn)
+        let suffix = Self.utf16Suffix(endLine, from: endColumn)
+        let replacement = edit.text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        let replacementLines = replacement.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let newLines: [String]
+        if replacementLines.isEmpty {
+            newLines = [prefix + suffix]
+        } else if replacementLines.count == 1 {
+            newLines = [prefix + replacementLines[0] + suffix]
+        } else {
+            var lines = replacementLines
+            lines[0] = prefix + lines[0]
+            lines[lines.count - 1] += suffix
+            newLines = lines
+        }
+        _ = replaceLines(in: startLineIndex ..< endLineIndex + 1, with: newLines)
+    }
+
+    private static func utf16Prefix(_ text: String, length: Int) -> String {
+        let nsText = text as NSString
+        let safeLength = min(max(0, length), nsText.length)
+        return nsText.substring(to: safeLength)
+    }
+
+    private static func utf16Suffix(_ text: String, from location: Int) -> String {
+        let nsText = text as NSString
+        let safeLocation = min(max(0, location), nsText.length)
+        return nsText.substring(from: safeLocation)
+    }
     func replaceFirstMatch(
         _ match: SearchMatch,
         with replacement: String,

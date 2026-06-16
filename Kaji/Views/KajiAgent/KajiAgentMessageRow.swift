@@ -4,6 +4,7 @@ struct KajiAgentMessageRow: View, Equatable {
     let message: KajiAgentMessage
     var toolExpanded: Bool?
     var onToggleToolExpanded: (() -> Void)?
+    var onInspectTool: (() -> Void)?
     @State private var localToolExpanded = false
 
     nonisolated static func == (lhs: KajiAgentMessageRow, rhs: KajiAgentMessageRow) -> Bool {
@@ -40,7 +41,12 @@ struct KajiAgentMessageRow: View, Equatable {
         case .thinking:
             KajiAgentThinkingRow(message: message, isExpanded: false, onToggle: {})
         case .tool:
-            KajiAgentToolCallRow(message: message, isExpanded: isToolExpanded, onToggle: toggleToolExpanded)
+            KajiAgentToolCallRow(
+                message: message,
+                isExpanded: isToolExpanded,
+                onToggle: toggleToolExpanded,
+                onInspect: onInspectTool
+            )
         case .event:
             systemRow(color: KajiTheme.fgMuted)
                 .padding(.vertical, 8)

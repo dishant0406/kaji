@@ -19,7 +19,9 @@ struct KajiAgentTimelineRowSpacingPolicyTests {
             turnID: turnID,
             startsTurn: false,
             isLatestTurn: false,
-            kind: .tool(KajiAgentMessage(kind: .tool, title: "read", detail: ""), expanded: false),
+            kind: .activity(KajiAgentActivitySummary(group: KajiAgentToolGroup(tools: [
+                KajiAgentMessage(kind: .tool, title: "read", detail: ""),
+            ])), expanded: false),
             depth: 1,
             parentID: start.id
         )

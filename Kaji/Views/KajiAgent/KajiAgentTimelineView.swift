@@ -3,6 +3,7 @@ import SwiftUI
 struct KajiAgentTimelineView: View {
     let store: KajiAgentStore
     let floatingTaskState: KajiAgentFloatingTaskState
+    let onInspectItem: (KajiAgentInspectorItem) -> Void
     @State private var scrollCoordinator = KajiAgentScrollCoordinator()
     @State private var viewportObserver = KajiAgentScrollViewportObserver()
     @State private var rowStore = KajiAgentTimelineRowStore()
@@ -54,7 +55,8 @@ struct KajiAgentTimelineView: View {
                 heightIndex: heightIndex,
                 scrollCoordinator: scrollCoordinator,
                 viewportObserver: viewportObserver,
-                onStructureChanged: { syncRows(viewportHeight: viewportHeight) }
+                onStructureChanged: { syncRows(viewportHeight: viewportHeight) },
+                onInspectItem: onInspectItem
             )
             bottomTrailingControls
         }

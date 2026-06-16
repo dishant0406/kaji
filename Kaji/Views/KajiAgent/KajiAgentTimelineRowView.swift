@@ -7,6 +7,7 @@ struct KajiAgentTimelineRowView: View {
     let isToolExpanded: (UUID) -> Bool
     let toggleTool: (UUID) -> Void
     let toggleThinking: (UUID) -> Void
+    let onInspectItem: (KajiAgentInspectorItem) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -60,24 +61,43 @@ struct KajiAgentTimelineRowView: View {
               let .message(message):
             KajiAgentMessageRow(message: message)
                 .equatable()
+        case let .plan(plan, expanded):
+            KajiAgentPlanSummaryRow(
+                plan: plan,
+                isExpanded: expanded,
+                onToggle: { toggleThinking(plan.id) },
+                onInspect: { onInspectItem(.thinking(plan.message)) }
+            )
+            .equatable()
+        case let .activity(activity, expanded):
+            KajiAgentActivitySummaryRow(
+                activity: activity,
+                isExpanded: expanded,
+                onToggle: { toggleToolGroup(activity.id) },
+                onInspect: onInspectItem
+            )
+            .equatable()
         case let .thinking(message, expanded):
             KajiAgentThinkingRow(
                 message: message,
                 isExpanded: expanded,
-                onToggle: { toggleThinking(message.id) }
+                onToggle: { toggleThinking(message.id) },
+                onInspect: { onInspectItem(.thinking(message)) }
             )
             .equatable()
         case let .toolGroupHeader(group):
             KajiAgentToolGroupHeaderView(
                 group: group,
                 isExpanded: isToolGroupExpanded(group.id),
-                onToggle: { toggleToolGroup(group.id) }
+                onToggle: { toggleToolGroup(group.id) },
+                onInspect: { onInspectItem(.toolGroup(group)) }
             )
         case let .tool(message, expanded):
             KajiAgentMessageRow(
                 message: message,
                 toolExpanded: expanded,
-                onToggleToolExpanded: { toggleTool(message.id) }
+                onToggleToolExpanded: { toggleTool(message.id) },
+                onInspectTool: { onInspectItem(.tool(message)) }
             )
             .equatable()
         case let .latestTurnSpacer(height):

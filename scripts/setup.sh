@@ -146,8 +146,9 @@ invalidate_swiftpm_ghostty_products
 echo "==> Building Kaji Agent runtime"
 if command -v bun >/dev/null 2>&1; then
     bash "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
+    bash "$SCRIPT_DIR/build-monaco-runtime.sh"
 else
-    echo "    Bun not found; skipping agent runtime build (install: curl -fsSL https://bun.sh/install | bash)"
+    echo "    Bun not found; skipping JavaScript runtime builds (install: curl -fsSL https://bun.sh/install | bash)"
 fi
 
 echo "==> Done"

@@ -2,16 +2,19 @@ import CoreGraphics
 
 enum KajiAgentTranscriptMetrics {
     static let columnWidth: CGFloat = 860
-    static let proseWidth: CGFloat = 720
-    static let userWidth: CGFloat = 600
-    static let assistantFont: CGFloat = 14.5
-    static let userFont: CGFloat = 13.5
-    static let thinkingFont: CGFloat = 12.75
-    static let systemFont: CGFloat = 12.5
+    static let compactColumnWidth: CGFloat = 720
+    static let workbenchWidth: CGFloat = 1_320
+    static let composerWidth: CGFloat = 760
+    static let proseWidth: CGFloat = 760
+    static let userWidth: CGFloat = 620
+    static let assistantFont: CGFloat = 15.5
+    static let userFont: CGFloat = 14.5
+    static let thinkingFont: CGFloat = 13
+    static let systemFont: CGFloat = 13
     static let metadataFont: CGFloat = 12
-    static let toolFont: CGFloat = 12
-    static let toolDetailFont: CGFloat = 11.5
-    static let codeFont: CGFloat = 12
+    static let toolFont: CGFloat = 12.5
+    static let toolDetailFont: CGFloat = 12
+    static let codeFont: CGFloat = 12.5
     static let inlineCodeDelta: CGFloat = 1
     static let lineSpacing: CGFloat = 4
     static let paragraphSpacing: CGFloat = 12

@@ -88,7 +88,7 @@ enum KajiAgentTimelineFlattener {
             switch block {
             case let .message(message):
                 let kind: KajiAgentTimelineRow.Kind = if message.kind == .thinking {
-                    .thinking(message, expanded: expansion.thinking.contains(message.id))
+                    .plan(KajiAgentPlanSummary(message: message), expanded: expansion.thinking.contains(message.id))
                 } else {
                     .message(message)
                 }
@@ -107,22 +107,9 @@ enum KajiAgentTimelineFlattener {
                     turnID: turn.id,
                     startsTurn: startsTurn,
                     isLatestTurn: isLatestTurn,
-                    kind: .toolGroupHeader(group)
+                    kind: .activity(KajiAgentActivitySummary(group: group), expanded: expansion.toolGroups.contains(group.id))
                 ))
                 startsTurn = false
-                if expansion.toolGroups.contains(group.id) {
-                    rows.append(contentsOf: group.tools.map { tool in
-                        row(
-                            id: "tool.\(tool.id.uuidString)",
-                            turnID: turn.id,
-                            startsTurn: false,
-                            isLatestTurn: isLatestTurn,
-                            kind: .tool(tool, expanded: expansion.tools.contains(tool.id)),
-                            depth: 1,
-                            parentID: groupRowID
-                        )
-                    })
-                }
             }
         }
     }

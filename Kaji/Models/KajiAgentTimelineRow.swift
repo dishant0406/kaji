@@ -34,6 +34,8 @@ struct KajiAgentTimelineRow: Identifiable, Hashable {
         case queuedMessages(Int)
         case user(KajiAgentMessage)
         case message(KajiAgentMessage)
+        case plan(KajiAgentPlanSummary, expanded: Bool)
+        case activity(KajiAgentActivitySummary, expanded: Bool)
         case thinking(KajiAgentMessage, expanded: Bool)
         case toolGroupHeader(KajiAgentToolGroup)
         case tool(KajiAgentMessage, expanded: Bool)

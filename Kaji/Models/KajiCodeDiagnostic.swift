@@ -13,6 +13,3 @@ struct KajiCodeDiagnostic: Identifiable, Hashable {
     let message: String
 }
 
-enum KajiCodeLanguage: Hashable {
-    case shell
-}

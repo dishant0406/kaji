@@ -9,6 +9,9 @@ enum KajiAgentTimelineRowSpacingPolicy {
             KajiAgentTranscriptMetrics.sameTurnSpacing
         case .message:
             KajiAgentTranscriptMetrics.sameTurnSpacing
+        case .plan,
+             .activity:
+            0
         case .thinking:
             0
         case .widget,
@@ -28,6 +31,9 @@ enum KajiAgentTimelineRowSpacingPolicy {
             4
         case .message:
             2
+        case .plan,
+             .activity:
+            KajiAgentTranscriptMetrics.sameTurnSpacing
         case .thinking:
             KajiAgentTranscriptMetrics.sameTurnSpacing
         case .user:

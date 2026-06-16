@@ -8,6 +8,7 @@ struct KajiAgentVirtualTimelineView: View {
     let scrollCoordinator: KajiAgentScrollCoordinator
     let viewportObserver: KajiAgentScrollViewportObserver
     let onStructureChanged: () -> Void
+    let onInspectItem: (KajiAgentInspectorItem) -> Void
 
     var body: some View {
         let rows = rowStore.rows
@@ -27,7 +28,8 @@ struct KajiAgentVirtualTimelineView: View {
                             toggleToolGroup: toggleToolGroup,
                             isToolExpanded: rowStore.isToolExpanded,
                             toggleTool: toggleTool,
-                            toggleThinking: toggleThinking
+                            toggleThinking: toggleThinking,
+                            onInspectItem: onInspectItem
                         )
                         .kajiAgentTimelineRowHeight(id: rows[index].id)
                     }
@@ -58,7 +60,9 @@ struct KajiAgentVirtualTimelineView: View {
     }
 
     private func toggleToolGroup(_ id: UUID) {
+        let rowID = rowStore.rowID(forToolGroup: id)
         rowStore.toggleToolGroup(id)
+        heightIndex.invalidate(rowID)
         onStructureChanged()
     }
 

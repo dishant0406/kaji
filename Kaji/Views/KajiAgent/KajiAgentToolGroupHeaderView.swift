@@ -4,6 +4,7 @@ struct KajiAgentToolGroupHeaderView: View {
     let group: KajiAgentToolGroup
     let isExpanded: Bool
     let onToggle: () -> Void
+    var onInspect: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -31,6 +32,17 @@ struct KajiAgentToolGroupHeaderView: View {
             .buttonStyle(.plain)
             .kajiPointer()
             .frame(maxWidth: .infinity, alignment: .leading)
+            if let onInspect {
+                Button(action: onInspect) {
+                    Text("Details")
+                        .kajiFont(size: 11.5, weight: .medium)
+                        .foregroundStyle(KajiTheme.fgDim)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                }
+                .buttonStyle(.plain)
+                .kajiPointer()
+            }
         }
         .padding(.vertical, 8)
     }

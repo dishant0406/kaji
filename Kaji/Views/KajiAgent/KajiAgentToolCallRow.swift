@@ -4,6 +4,7 @@ struct KajiAgentToolCallRow: View, Equatable {
     let message: KajiAgentMessage
     var isExpanded: Bool
     let onToggle: () -> Void
+    var onInspect: (() -> Void)?
 
     nonisolated static func == (lhs: KajiAgentToolCallRow, rhs: KajiAgentToolCallRow) -> Bool {
         lhs.message == rhs.message && lhs.isExpanded == rhs.isExpanded
@@ -54,7 +55,11 @@ struct KajiAgentToolCallRow: View, Equatable {
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let output, !output.isEmpty {
-                KajiAgentToolOutputView(output: output, toolName: message.title)
+                if let onInspect {
+                    KajiAgentToolOutputPreviewView(output: output, toolName: message.title, onOpen: onInspect)
+                } else {
+                    KajiAgentToolOutputView(output: output, toolName: message.title)
+                }
             }
             if let taskDetails = message.taskDetails {
                 KajiAgentTaskToolView(details: taskDetails)

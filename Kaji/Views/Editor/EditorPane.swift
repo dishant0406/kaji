@@ -136,7 +136,7 @@ struct EditorPane: View {
 
     private var codeEditorContainer: some View {
         HStack(spacing: 0) {
-            CodeEditorView(
+            MonacoEditorView(
                 state: state,
                 typography: typography,
                 themeVersion: ghostty.configVersion,

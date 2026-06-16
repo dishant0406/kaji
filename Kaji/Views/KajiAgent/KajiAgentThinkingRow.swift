@@ -4,6 +4,7 @@ struct KajiAgentThinkingRow: View, Equatable {
     let message: KajiAgentMessage
     let isExpanded: Bool
     let onToggle: () -> Void
+    var onInspect: (() -> Void)?
 
     nonisolated static func == (lhs: KajiAgentThinkingRow, rhs: KajiAgentThinkingRow) -> Bool {
         lhs.message == rhs.message && lhs.isExpanded == rhs.isExpanded
@@ -39,6 +40,13 @@ struct KajiAgentThinkingRow: View, Equatable {
                         threshold: KajiAgentTranscriptMetrics.thinkingPreviewCharacters
                     )
                     .frame(maxWidth: KajiAgentTranscriptMetrics.proseWidth, alignment: .leading)
+                    if let onInspect {
+                        Button("Open reasoning details", action: onInspect)
+                            .buttonStyle(.plain)
+                            .kajiFont(size: 11.5, weight: .medium)
+                            .foregroundStyle(KajiTheme.fgMuted)
+                            .kajiPointer()
+                    }
                 }
             }
         )

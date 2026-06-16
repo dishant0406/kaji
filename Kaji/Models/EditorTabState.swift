@@ -151,6 +151,21 @@ final class EditorTabState: Identifiable {
         cursorPosition = next
     }
 
+    func applyMonacoTextEdits(_ edits: [MonacoTextEdit]) {
+        guard let backingStore, !edits.isEmpty else { return }
+        backingStore.applyMonacoEdits(edits)
+        backingStoreVersion += 1
+        previewRefreshVersion += 1
+        markModified()
+        enforceMarkdownPreviewPolicy()
+        notifyLanguageServerChanged()
+    }
+
+    func syncLanguageServerAfterEditorChange() {
+        guard let backingStore else { return }
+        syncLanguageServerDocument(filePath: filePath, store: backingStore)
+    }
+
     var isMarkdownFile: Bool {
         Self.markdownExtensions.contains(fileExtension)
     }

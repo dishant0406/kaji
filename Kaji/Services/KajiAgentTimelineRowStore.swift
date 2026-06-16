@@ -58,11 +58,11 @@ final class KajiAgentTimelineRowStore {
     func toggleToolGroup(_ id: UUID) {
         if expandedToolGroups.contains(id) {
             expandedToolGroups.remove(id)
-            collapseToolGroup(id)
+            updateActivityRow(id)
             return
         }
         expandedToolGroups.insert(id)
-        expandToolGroup(id)
+        updateActivityRow(id)
     }
 
     func toggleTool(_ id: UUID) {
@@ -92,7 +92,16 @@ final class KajiAgentTimelineRowStore {
 
     func rowID(forThinking id: UUID) -> KajiAgentTimelineRowID? {
         rows.first { row in
+            if case let .plan(plan, _) = row.kind { return plan.id == id }
             if case let .thinking(message, _) = row.kind { return message.id == id }
+            return false
+        }?.id
+    }
+
+    func rowID(forToolGroup id: UUID) -> KajiAgentTimelineRowID? {
+        rows.first { row in
+            if case let .activity(activity, _) = row.kind { return activity.id == id }
+            if case let .toolGroupHeader(group) = row.kind { return group.id == id }
             return false
         }?.id
     }
@@ -109,51 +118,34 @@ final class KajiAgentTimelineRowStore {
 
     private func updateThinkingRow(_ id: UUID) {
         guard let index = rows.firstIndex(where: { row in
+            if case let .plan(plan, _) = row.kind { return plan.id == id }
             if case let .thinking(message, _) = row.kind { return message.id == id }
             return false
-        }), case let .thinking(message, _) = rows[index].kind else { return }
-        rows[index] = rows[index].copy(kind: .thinking(message, expanded: expandedThinking.contains(id)))
+        }) else { return }
+        switch rows[index].kind {
+        case let .plan(plan, _):
+            rows[index] = rows[index].copy(kind: .plan(plan, expanded: expandedThinking.contains(id)))
+        case let .thinking(message, _):
+            rows[index] = rows[index].copy(kind: .thinking(message, expanded: expandedThinking.contains(id)))
+        default:
+            return
+        }
+        rebuildIndex()
+        version &+= 1
+    }
+
+    private func updateActivityRow(_ id: UUID) {
+        guard let index = rows.firstIndex(where: { row in
+            if case let .activity(activity, _) = row.kind { return activity.id == id }
+            return false
+        }), case let .activity(activity, _) = rows[index].kind else { return }
+        rows[index] = rows[index].copy(kind: .activity(activity, expanded: expandedToolGroups.contains(id)))
         rebuildIndex()
         version &+= 1
     }
 
     func index(for id: KajiAgentTimelineRowID) -> Int? {
         rowIndexByID[id]
-    }
-
-    private func expandToolGroup(_ id: UUID) {
-        guard let headerIndex = rows.firstIndex(where: { row in
-            if case let .toolGroupHeader(group) = row.kind { return group.id == id }
-            return false
-        }), case let .toolGroupHeader(group) = rows[headerIndex].kind
-        else { return }
-        let parentID = rows[headerIndex].id
-        let childRows = group.tools.map { tool in
-            KajiAgentTimelineRow(
-                id: .init(rawValue: "tool.\(tool.id.uuidString)"),
-                turnID: rows[headerIndex].turnID,
-                startsTurn: false,
-                isLatestTurn: rows[headerIndex].isLatestTurn,
-                kind: .tool(tool, expanded: expandedTools.contains(tool.id)),
-                depth: 1,
-                parentID: parentID
-            )
-        }
-        rows.insert(contentsOf: childRows, at: headerIndex + 1)
-        rebuildIndex()
-        version &+= 1
-    }
-
-    private func collapseToolGroup(_ id: UUID) {
-        guard let headerIndex = rows.firstIndex(where: { row in
-            if case let .toolGroupHeader(group) = row.kind { return group.id == id }
-            return false
-        })
-        else { return }
-        let parentID = rows[headerIndex].id
-        rows.removeAll { $0.parentID == parentID }
-        rebuildIndex()
-        version &+= 1
     }
 
     private func replaceRows(_ nextRows: [KajiAgentTimelineRow]) {

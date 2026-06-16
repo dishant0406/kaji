@@ -17,6 +17,7 @@ struct KajiAgentHome: View {
     @State private var didOpenInitialSession = false
     @State private var showingModelPopover = false
     @State private var pendingSessionSwitchPath: String?
+    @State private var inspectorItem: KajiAgentInspectorItem?
     @FocusState private var focused
 
     init(scope: KajiAgentScope? = nil, projectPathOverride: String? = nil, initialSessionPath: String? = nil) {
@@ -27,19 +28,32 @@ struct KajiAgentHome: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             header
-                .padding(.top, 18)
-                .padding(.bottom, 14)
-                .frame(maxWidth: 760, alignment: .leading)
-                .background(KajiTheme.bg)
+                .frame(maxWidth: workbenchWidth, alignment: .leading)
                 .zIndex(1)
-            transcriptSurface
-            composer
-                .frame(maxWidth: 720)
+            HStack(alignment: .top, spacing: 14) {
+                VStack(spacing: 0) {
+                    transcriptSurface
+                    composer
+                        .frame(maxWidth: KajiAgentTranscriptMetrics.composerWidth)
+                }
+                .frame(maxWidth: mainColumnWidth, maxHeight: .infinity)
+                if let inspectorItem {
+                    KajiAgentInspectorPanel(item: inspectorItem) {
+                        self.inspectorItem = nil
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: KajiAgentTranscriptMetrics.controlRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: KajiAgentTranscriptMetrics.controlRadius)
+                            .stroke(KajiTheme.border.opacity(0.55))
+                    )
+                }
+            }
         }
-        .padding(.horizontal, 36)
-        .padding(.bottom, 88)
+        .padding(.horizontal, 24)
+        .padding(.top, 14)
+        .padding(.bottom, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(KajiTheme.bg)
         .overlay { attachmentPreview }
@@ -69,28 +83,60 @@ struct KajiAgentHome: View {
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
-            KajiPill(title: store.modelLabel, leadingIcon: "sparkles", trailingIcon: "chevron.down", variant: .filled) {
+        KajiAgentRunStatusBar(
+            modelLabel: store.modelLabel,
+            permissionTitle: store.effectivePermissionMode.title,
+            readiness: store.readiness,
+            statusMessage: store.statusMessage,
+            isRunning: store.isRunning,
+            hasInspector: inspectorItem != nil,
+            onModel: {
                 store.requestModelConfig { _ in }
                 showingModelPopover.toggle()
-            }
-            .kajiPopover(isPresented: $showingModelPopover, preferredEdge: .bottom) {
-                modelPopover
-            }
-            .help(store.statusMessage)
-            KajiPill(title: store.effectivePermissionMode.title, leadingIcon: "lock", variant: .plain) {}
-                .help(store.effectivePermissionMode.detail)
-            KajiPill(title: "New thread", leadingIcon: "plus", variant: .plain, action: startNewThread)
-            KajiPill(
-                title: store.readiness.title,
-                leadingIcon: store.readiness.isReady ? "checkmark.circle" : "exclamationmark.triangle",
-                variant: .plain
-            ) {
+            },
+            onPermission: {},
+            onNewThread: startNewThread,
+            onReadiness: {
                 store.retryRuntimeReadiness()
-            }
-            .help(store.readiness.detail)
-            Spacer(minLength: 0)
+            },
+            onToggleInspector: toggleInspector
+        )
+        .kajiPopover(isPresented: $showingModelPopover, preferredEdge: .bottom) {
+            modelPopover
         }
+        .help(store.effectivePermissionMode.detail)
+    }
+
+    private var mainColumnWidth: CGFloat {
+        inspectorItem == nil ? KajiAgentTranscriptMetrics.columnWidth : KajiAgentTranscriptMetrics.compactColumnWidth
+    }
+
+    private var workbenchWidth: CGFloat {
+        inspectorItem == nil ? KajiAgentTranscriptMetrics.columnWidth : KajiAgentTranscriptMetrics.workbenchWidth
+    }
+
+    private func toggleInspector() {
+        if inspectorItem != nil {
+            inspectorItem = nil
+            return
+        }
+        inspectorItem = latestInspectableItem
+    }
+
+    private var latestInspectableItem: KajiAgentInspectorItem? {
+        for turn in store.turns.reversed() {
+            for block in turn.blocks.reversed() {
+                switch block {
+                case let .toolGroup(group):
+                    if let tool = group.tools.last { return .tool(tool) }
+                    return .toolGroup(group)
+                case let .message(message):
+                    if message.kind == .thinking { return .thinking(message) }
+                    if message.kind == .tool { return .tool(message) }
+                }
+            }
+        }
+        return nil
     }
 
     private var modelPopover: some View {
@@ -190,7 +236,9 @@ struct KajiAgentHome: View {
     }
 
     private var timeline: some View {
-        KajiAgentTimelineView(store: store, floatingTaskState: floatingTaskState)
+        KajiAgentTimelineView(store: store, floatingTaskState: floatingTaskState) { item in
+            inspectorItem = item
+        }
     }
 
     private var floatingTaskState: KajiAgentFloatingTaskState {

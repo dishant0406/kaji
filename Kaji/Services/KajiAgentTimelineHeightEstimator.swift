@@ -11,6 +11,10 @@ enum KajiAgentTimelineHeightEstimator {
             textHeight(message.detail, width: min(width, KajiAgentTranscriptMetrics.userWidth)) + 34
         case let .message(message):
             messageHeight(message, width: width)
+        case let .plan(plan, expanded):
+            planHeight(plan, expanded: expanded)
+        case let .activity(activity, expanded):
+            activityHeight(activity, expanded: expanded)
         case let .thinking(message, expanded):
             thinkingHeight(message, expanded: expanded)
         case .toolGroupHeader:
@@ -43,6 +47,16 @@ enum KajiAgentTimelineHeightEstimator {
     private static func thinkingHeight(_ message: KajiAgentMessage, expanded: Bool) -> CGFloat {
         guard expanded || !message.isComplete else { return 36 }
         return min(textHeight(message.detail, width: KajiAgentTranscriptMetrics.proseWidth), 220) + 46
+    }
+
+    private static func planHeight(_ plan: KajiAgentPlanSummary, expanded: Bool) -> CGFloat {
+        guard expanded else { return 40 }
+        return min(textHeight(plan.summary, width: KajiAgentTranscriptMetrics.proseWidth), 120) + 56
+    }
+
+    private static func activityHeight(_ activity: KajiAgentActivitySummary, expanded: Bool) -> CGFloat {
+        guard expanded else { return 42 }
+        return 54 + CGFloat(activity.actions.count) * 36
     }
 
     private static func toolHeight(_ message: KajiAgentMessage, expanded: Bool) -> CGFloat {
