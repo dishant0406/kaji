@@ -21,6 +21,26 @@ struct KajiAgentExtensionRequestParserTests {
     }
 
     @Test
+    func parsesPermissionConfirmAsApprovalRequest() throws {
+        let actions = KajiAgentExtensionRequestParser.actions(for: KajiAgentRPCFrame(
+            id: "approval-1",
+            type: "extension_ui_request",
+            method: "confirm",
+            title: "Pi needs permission",
+            message: "Allow Bash: swift test?"
+        ))
+
+        guard case let .approval(request) = actions.first else {
+            Issue.record("Expected approval request")
+            return
+        }
+        #expect(request.id == "approval-1")
+        #expect(request.title == "Pi needs permission")
+        #expect(request.summary == "Allow Bash: swift test?")
+        #expect(request.toolName == "Bash")
+    }
+
+    @Test
     func parsesEditorQuestionMetadata() {
         let actions = KajiAgentExtensionRequestParser.actions(for: KajiAgentRPCFrame(
             id: "q2",

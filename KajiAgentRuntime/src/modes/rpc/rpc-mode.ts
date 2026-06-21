@@ -17,6 +17,7 @@ import { validateCustomProviderConnection } from "../../config/custom-provider-v
 import { BUILTIN_SLASH_COMMAND_DEFS } from "../../slash-commands/builtin-registry";
 import { getKnownRoleIds, getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
+import { generateRpcCommitMessage } from "./commit-message";
 import { buildSkillPromptMessage } from "../../extensibility/skills";
 import { expandSlashCommand } from "../../extensibility/slash-commands";
 import { HistoryStorage } from "../../session/history-storage";
@@ -675,6 +676,14 @@ export async function runRpcMode(
 			case "get_available_models": {
 				const models = session.getAvailableModels();
 				return success(id, "get_available_models", { models });
+			}
+
+			case "generate_commit_message": {
+				try {
+					return success(id, "generate_commit_message", await generateRpcCommitMessage(session, command));
+				} catch (err) {
+					return error(id, "generate_commit_message", err instanceof Error ? err.message : String(err));
+				}
 			}
 
 			case "get_custom_providers": {

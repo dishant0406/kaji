@@ -8,6 +8,10 @@ enum KajiAgentToolTimelineApplier {
         tailVersion: inout Int
     ) {
         let id = event.toolCallId ?? UUID().uuidString
+        KajiAgentTimeline.ensureActiveTurn(turns: &turns, activeTurnID: &activeTurnID)
+        let turnSeed = activeTurnID?.uuidString ?? "no-turn"
+        let toolOrdinal = KajiAgentTimeline.activeTurnIndex(turns: turns, activeTurnID: activeTurnID)
+            .map { turns[$0].toolGroups.flatMap(\.tools).count } ?? 0
         KajiAgentEventLog.record("tool_start", fields: [
             "toolName": .string(event.toolName ?? ""),
             "toolCallId": .string(id),
@@ -16,6 +20,7 @@ enum KajiAgentToolTimelineApplier {
                 .flatMap { turns[$0].blocks.last?.debugName } ?? ""),
         ])
         KajiAgentTimeline.appendToolToActiveGroup(KajiAgentMessage(
+            id: KajiAgentTranscriptIdentity.uuid("tool", turnSeed, String(toolOrdinal), id),
             kind: .tool,
             title: event.toolName ?? "Tool",
             detail: "",

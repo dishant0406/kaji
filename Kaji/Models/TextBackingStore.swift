@@ -80,7 +80,6 @@ final class TextBackingStore {
         fullTextCache = nil
     }
 
-
     func applyMonacoEdits(_ edits: [MonacoTextEdit]) {
         guard !edits.isEmpty else { return }
         let orderedEdits = edits.sorted { lhs, rhs in
@@ -130,6 +129,7 @@ final class TextBackingStore {
         let safeLocation = min(max(0, location), nsText.length)
         return nsText.substring(from: safeLocation)
     }
+
     func replaceFirstMatch(
         _ match: SearchMatch,
         with replacement: String,

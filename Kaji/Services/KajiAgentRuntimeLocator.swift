@@ -7,7 +7,10 @@ enum KajiAgentRuntimeLocator {
     static func resolveLaunch(
         projectPath: String?,
         sessionDirectory: String? = nil,
-        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue,
+        noSession: Bool = false,
+        noLSP: Bool = false,
+        noTools: Bool = false
     ) -> KajiAgentLaunchResolution {
         guard let script = sourceScriptURL() ?? bundledRuntimeScript() else { return .missingRuntime }
         switch bunLookup() {
@@ -16,7 +19,8 @@ enum KajiAgentRuntimeLocator {
                 arguments: [path, script.url.path] + launchArguments(
                     projectPath: projectPath,
                     sessionDirectory: sessionDirectory,
-                    approvalMode: approvalMode
+                    approvalMode: approvalMode,
+                    flags: KajiAgentRuntimeLaunchFlags(noSession: noSession, noLSP: noLSP, noTools: noTools)
                 ),
                 directory: script.directory
             ))
@@ -30,14 +34,18 @@ enum KajiAgentRuntimeLocator {
     static func sourceLaunch(
         projectPath: String?,
         sessionDirectory: String? = nil,
-        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue,
+        noSession: Bool = false,
+        noLSP: Bool = false,
+        noTools: Bool = false
     ) -> KajiAgentLaunch? {
         guard let script = sourceScriptURL(), case let .found(path, _) = bunLookup() else { return nil }
         return KajiAgentLaunch(
             arguments: [path, script.url.path] + launchArguments(
                 projectPath: projectPath,
                 sessionDirectory: sessionDirectory,
-                approvalMode: approvalMode
+                approvalMode: approvalMode,
+                flags: KajiAgentRuntimeLaunchFlags(noSession: noSession, noLSP: noLSP, noTools: noTools)
             ),
             directory: script.directory
         )
@@ -50,14 +58,18 @@ enum KajiAgentRuntimeLocator {
     static func bundledLaunch(
         projectPath: String?,
         sessionDirectory: String? = nil,
-        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue
+        approvalMode: String = KajiAgentPermissionMode.readAllow.rawValue,
+        noSession: Bool = false,
+        noLSP: Bool = false,
+        noTools: Bool = false
     ) -> KajiAgentLaunch? {
         guard let script = bundledRuntimeScript(), case let .found(path, _) = bunLookup() else { return nil }
         return KajiAgentLaunch(
             arguments: [path, script.url.path] + launchArguments(
                 projectPath: projectPath,
                 sessionDirectory: sessionDirectory,
-                approvalMode: approvalMode
+                approvalMode: approvalMode,
+                flags: KajiAgentRuntimeLaunchFlags(noSession: noSession, noLSP: noLSP, noTools: noTools)
             ),
             directory: script.directory
         )
@@ -89,7 +101,12 @@ enum KajiAgentRuntimeLocator {
         return result
     }
 
-    private static func launchArguments(projectPath: String?, sessionDirectory: String?, approvalMode: String) -> [String] {
+    private static func launchArguments(
+        projectPath: String?,
+        sessionDirectory: String?,
+        approvalMode: String,
+        flags: KajiAgentRuntimeLaunchFlags
+    ) -> [String] {
         var args = ["--approval-mode", approvalMode]
         if let projectPath, !projectPath.isEmpty {
             args.append(contentsOf: ["--cwd", projectPath])
@@ -97,6 +114,9 @@ enum KajiAgentRuntimeLocator {
         if let sessionDirectory, !sessionDirectory.isEmpty {
             args.append(contentsOf: ["--session-dir", sessionDirectory])
         }
+        if flags.noSession { args.append("--no-session") }
+        if flags.noLSP { args.append("--no-lsp") }
+        if flags.noTools { args.append("--no-tools") }
         return args
     }
 
@@ -157,6 +177,12 @@ enum KajiAgentRuntimeLocator {
         }
         return nil
     }
+}
+
+private struct KajiAgentRuntimeLaunchFlags {
+    let noSession: Bool
+    let noLSP: Bool
+    let noTools: Bool
 }
 
 struct KajiAgentLaunch: Equatable {

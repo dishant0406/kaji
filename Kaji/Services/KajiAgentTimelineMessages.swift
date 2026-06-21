@@ -14,7 +14,7 @@ enum KajiAgentTimeline {
             turns[index].user = user
             return
         }
-        let turn = KajiAgentTurn(user: user)
+        let turn = KajiAgentTurn(id: KajiAgentTranscriptIdentity.uuid("turn", user.id.uuidString), user: user)
         turns.append(turn)
         activeTurnID = turn.id
         KajiAgentEventLog.record("turn_start", fields: [

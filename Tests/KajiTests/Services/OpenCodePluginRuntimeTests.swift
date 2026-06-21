@@ -128,7 +128,7 @@ struct OpenCodePluginRuntimeTests {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [executable] + arguments
-        process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
+        process.environment = processEnvironment(environment)
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -136,5 +136,13 @@ struct OpenCodePluginRuntimeTests {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         return (process.terminationStatus, String(data: data, encoding: .utf8) ?? "")
+    }
+
+    private func processEnvironment(_ environment: [String: String]) -> [String: String] {
+        var base = ProcessInfo.processInfo.environment
+        let bunPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".bun/bin").path
+        let currentPath = base["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        base["PATH"] = "\(bunPath):\(currentPath)"
+        return base.merging(environment) { _, new in new }
     }
 }

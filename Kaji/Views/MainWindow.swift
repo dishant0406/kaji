@@ -110,7 +110,6 @@ struct MainWindow: View {
     @State private var showAsk = false
     @State private var showAgentCommandCenter = false
     @State private var showWorktreeSwitcher = false
-    @State private var showGoToSymbol = false
     @State private var showGoToLine = false
     @State private var showSettings = false
     @State private var showMCPControlPanel = false
@@ -138,7 +137,6 @@ struct MainWindow: View {
                 .overlay { askOverlay }
                 .overlay { agentCommandCenterOverlay }
                 .overlay { worktreeSwitcherOverlay }
-                .overlay { goToSymbolOverlay }
                 .overlay { goToLineOverlay }
         )
 
@@ -193,7 +191,6 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
-                    showGoToSymbol = false
                     showGoToLine = false
                     showCommandPalette.toggle()
                 }
@@ -208,7 +205,7 @@ struct MainWindow: View {
                     showWorktreeSwitcher = false
                     showCommandPalette = false
                     showGoToLine = false
-                    showGoToSymbol.toggle()
+                    activeEditorState?.requestGoToSymbol()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .goToLine)) { _ in
                     showQuickOpen = false
@@ -216,7 +213,6 @@ struct MainWindow: View {
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
                     showCommandPalette = false
-                    showGoToSymbol = false
                     showGoToLine.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .ask)) { _ in
@@ -225,7 +221,6 @@ struct MainWindow: View {
                     showQuickOpen = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
-                    showGoToSymbol = false
                     showGoToLine = false
                     showAsk = shouldShow
                 }
@@ -234,7 +229,6 @@ struct MainWindow: View {
                     showQuickOpen = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
-                    showGoToSymbol = false
                     showGoToLine = false
                     showAsk = true
                 }
@@ -244,7 +238,6 @@ struct MainWindow: View {
                     showQuickOpen = false
                     showAsk = false
                     showWorktreeSwitcher = false
-                    showGoToSymbol = false
                     showGoToLine = false
                     showAgentCommandCenter = shouldShow
                 }
@@ -364,15 +357,6 @@ struct MainWindow: View {
                     guard isPresented, let message = appState.pendingSaveErrorMessage else { return }
                     presentSaveErrorAlert(message: message)
                 }
-                .onChange(of: appState.pendingLanguagePackInstall != nil) { _, isPresented in
-                    guard isPresented else { return }
-                    presentLanguagePackInstallToast()
-                }
-                .onChange(of: appState.pendingLanguagePackInstallErrorMessage != nil) { _, isPresented in
-                    guard isPresented, let message = appState.pendingLanguagePackInstallErrorMessage else { return }
-                    ToastState.shared.show("Language pack install failed: \(message)")
-                    appState.pendingLanguagePackInstallErrorMessage = nil
-                }
                 .onChange(of: footerTerminalEnabled) { _, enabled in
                     if !enabled {
                         collapseAllFooterTerminals()
@@ -387,7 +371,7 @@ struct MainWindow: View {
     }
 
     private var overlayActive: Bool {
-        showCommandPalette || showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher || showGoToSymbol ||
+        showCommandPalette || showQuickOpen || showAsk || showAgentCommandCenter || showWorktreeSwitcher ||
             showGoToLine ||
             showSettings || showMCPControlPanel ||
             showCreateThemeModal || createWorktreeProjectID != nil || projectLogoCropRequest != nil
@@ -745,20 +729,6 @@ struct MainWindow: View {
                     }
                 },
                 onDismiss: { showWorktreeSwitcher = false }
-            )
-        }
-    }
-
-    @ViewBuilder
-    private var goToSymbolOverlay: some View {
-        if showGoToSymbol, let editor = activeEditorState {
-            GoToSymbolOverlay(
-                symbols: editor.symbols(),
-                onSelect: { symbol in
-                    editor.navigate(to: symbol)
-                    showGoToSymbol = false
-                },
-                onDismiss: { showGoToSymbol = false }
             )
         }
     }
@@ -1682,17 +1652,6 @@ struct MainWindow: View {
 
         alert.beginSheetModal(for: window) { _ in
             appState.pendingSaveErrorMessage = nil
-        }
-    }
-
-    private func presentLanguagePackInstallToast() {
-        guard let pending = appState.pendingLanguagePackInstall else { return }
-        let fileName = (pending.filePath as NSString).lastPathComponent
-        ToastState.shared.showAction(
-            message: "Install \(pending.entry.name) support for \(fileName)?",
-            actionTitle: "Install"
-        ) {
-            appState.finishLanguagePackInstall(LanguagePackInstaller.install(pending.entry))
         }
     }
 }

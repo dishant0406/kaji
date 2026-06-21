@@ -27,24 +27,30 @@ struct KajiAgentToolCallRow: View, Equatable {
     }
 
     private func header(expanded: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let descriptor = KajiAgentToolRenderer.descriptor(for: message)
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 if hasDetails {
                     KajiIcon(systemName: expanded ? "chevron.down" : "chevron.right", size: 9)
                         .foregroundStyle(KajiTheme.fgDim)
                         .frame(width: 10)
                 }
-                Text(message.title)
+                KajiIcon(systemName: descriptor.iconName, size: 11)
+                    .foregroundStyle(message.isError ? KajiTheme.diffRemoveFg : KajiTheme.fgMuted)
+                    .frame(width: 14)
+                Text(descriptor.title)
                     .kajiFont(size: KajiAgentTranscriptMetrics.toolFont, weight: .semibold)
                     .foregroundStyle(message.isError ? KajiTheme.diffRemoveFg : KajiTheme.fg)
-                Text(statusText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(descriptor.subtitle)
                     .kajiFont(size: KajiAgentTranscriptMetrics.toolDetailFont, weight: .medium)
                     .foregroundStyle(message.isError ? KajiTheme.diffRemoveFg : KajiTheme.fgDim)
                 if !message.isComplete { KajiSpinner(size: 9) }
                 Spacer(minLength: 0)
             }
-            if let args = message.toolArguments, !args.isEmpty {
-                Text(args.replacingOccurrences(of: "\n", with: "  "))
+            if let args = descriptor.argumentPreview {
+                Text(args)
                     .kajiFont(size: KajiAgentTranscriptMetrics.toolDetailFont, design: .monospaced)
                     .foregroundStyle(KajiTheme.fgDim)
                     .lineLimit(2)
@@ -75,11 +81,5 @@ struct KajiAgentToolCallRow: View, Equatable {
         if let fullOutput = message.fullOutput, !fullOutput.isEmpty { return fullOutput }
         if let preview = message.preview, !preview.isEmpty { return preview }
         return nil
-    }
-
-    private var statusText: String {
-        if message.isError { return "Failed" }
-        if !message.isComplete { return output == nil ? "Running" : "Streaming output" }
-        return output == nil && message.taskDetails == nil ? "No output" : "Output available"
     }
 }

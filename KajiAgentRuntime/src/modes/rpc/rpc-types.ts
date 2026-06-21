@@ -70,6 +70,7 @@ export type RpcCommand =
 	| { id?: string; type: "set_model_role"; role?: string; provider?: string; modelId?: string; thinkingLevel?: string; temporary?: boolean }
 	| { id?: string; type: "cycle_model" }
 	| { id?: string; type: "get_available_models" }
+	| { id?: string; type: "generate_commit_message"; provider?: string; modelId?: string; promptMessage: string; thinkingLevel?: ThinkingLevel }
 	| { id?: string; type: "get_custom_providers" }
 	| { id?: string; type: "save_custom_provider"; data: CustomProviderInput }
 	| { id?: string; type: "delete_custom_provider"; providerId: string }
@@ -209,6 +210,13 @@ export type RpcResponse =
 			command: "get_available_models";
 			success: true;
 			data: { models: Model[] };
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "generate_commit_message";
+			success: true;
+			data: { message: string; model: Model };
 	  }
 	| {
 			id?: string;

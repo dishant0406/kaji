@@ -14,29 +14,37 @@ struct MonacoMapperTests {
         #expect(MonacoLanguageMapper.languageID(for: "/tmp/unknown.custom") == "plaintext")
     }
 
-    @Test("maps diagnostics to Monaco markers")
+    @Test("maps Monaco diagnostics to editor diagnostics")
     func mapsDiagnostics() throws {
-        let markers = MonacoMarkerMapper.markers(for: [
-            EditorDiagnostic(
-                id: "a",
-                filePath: "/tmp/a.swift",
-                relativePath: "a.swift",
-                line: 4,
-                column: 7,
-                severity: .warning,
-                message: "careful",
-                source: "test"
-            ),
-        ])
-        #expect(markers.count == 1)
-        guard case let .object(marker) = markers[0] else {
-            Issue.record("Expected object marker")
-            return
-        }
-        #expect(marker["startLineNumber"] == .int(4))
-        #expect(marker["startColumn"] == .int(7))
-        #expect(marker["endColumn"] == .int(8))
-        #expect(marker["severity"] == .string("warning"))
-        #expect(marker["message"] == .string("careful"))
+        let diagnostics = MonacoDiagnosticMapper.diagnostics(
+            for: [
+                MonacoDiagnosticMarker(
+                    startLineNumber: 4,
+                    startColumn: 7,
+                    endLineNumber: 4,
+                    endColumn: 12,
+                    severity: 4,
+                    message: "careful",
+                    source: "typescript"
+                ),
+            ],
+            filePath: "/tmp/project/Sources/App.ts",
+            projectPath: "/tmp/project"
+        )
+
+        #expect(diagnostics.count == 1)
+        #expect(diagnostics[0].relativePath == "Sources/App.ts")
+        #expect(diagnostics[0].line == 4)
+        #expect(diagnostics[0].column == 7)
+        #expect(diagnostics[0].severity == .warning)
+        #expect(diagnostics[0].message == "careful")
+        #expect(diagnostics[0].source == "typescript")
+    }
+
+    @Test("maps language display names")
+    func mapsLanguageDisplayNames() {
+        #expect(MonacoLanguageMapper.displayName(for: "/tmp/App.swift") == "Swift")
+        #expect(MonacoLanguageMapper.displayName(for: "/tmp/index.tsx") == "TypeScript")
+        #expect(MonacoLanguageMapper.displayName(for: "/tmp/unknown.custom") == "Plain Text")
     }
 }

@@ -23,6 +23,69 @@ extension KajiAgentAssistantTimelineApplier {
         }
     }
 
+    static func finishAssistant(
+        content: KajiAgentJSONValue?,
+        errorMessage: String?,
+        turns: inout [KajiAgentTurn],
+        activeTurnID: inout KajiAgentTurn.ID?,
+        tailVersion: inout Int
+    ) {
+        if let errorMessage, !errorMessage.isEmpty {
+            KajiAgentTimeline.appendResponseMessage(
+                KajiAgentMessage(
+                    id: KajiAgentAssistantMessageIdentity.id(
+                        kind: .error,
+                        namespace: "error",
+                        contentIndex: nil,
+                        turns: &turns,
+                        activeTurnID: &activeTurnID
+                    ),
+                    kind: .error,
+                    title: "Provider error",
+                    detail: errorMessage
+                ),
+                turns: &turns,
+                activeTurnID: &activeTurnID,
+                tailVersion: &tailVersion
+            )
+            return
+        }
+        let text = KajiAgentTextExtractor.assistantText(from: content)
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            finishOpenThinkingBlocks(from: content, turns: &turns, activeTurnID: activeTurnID)
+            return
+        }
+        if let location = KajiAgentTimeline.responseLocation(
+            turns: turns,
+            activeTurnID: activeTurnID,
+            where: { $0.kind == .assistant && !$0.isComplete }
+        ) {
+            KajiAgentTimeline.updateMessage(at: location, turns: &turns) { message in
+                message.detail = text
+                message.isComplete = true
+            }
+        } else {
+            KajiAgentTimeline.appendResponseMessage(
+                KajiAgentMessage(
+                    id: KajiAgentAssistantMessageIdentity.id(
+                        kind: .assistant,
+                        namespace: "assistant-final",
+                        contentIndex: nil,
+                        turns: &turns,
+                        activeTurnID: &activeTurnID
+                    ),
+                    kind: .assistant,
+                    title: "Kaji",
+                    detail: text
+                ),
+                turns: &turns,
+                activeTurnID: &activeTurnID,
+                tailVersion: &tailVersion
+            )
+        }
+        finishOpenThinkingBlocks(from: content, turns: &turns, activeTurnID: activeTurnID)
+    }
+
     static func append(
         message: KajiAgentMessage,
         turns: inout [KajiAgentTurn],

@@ -111,6 +111,40 @@ struct KajiAgentToolTimelineApplierTests {
     }
 
     @Test
+    func repeatedToolCallIDsAcrossTurnsKeepDistinctMessageIDs() throws {
+        var state = State()
+        KajiAgentTimeline.startTurn(
+            user: KajiAgentMessage(kind: .user, title: "You", detail: "First"),
+            turns: &state.turns,
+            activeTurnID: &state.activeTurnID,
+            tailVersion: &state.tailVersion
+        )
+        KajiAgentToolTimelineApplier.start(
+            event: KajiAgentSessionEvent(type: "tool_execution_start", toolCallId: "tool-1", toolName: "bash"),
+            turns: &state.turns,
+            activeTurnID: &state.activeTurnID,
+            tailVersion: &state.tailVersion
+        )
+        KajiAgentTimeline.startTurn(
+            user: KajiAgentMessage(kind: .user, title: "You", detail: "Second"),
+            turns: &state.turns,
+            activeTurnID: &state.activeTurnID,
+            tailVersion: &state.tailVersion
+        )
+        KajiAgentToolTimelineApplier.start(
+            event: KajiAgentSessionEvent(type: "tool_execution_start", toolCallId: "tool-1", toolName: "bash"),
+            turns: &state.turns,
+            activeTurnID: &state.activeTurnID,
+            tailVersion: &state.tailVersion
+        )
+
+        let ids = state.turns.flatMap(\.toolGroups).flatMap(\.tools).map(\.id)
+
+        #expect(ids.count == 2)
+        #expect(Set(ids).count == 2)
+    }
+
+    @Test
     func todoWriteUpdatesPhasesOrReturnsFailureMessage() throws {
         var state = State.started(toolName: "todo_write")
         let phases = KajiAgentToolResult(details: .object([

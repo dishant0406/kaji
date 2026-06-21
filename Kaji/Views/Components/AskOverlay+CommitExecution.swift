@@ -33,9 +33,9 @@ extension AskOverlay {
         nativeDraft: String,
         settings: GitCommitMessageSettingsSnapshot
     ) {
-        guard GitCommitMessageAgent.isAvailable, let selectedProject, let selectedWorktree else {
+        guard GitCommitMessageAgent.isAvailable(settings: settings), let selectedProject, let selectedWorktree else {
             commitFlow?.isGenerating = false
-            commitFlow?.generationText = GitCommitMessageAgent.unavailableReason()
+            commitFlow?.generationText = GitCommitMessageAgent.unavailableReason(settings: settings)
             return
         }
         commitGenerationTask?.cancel()
@@ -59,7 +59,7 @@ extension AskOverlay {
                 guard !Task.isCancelled else { return }
                 commitFlow?.message = result.message
                 commitFlow?.generatedMessage = result.message
-                commitFlow?.generationText = "Refined with Kaji Agent · \(settings.contextLevel.title)"
+                commitFlow?.generationText = "Refined with \(result.modelLabel ?? settings.modelLabel) · \(settings.contextLevel.title)"
                 commitFlow?.isGenerating = false
             } catch {
                 guard !Task.isCancelled else { return }

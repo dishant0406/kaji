@@ -16,43 +16,9 @@ build_with_bun() {
 }
 
 build_static_fallback() {
-    python3 - <<'PY'
-import base64
-import hashlib
-import io
-import pathlib
-import shutil
-import tarfile
-import urllib.request
-
-url = "https://registry.npmjs.org/monaco-editor/-/monaco-editor-0.55.1.tgz"
-expected = "jz4x+TJNFHwHtwuV9vA9rMujcZRb0CEilTEwG2rRSpe/A7Jdkuj8xPKttCgOh+v/lkHy7HsZ64oj+q3xoAFl9A=="
-root = pathlib.Path("Kaji/Resources/MonacoEditor")
-index_html = root / "index.html"
-main_js = root / "main.js"
-vs_root = root / "vs"
-if not index_html.exists() or not main_js.exists():
-    raise SystemExit("Monaco fallback shell is missing")
-with urllib.request.urlopen(url, timeout=60) as response:
-    data = response.read()
-digest = base64.b64encode(hashlib.sha512(data).digest()).decode()
-if digest != expected:
-    raise SystemExit("Monaco package integrity mismatch")
-if vs_root.exists():
-    shutil.rmtree(vs_root)
-root.mkdir(parents=True, exist_ok=True)
-with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
-    for member in archive.getmembers():
-        name = member.name
-        prefix = "package/min/vs/"
-        if not name.startswith(prefix) or member.isdir():
-            continue
-        target = root / name[len("package/min/"):]
-        target.parent.mkdir(parents=True, exist_ok=True)
-        source = archive.extractfile(member)
-        if source is not None:
-            target.write_bytes(source.read())
-PY
+    echo "Error: Bun is required to build the Monaco runtime." >&2
+    echo "Install Bun or use the committed Kaji/Resources/MonacoEditor build output." >&2
+    exit 1
 }
 
 if command -v bun >/dev/null 2>&1; then
@@ -67,7 +33,7 @@ if [[ ! -f "$OUTPUT_DIR/index.html" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$OUTPUT_DIR/vs/loader.js" ]]; then
-    echo "Error: Monaco runtime build did not produce $OUTPUT_DIR/vs/loader.js"
+if [[ ! -f "$OUTPUT_DIR/assets/index.js" && ! -f "$OUTPUT_DIR/vs/loader.js" ]]; then
+    echo "Error: Monaco runtime build did not produce a runnable JavaScript entrypoint"
     exit 1
 fi

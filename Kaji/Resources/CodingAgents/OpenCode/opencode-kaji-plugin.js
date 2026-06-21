@@ -29,7 +29,7 @@ export const KajiNotificationPlugin = async ({ client }) => {
           execFileSync(
             hookClientPath,
             ["send", type, paneID, title, body || ""],
-            { stdio: "ignore", timeout: 1000 },
+            { stdio: "ignore", timeout: 5000 },
           )
         } catch {}
       }

@@ -1,3 +1,5 @@
+import Foundation
+
 enum KajiAgentAssistantTimelineApplier {
     static func appendStart(
         content: KajiAgentJSONValue?,
@@ -13,6 +15,13 @@ enum KajiAgentAssistantTimelineApplier {
                  .image:
                 append(
                     message: KajiAgentMessage(
+                        id: KajiAgentAssistantMessageIdentity.id(
+                            kind: .assistant,
+                            namespace: "assistant",
+                            contentIndex: part.index,
+                            turns: &turns,
+                            activeTurnID: &activeTurnID
+                        ),
                         kind: .assistant,
                         title: "Kaji",
                         detail: part.text,
@@ -26,6 +35,13 @@ enum KajiAgentAssistantTimelineApplier {
             case .thinking:
                 append(
                     message: KajiAgentMessage(
+                        id: KajiAgentAssistantMessageIdentity.id(
+                            kind: .thinking,
+                            namespace: "thinking",
+                            contentIndex: part.index,
+                            turns: &turns,
+                            activeTurnID: &activeTurnID
+                        ),
                         kind: .thinking,
                         title: "Thinking",
                         detail: part.text,
@@ -69,47 +85,6 @@ enum KajiAgentAssistantTimelineApplier {
         }
     }
 
-    static func finishAssistant(
-        content: KajiAgentJSONValue?,
-        errorMessage: String?,
-        turns: inout [KajiAgentTurn],
-        activeTurnID: inout KajiAgentTurn.ID?,
-        tailVersion: inout Int
-    ) {
-        if let errorMessage, !errorMessage.isEmpty {
-            KajiAgentTimeline.appendResponseMessage(
-                KajiAgentMessage(kind: .error, title: "Provider error", detail: errorMessage),
-                turns: &turns,
-                activeTurnID: &activeTurnID,
-                tailVersion: &tailVersion
-            )
-            return
-        }
-        let text = KajiAgentTextExtractor.assistantText(from: content)
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            finishOpenThinkingBlocks(from: content, turns: &turns, activeTurnID: activeTurnID)
-            return
-        }
-        if let location = KajiAgentTimeline.responseLocation(
-            turns: turns,
-            activeTurnID: activeTurnID,
-            where: { $0.kind == .assistant && !$0.isComplete }
-        ) {
-            KajiAgentTimeline.updateMessage(at: location, turns: &turns) { message in
-                message.detail = text
-                message.isComplete = true
-            }
-        } else {
-            KajiAgentTimeline.appendResponseMessage(
-                KajiAgentMessage(kind: .assistant, title: "Kaji", detail: text),
-                turns: &turns,
-                activeTurnID: &activeTurnID,
-                tailVersion: &tailVersion
-            )
-        }
-        finishOpenThinkingBlocks(from: content, turns: &turns, activeTurnID: activeTurnID)
-    }
-
     private static func appendAssistantDelta(
         _ text: String,
         contentIndex: Int?,
@@ -128,7 +103,20 @@ enum KajiAgentAssistantTimelineApplier {
             KajiAgentTimeline.updateMessage(at: location, turns: &turns) { $0.detail += text }
         } else {
             append(
-                message: KajiAgentMessage(kind: .assistant, title: "Kaji", detail: text, contentIndex: contentIndex, isComplete: false),
+                message: KajiAgentMessage(
+                    id: KajiAgentAssistantMessageIdentity.id(
+                        kind: .assistant,
+                        namespace: "assistant",
+                        contentIndex: contentIndex,
+                        turns: &turns,
+                        activeTurnID: &activeTurnID
+                    ),
+                    kind: .assistant,
+                    title: "Kaji",
+                    detail: text,
+                    contentIndex: contentIndex,
+                    isComplete: false
+                ),
                 turns: &turns,
                 activeTurnID: &activeTurnID,
                 tailVersion: &tailVersion
@@ -154,7 +142,20 @@ enum KajiAgentAssistantTimelineApplier {
             KajiAgentTimeline.updateMessage(at: location, turns: &turns) { $0.detail += text }
         } else {
             append(
-                message: KajiAgentMessage(kind: .thinking, title: "Thinking", detail: text, contentIndex: contentIndex, isComplete: false),
+                message: KajiAgentMessage(
+                    id: KajiAgentAssistantMessageIdentity.id(
+                        kind: .thinking,
+                        namespace: "thinking",
+                        contentIndex: contentIndex,
+                        turns: &turns,
+                        activeTurnID: &activeTurnID
+                    ),
+                    kind: .thinking,
+                    title: "Thinking",
+                    detail: text,
+                    contentIndex: contentIndex,
+                    isComplete: false
+                ),
                 turns: &turns,
                 activeTurnID: &activeTurnID,
                 tailVersion: &tailVersion

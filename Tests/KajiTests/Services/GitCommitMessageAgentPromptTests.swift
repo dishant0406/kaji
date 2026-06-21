@@ -45,6 +45,9 @@ struct GitCommitMessageAgentPromptTests {
             inventory: inventory,
             nativeDraft: "Update project changes",
             settings: GitCommitMessageSettingsSnapshot(
+                modelSelector: "anthropic/claude-sonnet-4-5",
+                providerID: "anthropic",
+                modelID: "claude-sonnet-4-5",
                 contextLevel: .detailed,
                 customInstructions: "Use conventional commits."
             )
@@ -79,7 +82,13 @@ struct GitCommitMessageAgentPromptTests {
             repoPath: "/repo",
             inventory: inventory,
             nativeDraft: "",
-            settings: GitCommitMessageSettingsSnapshot(contextLevel: .fast, customInstructions: "  ")
+            settings: GitCommitMessageSettingsSnapshot(
+                modelSelector: "anthropic/claude-sonnet-4-5",
+                providerID: "anthropic",
+                modelID: "claude-sonnet-4-5",
+                contextLevel: .fast,
+                customInstructions: "  "
+            )
         ))
 
         #expect(prompt.contains("User commit-message instructions: none"))

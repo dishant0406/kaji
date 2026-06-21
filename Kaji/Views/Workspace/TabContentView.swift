@@ -11,7 +11,6 @@ struct TabContentView: View {
     @Environment(\.activeWorktreeKey) private var worktreeKey
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
-    @Environment(WorktreeStore.self) private var worktreeStore
 
     var body: some View {
         switch tab.content {
@@ -26,14 +25,8 @@ struct TabContentView: View {
             )
         case let .vcs(vcsState):
             VCSTabView(state: vcsState, focused: focused, onFocus: onFocus)
-        case let .editor(editorState):
-            EditorPane(
-                state: editorState,
-                focused: focused,
-                onFocus: onFocus,
-                project: activeProject,
-                worktree: activeWorktree
-            )
+        case .editor:
+            EmptyView()
         case let .filePreview(previewState):
             FilePreviewPane(state: previewState, onFocus: onFocus)
         case let .diffViewer(diffState):
@@ -66,13 +59,5 @@ struct TabContentView: View {
     private var activeProject: Project? {
         guard let projectID = appState.activeProjectID else { return nil }
         return projectStore.projects.first { $0.id == projectID }
-    }
-
-    private var activeWorktree: Worktree? {
-        guard let project = activeProject else { return nil }
-        if let worktreeKey {
-            return worktreeStore.worktrees[project.id]?.first { $0.id == worktreeKey.worktreeID }
-        }
-        return worktreeStore.primary(for: project.id)
     }
 }

@@ -19,8 +19,11 @@ final class KajiAgentTimelineHeightIndex {
     func sync(rows nextRows: [KajiAgentTimelineRow]) {
         guard rowIDs != nextRows.map(\.id) || rows != nextRows else { return }
         let oldRowsByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
-        for row in nextRows where oldRowsByID[row.id] != nil && oldRowsByID[row.id] != row {
-            measuredHeights.removeValue(forKey: row.id)
+        for row in nextRows {
+            guard let oldRow = oldRowsByID[row.id], oldRow != row else { continue }
+            if !row.preservesMeasuredHeight(replacing: oldRow) {
+                measuredHeights.removeValue(forKey: row.id)
+            }
         }
         rows = nextRows
         rowIDs = nextRows.map(\.id)

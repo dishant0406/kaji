@@ -110,7 +110,8 @@ final class KajiAgentTimelineRowStore {
         guard let index = rows.firstIndex(where: { row in
             if case let .tool(message, _) = row.kind { return message.id == id }
             return false
-        }), case let .tool(message, _) = rows[index].kind else { return }
+        }), case let .tool(message, _) = rows[index].kind
+        else { return }
         rows[index] = rows[index].copy(kind: .tool(message, expanded: expandedTools.contains(id)))
         rebuildIndex()
         version &+= 1
@@ -121,7 +122,8 @@ final class KajiAgentTimelineRowStore {
             if case let .plan(plan, _) = row.kind { return plan.id == id }
             if case let .thinking(message, _) = row.kind { return message.id == id }
             return false
-        }) else { return }
+        })
+        else { return }
         switch rows[index].kind {
         case let .plan(plan, _):
             rows[index] = rows[index].copy(kind: .plan(plan, expanded: expandedThinking.contains(id)))
@@ -138,7 +140,8 @@ final class KajiAgentTimelineRowStore {
         guard let index = rows.firstIndex(where: { row in
             if case let .activity(activity, _) = row.kind { return activity.id == id }
             return false
-        }), case let .activity(activity, _) = rows[index].kind else { return }
+        }), case let .activity(activity, _) = rows[index].kind
+        else { return }
         rows[index] = rows[index].copy(kind: .activity(activity, expanded: expandedToolGroups.contains(id)))
         rebuildIndex()
         version &+= 1
@@ -150,6 +153,13 @@ final class KajiAgentTimelineRowStore {
 
     private func replaceRows(_ nextRows: [KajiAgentTimelineRow]) {
         guard rows != nextRows else { return }
+        if rows.map(\.id) == nextRows.map(\.id) {
+            for index in nextRows.indices where rows[index] != nextRows[index] {
+                rows[index] = nextRows[index]
+            }
+            version &+= 1
+            return
+        }
         rows = nextRows
         rebuildIndex()
         version &+= 1

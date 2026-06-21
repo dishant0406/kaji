@@ -134,7 +134,7 @@ struct InlineEditOverlay: View {
             selectedText: state.inlineEditOriginal,
             instruction: trimmedInstruction,
             provider: provider,
-            languageID: LanguageRegistry.shared.definition(forFile: state.filePath)?.id,
+            languageID: MonacoLanguageMapper.languageID(for: state.filePath),
             model: selectedModel.isEmpty ? nil : selectedModel
         )
         generationTask = Task {
@@ -173,7 +173,7 @@ struct InlineEditOverlay: View {
             filePath: state.filePath,
             instruction: instruction.isEmpty ? "Improve this code" : instruction,
             selectedCode: state.inlineEditOriginal,
-            languageID: LanguageRegistry.shared.definition(forFile: state.filePath)?.id
+            languageID: MonacoLanguageMapper.languageID(for: state.filePath)
         )
     }
 

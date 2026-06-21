@@ -22,10 +22,11 @@ struct KajiAgentInspectorItem: Identifiable, Hashable {
     }
 
     static func tool(_ message: KajiAgentMessage) -> KajiAgentInspectorItem {
-        KajiAgentInspectorItem(
+        let descriptor = KajiAgentToolRenderer.descriptor(for: message)
+        return KajiAgentInspectorItem(
             id: "tool.\(message.id.uuidString)",
-            title: message.title,
-            subtitle: toolSubtitle(message),
+            title: descriptor.title,
+            subtitle: descriptor.subtitle,
             kind: .tool(message)
         )
     }
@@ -37,14 +38,6 @@ struct KajiAgentInspectorItem: Identifiable, Hashable {
             subtitle: "\(group.tools.count) action\(group.tools.count == 1 ? "" : "s")",
             kind: .toolGroup(group)
         )
-    }
-
-    private static func toolSubtitle(_ message: KajiAgentMessage) -> String {
-        if message.isError { return "Failed" }
-        if !message.isComplete { return "Running" }
-        if message.fullOutput?.isEmpty == false || message.preview?.isEmpty == false { return "Output available" }
-        if message.taskDetails != nil { return "Task details" }
-        return "No output"
     }
 }
 

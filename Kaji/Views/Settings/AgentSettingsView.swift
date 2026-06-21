@@ -111,7 +111,12 @@ struct AgentSettingsView: View {
 
             KajiAgentCustomProvidersSection(store: kajiAgent)
 
-            CommitMessageSettingsSection(settings: commitMessageSettings)
+            CommitMessageSettingsSection(
+                settings: commitMessageSettings,
+                modelOptions: kajiAgent.modelOptions,
+                modelRoles: kajiAgent.modelRoles,
+                onRefreshModels: refreshKajiAgentMetadata
+            )
 
             SettingsSection(
                 "Verification",

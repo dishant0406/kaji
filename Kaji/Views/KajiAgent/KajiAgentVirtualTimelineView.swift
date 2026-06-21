@@ -46,6 +46,7 @@ struct KajiAgentVirtualTimelineView: View {
             .padding(.bottom, 8)
             .scrollTargetLayout()
         }
+        .defaultScrollAnchor(.bottom)
         .introspect(.scrollView, on: .macOS(.v14, .v15, .v26)) { scrollView in
             scrollCoordinator.attach(scrollView)
             viewportObserver.attach(scrollView)

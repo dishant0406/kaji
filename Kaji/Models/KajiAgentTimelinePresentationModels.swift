@@ -40,7 +40,7 @@ struct KajiAgentActivitySummary: Identifiable, Hashable {
 
     var summary: String {
         let failed = actions.filter(\.isError).count
-        let running = actions.filter { !$0.isComplete }.count
+        let running = actions.count(where: { !$0.isComplete })
         let output = actions.filter(\.hasOutput).count
         var parts = ["\(actions.count) action\(actions.count == 1 ? "" : "s")"]
         if running > 0 { parts.append("\(running) running") }

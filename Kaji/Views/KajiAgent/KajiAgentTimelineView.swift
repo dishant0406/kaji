@@ -72,20 +72,8 @@ struct KajiAgentTimelineView: View {
         syncRows(viewportHeight: viewportHeight)
     }
 
-    private func syncRows(viewportHeight: CGFloat) {
+    private func syncRows(viewportHeight _: CGFloat) {
         heightIndex.sync(rows: rowStore.rows)
-        rowStore.setLatestTurnSpacer(turnID: store.turns.last?.id, height: latestTurnSpacerHeight(viewportHeight: viewportHeight))
-        heightIndex.sync(rows: rowStore.rows)
-    }
-
-    private func latestTurnSpacerHeight(viewportHeight: CGFloat) -> CGFloat {
-        guard let latestTurnID = store.turns.last?.id else { return 0 }
-        let height = rowStore.rows.filter { row in
-            row.turnID == latestTurnID && !row.isSpacer
-        }.reduce(CGFloat(0)) { partial, row in
-            partial + heightIndex.height(for: row)
-        }
-        return max(0, viewportHeight - height - 8)
     }
 
     private var bottomTrailingControls: some View {

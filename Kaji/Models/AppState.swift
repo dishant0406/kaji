@@ -126,9 +126,7 @@ final class AppState {
     var pendingLastTabClose: PendingTabClose?
     var pendingUnsavedEditorTabClose: PendingTabClose?
     var pendingProcessTabClose: PendingTabClose?
-    var pendingLanguagePackInstall: PendingLanguagePackInstall?
     var pendingSaveErrorMessage: String?
-    var pendingLanguagePackInstallErrorMessage: String?
     let navigation = NavigationHistory()
     private var focusHistory: [WorktreeKey: [UUID]] = [:]
 
@@ -140,13 +138,6 @@ final class AppState {
         self.selectionStore = selectionStore
         self.terminalViews = terminalViews
         self.workspacePersistence = workspacePersistence
-    }
-
-    func finishLanguagePackInstall(_ result: Result<LanguageDefinition, Error>) {
-        pendingLanguagePackInstall = nil
-        if case let .failure(error) = result {
-            pendingLanguagePackInstallErrorMessage = error.localizedDescription
-        }
     }
 
     func restoreSelection(projects: [Project], worktrees: [UUID: [Worktree]]) {
@@ -397,9 +388,6 @@ final class AppState {
             return
         }
         DebugFileLog.log("FileOpen", "creating built-in editor tab path=\(filePath)")
-        if let entry = LanguagePackCatalog.availableEntry(forFile: filePath), pendingLanguagePackInstall?.filePath != filePath {
-            pendingLanguagePackInstall = PendingLanguagePackInstall(filePath: filePath, entry: entry)
-        }
         dispatch(.createEditorTab(projectID: projectID, areaID: nil, filePath: filePath))
     }
 

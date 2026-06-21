@@ -16,8 +16,6 @@ let package = Package(
         .package(url: "https://github.com/EmergeTools/Pow", from: "1.0.5"),
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.1"),
         .package(url: "https://github.com/siteline/swiftui-introspect", from: "26.0.0"),
-        .package(url: "https://github.com/tree-sitter/swift-tree-sitter", from: "0.25.0"),
-        .package(url: "https://github.com/tree-sitter/tree-sitter-bash", from: "0.25.0"),
     ],
     targets: [
         .target(
@@ -74,20 +72,14 @@ let package = Package(
                 .product(name: "Pow", package: "Pow"),
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "SwiftUIIntrospect", package: "swiftui-introspect"),
-                .product(name: "SwiftTreeSitter", package: "swift-tree-sitter"),
-                .product(name: "TreeSitterBash", package: "tree-sitter-bash"),
             ],
             path: "Kaji",
             exclude: [
                 "Info.plist",
                 "Kaji.entitlements",
-                "Resources/LanguagePacks",
-                "Resources/LanguagePackRegistry",
                 "Resources/MonacoEditor",
             ],
             resources: [
-                .copy("Resources/LanguagePacks"),
-                .copy("Resources/LanguagePackRegistry"),
                 .copy("Resources/MonacoEditor"),
                 .process("Resources"),
             ],

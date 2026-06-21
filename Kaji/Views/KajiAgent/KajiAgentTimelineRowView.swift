@@ -37,7 +37,7 @@ struct KajiAgentTimelineRowView: View {
                     .padding(.leading, nestedRailLeadingPadding)
                     .padding(.vertical, 7)
             }
-        .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var nestedRailLeadingPadding: CGFloat {
@@ -58,7 +58,7 @@ struct KajiAgentTimelineRowView: View {
             KajiAgentQueuedMessagesRow(count: count)
                 .padding(.bottom, 12)
         case let .user(message),
-              let .message(message):
+             let .message(message):
             KajiAgentMessageRow(message: message)
                 .equatable()
         case let .plan(plan, expanded):

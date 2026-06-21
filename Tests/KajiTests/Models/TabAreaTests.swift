@@ -64,6 +64,42 @@ struct TabAreaTests {
         #expect(area.activeTab?.kind == .editor)
     }
 
+    @Test("hostedEditorTab uses active editor")
+    func hostedEditorTabUsesActiveEditor() {
+        let area = TabArea(projectPath: testPath)
+        area.createEditorTab(filePath: "/tmp/test/one.swift")
+        let firstEditorID = area.activeTabID
+        area.createEditorTab(filePath: "/tmp/test/two.swift")
+
+        #expect(area.hostedEditorTab?.id == area.activeTabID)
+        #expect(area.hostedEditorTab?.id != firstEditorID)
+    }
+
+    @Test("hostedEditorTab keeps most recent editor while terminal is active")
+    func hostedEditorTabKeepsMostRecentEditorWhenTerminalActive() {
+        let area = TabArea(projectPath: testPath)
+        area.createEditorTab(filePath: "/tmp/test/one.swift")
+        let firstEditorID = area.activeTabID
+        area.createEditorTab(filePath: "/tmp/test/two.swift")
+        let secondEditorID = area.activeTabID
+        area.selectTab(firstEditorID!)
+        area.selectTab(secondEditorID!)
+        area.selectTabByIndex(0)
+
+        #expect(area.activeTab?.kind == .terminal)
+        #expect(area.hostedEditorTab?.id == secondEditorID)
+    }
+
+    @Test("mountedNonEditorTabs excludes editor tabs")
+    func mountedNonEditorTabsExcludesEditorTabs() {
+        let area = TabArea(projectPath: testPath)
+        area.createEditorTab(filePath: "/tmp/test/one.swift")
+        area.createVCSTab()
+
+        #expect(area.mountedNonEditorTabs.allSatisfy { $0.kind != .editor })
+        #expect(area.mountedNonEditorTabs.contains(where: { $0.kind == .vcs }))
+    }
+
     @Test("createEditorTab reuses existing tab for same file path")
     func createEditorTabReuse() {
         let area = TabArea(projectPath: testPath)

@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import Kaji
@@ -73,6 +74,27 @@ struct KajiAgentTimelineHeightIndexTests {
         index.sync(rows: store.rows)
 
         #expect(index.layout(scrollOffset: 0, viewportHeight: 100).totalHeight < 300)
+    }
+
+    @Test
+    func syncPreservesMeasuredHeightForStreamingAssistantDelta() {
+        let id = UUID()
+        let first = KajiAgentMessage(id: id, kind: .assistant, title: "Kaji", detail: "One", isComplete: false)
+        let second = KajiAgentMessage(id: id, kind: .assistant, title: "Kaji", detail: "One two", isComplete: false)
+        let store = KajiAgentTimelineRowStore()
+        store.rebuild(turns: [KajiAgentTurn(blocks: [.message(first)])], widgetLines: [], queuedMessageCount: 0)
+        let index = KajiAgentTimelineHeightIndex()
+        index.sync(rows: store.rows)
+        _ = index.applyMeasurements(
+            [KajiAgentTimelineRowHeightValue(id: store.rows[0].id, height: 240)],
+            rowStore: store,
+            scrollOffset: 0
+        )
+
+        store.rebuild(turns: [KajiAgentTurn(blocks: [.message(second)])], widgetLines: [], queuedMessageCount: 0)
+        index.sync(rows: store.rows)
+
+        #expect(index.height(for: store.rows[0]) == 240)
     }
 
     private func rows(count: Int) -> [KajiAgentTimelineRow] {

@@ -246,46 +246,26 @@ struct KajiAgentHome: View {
     }
 
     private var composer: some View {
-        VStack(spacing: 10) {
-            if let question = store.loginQuestion ?? store.pendingQuestion {
-                KajiAgentQuestionPrompt(question: question) { answer in
-                    store.answerQuestion(question, value: answer)
-                    requestFocus()
-                } onCancel: {
-                    store.cancelQuestion(question)
-                    requestFocus()
-                }
-            }
-            KajiAgentLoginInstructionsView(store: store)
-            if !attachments.isEmpty {
-                AskAttachmentStrip(attachments: attachments, onRemove: removeAttachment, onPreview: { previewAttachment = $0 })
-            }
-            if let activePanel {
-                KajiAgentControlPanel(
-                    panel: activePanel,
-                    store: store,
-                    onSelectSession: { requestSessionSwitch(path: $0.path) },
-                    onClose: { self.activePanel = nil }
-                )
-            }
-            AgentComposer(
-                prompt: $prompt,
-                completionState: $completionState,
-                isFocused: $focused,
-                placeholder: store.pendingQuestion == nil ? "Ask Kaji Agent to build, fix, review, or research" : "Reply to Kaji Agent",
-                isBusy: store.isRunning && store.pendingQuestion == nil,
-                isReady: store.readiness.isReady,
-                hasAttachments: !attachments.isEmpty,
-                thinkingLevel: thinkingSelection,
-                onAttach: attach,
-                onStop: stop,
-                onSubmit: submit,
-                onCompletionMove: moveCompletion,
-                onCompletionAccept: { acceptCompletion(submitAfterAccept: $0) },
-                onCompletionDismiss: { completionState.clear() }
-            )
-        }
-        .onChange(of: prompt) { _, _ in refreshCompletions() }
+        KajiAgentComposerPanel(
+            store: store,
+            prompt: $prompt,
+            attachments: $attachments,
+            previewAttachment: $previewAttachment,
+            completionState: $completionState,
+            activePanel: $activePanel,
+            isFocused: $focused,
+            thinkingLevel: thinkingSelection,
+            onSelectSession: { requestSessionSwitch(path: $0.path) },
+            onRequestFocus: requestFocus,
+            onAttach: attach,
+            onRemoveAttachment: removeAttachment,
+            onStop: stop,
+            onSubmit: submit,
+            onCompletionMove: moveCompletion,
+            onCompletionAccept: { acceptCompletion(submitAfterAccept: $0) },
+            onCompletionDismiss: { completionState.clear() },
+            onPromptChange: refreshCompletions
+        )
     }
 
     @ViewBuilder

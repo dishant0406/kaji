@@ -55,6 +55,42 @@ final class TabArea: Identifiable {
         return tabs.first { $0.id == activeTabID }
     }
 
+    var mountedTabs: [TerminalTab] {
+        let activeTabID = activeTabID
+        let recency = Dictionary(uniqueKeysWithValues: tabHistory.enumerated().map { index, tabID in
+            (tabID, index)
+        })
+        let snapshots = tabs.map { tab in
+            TabContentMountSnapshot(
+                tabID: tab.id,
+                kind: tab.kind,
+                isActive: tab.id == activeTabID,
+                isModified: tab.content.editorState?.isModified ?? false,
+                retainedUTF16Length: tab.content.editorState?.backingStore?.utf16Length,
+                recencyRank: recency[tab.id] ?? -1
+            )
+        }
+        let mountedIDs = TabContentMountPolicy.mountedTabIDs(snapshots: snapshots)
+        return tabs.filter { mountedIDs.contains($0.id) }
+    }
+
+    var mountedNonEditorTabs: [TerminalTab] {
+        mountedTabs.filter { $0.kind != .editor }
+    }
+
+    var hostedEditorTab: TerminalTab? {
+        if activeTab?.kind == .editor {
+            return activeTab
+        }
+        let editorTabs = tabs.filter { $0.kind == .editor }
+        guard !editorTabs.isEmpty else { return nil }
+        for tabID in tabHistory.reversed() {
+            guard let tab = editorTabs.first(where: { $0.id == tabID }) else { continue }
+            return tab
+        }
+        return editorTabs.first
+    }
+
     func existingFileTabID(filePath: String) -> UUID? {
         contentIndex.editorTabID(filePath: filePath)
             ?? contentIndex.filePreviewTabID(filePath: filePath)

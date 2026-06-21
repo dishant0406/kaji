@@ -123,11 +123,10 @@ struct KajiAgentAssistantTimelineApplierTests {
         var activeTurnID: KajiAgentTurn.ID?
         var tailVersion = 0
 
-        var messages: [KajiAgentMessage] { turns.flatMap(\.messages) }
-    }
+        var messages: [KajiAgentMessage] { turns.flatMap(\.messages) }    }
 }
 
-private extension KajiAgentAssistantMessageEvent {
+extension KajiAgentAssistantMessageEvent {
     static func test(type: String, delta: String?, contentIndex: Int?) -> KajiAgentAssistantMessageEvent {
         try! JSONDecoder().decode(KajiAgentAssistantMessageEvent.self, from: Data(
             #"{"type":"\#(type)","delta":"\#(delta ?? "")","contentIndex":\#(contentIndex ?? 0)}"#.utf8

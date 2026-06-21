@@ -10,6 +10,8 @@ struct KajiAgentTranscriptRestorer {
     var turns: [KajiAgentTurn] = []
     var activeTurnID: KajiAgentTurn.ID?
     var todoPhases: [KajiAgentTodoPhase]?
+    private var messageOrdinal = 0
+    private var turnOrdinal = 0
 
     static func restore(from value: KajiAgentJSONValue?) -> KajiAgentTranscriptRestoration? {
         guard let values = value?.objectValue?["messages"]?.arrayValue else { return nil }
@@ -22,12 +24,17 @@ struct KajiAgentTranscriptRestorer {
         )
     }
 
+    private func messageID(_ parts: String...) -> UUID {
+        KajiAgentTranscriptIdentity.uuid(([String(messageOrdinal)] + parts).joined(separator: "\u{1f}"))
+    }
+
     private mutating func restore(_ values: [KajiAgentJSONValue]) {
         for value in values {
             guard let object = value.objectValue,
                   let role = object["role"]?.stringValue
             else { continue }
             restore(object, role: role)
+            messageOrdinal += 1
         }
     }
 
@@ -35,36 +42,51 @@ struct KajiAgentTranscriptRestorer {
         let text = KajiAgentTextExtractor.text(from: object["content"])
         switch role {
         case "user":
-            startTurn(user: KajiAgentMessage(kind: .user, title: "You", detail: text))
+            startTurn(user: KajiAgentMessage(id: messageID("user", text), kind: .user, title: "You", detail: text))
         case "assistant":
             restoreAssistantContent(object["content"])
             if let error = object["errorMessage"]?.stringValue, !error.isEmpty {
-                appendMessage(KajiAgentMessage(kind: .error, title: "Provider error", detail: error))
+                appendMessage(KajiAgentMessage(id: messageID("error", error), kind: .error, title: "Provider error", detail: error))
             }
         case "toolResult":
             restoreToolResult(object)
         default:
             guard object["display"]?.boolValue != false else { return }
-            appendMessage(KajiAgentMessage(kind: .event, title: object["customType"]?.stringValue ?? role, detail: text))
+            appendMessage(KajiAgentMessage(
+                id: messageID("event", role, text),
+                kind: .event,
+                title: object["customType"]?.stringValue ?? role,
+                detail: text
+            ))
         }
     }
 
     private mutating func restoreAssistantContent(_ content: KajiAgentJSONValue?) {
         guard let values = content?.arrayValue else {
             let text = KajiAgentTextExtractor.assistantText(from: content)
-            if !text.isEmpty { appendMessage(KajiAgentMessage(kind: .assistant, title: "Kaji", detail: text)) }
+            if !text.isEmpty { appendMessage(KajiAgentMessage(
+                id: messageID("assistant", text),
+                kind: .assistant,
+                title: "Kaji",
+                detail: text
+            )) }
             return
         }
-        for value in values {
+        for (partIndex, value) in values.enumerated() {
             guard let object = value.objectValue, let type = object["type"]?.stringValue else { continue }
             switch type {
             case "thinking":
-                appendTextMessage(kind: .thinking, title: "Thinking", text: object["thinking"]?.stringValue ?? "")
+                appendTextMessage(kind: .thinking, title: "Thinking", text: object["thinking"]?.stringValue ?? "", key: "part.\(partIndex)")
             case "text":
-                appendTextMessage(kind: .assistant, title: "Kaji", text: object["text"]?.stringValue ?? "")
+                appendTextMessage(kind: .assistant, title: "Kaji", text: object["text"]?.stringValue ?? "", key: "part.\(partIndex)")
             case "image":
                 let label = object["mimeType"]?.stringValue ?? object["mime_type"]?.stringValue ?? "image"
-                appendMessage(KajiAgentMessage(kind: .assistant, title: "Kaji", detail: "[Image: \(label)]"))
+                appendMessage(KajiAgentMessage(
+                    id: messageID("image", "part.\(partIndex)", label),
+                    kind: .assistant,
+                    title: "Kaji",
+                    detail: "[Image: \(label)]"
+                ))
             case "toolCall":
                 restoreToolCall(object)
             default:
@@ -74,21 +96,37 @@ struct KajiAgentTranscriptRestorer {
     }
 
     private mutating func restoreToolCall(_ object: [String: KajiAgentJSONValue]) {
+        let id = object["id"]?.stringValue ?? KajiAgentTranscriptIdentity.uuid("restored-tool", String(messageOrdinal)).uuidString
+        ensureActiveTurn()
         appendTool(KajiAgentMessage(
+            id: toolMessageID(id),
             kind: .tool,
             title: object["name"]?.stringValue ?? "Tool",
             detail: "Pending result",
-            toolCallID: object["id"]?.stringValue ?? UUID().uuidString,
+            toolCallID: id,
             toolArguments: object["arguments"]?.prettyDescription,
             isComplete: false
         ))
     }
 
+    private func toolMessageID(_ id: String) -> UUID {
+        KajiAgentTranscriptIdentity.uuid("tool", activeTurnID?.uuidString ?? "no-turn", String(messageOrdinal), id)
+    }
+
     private mutating func restoreToolResult(_ object: [String: KajiAgentJSONValue]) {
-        let id = object["toolCallId"]?.stringValue ?? UUID().uuidString
+        let id = object["toolCallId"]?.stringValue ?? KajiAgentTranscriptIdentity.uuid("restored-tool-result", String(messageOrdinal))
+            .uuidString
         let name = object["toolName"]?.stringValue ?? "Tool"
         if toolLocation(id: id) == nil {
-            appendTool(KajiAgentMessage(kind: .tool, title: name, detail: "", toolCallID: id, isComplete: false))
+            ensureActiveTurn()
+            appendTool(KajiAgentMessage(
+                id: toolMessageID(id),
+                kind: .tool,
+                title: name,
+                detail: "",
+                toolCallID: id,
+                isComplete: false
+            ))
         }
         guard let location = toolLocation(id: id) else { return }
         updateToolOutput(at: location, output: KajiAgentTextExtractor.text(from: object["content"]), complete: true)
@@ -105,18 +143,19 @@ struct KajiAgentTranscriptRestorer {
              .missingPhases:
             return
         case let .failed(detail):
-            appendMessage(KajiAgentMessage(kind: .error, title: "Todo update failed", detail: detail))
+            appendMessage(KajiAgentMessage(id: messageID("todo-error", detail), kind: .error, title: "Todo update failed", detail: detail))
         case let .phases(phases):
             todoPhases = phases
         }
     }
 
-    private mutating func appendTextMessage(kind: KajiAgentMessageKind, title: String, text: String) {
-        if !text.isEmpty { appendMessage(KajiAgentMessage(kind: kind, title: title, detail: text)) }
+    private mutating func appendTextMessage(kind: KajiAgentMessageKind, title: String, text: String, key: String) {
+        if !text.isEmpty { appendMessage(KajiAgentMessage(id: messageID("\(kind)", key, text), kind: kind, title: title, detail: text)) }
     }
 
     private mutating func startTurn(user: KajiAgentMessage) {
-        let turn = KajiAgentTurn(user: user)
+        let turn = KajiAgentTurn(id: KajiAgentTranscriptIdentity.uuid("restored-turn", String(turnOrdinal), user.id.uuidString), user: user)
+        turnOrdinal += 1
         turns.append(turn)
         activeTurnID = turn.id
     }
@@ -137,12 +176,16 @@ struct KajiAgentTranscriptRestorer {
             turns[turnIndex].blocks[blockIndex] = .toolGroup(group)
             return
         }
-        turns[turnIndex].blocks.append(.toolGroup(KajiAgentToolGroup(tools: [tool])))
+        turns[turnIndex].blocks.append(.toolGroup(KajiAgentToolGroup(
+            id: KajiAgentTranscriptIdentity.uuid("toolGroup", turns[turnIndex].id.uuidString, tool.id.uuidString),
+            tools: [tool]
+        )))
     }
 
     private mutating func ensureActiveTurn() {
         if activeTurnIndex() != nil { return }
-        let turn = KajiAgentTurn(user: nil)
+        let turn = KajiAgentTurn(id: KajiAgentTranscriptIdentity.uuid("restored-turn", String(turnOrdinal)))
+        turnOrdinal += 1
         turns.append(turn)
         activeTurnID = turn.id
     }

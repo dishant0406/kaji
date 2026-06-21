@@ -28,7 +28,17 @@ struct MonacoAssetServerTests {
         let response = MonacoAssetServer.response(for: "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n", root: root)
         let text = String(data: response.data, encoding: .utf8) ?? ""
         #expect(text.contains("HTTP/1.1 200 OK"))
+        #expect(text.contains("Cache-Control: no-cache"))
         #expect(text.contains("body"))
+    }
+
+    @Test("serves hashed assets with long cache lifetime")
+    func servesHashedAssetsWithLongCacheLifetime() throws {
+        let root = try makeRoot()
+        try "body".write(to: root.appendingPathComponent("main-abc123.js"), atomically: true, encoding: .utf8)
+        let response = MonacoAssetServer.response(for: "GET /main-abc123.js HTTP/1.1\r\nHost: localhost\r\n\r\n", root: root)
+        let text = String(data: response.data, encoding: .utf8) ?? ""
+        #expect(text.contains("Cache-Control: public, max-age=31536000, immutable"))
     }
 
     private func makeRoot() throws -> URL {

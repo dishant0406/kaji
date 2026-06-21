@@ -28,6 +28,7 @@ struct KajiAgentMessageRow: View, Equatable {
                     .frame(maxWidth: KajiAgentTranscriptMetrics.proseWidth, alignment: .leading)
                 } else {
                     KajiAgentStreamingMarkdownText(
+                        messageID: message.id,
                         content: message.detail,
                         size: KajiAgentTranscriptMetrics.assistantFont,
                         color: KajiTheme.fg

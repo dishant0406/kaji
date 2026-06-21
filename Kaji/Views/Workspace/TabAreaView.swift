@@ -72,31 +72,41 @@ struct TabAreaView: View {
                 Rectangle().fill(KajiTheme.border).frame(height: 1)
             }
             ZStack {
-                ForEach(area.tabs) { tab in
+                ForEach(area.mountedNonEditorTabs) { tab in
                     let isActive = tab.id == area.activeTabID
-                    if isActive || tab.kind.keepsMountedWhenInactive {
-                        TabContentView(
-                            tab: tab,
-                            focused: isActive && isFocused && isActiveProject,
-                            visible: isActive && isActiveProject && !workspaceOccluded,
-                            onFocus: onFocus,
-                            onProcessExit: { onForceCloseTab(tab.id) },
-                            onClosePane: onCloseArea,
-                            onSplitRequest: { direction, position in
-                                appState.dispatch(.splitArea(.init(
-                                    projectID: projectID,
-                                    areaID: area.id,
-                                    direction: direction,
-                                    position: position
-                                )))
-                            }
-                        )
-                        .zIndex(isActive ? 1 : 0)
-                        .opacity(isActive ? 1 : 0)
-                        .allowsHitTesting(isActive)
-                    }
+                    TabContentView(
+                        tab: tab,
+                        focused: isActive && isFocused && isActiveProject,
+                        visible: isActive && isActiveProject && !workspaceOccluded,
+                        onFocus: onFocus,
+                        onProcessExit: { onForceCloseTab(tab.id) },
+                        onClosePane: onCloseArea,
+                        onSplitRequest: { direction, position in
+                            appState.dispatch(.splitArea(.init(
+                                projectID: projectID,
+                                areaID: area.id,
+                                direction: direction,
+                                position: position
+                            )))
+                        }
+                    )
+                    .zIndex(isActive ? 1 : 0)
+                    .opacity(isActive ? 1 : 0)
+                    .allowsHitTesting(isActive)
+                }
+                if let editorTab = area.hostedEditorTab {
+                    let isActive = editorTab.id == area.activeTabID
+                    EditorAreaHostView(
+                        tab: editorTab,
+                        focused: isActive && isFocused && isActiveProject,
+                        onFocus: onFocus
+                    )
+                    .zIndex(isActive ? 1 : 0)
+                    .opacity(isActive ? 1 : 0)
+                    .allowsHitTesting(isActive)
                 }
             }
+            .background(KajiTheme.bg)
             .overlay {
                 DropZoneHighlight(
                     zone: paneDragCoordinator.hoveredZone ?? .left,

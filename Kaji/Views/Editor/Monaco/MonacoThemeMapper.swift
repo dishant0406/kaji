@@ -31,7 +31,12 @@ enum MonacoThemeMapper {
 private extension NSColor {
     var kajiHexRGB: String {
         let color = usingColorSpace(.sRGB) ?? self
-        return String(format: "#%02X%02X%02X", Int(color.redComponent * 255), Int(color.greenComponent * 255), Int(color.blueComponent * 255))
+        return String(
+            format: "#%02X%02X%02X",
+            Int(color.redComponent * 255),
+            Int(color.greenComponent * 255),
+            Int(color.blueComponent * 255)
+        )
     }
 
     var kajiHexRGBA: String {

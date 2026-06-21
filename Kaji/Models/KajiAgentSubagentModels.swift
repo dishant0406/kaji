@@ -17,6 +17,7 @@ struct KajiAgentTaskToolDetails: Hashable {
         self.asyncState = asyncState
         self.jobID = jobID
     }
+
     init?(json: KajiAgentJSONValue?) {
         guard let object = json?.objectValue else { return nil }
         progress = object["progress"]?.arrayValue?.compactMap(KajiAgentSubagentProgress.init(json:)) ?? []
@@ -87,6 +88,7 @@ struct KajiAgentSubagentProgress: Identifiable, Hashable {
         self.cost = cost
         self.sessionFile = sessionFile
     }
+
     init?(json: KajiAgentJSONValue) {
         guard let object = json.objectValue,
               let id = object["id"]?.stringValue,

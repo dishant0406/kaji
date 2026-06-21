@@ -12,4 +12,3 @@ struct KajiCodeDiagnostic: Identifiable, Hashable {
     let severity: KajiCodeDiagnosticSeverity
     let message: String
 }
-

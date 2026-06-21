@@ -17,6 +17,7 @@ final class KajiAgentStore {
     var turns: [KajiAgentTurn] = []
     var messages: [KajiAgentMessage] { turns.flatMap(\.messages) }
     var pendingQuestion: KajiAgentQuestion?
+    var pendingApproval: KajiAgentApprovalRequest?
     var settingsQuestion: KajiAgentQuestion?
     var editorQuestion: KajiAgentQuestion?
     var loginQuestion: KajiAgentQuestion?
@@ -150,6 +151,7 @@ final class KajiAgentStore {
         restoredTranscriptSessionKey = nil
         restoringTranscriptSessionKey = nil
         pendingQuestion = nil
+        pendingApproval = nil
         send(KajiAgentRPCFrame(type: "new_session")) { [weak self] frame in
             self?.applyState(frame.data)
         }
@@ -410,6 +412,16 @@ final class KajiAgentStore {
         } else {
             send(KajiAgentRPCFrame(id: question.id, type: "extension_ui_response", value: value))
         }
+    }
+
+    func answerApproval(_ request: KajiAgentApprovalRequest, option: KajiAgentApprovalOption) {
+        clearQuestion(id: request.id)
+        send(KajiAgentRPCFrame(id: request.id, type: "extension_ui_response", confirmed: option.isAllow))
+    }
+
+    func cancelApproval(_ request: KajiAgentApprovalRequest) {
+        clearQuestion(id: request.id)
+        send(KajiAgentRPCFrame(id: request.id, type: "extension_ui_response", cancelled: true))
     }
 
     func cancelQuestion(_ question: KajiAgentQuestion) {
@@ -732,7 +744,12 @@ final class KajiAgentStore {
         switch message.role {
         case "user":
             KajiAgentTimeline.startTurn(
-                user: KajiAgentMessage(kind: .user, title: "You", detail: message.textContent),
+                user: KajiAgentMessage(
+                    id: KajiAgentTranscriptIdentity.uuid("user", String(message.timestamp ?? 0), message.textContent),
+                    kind: .user,
+                    title: "You",
+                    detail: message.textContent
+                ),
                 turns: &turns,
                 activeTurnID: &activeTurnID,
                 tailVersion: &tailVersion
@@ -749,7 +766,12 @@ final class KajiAgentStore {
         default:
             if message.display != false {
                 KajiAgentTimeline.appendResponseMessage(
-                    KajiAgentMessage(kind: .event, title: message.customType ?? message.role, detail: message.textContent),
+                    KajiAgentMessage(
+                        id: KajiAgentTranscriptIdentity.uuid("event", message.customType ?? message.role, message.textContent),
+                        kind: .event,
+                        title: message.customType ?? message.role,
+                        detail: message.textContent
+                    ),
                     turns: &turns,
                     activeTurnID: &activeTurnID,
                     tailVersion: &tailVersion
@@ -768,6 +790,8 @@ final class KajiAgentStore {
         switch action {
         case let .question(question):
             setQuestion(question)
+        case let .approval(request):
+            setApproval(request)
         case let .clearQuestion(id):
             clearQuestion(id: id)
         case let .system(title, detail, kind):
@@ -823,7 +847,12 @@ final class KajiAgentStore {
 
     private func appendSystem(title: String, detail: String, kind: KajiAgentMessageKind) {
         guard !detail.isEmpty else { return }
-        appendSystem(KajiAgentMessage(kind: kind, title: title, detail: detail))
+        appendSystem(KajiAgentMessage(
+            id: KajiAgentTranscriptIdentity.uuid("system", title, detail),
+            kind: kind,
+            title: title,
+            detail: detail
+        ))
     }
 
     private func appendSystem(_ message: KajiAgentMessage) {
@@ -904,8 +933,13 @@ final class KajiAgentStore {
         if question.method == "editor" { editorQuestion = question }
     }
 
+    private func setApproval(_ request: KajiAgentApprovalRequest) {
+        pendingApproval = request
+    }
+
     private func clearQuestion(id: String) {
         if pendingQuestion?.id == id { pendingQuestion = nil }
+        if pendingApproval?.id == id { pendingApproval = nil }
         if settingsQuestion?.id == id { settingsQuestion = nil }
         if editorQuestion?.id == id { editorQuestion = nil }
         if loginQuestion?.id == id { loginQuestion = nil }

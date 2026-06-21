@@ -20,65 +20,45 @@ enum GitCommitMessageAgentError: LocalizedError {
 @MainActor
 enum GitCommitMessageAgent {
     static var isAvailable: Bool {
-        let settings = ParentAgentSettingsStore.shared
-        return settings.readiness.isReady && settings.authStatus.configured
+        KajiAgentRuntimeLocator.resolveLaunch(
+            projectPath: nil,
+            approvalMode: KajiAgentPermissionMode.readAllow.rawValue,
+            noSession: true,
+            noLSP: true,
+            noTools: true
+        ).readiness.isReady
+    }
+
+    static func isAvailable(settings _: GitCommitMessageSettingsSnapshot) -> Bool {
+        isAvailable
     }
 
     static func unavailableReason() -> String? {
-        let settings = ParentAgentSettingsStore.shared
-        if !settings.readiness.isReady { return settings.readiness.detail }
-        if !settings.authStatus.configured { return settings.authStatus.label }
-        return nil
+        let readiness = KajiAgentRuntimeLocator.resolveLaunch(
+            projectPath: nil,
+            approvalMode: KajiAgentPermissionMode.readAllow.rawValue,
+            noSession: true,
+            noLSP: true,
+            noTools: true
+        ).readiness
+        return readiness.isReady ? nil : readiness.detail
+    }
+
+    static func unavailableReason(settings _: GitCommitMessageSettingsSnapshot) -> String? {
+        unavailableReason()
     }
 
     static func generate(
         _ request: GitCommitMessageAgentRequest,
-        appState: AppState,
-        projectStore: ProjectStore,
-        worktreeStore: WorktreeStore
+        appState _: AppState,
+        projectStore _: ProjectStore,
+        worktreeStore _: WorktreeStore
     ) async throws -> GitCommitMessageAgentResult {
-        guard isAvailable else {
-            throw GitCommitMessageAgentError.unavailable(unavailableReason() ?? "Kaji Agent is unavailable.")
+        guard isAvailable(settings: request.settings) else {
+            throw GitCommitMessageAgentError.unavailable(
+                unavailableReason(settings: request.settings) ?? "Kaji Agent is unavailable."
+            )
         }
-        return try await run(request, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-    }
-
-    private static func run(
-        _ request: GitCommitMessageAgentRequest,
-        appState: AppState,
-        projectStore: ProjectStore,
-        worktreeStore: WorktreeStore
-    ) async throws -> GitCommitMessageAgentResult {
-        let store = ParentAgentTaskStore(persistence: temporaryPersistence())
-        let controller = ParentAgentController(store: store)
-        let box = GitCommitMessageContinuationBox(controller: controller)
-        controller.process.environmentOverrides = ["KAJI_PARENT_AGENT_MODE": "kajicommit"]
-        controller.process.onMessage = { message in
-            controller.handle(message)
-            box.handle(message)
-        }
-        controller.process.onError = { message in
-            box.fail(message)
-        }
-        return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                box.continuation = continuation
-                controller.submit(
-                    prompt: GitCommitMessageAgentPrompt.make(request),
-                    appState: appState,
-                    projectStore: projectStore,
-                    worktreeStore: worktreeStore
-                )
-            }
-        } onCancel: {
-            Task { @MainActor in controller.stop() }
-        }
-    }
-
-    private static func temporaryPersistence() -> ParentAgentTaskPersistence {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kaji-commit-agent-\(UUID().uuidString)")
-            .appendingPathExtension("json")
-        return ParentAgentTaskPersistence(store: CodableFileStore(fileURL: url))
+        return try await GitCommitMessageRuntimeClient.generate(request)
     }
 }

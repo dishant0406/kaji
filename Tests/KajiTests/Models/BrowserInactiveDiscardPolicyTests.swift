@@ -23,7 +23,9 @@ struct BrowserControllerRegistryDiscardTests {
         _ = registry.controller(for: id)
 
         registry.scheduleDiscard(after: .milliseconds(5))
-        try await Task.sleep(for: .seconds(1))
+        try await waitUntil {
+            registry.controllerIDs.isEmpty
+        }
 
         #expect(registry.controllerIDs.isEmpty)
     }
@@ -39,5 +41,14 @@ struct BrowserControllerRegistryDiscardTests {
         try await Task.sleep(for: .milliseconds(40))
 
         #expect(registry.controllerIDs == [id])
+    }
+
+    private func waitUntil(_ predicate: @escaping @MainActor () -> Bool) async throws {
+        for _ in 0 ..< 200 {
+            if predicate() {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
     }
 }

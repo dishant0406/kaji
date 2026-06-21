@@ -69,3 +69,27 @@ struct KajiAgentTimelineRow: Identifiable, Hashable {
         self.parentID = parentID
     }
 }
+
+extension KajiAgentTimelineRow {
+    func preservesMeasuredHeight(replacing old: KajiAgentTimelineRow) -> Bool {
+        guard id == old.id else { return false }
+        switch (old.kind, kind) {
+        case let (.message(oldMessage), .message(newMessage)):
+            return oldMessage.preservesMeasuredHeight(replacing: newMessage)
+        case let (.plan(oldPlan, oldExpanded), .plan(newPlan, newExpanded)):
+            return oldExpanded == newExpanded && oldPlan.id == newPlan.id
+        default:
+            return self == old
+        }
+    }
+}
+
+private extension KajiAgentMessage {
+    func preservesMeasuredHeight(replacing next: KajiAgentMessage) -> Bool {
+        id == next.id
+            && kind == next.kind
+            && kind == .assistant
+            && !isComplete
+            && !next.isComplete
+    }
+}

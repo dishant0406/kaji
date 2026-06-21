@@ -32,7 +32,7 @@ struct KajiAgentFloatingTaskState: Equatable {
     }
 
     var title: String {
-        if openTodoCount > 0 && runningSubagentCount > 0 {
+        if openTodoCount > 0, runningSubagentCount > 0 {
             let todos = "\(openTodoCount) todo\(openTodoCount == 1 ? "" : "s")"
             let agents = "\(runningSubagentCount) agent\(runningSubagentCount == 1 ? "" : "s")"
             return "\(todos) · \(agents)"

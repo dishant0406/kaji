@@ -67,11 +67,17 @@ final class MonacoAssetServer: @unchecked Sendable {
         guard request.method == "GET" || request.method == "HEAD" else { return .methodNotAllowed() }
         guard let fileURL = resolvedFileURL(for: request.path, root: root) else { return .notFound() }
         guard let data = try? Data(contentsOf: fileURL) else { return .notFound() }
-        return MonacoAssetHTTPResponse(status: "200 OK", contentType: contentType(for: fileURL), body: request.method == "HEAD" ? Data() : data)
+        return MonacoAssetHTTPResponse(
+            status: "200 OK",
+            contentType: contentType(for: fileURL),
+            cacheControl: cacheControl(for: fileURL),
+            body: request.method == "HEAD" ? Data() : data
+        )
     }
 
     static func resolvedFileURL(for requestPath: String, root: URL) -> URL? {
-        let pathOnly = requestPath.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? requestPath
+        let pathOnly = requestPath.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first
+            .map(String.init) ?? requestPath
         let rawPath = pathOnly == "/" ? "/index.html" : pathOnly
         guard rawPath.hasPrefix("/") else { return nil }
         guard let decoded = rawPath.removingPercentEncoding else { return nil }
@@ -89,9 +95,12 @@ final class MonacoAssetServer: @unchecked Sendable {
         let candidates = [
             Bundle.appResources.resourceURL?.appendingPathComponent("MonacoEditor", isDirectory: true),
             Bundle.main.resourceURL?.appendingPathComponent("MonacoEditor", isDirectory: true),
-            URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Kaji/Resources/MonacoEditor", isDirectory: true),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(
+                "Kaji/Resources/MonacoEditor",
+                isDirectory: true
+            ),
         ]
-        return candidates.compactMap { $0 }.first(where: isReadableDirectory)
+        return candidates.compactMap(\.self).first(where: isReadableDirectory)
     }
 
     private static func isReadableDirectory(_ url: URL) -> Bool {
@@ -102,21 +111,30 @@ final class MonacoAssetServer: @unchecked Sendable {
     private static func contentType(for url: URL) -> String {
         switch url.pathExtension.lowercased() {
         case "html": "text/html; charset=utf-8"
-        case "js", "mjs": "text/javascript; charset=utf-8"
+        case "js",
+             "mjs": "text/javascript; charset=utf-8"
         case "css": "text/css; charset=utf-8"
-        case "json", "map": "application/json; charset=utf-8"
+        case "json",
+             "map": "application/json; charset=utf-8"
         case "wasm": "application/wasm"
         case "svg": "image/svg+xml"
         case "png": "image/png"
-        case "jpg", "jpeg": "image/jpeg"
+        case "jpg",
+             "jpeg": "image/jpeg"
         case "woff": "font/woff"
         case "woff2": "font/woff2"
         case "ttf": "font/ttf"
         default: "application/octet-stream"
         }
     }
-}
 
+    private static func cacheControl(for url: URL) -> String {
+        if url.lastPathComponent == "index.html" {
+            return "no-cache"
+        }
+        return "public, max-age=31536000, immutable"
+    }
+}
 
 struct MonacoAssetHTTPRequest {
     let method: String
@@ -133,9 +151,11 @@ struct MonacoAssetHTTPRequest {
         path = tokens[1]
     }
 }
+
 struct MonacoAssetHTTPResponse {
     let status: String
     let contentType: String
+    let cacheControl: String
     let body: Data
 
     var data: Data {
@@ -143,7 +163,7 @@ struct MonacoAssetHTTPResponse {
             "HTTP/1.1 \(status)",
             "Content-Type: \(contentType)",
             "Content-Length: \(body.count)",
-            "Cache-Control: no-store",
+            "Cache-Control: \(cacheControl)",
             "X-Content-Type-Options: nosniff",
             "Connection: close",
             "",
@@ -155,15 +175,30 @@ struct MonacoAssetHTTPResponse {
     }
 
     static func badRequest() -> MonacoAssetHTTPResponse {
-        MonacoAssetHTTPResponse(status: "400 Bad Request", contentType: "text/plain; charset=utf-8", body: Data("bad request".utf8))
+        MonacoAssetHTTPResponse(
+            status: "400 Bad Request",
+            contentType: "text/plain; charset=utf-8",
+            cacheControl: "no-store",
+            body: Data("bad request".utf8)
+        )
     }
 
     static func methodNotAllowed() -> MonacoAssetHTTPResponse {
-        MonacoAssetHTTPResponse(status: "405 Method Not Allowed", contentType: "text/plain; charset=utf-8", body: Data("method not allowed".utf8))
+        MonacoAssetHTTPResponse(
+            status: "405 Method Not Allowed",
+            contentType: "text/plain; charset=utf-8",
+            cacheControl: "no-store",
+            body: Data("method not allowed".utf8)
+        )
     }
 
     static func notFound() -> MonacoAssetHTTPResponse {
-        MonacoAssetHTTPResponse(status: "404 Not Found", contentType: "text/plain; charset=utf-8", body: Data("not found".utf8))
+        MonacoAssetHTTPResponse(
+            status: "404 Not Found",
+            contentType: "text/plain; charset=utf-8",
+            cacheControl: "no-store",
+            body: Data("not found".utf8)
+        )
     }
 }
 

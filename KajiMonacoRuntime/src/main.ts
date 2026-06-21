@@ -1,5 +1,5 @@
 import './style.css';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
@@ -61,15 +61,15 @@ window.MonacoEnvironment = {
 const container = document.getElementById('editor');
 if (!container) throw new Error('Missing editor container');
 
-const editorID = new URLSearchParams(window.location.search).get('editorID') ?? 'default';
+let editorID = new URLSearchParams(window.location.search).get('editorID') ?? 'default';
 let model: monaco.editor.ITextModel | null = null;
+const viewStates = new Map<string, monaco.editor.ICodeEditorViewState | null>();
 let suppressChange = false;
 let currentSearchNeedle = '';
 let currentSearchCaseSensitive = false;
 let currentSearchRegex = false;
 let searchMatches: SearchMatch[] = [];
 let currentSearchIndex = -1;
-let diagnosticsOwner = 'kaji';
 const editor = monaco.editor.create(container, {
   automaticLayout: true,
   minimap: { enabled: false },
@@ -95,6 +95,16 @@ function currentModel() {
   return value;
 }
 
+function saveCurrentViewState() {
+  if (!model) return;
+  viewStates.set(model.uri.toString(), editor.saveViewState());
+}
+
+function restoreViewState(uri: monaco.Uri) {
+  const state = viewStates.get(uri.toString());
+  if (state) editor.restoreViewState(state);
+}
+
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
@@ -111,20 +121,43 @@ function commandPayload(command: KajiCommand): Record<string, unknown> {
   return command.payload ?? {};
 }
 
+function bindEditor(command: KajiCommand) {
+  saveCurrentViewState();
+  const payload = commandPayload(command);
+  editorID = asString(payload.editorID, command.editorID || editorID);
+  currentSearchNeedle = '';
+  currentSearchCaseSensitive = false;
+  currentSearchRegex = false;
+  searchMatches = [];
+  currentSearchIndex = -1;
+  post('ready', { userAgent: navigator.userAgent, preloaded: true });
+}
+
 function setModel(payload: Record<string, unknown>) {
   const uri = monaco.Uri.parse(asString(payload.uri, `kaji://editor/${editorID}`));
+  const uriString = uri.toString();
   const language = asString(payload.language, 'plaintext');
   const text = asString(payload.text);
   const readOnly = asBoolean(payload.readOnly);
+  const backingStoreVersion = asNumber(payload.backingStoreVersion, -1);
   const existing = monaco.editor.getModel(uri);
+  saveCurrentViewState();
   suppressChange = true;
   try {
     model = existing ?? monaco.editor.createModel(text, language, uri);
     if (existing && existing.getValue() !== text) existing.setValue(text);
     monaco.editor.setModelLanguage(model, language);
     editor.setModel(model);
+    restoreViewState(uri);
     editor.updateOptions({ readOnly });
-    setTimeout(() => postSearchState(), 0);
+    const activeEditorID = editorID;
+    const activeModel = model;
+    setTimeout(() => {
+      if (editorID !== activeEditorID || model !== activeModel) return;
+      post('modelActivated', { uri: uriString, backingStoreVersion });
+      postSearchState();
+      postDiagnostics();
+    }, 0);
   } finally {
     suppressChange = false;
   }
@@ -168,31 +201,6 @@ function applyInlineEdit(payload: Record<string, unknown>) {
   editor.executeEdits('kaji-inline-edit', [{ range: selection, text, forceMoveMarkers: true }]);
 }
 
-function setDiagnostics(payload: Record<string, unknown>) {
-  const markersPayload = Array.isArray(payload.markers) ? payload.markers : [];
-  const markers: monaco.editor.IMarkerData[] = markersPayload.flatMap((entry) => {
-    if (!entry || typeof entry !== 'object') return [];
-    const value = entry as Record<string, unknown>;
-    return [{
-      startLineNumber: asNumber(value.startLineNumber, 1),
-      startColumn: asNumber(value.startColumn, 1),
-      endLineNumber: asNumber(value.endLineNumber, asNumber(value.startLineNumber, 1)),
-      endColumn: asNumber(value.endColumn, asNumber(value.startColumn, 1) + 1),
-      severity: markerSeverity(asString(value.severity, 'information')),
-      message: asString(value.message),
-      source: asString(value.source, 'Kaji')
-    }];
-  });
-  if (model) monaco.editor.setModelMarkers(model, diagnosticsOwner, markers);
-}
-
-function markerSeverity(severity: string): monaco.MarkerSeverity {
-  if (severity === 'error') return monaco.MarkerSeverity.Error;
-  if (severity === 'warning') return monaco.MarkerSeverity.Warning;
-  if (severity === 'hint') return monaco.MarkerSeverity.Hint;
-  return monaco.MarkerSeverity.Info;
-}
-
 function updateOptions(payload: Record<string, unknown>) {
   editor.updateOptions({
     lineNumbers: asBoolean(payload.showsLineNumbers, true) ? 'on' : 'off',
@@ -210,6 +218,24 @@ function updateOptions(payload: Record<string, unknown>) {
     fontSize: asNumber(payload.fontSize, 15),
     lineHeight: asNumber(payload.lineHeight, 21)
   });
+}
+
+function quickOutline() {
+  editor.trigger('kaji', 'editor.action.quickOutline', {});
+}
+
+function postDiagnostics() {
+  if (!model) return;
+  const markers = monaco.editor.getModelMarkers({ resource: model.uri }).map((marker) => ({
+    startLineNumber: marker.startLineNumber,
+    startColumn: marker.startColumn,
+    endLineNumber: marker.endLineNumber,
+    endColumn: marker.endColumn,
+    severity: marker.severity,
+    message: marker.message,
+    source: marker.source
+  }));
+  post('diagnosticsChanged', { diagnostics: markers });
 }
 
 function setTheme(payload: Record<string, unknown>) {
@@ -323,11 +349,12 @@ function selectedTextForState() {
 window.kajiMonacoReceive = (command: KajiCommand) => {
   try {
     const payload = commandPayload(command);
-    if (command.command === 'setModel') setModel(payload);
+    if (command.command === 'bindEditor') bindEditor(command);
+    else if (command.editorID !== editorID) return;
+    else if (command.command === 'setModel') setModel(payload);
     else if (command.command === 'appendText') appendText(payload);
     else if (command.command === 'applyEdit') applyEdit(payload);
     else if (command.command === 'applyInlineEdit') applyInlineEdit(payload);
-    else if (command.command === 'setDiagnostics') setDiagnostics(payload);
     else if (command.command === 'updateOptions') updateOptions(payload);
     else if (command.command === 'setTheme') setTheme(payload);
     else if (command.command === 'focus') editor.focus();
@@ -337,6 +364,7 @@ window.kajiMonacoReceive = (command: KajiCommand) => {
     else if (command.command === 'replaceCurrent') replaceCurrent(payload);
     else if (command.command === 'replaceAll') replaceAll(payload);
     else if (command.command === 'prepareInlineEdit') prepareInlineEdit();
+    else if (command.command === 'quickOutline') quickOutline();
   } catch (error) {
     post('error', { message: error instanceof Error ? error.message : String(error) });
   }
@@ -384,6 +412,14 @@ editor.onDidScrollChange((event) => {
 
 editor.onDidFocusEditorText(() => post('focusChanged', { focused: true }));
 editor.onDidBlurEditorText(() => post('focusChanged', { focused: false }));
+
+monaco.editor.onDidChangeMarkers((resources) => {
+  if (!model) return;
+  const modelURI = model.uri.toString();
+  if (resources.some((resource) => resource.toString() === modelURI)) {
+    postDiagnostics();
+  }
+});
 
 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => post('saveRequested'));
 

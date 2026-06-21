@@ -21,7 +21,10 @@ extension KajiAgentTimeline {
             ])
             return
         }
-        let group = KajiAgentToolGroup(tools: [tool])
+        let group = KajiAgentToolGroup(
+            id: KajiAgentTranscriptIdentity.uuid("toolGroup", turns[turnIndex].id.uuidString, tool.id.uuidString),
+            tools: [tool]
+        )
         turns[turnIndex].blocks.append(.toolGroup(group))
         KajiAgentEventLog.record("tool_group_start", fields: [
             "turn": .string(turns[turnIndex].id.uuidString),
@@ -125,7 +128,7 @@ extension KajiAgentTimeline {
     }
 }
 
-private extension Array where Element == KajiAgentTodoPhase {
+private extension [KajiAgentTodoPhase] {
     func reconciledForAbort() -> [KajiAgentTodoPhase] {
         map { phase in
             KajiAgentTodoPhase(

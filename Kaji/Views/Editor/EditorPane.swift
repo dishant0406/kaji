@@ -9,7 +9,7 @@ struct EditorPane: View {
     @Environment(GhosttyService.self) private var ghostty
     @Environment(AppTypographySettings.self) private var typography
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showsOutline = false
+    @State private var activatedMonacoRenderToken: MonacoEditorRenderToken?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,19 +17,17 @@ struct EditorPane: View {
             Rectangle().fill(KajiTheme.border).frame(height: 1)
             if state.awaitingLargeFileConfirmation {
                 largeFileConfirmation
-            } else if state.isLoading {
-                loadingView
             } else if let error = state.errorMessage {
                 errorView(error)
             } else {
-                editorContentLayer
+                editorContentLayerWithLoadingState
             }
             EditorStatusBar(state: state)
         }
         .background(KajiTheme.bg)
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded { onFocus() })
-        .task {
+        .task(id: state.id) {
             state.loadIfNeeded()
         }
         .onDisappear {
@@ -109,6 +107,17 @@ struct EditorPane: View {
         }
     }
 
+    private var editorContentLayerWithLoadingState: some View {
+        ZStack {
+            editorContentLayer
+                .opacity(state.isLoading ? 0 : 1)
+                .allowsHitTesting(!state.isLoading)
+            if state.isLoading {
+                loadingView
+            }
+        }
+    }
+
     private var editorMainContent: some View {
         Group {
             if state.isMarkdownFile {
@@ -129,59 +138,66 @@ struct EditorPane: View {
                 codeEditorContainer
             }
         }
-        .id(state.markdownViewMode)
         .transition(KajiMotion.contentSwitchTransition(reduceMotion: reduceMotion))
         .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: state.markdownViewMode)
     }
 
     private var codeEditorContainer: some View {
-        HStack(spacing: 0) {
-            MonacoEditorView(
-                state: state,
-                typography: typography,
-                themeVersion: ghostty.configVersion,
-                showsVerticalScroller: true,
-                focused: focused,
-                searchNeedle: state.searchNeedle,
-                searchNavigationVersion: state.searchNavigationVersion,
-                searchNavigationDirection: state.searchNavigationDirection,
-                searchCaseSensitive: state.searchCaseSensitive,
-                searchUseRegex: state.searchUseRegex,
-                replaceText: state.replaceText,
-                replaceVersion: state.replaceVersion,
-                replaceAllVersion: state.replaceAllVersion,
-                editorFocusVersion: state.editorFocusVersion,
-                symbolNavigationVersion: state.symbolNavigationVersion,
-                lineNavigationVersion: state.lineNavigationVersion,
-                inlineEditRequestVersion: state.inlineEditRequestVersion,
-                inlineEditApplyVersion: state.inlineEditApplyVersion,
-                lspChangeVersion: state.lspChangeVersion,
-                onFocus: onFocus
-            )
-            if showsOutline {
-                EditorOutlinePanel(symbols: state.symbols()) { symbol in
-                    state.navigate(to: symbol)
-                }
-                .transition(KajiMotion.sidePanelTransition(reduceMotion: reduceMotion))
+        let modelInput = MonacoEditorModelInput(state: state)
+        let renderToken = MonacoEditorRenderToken(modelInput: modelInput)
+        let contentVisible = MonacoEditorRevealPolicy.shouldReveal(
+            current: renderToken,
+            activated: activatedMonacoRenderToken
+        )
+
+        return ZStack {
+            HStack(spacing: 0) {
+                MonacoEditorView(
+                    state: state,
+                    modelInput: modelInput,
+                    contentVisible: contentVisible,
+                    contentRevealDuration: reduceMotion ? 0 : 0.08,
+                    typography: typography,
+                    themeVersion: ghostty.configVersion,
+                    showsVerticalScroller: true,
+                    focused: focused,
+                    searchNeedle: state.searchNeedle,
+                    searchNavigationVersion: state.searchNavigationVersion,
+                    searchNavigationDirection: state.searchNavigationDirection,
+                    searchCaseSensitive: state.searchCaseSensitive,
+                    searchUseRegex: state.searchUseRegex,
+                    replaceText: state.replaceText,
+                    replaceVersion: state.replaceVersion,
+                    replaceAllVersion: state.replaceAllVersion,
+                    editorFocusVersion: state.editorFocusVersion,
+                    quickOutlineRequestVersion: state.quickOutlineRequestVersion,
+                    lineNavigationVersion: state.lineNavigationVersion,
+                    inlineEditRequestVersion: state.inlineEditRequestVersion,
+                    inlineEditApplyVersion: state.inlineEditApplyVersion,
+                    onModelActivated: { token in
+                        activatedMonacoRenderToken = token
+                    },
+                    onFocus: onFocus
+                )
+            }
+            if !contentVisible {
+                MonacoEditorLoadingOverlay(isLoadingFile: state.isLoading)
             }
         }
         .overlay(alignment: .topTrailing) {
             Button {
-                withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
-                    showsOutline.toggle()
-                }
+                state.requestGoToSymbol()
             } label: {
                 KajiIcon(systemName: "list.bullet.rectangle", size: 12)
-                    .foregroundStyle(showsOutline ? KajiTheme.accent : KajiTheme.fgMuted)
+                    .foregroundStyle(KajiTheme.fgMuted)
                     .frame(width: 26, height: 24)
                     .background(KajiTheme.bg.opacity(0.72), in: RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.plain)
             .padding(.top, 6)
-            .padding(.trailing, showsOutline ? 248 : 8)
-            .help("Toggle Outline")
+            .padding(.trailing, 8)
+            .help("Go to Symbol")
         }
-        .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: showsOutline)
     }
 
     private func markdownPreviewContainer(mode: EditorMarkdownViewMode) -> some View {
@@ -231,6 +247,8 @@ struct EditorPane: View {
             ProgressView().controlSize(.small)
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(KajiTheme.bg)
     }
 
     private var largeFileConfirmation: some View {

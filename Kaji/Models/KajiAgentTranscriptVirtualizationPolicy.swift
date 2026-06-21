@@ -1,6 +1,6 @@
 import Foundation
 
-struct KajiAgentTranscriptVirtualizationPolicy {
+enum KajiAgentTranscriptVirtualizationPolicy {
     static let liveTailTurnLimit = 3
 
     static func split(_ turns: [KajiAgentTurn]) -> KajiAgentTranscriptSections {

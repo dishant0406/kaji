@@ -33,33 +33,6 @@ struct EditorTabStateTests {
         #expect(state.backingStore == nil)
     }
 
-    @Test("editor tabs defer syntax highlighter creation until rendering")
-    func editorTabsDeferSyntaxHighlighterCreation() throws {
-        let (directory, fileURL) = try makeEditorFixture(name: "deferred.swift", content: "let value = 1\n")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let state = EditorTabState(projectPath: directory.path, filePath: fileURL.path)
-
-        #expect(state.syntaxHighlighter == nil)
-
-        _ = state.ensureSyntaxHighlighter()
-
-        #expect(state.syntaxHighlighter != nil)
-    }
-
-    @Test("file path changes reset deferred syntax highlighter")
-    func filePathChangesResetDeferredSyntaxHighlighter() throws {
-        let (directory, fileURL) = try makeEditorFixture(name: "deferred.swift", content: "let value = 1\n")
-        let nextFileURL = directory.appendingPathComponent("plain.unknown")
-        try "plain\n".write(to: nextFileURL, atomically: true, encoding: .utf8)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let state = EditorTabState(projectPath: directory.path, filePath: fileURL.path)
-
-        _ = state.ensureSyntaxHighlighter()
-        state.updateFilePath(nextFileURL.path)
-
-        #expect(state.syntaxHighlighter == nil)
-        #expect(state.ensureSyntaxHighlighter() == nil)
-    }
 
     @Test("loadIfNeeded starts loading only once")
     func loadIfNeededStartsLoadingOnlyOnce() async throws {
@@ -76,6 +49,24 @@ struct EditorTabStateTests {
 
         #expect(state.backingStore?.fullText() == "let value = 1\n")
         #expect(state.backingStoreVersion == loadedVersion)
+    }
+
+    @Test("loadIfNeeded reloads after inactive resource release")
+    func loadIfNeededReloadsAfterInactiveResourceRelease() async throws {
+        let content = String(repeating: "let value = 1\n", count: 80_000)
+        let (directory, fileURL) = try makeEditorFixture(name: "released.swift", content: content)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let state = EditorTabState(projectPath: directory.path, filePath: fileURL.path)
+
+        state.loadIfNeeded()
+        try await waitForLoad(state)
+        state.suspendInactiveLoad()
+        #expect(state.backingStore == nil)
+
+        state.loadIfNeeded()
+        try await waitForLoad(state)
+
+        #expect(state.backingStore?.fullText() == content)
     }
 
     @Test("inactive loads are cancelled before hidden editor tabs keep streaming")
@@ -141,7 +132,7 @@ struct EditorTabStateTests {
         #expect(state.backingStore === store)
     }
 
-    @Test("large files skip document-wide markdown and symbol scans")
+    @Test("large files skip document-wide markdown scans")
     func largeFilesSkipDocumentWideScans() throws {
         let (directory, fileURL) = try makeEditorFixture(name: "large.md", content: "")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -153,7 +144,6 @@ struct EditorTabStateTests {
 
         #expect(!EditorStructuralAnalysisPolicy.allowsDocumentWideScan(store))
         #expect(state.markdownSyncAnchors().isEmpty)
-        #expect(state.symbols().isEmpty)
     }
 
     @Test("large markdown files switch back to code mode")

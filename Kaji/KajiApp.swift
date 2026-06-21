@@ -103,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = GhosttyService.shared
         _ = AppTypographySettings.shared
         ThemeService.shared.applyDefaultThemeIfNeeded()
+        MonacoPreloadService.shared.start()
         UpdateService.shared.start()
         ModifierKeyMonitor.shared.start()
         ProviderEventReceiver.shared.start()
@@ -184,7 +185,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemWakeCoordinator.shared.stop()
         CodexSessionMonitor.shared.stop()
         ProviderEventReceiver.shared.stop()
-        LanguageServerManager.shared.stopAll()
         ParentAgentController.shared.stop()
         BrowserControllerRegistry.closeAllRegisteredImmediately()
         KajiBrowserRuntimeCoordinator.shared.shutdownForTermination()

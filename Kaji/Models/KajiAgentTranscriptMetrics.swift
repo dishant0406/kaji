@@ -3,7 +3,7 @@ import CoreGraphics
 enum KajiAgentTranscriptMetrics {
     static let columnWidth: CGFloat = 860
     static let compactColumnWidth: CGFloat = 720
-    static let workbenchWidth: CGFloat = 1_320
+    static let workbenchWidth: CGFloat = 1320
     static let composerWidth: CGFloat = 760
     static let proseWidth: CGFloat = 760
     static let userWidth: CGFloat = 620

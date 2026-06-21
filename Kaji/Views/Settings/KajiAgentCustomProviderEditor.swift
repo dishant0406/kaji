@@ -173,6 +173,7 @@ struct KajiAgentCustomProviderEditor: View {
             ? "Leave blank to keep saved key"
             : draft.discovery == .azureOpenAIDeployments ? "AZURE_OPENAI_API_KEY" : "MYCO_API_KEY"
     }
+
     private var footer: some View {
         HStack(spacing: 8) {
             Text("Literal API keys are saved in OMP models.yml. Env var names are safer.")
@@ -190,6 +191,7 @@ struct KajiAgentCustomProviderEditor: View {
     private var apiOptions: [KajiSelectOption<KajiAgentCustomProviderAPI>] {
         KajiAgentCustomProviderAPI.allCases.map { KajiSelectOption(id: $0.rawValue, title: $0.title, value: $0) }
     }
+
     private var authOptions: [KajiSelectOption<KajiAgentCustomProviderAuth>] {
         KajiAgentCustomProviderAuth.allCases.map { KajiSelectOption(id: $0.rawValue, title: $0.title, value: $0) }
     }

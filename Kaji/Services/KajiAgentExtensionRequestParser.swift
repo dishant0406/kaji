@@ -14,6 +14,9 @@ enum KajiAgentExtensionRequestParser {
                 )),
             ]
         case "confirm":
+            if let request = KajiAgentApprovalRequest.fromConfirm(id: id, title: frame.title, message: frame.message) {
+                return [.approval(request)]
+            }
             return [
                 .question(KajiAgentQuestion(
                     id: id,
@@ -93,6 +96,7 @@ enum KajiAgentExtensionRequestParser {
 
 enum KajiAgentExtensionRequestAction: Equatable {
     case question(KajiAgentQuestion)
+    case approval(KajiAgentApprovalRequest)
     case clearQuestion(String)
     case system(title: String, detail: String, kind: KajiAgentMessageKind)
     case loginDisplay(KajiAgentLoginDisplay)
