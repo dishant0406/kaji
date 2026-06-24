@@ -969,6 +969,8 @@ struct MainWindow: View {
             if let project = activeProject {
                 TopBarBranchPicker()
                     .padding(.trailing, 4)
+                TopBarIDEPicker()
+                    .padding(.trailing, 4)
                 FileDiffIconButton {
                     openVCS(for: project)
                 }

@@ -1,0 +1,58 @@
+import Foundation
+
+enum ExternalIDESource: String, Codable {
+    case builtIn
+    case custom
+}
+
+struct ExternalIDE: Identifiable, Codable, Equatable {
+    let id: String
+    let displayName: String
+    let bundleIdentifiers: [String]
+    let executableNames: [String]
+    let appPaths: [String]
+    let launchArguments: [String]
+    let source: ExternalIDESource
+
+    init(
+        id: String,
+        displayName: String,
+        bundleIdentifiers: [String],
+        executableNames: [String] = [],
+        appPaths: [String] = [],
+        launchArguments: [String] = [],
+        source: ExternalIDESource = .builtIn
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.bundleIdentifiers = bundleIdentifiers
+        self.executableNames = executableNames
+        self.appPaths = appPaths
+        self.launchArguments = launchArguments
+        self.source = source
+    }
+}
+
+struct ExternalIDECustomApplication: Identifiable, Codable, Equatable {
+    let id: String
+    let displayName: String
+    let bundleIdentifier: String?
+    let appPath: String
+
+    init(id: String? = nil, displayName: String, bundleIdentifier: String?, appPath: String) {
+        self.id = id ?? (bundleIdentifier ?? appPath)
+        self.displayName = displayName
+        self.bundleIdentifier = bundleIdentifier
+        self.appPath = appPath
+    }
+
+    var ide: ExternalIDE {
+        ExternalIDE(
+            id: id,
+            displayName: displayName,
+            bundleIdentifiers: bundleIdentifier.map { [$0] } ?? [],
+            appPaths: [appPath],
+            source: .custom
+        )
+    }
+}
