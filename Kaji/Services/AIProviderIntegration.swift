@@ -123,7 +123,7 @@ final class AIProviderRegistry {
         switch source {
         case .osc: "terminal"
         case let .aiProvider(id):
-            providers.first { $0.id == id }?.iconName ?? "sparkles"
+            AgentProviderCatalog.iconName(for: id)
         case .socket: "network"
         }
     }

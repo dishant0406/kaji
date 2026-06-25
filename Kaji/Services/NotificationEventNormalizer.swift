@@ -32,7 +32,7 @@ enum NotificationEventNormalizer {
         case .osc:
             .terminal
         case let .aiProvider(id):
-            CodingAgentRegistry.shared.definition(id: id).map { NotificationRouteSource(rawValue: $0.displayName) } ?? .custom
+            AgentProviderCatalog.routeSource(for: id) ?? .custom
         case .socket:
             .custom
         }
@@ -90,6 +90,6 @@ enum NotificationEventNormalizer {
     }
 
     private static func isCodingAgent(_ source: NotificationRouteSource) -> Bool {
-        CodingAgentRegistry.shared.definitions.contains { $0.displayName == source.rawValue }
+        AgentProviderCatalog.isAgentRouteSource(source)
     }
 }

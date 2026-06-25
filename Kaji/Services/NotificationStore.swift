@@ -170,7 +170,7 @@ final class NotificationStore {
 
     private func insertIfNotFocused(_ notification: KajiNotification, appState: AppState) {
         let decision = NotificationDeliveryDecision.resolve(
-            isAppActive: NSApp.isActive,
+            isAppActive: NSApp?.isActive ?? false,
             isTargetTabActive: NotificationNavigator.isActiveTab(notification.tabID, appState: appState)
         )
         notification.isRead = decision == .persistReadAndDeliver
@@ -297,7 +297,11 @@ final class NotificationStore {
         else {
             return
         }
-        AIActivityStore.shared.stop(paneID: notification.paneID)
+        let message = notification.body.isEmpty ? "Session completed" : notification.body
+        if AIActivityStore.shared.stop(paneID: notification.paneID) != nil {
+            AgentRunStore.shared.complete(providerID: providerID, paneID: notification.paneID, message: message)
+            return
+        }
         AIActivityStore.shared.stop(
             providerID: providerID,
             projectID: notification.projectID,
@@ -307,7 +311,7 @@ final class NotificationStore {
             providerID: providerID,
             projectID: notification.projectID,
             worktreeID: notification.worktreeID,
-            message: notification.body.isEmpty ? "Session completed" : notification.body
+            message: message
         )
     }
 

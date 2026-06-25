@@ -53,6 +53,7 @@ final class KajiAgentStore {
     weak var worktreeStore: WorktreeStore?
 
     private let pendingRPC: KajiAgentPendingRPC
+    private let activityBridge = KajiAgentActivityBridge.shared
     private let runtimeReadiness = KajiAgentRuntimeReadinessController()
     private var projectPath: String?
     private var hasRequestedState = false
@@ -130,10 +131,14 @@ final class KajiAgentStore {
 
     func stop() {
         flushPendingTimelineUpdates()
+        let wasRunning = isRunning
         awaitingAbortStateReconciliation = true
         KajiAgentTimeline.reconcileAbortedWork(turns: &turns, todoPhases: &todoPhases, tailVersion: &tailVersion)
         send(KajiAgentRPCFrame(type: "abort"))
         isRunning = false
+        if wasRunning {
+            activityBridge.abort(scope: scope, message: "Kaji Agent stopped")
+        }
     }
 
     func stopProcess() {
@@ -541,8 +546,26 @@ final class KajiAgentStore {
         case "agent_start":
             awaitingAbortStateReconciliation = false
             isRunning = true
+            activityBridge.start(
+                scope: scope,
+                appState: appState,
+                worktreeStore: worktreeStore,
+                sessionID: activitySessionID(from: frame)
+            )
         case "agent_end":
+            let wasAborting = awaitingAbortStateReconciliation
             isRunning = false
+            if wasAborting {
+                activityBridge.abort(scope: scope, message: "Kaji Agent stopped")
+            } else {
+                activityBridge.complete(
+                    scope: scope,
+                    appState: appState,
+                    worktreeStore: worktreeStore,
+                    body: KajiAgentRunSummary.completionBody(from: turns),
+                    sessionID: sessionID
+                )
+            }
             send(KajiAgentRPCFrame(type: "get_state")) { [weak self] frame in self?.applyState(frame.data) }
         case "message_start",
              "message_update",
@@ -554,10 +577,16 @@ final class KajiAgentStore {
              "turn_end":
             handleEvent(frame.event ?? KajiAgentSessionEvent(frame: frame))
         case "fatal_error":
-            appendSystem(title: "Runtime failed", detail: frame.error ?? "Unknown runtime error", kind: .error)
+            let message = frame.error ?? "Unknown runtime error"
+            appendSystem(title: "Runtime failed", detail: message, kind: .error)
+            activityBridge.fail(scope: scope, appState: appState, worktreeStore: worktreeStore, message: message)
         default:
             break
         }
+    }
+
+    private func activitySessionID(from frame: KajiAgentRPCFrame) -> String? {
+        frame.sessionID ?? frame.sessionId ?? sessionID
     }
 
     private func requestInitialStateIfNeeded() {
@@ -590,6 +619,7 @@ final class KajiAgentStore {
     }
 
     private func handleEvent(_ event: KajiAgentSessionEvent) {
+        activityBridge.observe(scope: scope, event: event)
         KajiAgentEventLog.record("store_event", fields: [
             "type": .string(event.type),
             "messageRole": .string(event.message?.role ?? ""),
@@ -868,16 +898,24 @@ final class KajiAgentStore {
     private func handleRuntimeError(_ error: String) {
         guard runtimeErrorGate.shouldShow(error) else { return }
         appendSystem(title: "Runtime", detail: error, kind: .error)
+        if isRunning {
+            activityBridge.fail(scope: scope, appState: appState, worktreeStore: worktreeStore, message: error)
+        }
     }
 
     private func applyState(_ value: KajiAgentJSONValue?) {
         guard let snapshot = KajiAgentRuntimeStateSnapshot(json: value) else { return }
+        let wasRunning = isRunning
         sessionID = snapshot.sessionID ?? sessionID
+        activityBridge.recordSession(scope: scope, sessionID: sessionID, transcriptPath: snapshot.sessionFile)
         thinkingLevel = snapshot.thinkingLevel ?? thinkingLevel
         queuedMessageCount = snapshot.queuedMessageCount ?? queuedMessageCount
         todoPhases = snapshot.todoPhases ?? todoPhases
         modelLabel = snapshot.modelLabel ?? modelLabel
         isRunning = snapshot.isRunning ?? isRunning
+        if isRunning, !wasRunning {
+            activityBridge.start(scope: scope, appState: appState, worktreeStore: worktreeStore, sessionID: sessionID)
+        }
         restoreTranscriptIfNeeded(snapshot)
         if awaitingAbortStateReconciliation, !isRunning {
             KajiAgentTimeline.reconcileAbortedWork(turns: &turns, todoPhases: &todoPhases, tailVersion: &tailVersion)
@@ -931,10 +969,24 @@ final class KajiAgentStore {
         pendingQuestion = question
         settingsQuestion = question
         if question.method == "editor" { editorQuestion = question }
+        activityBridge.needsAttention(
+            scope: scope,
+            appState: appState,
+            worktreeStore: worktreeStore,
+            kind: "question",
+            detail: question.title
+        )
     }
 
     private func setApproval(_ request: KajiAgentApprovalRequest) {
         pendingApproval = request
+        activityBridge.needsAttention(
+            scope: scope,
+            appState: appState,
+            worktreeStore: worktreeStore,
+            kind: "approval",
+            detail: request.summary
+        )
     }
 
     private func clearQuestion(id: String) {

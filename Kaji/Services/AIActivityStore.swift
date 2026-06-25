@@ -50,6 +50,12 @@ final class AIActivityStore {
         activitiesByPaneID.values.contains { $0.projectID == projectID }
     }
 
+    func hasActiveAgent(projectID: UUID, worktreeID: UUID) -> Bool {
+        activitiesByPaneID.values.contains { activity in
+            activity.projectID == projectID && activity.worktreeID == worktreeID
+        }
+    }
+
     func start(
         providerID: String,
         paneID: UUID,
@@ -254,7 +260,9 @@ final class AIActivityStore {
             appState.workspaces.values.flatMap { workspace in
                 workspace.tabs.flatMap { workspaceTab in
                     workspaceTab.root.allAreas().flatMap { area in
-                        area.tabs.compactMap { $0.content.pane?.id }
+                        area.tabs.compactMap { tab in
+                            tab.content.pane?.id ?? tab.content.parentAgentState?.id
+                        }
                     }
                 }
             }

@@ -11,7 +11,7 @@ struct NotificationRouteSource: RawRepresentable, CaseIterable, Codable, Hashabl
     var id: String { rawValue }
 
     static var allCases: [NotificationRouteSource] {
-        CodingAgentRegistry.shared.definitions.map { NotificationRouteSource(rawValue: $0.displayName) } + [.terminal, .custom]
+        AgentProviderCatalog.routeSources + [.terminal, .custom]
     }
 
     init(rawValue: String) {

@@ -51,6 +51,7 @@ struct SidebarWorktreeRow: View {
     @State private var isRenaming = false
     @State private var renameText = ""
     @State private var notificationStore = NotificationStore.shared
+    @State private var activityStore = AIActivityStore.shared
     @FocusState private var renameFieldFocused: Bool
 
     private var displayName: String {
@@ -61,6 +62,10 @@ struct SidebarWorktreeRow: View {
         guard let branch = worktree.branch, !branch.isEmpty else { return nil }
         guard branch.caseInsensitiveCompare(displayName) != .orderedSame else { return nil }
         return branch
+    }
+
+    private var hasRunningAgent: Bool {
+        activityStore.hasActiveAgent(projectID: projectID, worktreeID: worktree.id)
     }
 
     var body: some View {
@@ -101,12 +106,18 @@ struct SidebarWorktreeRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(rowBackground, in: RoundedRectangle(cornerRadius: KajiShape.tileRadius))
+        .overlay {
+            if hasRunningAgent {
+                SidebarActivityBorder(cornerRadius: KajiShape.tileRadius, lineWidth: 1)
+            }
+        }
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
         .animation(KajiMotion.fast, value: selected)
         .animation(KajiMotion.hover, value: hovered)
         .kajiHoverEffect(isActive: hovered && !isRenaming, scale: 1.01)
         .kajiChangeFeedback(KajiMotion.selectionFeedback, value: selected, isEnabled: selected)
+        .kajiChangeFeedback(KajiMotion.attentionFeedback, value: hasRunningAgent, isEnabled: hasRunningAgent)
         .kajiPointer()
         .onTapGesture {
             guard !isRenaming else { return }

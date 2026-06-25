@@ -44,8 +44,47 @@ struct NotificationNavigatorTests {
         #expect(appState.activeProjectID == project.id)
         #expect(appState.activeWorktreeID[project.id] == worktree.id)
         #expect(appState.focusedAreaID[key] == area.id)
-        #expect(NotificationNavigator.activeTabID(appState: appState) == area.activeTabID)
+        #expect(NotificationNavigator.activeTabID(appState: appState) == workspaceTab.id)
     }
+
+    @Test
+    func resolvesKajiAgentContextFromParentAgentTab() throws {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let agentID = UUID()
+        let area = TabArea(projectPath: project.path, existingTab: TerminalTab(parentAgentState: ParentAgentTabState(
+            id: agentID,
+            projectID: project.id,
+            worktreeID: worktree.id,
+            projectPath: project.path
+        )))
+        let workspaceTab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
+        let key = WorktreeKey(projectID: project.id, worktreeID: worktree.id)
+        let appState = AppState(
+            selectionStore: NavigatorSelectionStore(),
+            terminalViews: NavigatorTerminalViews(),
+            workspacePersistence: NavigatorWorkspacePersistence()
+        )
+        appState.workspaces[key] = WorktreeWorkspace(tabs: [workspaceTab], activeTabID: workspaceTab.id)
+        appState.workspaceRoots[key] = workspaceTab.root
+        appState.focusedAreaID[key] = area.id
+        let worktreeStore = WorktreeStore(
+            persistence: NavigatorWorktreePersistence(worktrees: [project.id: [worktree]]),
+            projects: [project]
+        )
+
+        let context = try #require(NotificationNavigator.resolveKajiAgentContext(
+            for: KajiAgentScope(agentID: agentID, projectID: project.id, worktreeID: worktree.id, projectPath: project.path),
+            appState: appState,
+            worktreeStore: worktreeStore
+        ))
+
+        #expect(context.projectID == project.id)
+        #expect(context.worktreeID == worktree.id)
+        #expect(context.areaID == area.id)
+        #expect(context.tabID == workspaceTab.id)
+    }
+
 }
 
 private struct NavigatorSelectionStore: ActiveProjectSelectionStoring {

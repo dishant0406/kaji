@@ -230,6 +230,23 @@ struct AgentRunMissionControlSnapshotBuilderTests {
         #expect(item?.transcriptEntries.map(\.text) == ["Read Package.swift", "Permission requested"])
     }
 
+
+    @Test
+    func kajiAgentRunsUseNativeProviderDisplay() {
+        let project = Project(name: "muxy", path: "/tmp/muxy")
+        let worktree = Worktree(name: "main", path: "/tmp/muxy", isPrimary: true)
+        let item = AgentRunMissionControlSnapshotBuilder.items(
+            runs: [run(status: .running, providerID: AgentProviderCatalog.kajiAgentID, project: project, worktree: worktree)],
+            notifications: [],
+            projects: [project],
+            worktrees: [project.id: [worktree]]
+        ).first
+
+        #expect(item?.providerName == "Kaji Agent")
+        #expect(item?.providerIconName == "sparkles")
+        #expect(item?.title == "Kaji Agent session")
+    }
+
     private func run(
         paneID: UUID = UUID(),
         status: AgentRunStatus,

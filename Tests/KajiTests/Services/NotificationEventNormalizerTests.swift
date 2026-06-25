@@ -32,6 +32,32 @@ struct NotificationEventNormalizerTests {
         #expect(event.worktree == "muxy")
     }
 
+
+    @Test
+    func kajiAgentCompletionBecomesCompletedKajiAgentEvent() {
+        let notification = KajiNotification(
+            paneID: UUID(),
+            projectID: UUID(),
+            worktreeID: UUID(),
+            areaID: UUID(),
+            tabID: UUID(),
+            worktreePath: "/Users/dishants/projects/muxy",
+            source: .aiProvider(AgentProviderCatalog.kajiAgentID),
+            title: "Kaji Agent",
+            body: "Finished"
+        )
+
+        let event = NotificationEventNormalizer.normalize(
+            notification: notification,
+            appState: nil,
+            worktreeStore: nil
+        )
+
+        #expect(event.source.rawValue == "Kaji Agent")
+        #expect(event.kind == .completed)
+        #expect(event.title == "Kaji Agent · muxy")
+    }
+
     @Test
     func errorTextBecomesErrorEvent() {
         let notification = KajiNotification(

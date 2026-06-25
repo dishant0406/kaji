@@ -13,7 +13,7 @@ struct NotificationRoutingRule: Identifiable, Codable, Equatable {
         var id: String { rawValue }
 
         static var allCases: [SourceFilter] {
-            [.any] + CodingAgentRegistry.shared.definitions.map { SourceFilter(rawValue: $0.displayName) } + [.terminal, .custom]
+            [.any] + AgentProviderCatalog.routeSourceFilters + [.terminal, .custom]
         }
 
         init(rawValue: String) {

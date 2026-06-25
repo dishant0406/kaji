@@ -40,7 +40,7 @@ enum AgentRunMissionControlSnapshotBuilder {
         worktrees: [UUID: [Worktree]],
         now: Date = Date()
     ) -> AgentMissionControlItem {
-        let providerName = AgentMissionControlSnapshotBuilder.providerName(for: run.providerID)
+        let providerName = AgentProviderCatalog.displayName(for: run.providerID)
         let resolvedStatus = completion == nil ? status(for: run.status) : .completed
         let resolvedTimestamp = completion?.timestamp ?? run.lastEventAt
         return AgentMissionControlItem(
@@ -48,7 +48,7 @@ enum AgentRunMissionControlSnapshotBuilder {
             runID: run.id,
             providerID: run.providerID,
             providerName: providerName,
-            providerIconName: AgentMissionControlSnapshotBuilder.providerIconName(for: run.providerID),
+            providerIconName: AgentProviderCatalog.iconName(for: run.providerID),
             sessionID: run.sessionID,
             title: run.title.isEmpty ? "\(providerName) session" : run.title,
             detail: detail(run: run, completion: completion, projects: projects, worktrees: worktrees, now: now),
@@ -80,8 +80,8 @@ enum AgentRunMissionControlSnapshotBuilder {
             id: "notification:\(notification.id.uuidString)",
             runID: nil,
             providerID: providerID,
-            providerName: AgentMissionControlSnapshotBuilder.providerName(for: providerID),
-            providerIconName: AgentMissionControlSnapshotBuilder.providerIconName(for: providerID),
+            providerName: AgentProviderCatalog.displayName(for: providerID),
+            providerIconName: AgentProviderCatalog.iconName(for: providerID),
             sessionID: nil,
             title: notification.title.isEmpty ? "Agent update" : notification.title,
             detail: notification.body.isEmpty ? fallbackDetail : notification.body,

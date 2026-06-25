@@ -31,11 +31,11 @@ enum AgentMissionControlSnapshotBuilder {
     }
 
     static func providerName(for providerID: String) -> String {
-        CodingAgentRegistry.shared.definition(id: providerID)?.displayName ?? (providerID.isEmpty ? "Agent" : providerID.capitalized)
+        AgentProviderCatalog.displayName(for: providerID)
     }
 
     static func providerIconName(for providerID: String) -> String {
-        CodingAgentRegistry.shared.definition(id: providerID)?.iconName ?? "sparkles"
+        AgentProviderCatalog.iconName(for: providerID)
     }
 
     static func status(for notification: KajiNotification, now: Date = Date()) -> AgentMissionControlStatus {
