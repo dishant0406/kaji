@@ -81,6 +81,11 @@ if otool -l "$EXECUTABLE" | grep -q ".dev-support"; then
     fail "Kaji binary has .dev-support load command"
 fi
 
+if otool -L "$EXECUTABLE" | grep -q "@rpath/Sparkle.framework"; then
+    [[ -d "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework" ]] || fail "Sparkle.framework missing from app bundle"
+    otool -l "$EXECUTABLE" | grep -q "@executable_path/../Frameworks" || fail "Kaji executable cannot resolve bundled frameworks"
+fi
+
 if [[ "$LAUNCH" == true || "${KAJI_RELEASE_SMOKE_LAUNCH:-}" == "1" ]]; then
     open -n "$APP_BUNDLE"
     sleep "${KAJI_RELEASE_SMOKE_SECONDS:-5}"
