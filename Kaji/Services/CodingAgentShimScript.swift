@@ -141,16 +141,9 @@ struct CodingAgentShimScript {
         }
         resolve_kaji_graph
         ensure_kaji_bridges
-        browser_agent_config_dir="${HOME:-}/.kaji/agent-configs"
-        claude_browser_config="${KAJI_CLAUDE_BROWSER_MCP_CONFIG:-$browser_agent_config_dir/claude-browser-mcp.json}"
-        opencode_browser_config="${KAJI_OPENCODE_BROWSER_MCP_CONFIG:-$browser_agent_config_dir/opencode-browser-mcp.json}"
-        pi_browser_config="${KAJI_PI_BROWSER_MCP_CONFIG:-$browser_agent_config_dir/pi-browser-mcp.json}"
         codex_model_config="model_instructions_file=\\"${KAJI_CODE_GRAPH_INSTRUCTIONS:-}\\""
         case "\(bridge)" in
           claude)
-            if [ -f "$claude_browser_config" ]; then
-              set -- --mcp-config "$claude_browser_config" "$@"
-            fi
             if [ -n "$kaji_dir" ] && [ -d "$kaji_dir" ] && [ -n "$kaji_root" ] && [ -d "$kaji_root" ]; then
               CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 exec "$real" --add-dir "$kaji_dir" --add-dir "$kaji_root" "$@"
             fi
@@ -159,14 +152,6 @@ struct CodingAgentShimScript {
             fi
             ;;
           codex)
-            if [ -n "${KAJI_CODEX_BROWSER_MCP_ARGS:-}" ]; then
-              eval "set -- $KAJI_CODEX_BROWSER_MCP_ARGS \\"\\$@\\""
-            else
-              browser_mcp="${HOME:-}/.kaji/bin/kaji-browser-mcp"
-              if [ -x "$browser_mcp" ]; then
-                set -- -c "mcp_servers.kaji-browser.command=\\"$browser_mcp\\"" -c "mcp_servers.kaji-browser.args=[]" "$@"
-              fi
-            fi
             if [ -n "${KAJI_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$KAJI_CODE_GRAPH_INSTRUCTIONS" ]; then
               if [ -n "$kaji_dir" ] && [ -d "$kaji_dir" ] && [ -n "$kaji_root" ] && [ -d "$kaji_root" ]; then
                 exec "$real" -c "$codex_model_config" --add-dir "$kaji_dir" --add-dir "$kaji_root" "$@"
@@ -187,14 +172,8 @@ struct CodingAgentShimScript {
             if [ -n "${KAJI_CODE_GRAPH_OPENCODE_CONFIG:-}" ] && [ -f "$KAJI_CODE_GRAPH_OPENCODE_CONFIG" ]; then
               OPENCODE_CONFIG="$KAJI_CODE_GRAPH_OPENCODE_CONFIG" exec "$real" "$@"
             fi
-            if [ -f "$opencode_browser_config" ]; then
-              OPENCODE_CONFIG="$opencode_browser_config" exec "$real" "$@"
-            fi
             ;;
           pi)
-            if [ -f "$pi_browser_config" ]; then
-              set -- --mcp-config "$pi_browser_config" "$@"
-            fi
             if [ -n "${KAJI_CODE_GRAPH_INSTRUCTIONS:-}" ] && [ -f "$KAJI_CODE_GRAPH_INSTRUCTIONS" ]; then
               exec "$real" --append-system-prompt "$KAJI_CODE_GRAPH_INSTRUCTIONS" "$@"
             fi

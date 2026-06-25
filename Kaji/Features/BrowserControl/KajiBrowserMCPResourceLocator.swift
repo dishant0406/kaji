@@ -2,11 +2,15 @@ import Foundation
 
 enum KajiBrowserMCPResourceLocator {
     static let supportFileNames = [
+        "availability.js",
+        "browser-errors.js",
         "framing.js",
         "kaji-tools.js",
         "main.js",
+        "playwright-compatible-tools.js",
         "results.js",
         "session.js",
+        "tool-catalog.js",
     ]
 
     static func scriptPath(fileManager: FileManager = .default, projectRoot: URL? = nil) -> String? {

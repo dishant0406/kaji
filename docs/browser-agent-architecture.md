@@ -16,13 +16,8 @@ Kaji no longer exposes Chrome DevTools Protocol. The MCP server talks only to th
 
 Unsupported Chromium-only features include Chrome extensions, CDP-complete network interception, HAR/trace/screencast/video recording, browser-process internals, and cross-origin iframe internals. Network tools report WebKit-observed coverage rather than CDP parity.
 
-## Environment
+## MCP installation and availability
 
-Agent shims receive:
+Kaji does not inject the browser MCP server into coding-agent launches. Users install or repair the bundled `kaji-browser` server explicitly from Settings, where Kaji writes normal user MCP config entries for supported agents. The installed command points at `~/.kaji/bin/kaji-browser-mcp` and carries no session-specific environment.
 
-- `KAJI_BROWSER_BROKER_URL`
-- `KAJI_BROWSER_MCP_TOKEN`
-- `KAJI_BROWSER_SESSION_ID`
-- `KAJI_BROWSER_MCP_COMMAND`
-
-The session file lives at `~/.kaji/browser/session.json` and contains the broker URL, token, session ID, and update timestamp.
+The session file lives at `~/.kaji/browser/session.json` and contains the broker URL, token, session ID, and update timestamp. The MCP server always exposes the full WebKit-native `kaji_browser_*` catalog plus Playwright-compatible `browser_*` aliases so agents never need to use `node_repl` or manually call the broker. When Kaji Browser is unavailable, direct browser tools return structured MCP errors with codes, recovery guidance, broker source, and session path.

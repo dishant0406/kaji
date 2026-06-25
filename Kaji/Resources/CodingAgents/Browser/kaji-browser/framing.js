@@ -3,6 +3,7 @@ class MessageFramer {
     this.buffer = Buffer.alloc(0);
     this.onMessage = onMessage;
     input.on('data', chunk => this.read(chunk));
+    if (typeof input.resume === 'function') input.resume();
   }
 
   read(chunk) {

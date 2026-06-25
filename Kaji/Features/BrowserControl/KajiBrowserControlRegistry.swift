@@ -32,7 +32,7 @@ final class KajiBrowserControlRegistry {
         do {
             switch command.action {
             case "current": return current(target: target)
-            case "navigate": return navigate(command.arguments, target: target)
+            case "navigate": return try await navigate(command.arguments, target: target)
             case "new_tab": return newTab(command.arguments, target: target)
             case "back": return back(target: target)
             case "forward": return forward(target: target)

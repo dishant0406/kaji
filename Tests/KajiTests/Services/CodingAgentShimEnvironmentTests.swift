@@ -27,11 +27,8 @@ struct CodingAgentShimEnvironmentTests {
         #expect(values["KAJI_REAL_CODEX"] == fixture.bin.appendingPathComponent("codex").path)
         #expect(values["KAJI_AGENT_SHIM_DIR"] == shimDirectory)
         #expect(values["ZDOTDIR"] == KajiShellBootstrapInstaller.directory(homeDirectory: fixture.home.path).path)
-        #expect(values["KAJI_BROWSER_MCP_COMMAND"] == "\(shimDirectory)/kaji-browser-mcp")
-        #expect(values["KAJI_CODEX_BROWSER_MCP_ARGS"]?.contains("mcp_servers.kaji-browser.command") == true)
-        #expect(values["KAJI_CLAUDE_BROWSER_MCP_CONFIG"]?.hasSuffix(".kaji/agent-configs/claude-browser-mcp.json") == true)
-        #expect(values["KAJI_OPENCODE_BROWSER_MCP_CONFIG"]?.hasSuffix(".kaji/agent-configs/opencode-browser-mcp.json") == true)
-        #expect(values["KAJI_PI_BROWSER_MCP_CONFIG"]?.hasSuffix(".kaji/agent-configs/pi-browser-mcp.json") == true)
+        #expect(values["KAJI_BROWSER_MCP_COMMAND"] == nil)
+        #expect(values["KAJI_CODEX_BROWSER_MCP_ARGS"] == nil)
     }
 
     @Test
@@ -103,11 +100,6 @@ struct CodingAgentShimEnvironmentTests {
         let fixture = try Fixture()
         defer { fixture.cleanup() }
         try fixture.makeInstalledRuntime()
-        let staleConfig = fixture.home
-            .appendingPathComponent(".kaji/agent-configs", isDirectory: true)
-            .appendingPathComponent("claude-browser-mcp.json")
-        try fixture.fileManager.createDirectory(at: staleConfig.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try Data("{}".utf8).write(to: staleConfig)
         let staleSession = KajiBrowserSessionEnvironmentStore.fileURL(homeDirectory: fixture.home.path)
         try fixture.fileManager.createDirectory(at: staleSession.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("{}".utf8).write(to: staleSession)
@@ -126,7 +118,7 @@ struct CodingAgentShimEnvironmentTests {
         #expect(keys.contains("KAJI_AGENT_SHIM_DIR"))
         #expect(!keys.contains("KAJI_BROWSER_MCP_COMMAND"))
         #expect(!keys.contains("KAJI_CODEX_BROWSER_MCP_ARGS"))
-        #expect(!fixture.fileManager.fileExists(atPath: staleConfig.path))
+        #expect(!keys.contains("KAJI_CLAUDE_BROWSER_MCP_CONFIG"))
         #expect(!fixture.fileManager.fileExists(atPath: staleSession.path))
     }
 

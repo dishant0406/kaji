@@ -3,7 +3,7 @@ import Testing
 
 @testable import Kaji
 
-@Suite("BrowserSession")
+@Suite("BrowserSession", .serialized)
 @MainActor
 struct BrowserSessionTests {
     @Test("session preserves one controller registry for its lifetime")

@@ -11,8 +11,7 @@ enum CodingAgentShimTestHarness {
         graphEnv: [String: String],
         args: [String],
         root providedRoot: URL? = nil,
-        workingDirectory: URL? = nil,
-        installBrowserMCP: Bool = false
+        workingDirectory: URL? = nil
     ) throws -> [String] {
         let fileManager = FileManager.default
         let root = providedRoot ?? fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -28,8 +27,7 @@ enum CodingAgentShimTestHarness {
         try realExecutable(real)
         let shim = try #require(CodingAgentShimInstaller.install(
             homeDirectory: home.path,
-            fileManager: fileManager,
-            installBrowserMCP: installBrowserMCP
+            fileManager: fileManager
         )).appendingPathComponent(name)
         try run(shim, env: environment(
             realEnv: realEnv,
@@ -81,14 +79,6 @@ enum CodingAgentShimTestHarness {
             "KAJI_CODE_GRAPH_REPORT": "",
             "KAJI_CODE_GRAPH_JSON": "",
             "KAJI_CODE_GRAPH_OPENCODE_CONFIG": "",
-            "KAJI_BROWSER_BROKER_URL": "",
-            "KAJI_BROWSER_MCP_COMMAND": "",
-            "KAJI_BROWSER_MCP_TOKEN": "",
-            "KAJI_BROWSER_SESSION_ID": "",
-            "KAJI_CODEX_BROWSER_MCP_ARGS": "",
-            "KAJI_CLAUDE_BROWSER_MCP_CONFIG": "",
-            "KAJI_OPENCODE_BROWSER_MCP_CONFIG": "",
-            "KAJI_PI_BROWSER_MCP_CONFIG": "",
         ]
     }
 
@@ -108,6 +98,6 @@ enum CodingAgentShimTestHarness {
             .split(separator: "\n")
             .map(String.init)
             .map { $0.replacingOccurrences(of: root.path + "/", with: "") }
-            .filter { !$0.hasPrefix("OPENCODE_CONFIG=") || $0 == "OPENCODE_CONFIG=opencode.json" || $0 == "OPENCODE_CONFIG=configs/opencode-browser-mcp.json" }
+            .filter { !$0.hasPrefix("OPENCODE_CONFIG=") || $0 == "OPENCODE_CONFIG=opencode.json" }
     }
 }

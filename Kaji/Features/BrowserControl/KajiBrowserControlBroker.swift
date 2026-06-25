@@ -12,7 +12,9 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
     private init() {}
 
     func ensureStarted(sessionID: String = "default") -> KajiBrowserBrokerState? {
-        if let existing = lock.withLock({ stateStorage }) { return existing }
+        if let existing = lock.withLock({ stateStorage }) {
+            return ensureSession(existing, sessionID: sessionID)
+        }
         guard let listener = try? NWListener(using: .tcp, on: .any) else { return nil }
         let ready = DispatchSemaphore(value: 0)
         listener.stateUpdateHandler = { state in
@@ -53,6 +55,20 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
                 sessionID: sessionID
             )
         }
+    }
+
+    private func ensureSession(_ existing: KajiBrowserBrokerState, sessionID: String) -> KajiBrowserBrokerState {
+        guard existing.sessionID != sessionID else { return existing }
+        let updated = KajiBrowserBrokerState(
+            port: existing.port,
+            token: existing.token,
+            sessionID: sessionID
+        )
+        lock.withLock {
+            stateStorage = updated
+        }
+        KajiBrowserSessionEnvironmentStore.write(updated)
+        return updated
     }
 
     private func updateState(_ transform: (KajiBrowserBrokerState) -> KajiBrowserBrokerState) {

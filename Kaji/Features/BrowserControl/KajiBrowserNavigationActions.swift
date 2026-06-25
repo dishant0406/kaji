@@ -2,10 +2,12 @@ import Foundation
 
 @MainActor
 extension KajiBrowserControlRegistry {
-    func navigate(_ arguments: KajiBrowserControlArguments, target: KajiBrowserSessionTarget) -> [String: Any] {
+    func navigate(_ arguments: KajiBrowserControlArguments, target: KajiBrowserSessionTarget) async throws -> [String: Any] {
         guard let url = arguments.string("url"), !url.isEmpty else { return ["connected": true, "error": "missing_url"] }
-        target.selectedController?.navigate(to: url)
-        return current(target: target)
+        guard let controller = target.selectedController else { return ["connected": false, "error": "page_not_ready"] }
+        controller.navigate(to: url)
+        let ready = try await controller.waitUntilReady(timeout: .milliseconds(arguments.int("timeoutMs") ?? 10000))
+        return current(target: target).merging(["ready": ready]) { _, new in new }
     }
 
     func newTab(_ arguments: KajiBrowserControlArguments, target: KajiBrowserSessionTarget) -> [String: Any] {

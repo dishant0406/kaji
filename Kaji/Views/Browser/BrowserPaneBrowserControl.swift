@@ -9,7 +9,7 @@ extension BrowserPane {
             controllers: state.controllers,
             close: onClosePane
         )
-        KajiBrowserControlBroker.shared.updateSession(sessionID)
+        _ = KajiBrowserControlBroker.shared.ensureStarted(sessionID: sessionID)
     }
 
     func unregisterBrowserControl() {

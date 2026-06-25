@@ -15,38 +15,7 @@ struct CodingAgentShimTests {
         #expect(result == ["--add-dir", "kaji-graph", "--add-dir", "kaji-root", "--add-dir", "user-extra", "hello"])
     }
 
-    @Test
-    func codexShimPrependsBrowserMCPArguments() throws {
-        let result = try CodingAgentShimTestHarness.runShim(named: "codex", realEnv: "KAJI_REAL_CODEX", graphEnv: [
-            "KAJI_CODEX_BROWSER_MCP_ARGS": "-c 'mcp_servers.kaji-browser.command=\"/tmp/kaji-browser-mcp\"'",
-        ], args: ["hello"])
 
-        #expect(result == [
-            "-c",
-            "mcp_servers.kaji-browser.command=\"/tmp/kaji-browser-mcp\"",
-            "hello",
-        ])
-    }
-
-
-    @Test
-    func codexShimAddsInstalledBrowserMCPWithoutInjectedEnvironment() throws {
-        let result = try CodingAgentShimTestHarness.runShim(
-            named: "codex",
-            realEnv: "KAJI_REAL_CODEX",
-            graphEnv: [:],
-            args: ["hello"],
-            installBrowserMCP: true
-        )
-
-        #expect(result == [
-            "-c",
-            "mcp_servers.kaji-browser.command=\"home/.kaji/bin/kaji-browser-mcp\"",
-            "-c",
-            "mcp_servers.kaji-browser.args=[]",
-            "hello",
-        ])
-    }
 
     @Test
     func codexShimResolvesGraphFromCurrentDirectory() throws {
@@ -130,23 +99,7 @@ struct CodingAgentShimTests {
         #expect(result == ["--append-system-prompt", "instructions/AGENTS.md", "hello"])
     }
 
-    @Test
-    func piShimPrependsBrowserMCPConfig() throws {
-        let result = try CodingAgentShimTestHarness.runShim(named: "pi", realEnv: "KAJI_REAL_PI", graphEnv: [
-            "KAJI_PI_BROWSER_MCP_CONFIG": "configs/pi-browser-mcp.json",
-        ], args: ["hello"])
 
-        #expect(result == ["--mcp-config", "configs/pi-browser-mcp.json", "hello"])
-    }
-
-    @Test
-    func claudeShimPrependsBrowserMCPConfig() throws {
-        let result = try CodingAgentShimTestHarness.runShim(named: "claude", realEnv: "KAJI_REAL_CLAUDE", graphEnv: [
-            "KAJI_CLAUDE_BROWSER_MCP_CONFIG": "configs/claude-browser-mcp.json",
-        ], args: ["hello"])
-
-        #expect(result == ["--mcp-config", "configs/claude-browser-mcp.json", "hello"])
-    }
 
     @Test
     func claudeShimUsesNativeAdditionalDirectory() throws {
@@ -167,13 +120,5 @@ struct CodingAgentShimTests {
         #expect(result == ["OPENCODE_CONFIG=opencode.json", "run", "hello"])
     }
 
-    @Test
-    func openCodeShimUsesBrowserConfigWithoutCodeGraph() throws {
-        let result = try CodingAgentShimTestHarness.runShim(named: "opencode", realEnv: "KAJI_REAL_OPENCODE", graphEnv: [
-            "KAJI_OPENCODE_BROWSER_MCP_CONFIG": "configs/opencode-browser-mcp.json",
-        ], args: ["run", "hello"])
-
-        #expect(result == ["OPENCODE_CONFIG=configs/opencode-browser-mcp.json", "run", "hello"])
-    }
 
 }

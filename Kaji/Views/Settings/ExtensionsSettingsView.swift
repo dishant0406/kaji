@@ -3,20 +3,25 @@ import SwiftUI
 struct ExtensionsSettingsView: View {
     @State private var store = KajiCodeGraphStore.shared
     @State private var isInstalling = false
+    @State private var isInstallingBrowserMCP = false
+    @State private var browserMCPAgents = [String]()
+    @State private var browserMCPMessage: String?
     @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
-    @AppStorage(BrowserExtensionPreferences.unsafeToolsEnabledKey) private var unsafeBrowserToolsEnabled = false
 
     var body: some View {
         ScrollView {
             SettingsContainer {
                 SettingsSection(
                     "Browser",
-                    footer: "Enable Kaji Browser to show the browser side panel and expose kaji-browser tools to coding agents."
+                    footer: "Enable the native browser side panel. Install the MCP explicitly for agents that should use browser tools."
                 ) {
                     BrowserExtensionRow(isEnabled: $browserEnabled)
-                    BrowserUnsafeToolsRow(
-                        isEnabled: $unsafeBrowserToolsEnabled,
-                        isBrowserEnabled: browserEnabled
+                    BrowserMCPInstallRow(
+                        installedAgents: browserMCPAgents,
+                        isInstalling: isInstallingBrowserMCP,
+                        message: browserMCPMessage,
+                        onInstall: installBrowserMCP,
+                        onUninstall: uninstallBrowserMCP
                     )
                 }
 
@@ -36,21 +41,14 @@ struct ExtensionsSettingsView: View {
         }
         .onAppear {
             store.refreshFromDisk()
+            refreshBrowserMCPState()
         }
         .onChange(of: browserEnabled) { _, enabled in
             BrowserExtensionPreferences.isEnabled = enabled
-            _ = CodingAgentShimInstaller.install(installBrowserMCP: enabled)
-            if enabled {
-                CodingAgentBrowserEnvironment.writeInstalledConfigs(homeDirectory: NSHomeDirectory())
-            } else {
-                CodingAgentBrowserEnvironment.removeConfigs(homeDirectory: NSHomeDirectory())
+            if !enabled {
+                KajiBrowserControlBroker.shared.stop()
                 KajiBrowserSessionEnvironmentStore.remove()
             }
-        }
-        .onChange(of: unsafeBrowserToolsEnabled) { _, enabled in
-            BrowserExtensionPreferences.allowsUnsafeTools = enabled
-            guard browserEnabled else { return }
-            CodingAgentBrowserEnvironment.writeInstalledConfigs(homeDirectory: NSHomeDirectory())
         }
     }
 
@@ -61,6 +59,36 @@ struct ExtensionsSettingsView: View {
             await KajiCodeGraphInstaller().install(store: store)
             isInstalling = false
         }
+    }
+
+    private func installBrowserMCP() {
+        guard !isInstallingBrowserMCP else { return }
+        isInstallingBrowserMCP = true
+        Task { @MainActor in
+            let outcomes = KajiBrowserMCPInstallService.installAll()
+            browserMCPAgents = KajiBrowserMCPInstallService.installedAgentIDs()
+            let failed = outcomes.filter { !$0.installed }
+            browserMCPMessage = failed.isEmpty ? "Installed. Agents will show tools only when Kaji Browser is reachable." : failed
+                .map { "\($0.agentID): \($0.detail)" }.joined(separator: ", ")
+            isInstallingBrowserMCP = false
+        }
+    }
+
+    private func uninstallBrowserMCP() {
+        guard !isInstallingBrowserMCP else { return }
+        isInstallingBrowserMCP = true
+        Task { @MainActor in
+            let outcomes = KajiBrowserMCPInstallService.uninstallAll()
+            browserMCPAgents = KajiBrowserMCPInstallService.installedAgentIDs()
+            let failed = outcomes.filter(\.installed)
+            browserMCPMessage = failed.isEmpty ? "Uninstalled from agent MCP configs." : failed
+                .map { "\($0.agentID): \($0.detail)" }.joined(separator: ", ")
+            isInstallingBrowserMCP = false
+        }
+    }
+
+    private func refreshBrowserMCPState() {
+        browserMCPAgents = KajiBrowserMCPInstallService.installedAgentIDs()
     }
 }
 

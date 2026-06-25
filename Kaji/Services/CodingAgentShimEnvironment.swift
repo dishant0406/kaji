@@ -16,8 +16,7 @@ enum CodingAgentShimEnvironment {
     ) -> [(key: String, value: String)] {
         guard let shimDirectory = CodingAgentShimInstaller.install(
             homeDirectory: homeDirectory,
-            fileManager: fileManager,
-            installBrowserMCP: browserEnabled
+            fileManager: fileManager
         )
         else {
             return []
@@ -37,34 +36,9 @@ enum CodingAgentShimEnvironment {
             fileManager: fileManager,
             shimDirectory: shimDirectory
         ))
-        guard browserEnabled else {
-            CodingAgentBrowserEnvironment.removeConfigs(homeDirectory: homeDirectory, fileManager: fileManager)
+        if !browserEnabled {
             KajiBrowserSessionEnvironmentStore.remove(homeDirectory: homeDirectory, fileManager: fileManager)
-            return valuesWithCodeGraph(
-                values,
-                context: CodeGraphEnvironmentContext(
-                    projectID: projectID,
-                    worktreeID: worktreeID,
-                    store: store,
-                    fileManager: fileManager,
-                    browserMCPDescriptor: nil
-                )
-            )
         }
-
-        let browserValues = KajiBrowserAgentEnvironment.variables(
-            sessionID: worktreeID.uuidString,
-            homeDirectory: homeDirectory,
-            fileManager: fileManager,
-            browserEnabled: true
-        )
-        let browserMCPDescriptor = CodingAgentBrowserEnvironment.descriptor(browserValues)
-        values.append(contentsOf: browserValues)
-        values.append(contentsOf: CodingAgentBrowserEnvironment.variables(
-            browserValues: browserValues,
-            homeDirectory: homeDirectory,
-            fileManager: fileManager
-        ))
 
         return valuesWithCodeGraph(
             values,
@@ -72,8 +46,7 @@ enum CodingAgentShimEnvironment {
                 projectID: projectID,
                 worktreeID: worktreeID,
                 store: store,
-                fileManager: fileManager,
-                browserMCPDescriptor: browserMCPDescriptor
+                fileManager: fileManager
             )
         )
     }
@@ -83,7 +56,6 @@ enum CodingAgentShimEnvironment {
         let worktreeID: UUID
         let store: KajiCodeGraphStore
         let fileManager: FileManager
-        let browserMCPDescriptor: KajiBrowserMCPServerDescriptor?
     }
 
     private static func valuesWithCodeGraph(
@@ -127,7 +99,6 @@ enum CodingAgentShimEnvironment {
             projectID: context.projectID,
             worktreeID: context.worktreeID,
             instructionFile: instructions,
-            browserDescriptor: context.browserMCPDescriptor,
             store: context.store,
             fileManager: context.fileManager
         ) {

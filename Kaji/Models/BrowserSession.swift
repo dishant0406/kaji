@@ -22,12 +22,14 @@ final class BrowserSession {
 
     func registerControl(close: @escaping () -> Void) {
         closeHandler = close
+        let sessionID = key.worktreeID.uuidString
         KajiBrowserControlRegistry.shared.register(
-            sessionID: key.worktreeID.uuidString,
+            sessionID: sessionID,
             state: state,
             controllers: controllers,
             close: close
         )
+        _ = KajiBrowserControlBroker.shared.ensureStarted(sessionID: sessionID)
     }
 
     func unregisterControl() {

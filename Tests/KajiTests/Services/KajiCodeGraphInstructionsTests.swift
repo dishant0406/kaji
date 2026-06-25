@@ -71,23 +71,6 @@ struct KajiCodeGraphInstructionsTests {
         #expect(!openCodeText.contains("kaji-browser"))
 
 
-        let descriptor = KajiBrowserMCPServerDescriptor(
-            name: "kaji-browser",
-            command: "/tmp/kaji-browser-mcp",
-            arguments: [],
-            environment: ["KAJI_BROWSER_BROKER_URL": "http://127.0.0.1:1"]
-        )
-        let openCodeBrowserConfig = try #require(KajiCodeGraphInstructions.ensureOpenCodeConfig(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            instructionFile: file,
-            browserDescriptor: descriptor,
-            store: store,
-            fileManager: fileManager
-        ))
-        let openCodeBrowserText = try String(contentsOf: openCodeBrowserConfig, encoding: .utf8)
-        #expect(openCodeBrowserText.contains("kaji-browser"))
-        #expect(openCodeBrowserText.contains("KAJI_BROWSER_BROKER_URL"))
         let environment = Dictionary(uniqueKeysWithValues: KajiCodeGraphInstructions.environment(
             projectID: projectID,
             worktreeID: worktreeID,

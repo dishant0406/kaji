@@ -85,11 +85,6 @@ private final class Fixture {
             "KAJI_CODE_GRAPH_REPORT": "",
             "KAJI_CODE_GRAPH_JSON": "",
             "KAJI_CODE_GRAPH_OPENCODE_CONFIG": "",
-            "KAJI_BROWSER_BROKER_URL": "",
-            "KAJI_BROWSER_MCP_COMMAND": "",
-            "KAJI_BROWSER_MCP_TOKEN": "",
-            "KAJI_BROWSER_SESSION_ID": "",
-            "KAJI_CODEX_BROWSER_MCP_ARGS": "",
             "HOME": home.path,
             "CAPTURE": output.path,
         ]) { _, new in new }
