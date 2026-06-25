@@ -35,8 +35,7 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
         let state = KajiBrowserBrokerState(
             port: port.rawValue,
             token: UUID().uuidString.replacingOccurrences(of: "-", with: ""),
-            sessionID: sessionID,
-            cdpPort: nil
+            sessionID: sessionID
         )
         lock.withLock {
             self.listener = listener
@@ -46,24 +45,12 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
         return state
     }
 
-    func updateRuntime(_ runtime: KajiBrowserRuntimeInfo) {
-        updateState { stateStorage in
-            KajiBrowserBrokerState(
-                port: stateStorage.port,
-                token: stateStorage.token,
-                sessionID: stateStorage.sessionID,
-                cdpPort: runtime.remoteDebuggingPort
-            )
-        }
-    }
-
     func updateSession(_ sessionID: String) {
         updateState { stateStorage in
             KajiBrowserBrokerState(
                 port: stateStorage.port,
                 token: stateStorage.token,
-                sessionID: sessionID,
-                cdpPort: stateStorage.cdpPort
+                sessionID: sessionID
             )
         }
     }
@@ -140,11 +127,10 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
     private func statusBody() -> String {
         let state = state()
         let values: [String: Any?] = [
-            "connected": state?.cdpPort != nil,
+            "connected": state != nil,
             "brokerUrl": state?.brokerURL,
             "sessionId": state?.sessionID,
-            "cdpUrl": state?.cdpURL,
-            "cdpPort": state?.cdpPort,
+            "engine": "webkit",
         ]
         return KajiBrowserControlJSON.body(values.compactMapValues { $0 })
     }

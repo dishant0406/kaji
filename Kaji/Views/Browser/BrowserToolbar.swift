@@ -8,7 +8,6 @@ struct BrowserToolbar: View {
     let onForward: () -> Void
     let onReload: () -> Void
     let onNavigate: () -> Void
-    let onOpenDevTools: () -> Void
     let onReadPage: () -> Void
 
     var body: some View {
@@ -28,8 +27,6 @@ struct BrowserToolbar: View {
             IconButton(symbol: "paperplane", accessibilityLabel: "Open URL", action: onNavigate)
             BrowserDeviceSelect(selection: $deviceProfileID)
                 .help("Device mode")
-            IconButton(symbol: "hammer", accessibilityLabel: "Open DevTools", action: onOpenDevTools)
-                .help("Open Chromium DevTools")
             IconButton(symbol: "text.page", selected: showsPageText, accessibilityLabel: "Read Page", action: onReadPage)
                 .help("Read page text")
         }

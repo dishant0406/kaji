@@ -156,10 +156,8 @@ async function reconnectWithAbort(reconnect: MCPReconnect, signal?: AbortSignal)
 /**
  * Create a unique tool name for an MCP tool.
  *
- * Prefixes with server name to avoid conflicts. If the tool name already
- * starts with the server name (e.g., server "puppeteer" with tool
- * "puppeteer_screenshot"), strips the redundant prefix to produce
- * "mcp__puppeteer_screenshot" instead of "mcp__puppeteer_puppeteer_screenshot".
+ * Prefixes with server name to avoid conflicts. If the tool name already starts
+ * with the server name, strips the redundant prefix.
  */
 function sanitizeMCPToolNamePart(value: string, fallback: string): string {
 	const sanitized = value

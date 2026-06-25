@@ -1,27 +1,39 @@
 const { imageResult, textResult, tool } = require('./results');
-const { browserState, browserStates, readSession, sessionPath } = require('./session');
+const { browserStates, readSession, sessionPath } = require('./session');
+const playwrightTools = require('./playwright-compatible-tools');
 
-const tools = [
-  tool('kaji_browser_status', 'Return Kaji embedded browser broker and CDP status.'),
-  tool('kaji_browser_session', 'Return the Kaji browser session values known to this MCP wrapper.'),
-  tool('kaji_browser_provider_status', 'Return active browser automation provider status for Kaji browser automation.'),
+const nativeTools = [
+  tool('kaji_browser_status', 'Return Kaji embedded WebKit browser broker status.'),
+  tool('kaji_browser_session', 'Return the Kaji WebKit browser session values known to this MCP wrapper.'),
   tool('kaji_browser_open_panel', 'Open the Kaji Browser side panel for the active workspace.'),
   tool('kaji_browser_close_panel', 'Close the Kaji Browser side panel for the active workspace.'),
   tool('kaji_browser_current', 'Return the active Kaji browser tab and tab list.'),
-  tool('kaji_browser_navigate', 'Navigate the active Kaji browser tab through Kaji broker.', { url: stringSchema('URL or search query') }, ['url']),
-  tool('kaji_browser_new_tab', 'Open a new Kaji browser tab through Kaji broker.', { url: stringSchema('Optional URL or search query') }),
+  tool('kaji_browser_navigate', 'Navigate the active Kaji browser tab.', { url: stringSchema('URL or search query') }, ['url']),
+  tool('kaji_browser_new_tab', 'Open a new Kaji browser tab.', { url: stringSchema('Optional URL or search query') }),
   tool('kaji_browser_back', 'Go back in the active Kaji browser tab.'),
   tool('kaji_browser_forward', 'Go forward in the active Kaji browser tab.'),
   tool('kaji_browser_reload', 'Reload the active Kaji browser tab.'),
   tool('kaji_browser_read_page', 'Read text and metadata from the active Kaji browser tab.'),
-  tool('kaji_browser_screenshot', 'Capture a PNG screenshot of the active Kaji browser tab.')
+  tool('kaji_browser_screenshot', 'Capture a visible PNG screenshot of the active Kaji browser tab.'),
+  tool('kaji_browser_eval', 'Evaluate JavaScript in the active Kaji browser tab.', { script: stringSchema('JavaScript expression or IIFE') }, ['script']),
+  tool('kaji_browser_snapshot', 'Return interactive element refs and selectors from the active Kaji browser tab.'),
+  tool('kaji_browser_click', 'Click an element by CSS selector.', { selector: stringSchema('CSS selector') }, ['selector']),
+  tool('kaji_browser_fill', 'Fill an input, textarea, select-like field, or contenteditable by CSS selector.', { selector: stringSchema('CSS selector'), text: stringSchema('Text to enter') }, ['selector', 'text']),
+  tool('kaji_browser_type', 'Type text into a field by CSS selector.', { selector: stringSchema('CSS selector'), text: stringSchema('Text to enter') }, ['selector', 'text']),
+  tool('kaji_browser_wait', 'Wait for a visible element by CSS selector.', { selector: stringSchema('CSS selector'), timeoutMs: stringSchema('Optional timeout in milliseconds') }, ['selector']),
+  tool('kaji_browser_get_text', 'Read text from an element by CSS selector.', { selector: stringSchema('CSS selector') }, ['selector']),
+  tool('kaji_browser_get_html', 'Read outer HTML from an element by CSS selector.', { selector: stringSchema('CSS selector') }, ['selector']),
+  tool('kaji_browser_storage_get', 'Read localStorage or sessionStorage.', { type: stringSchema('local or session'), key: stringSchema('Optional storage key') })
 ];
 
-async function call(name, args, provider) {
+const tools = nativeTools.concat(playwrightTools.tools);
+
+async function call(name, args) {
   if (name === 'kaji_browser_status') return textResult(await readStatus());
   if (name === 'kaji_browser_session') return textResult(safeSession());
-  if (name === 'kaji_browser_provider_status') return textResult(provider.status());
-  if (name === 'kaji_browser_screenshot') return imageResult(await browserAction('screenshot', args));
+  if (name === 'kaji_browser_screenshot' || name === 'browser_take_screenshot') {
+    return imageResult(await browserAction('screenshot', args));
+  }
   const action = actionName(name);
   if (!action) return null;
   return textResult(await browserAction(action, args));
@@ -42,8 +54,16 @@ function actionName(toolName) {
     kaji_browser_forward: 'forward',
     kaji_browser_reload: 'reload',
     kaji_browser_read_page: 'read_page',
-    kaji_browser_screenshot: 'screenshot'
-  }[toolName];
+    kaji_browser_eval: 'eval',
+    kaji_browser_snapshot: 'snapshot',
+    kaji_browser_click: 'click',
+    kaji_browser_fill: 'fill',
+    kaji_browser_type: 'type',
+    kaji_browser_wait: 'wait',
+    kaji_browser_get_text: 'get_text',
+    kaji_browser_get_html: 'get_html',
+    kaji_browser_storage_get: 'storage_get'
+  }[toolName] || playwrightTools.actionName(toolName);
 }
 
 function safeSession() {
@@ -51,8 +71,7 @@ function safeSession() {
   return {
     brokerUrl: process.env.KAJI_BROWSER_BROKER_URL || session.brokerUrl || '',
     sessionId: process.env.KAJI_BROWSER_SESSION_ID || session.sessionId || '',
-    cdpUrl: process.env.KAJI_BROWSER_CDP_URL || session.cdpUrl || '',
-    cdpPort: process.env.KAJI_BROWSER_CDP_PORT || session.cdpPort || '',
+    engine: 'webkit',
     hasToken: Boolean(process.env.KAJI_BROWSER_MCP_TOKEN || session.token)
   };
 }
@@ -72,7 +91,7 @@ async function browserAction(action, args) {
       headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: state.sessionId, action, arguments: args })
     });
-    return await awaitReadyResult(await parseResponse(response), action, args);
+    return await awaitReadyResult(await parseResponse(response), action);
   });
 }
 
@@ -83,9 +102,7 @@ async function withReachableBroker(action, body) {
   for (const state of states) {
     try {
       const result = await body(state);
-      if (result && result.error === 'browser_panel_not_open' && action !== 'open_panel') {
-        return await openPanelAndRetry(action, state, body, result);
-      }
+      if (result && result.error === 'browser_panel_not_open' && action !== 'open_panel') return await openPanelAndRetry(action, state, body, result);
       return result;
     } catch (error) {
       errors.push(brokerFetchError(action, state, error));
@@ -116,20 +133,7 @@ async function sendPanelAction(state, action) {
 
 function brokerFetchError(action, state, error) {
   const reason = error && error.cause && error.cause.code ? error.cause.code : error.message || String(error);
-  return [
-    `Kaji browser broker request failed for ${action}: ${reason}.`,
-    `brokerUrl=${state.brokerUrl || 'missing'}`,
-    `source=${state.source || 'unknown'}`,
-    `sessionPath=${sessionPath()}`,
-    `sessionFile=${sessionDescription()}`,
-    'Open a Kaji Browser pane or restart Kaji so the broker session file is refreshed.'
-  ].join(' ');
-}
-
-function sessionDescription() {
-  const session = readSession();
-  if (!session.brokerUrl) return 'missing';
-  return `updatedAt=${session.updatedAt || 'unknown'}`;
+  return [`Kaji browser broker request failed for ${action}: ${reason}.`, `brokerUrl=${state.brokerUrl || 'missing'}`, `source=${state.source || 'unknown'}`, `sessionPath=${sessionPath()}`].join(' ');
 }
 
 async function parseResponse(response) {
@@ -144,7 +148,7 @@ async function parseResponse(response) {
   return body;
 }
 
-async function awaitReadyResult(result, action, args) {
+async function awaitReadyResult(result, action) {
   if (!result || result.connected || result.error || !result.pending) return result;
   for (let attempt = 0; attempt < 20; attempt++) {
     await sleep(150);

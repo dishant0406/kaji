@@ -7,13 +7,12 @@ struct BrowserPane: View {
     let managesBrowserControl: Bool
     let paneIsVisible: Bool
     let onClosePane: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
     @State private var pendingURL = ""
-    @State private var showsPageText = false
-    @State private var isReading = false
-
+    @State var showsPageText = false
+    @State var isReading = false
     private var selectedPage: BrowserPageState? { state.selectedPage }
-    private var selectedController: BrowserWebController? {
+    var selectedController: BrowserWebController? {
         selectedPage.map { state.controllers.controller(for: $0.id) }
     }
 
@@ -143,7 +142,6 @@ struct BrowserPane: View {
             onForward: { selectedController?.goForward() },
             onReload: { selectedController?.reload() },
             onNavigate: navigate,
-            onOpenDevTools: { selectedController?.showDevTools() },
             onReadPage: { Task { await readPage() } }
         )
     }
@@ -190,18 +188,5 @@ struct BrowserPane: View {
         let page = state.openPage(url: url.isEmpty ? "about:blank" : url)
         pendingURL = page.url
         state.controllers.controller(for: page.id).ensureStarted(url: page.url)
-    }
-
-    private func readPage() async {
-        isReading = true
-        withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
-            showsPageText = true
-        }
-        defer { isReading = false }
-        do {
-            state.pageSummary = try await selectedController?.readPage() ?? ""
-        } catch {
-            state.pageSummary = error.localizedDescription
-        }
     }
 }

@@ -27,8 +27,6 @@ APP_FRAMEWORKS="$APP_CONTENTS/Frameworks"
 APP_BINARY="$APP_MACOS/$APP_EXECUTABLE_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 PKGINFO="$APP_CONTENTS/PkgInfo"
-CEF_ROOT="$ROOT_DIR/.dev-support/cef-runtime/cef_binary"
-CEF_BUILD="$ROOT_DIR/.dev-support/cef-runtime/build/tests/cefsimple/Release"
 
 stop_existing_app() {
   if [[ "$KILL_BEFORE_LAUNCH" != "1" ]]; then
@@ -45,9 +43,13 @@ stop_existing_app() {
   pgrep -f "$target_binary" | xargs kill >/dev/null 2>&1 || true
 }
 
+clean_spm_resource_bundles() {
+  find "$ROOT_DIR/.build" -type d -name "${BUILD_PRODUCT_NAME}_${BUILD_PRODUCT_NAME}.bundle" -prune -exec rm -rf {} + 2>/dev/null || true
+}
+
 cd "$ROOT_DIR"
 stop_existing_app
-"$ROOT_DIR/scripts/install-cef-runtime.sh"
+clean_spm_resource_bundles
 swift build
 swift build --target KajiHookClient
 BUILD_BIN_DIR="$(swift build --show-bin-path)"
@@ -65,19 +67,10 @@ chmod +x "$APP_BINARY"
 cp "$HOOK_CLIENT_BINARY" "$APP_MACOS/KajiHookClient"
 chmod +x "$APP_MACOS/KajiHookClient"
 install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_BINARY" 2>/dev/null || true
-install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BINARY" 2>/dev/null || true
 
 if [[ -d "$RESOURCE_BUNDLE" ]]; then
   cp -R "$RESOURCE_BUNDLE" "$APP_RESOURCES/$RESOURCE_BUNDLE_NAME"
 fi
-
-if [[ -d "$CEF_ROOT/Release/Chromium Embedded Framework.framework" ]]; then
-  cp -R "$CEF_ROOT/Release/Chromium Embedded Framework.framework" "$APP_FRAMEWORKS/Chromium Embedded Framework.framework"
-fi
-for helper in "$CEF_BUILD"/cefsimple\ Helper*.app; do
-  [[ -d "$helper" ]] || continue
-  cp -R "$helper" "$APP_FRAMEWORKS/$(basename "$helper")"
-done
 
 if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
   cp -R "$SPARKLE_FRAMEWORK" "$APP_FRAMEWORKS/Sparkle.framework"
@@ -105,7 +98,7 @@ cp "$ROOT_DIR/Kaji/Info.plist" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $MIN_SYSTEM_VERSION" "$INFO_PLIST"
-/usr/libexec/PlistBuddy -c "Set :NSPrincipalClass KajiCEFApplication" "$INFO_PLIST"
+/usr/libexec/PlistBuddy -c "Set :NSPrincipalClass NSApplication" "$INFO_PLIST"
 printf 'APPL????' >"$PKGINFO"
 codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 

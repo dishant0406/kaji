@@ -1,11 +1,6 @@
 // swift-tools-version: 6.0
 
-import Foundation
 import PackageDescription
-
-let packageRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path
-let cefRoot = packageRoot + "/.dev-support/cef-runtime/cef_binary"
-let cefBuild = packageRoot + "/.dev-support/cef-runtime/build"
 
 let package = Package(
     name: "Kaji",
@@ -18,36 +13,6 @@ let package = Package(
         .package(url: "https://github.com/siteline/swiftui-introspect", from: "26.0.0"),
     ],
     targets: [
-        .target(
-            name: "CEFBridge",
-            path: "CEFBridge",
-            publicHeadersPath: "include",
-            cxxSettings: [
-                .unsafeFlags([
-                    "-I", cefRoot,
-                    "-I", cefRoot + "/include",
-                    "-std=c++20",
-                    "-fno-exceptions",
-                    "-fno-rtti",
-                    "-fobjc-call-cxx-cdtors",
-                ]),
-            ],
-            linkerSettings: [
-                .unsafeFlags([
-                    cefBuild + "/libcef_dll_wrapper/libcef_dll_wrapper.a",
-                    "-F", cefRoot + "/Release",
-                    "-framework", "Chromium Embedded Framework",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", cefRoot + "/Release",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", "@executable_path/../Frameworks",
-                ]),
-                .linkedFramework("AppKit"),
-                .linkedFramework("Cocoa"),
-                .linkedFramework("IOSurface"),
-                .linkedLibrary("c++"),
-            ]
-        ),
         .target(
             name: "GhosttyKit",
             path: "GhosttyKit",
@@ -65,7 +30,6 @@ let package = Package(
         .executableTarget(
             name: "Kaji",
             dependencies: [
-                "CEFBridge",
                 "FFFKit",
                 "GhosttyKit",
                 "SwiftyDiff",
@@ -86,9 +50,6 @@ let package = Package(
             linkerSettings: [
                 .unsafeFlags([
                     "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
-                    "-F", cefRoot + "/Release",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", cefRoot + "/Release",
                 ]),
                 .linkedFramework("AppKit"),
                 .linkedFramework("Carbon"),
@@ -99,6 +60,7 @@ let package = Package(
                 .linkedFramework("Metal"),
                 .linkedFramework("MetalKit"),
                 .linkedFramework("QuartzCore"),
+                .linkedFramework("WebKit"),
                 .linkedLibrary("c++"),
             ]
         ),
@@ -116,9 +78,6 @@ let package = Package(
             linkerSettings: [
                 .unsafeFlags([
                     "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
-                    "-F", cefRoot + "/Release",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", cefRoot + "/Release",
                 ]),
                 .linkedFramework("AppKit"),
                 .linkedFramework("Carbon"),
@@ -129,6 +88,7 @@ let package = Package(
                 .linkedFramework("Metal"),
                 .linkedFramework("MetalKit"),
                 .linkedFramework("QuartzCore"),
+                .linkedFramework("WebKit"),
                 .linkedLibrary("c++"),
             ]
         ),

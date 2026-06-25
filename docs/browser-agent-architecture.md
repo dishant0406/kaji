@@ -1,59 +1,28 @@
-# Browser Agent Architecture
+# Browser agent architecture
 
-Kaji owns the browser runtime. Coding agents only receive a stable local control contract.
+Kaji embeds a native macOS WebKit browser through `WKWebView`. Browser panels are controlled through Kaji's localhost broker and the bundled `kaji-browser` MCP server.
 
-## Goals
+## Runtime
 
-- Keep Chromium embedded inside Kaji.
-- Never launch external Chrome for agent browser control.
-- Expose CEF through Chrome DevTools Protocol first.
-- Build MCP tools on top of CDP and Kaji broker state.
-- Keep agent-specific configuration inside each coding agent module.
+`BrowserWebController` owns one `KajiBrowserWebView` per retained browser page. `NativeBrowserSurface` hosts the native view in the browser pane, keeps the view mounted across tab switches, and applies responsive width profiles through AppKit layout. Cookies, localStorage, sessionStorage, login state, and site data are stored by WebKit's persistent default `WKWebsiteDataStore`.
 
-## Layers
+## Navigation and popups
 
-### Runtime coordinator
+`KajiBrowserNavigationDelegate` updates page URL/title/loading state, routes non-web schemes to macOS, supports downloads, preserves TLS/client-certificate handling through WebKit default challenge handling, and replaces the web view after WebContent process termination. `KajiBrowserUIDelegate` handles JavaScript dialogs, file upload panels, and creates live WebKit popup windows for `window.open` so OAuth opener flows can complete.
 
-`KajiBrowserRuntimeCoordinator` starts CEF once per process, allocates the remote debugging port, and publishes runtime state to the broker. Browser views do not decide process-level CEF settings.
+## Automation
 
-### Control broker
+Kaji no longer exposes Chrome DevTools Protocol. The MCP server talks only to the Kaji broker and offers WebKit-native `kaji_browser_*` tools plus Playwright-compatible `browser_*` aliases. The compatible API covers current tab, tab list/new/select/close, navigation, resize, screenshots, JavaScript eval, ref snapshots, click, hover, drag, fill, type, fill form, select option, key press, waits, console messages, JavaScript dialogs, observed network requests, file upload, drop data/files, element text/HTML, and storage reads.
 
-`KajiBrowserControlBroker` listens on localhost and exposes token-protected browser actions for the active Kaji browser session. `KajiBrowserControlRegistry` binds visible browser panes to worktree sessions, so agents can navigate, open tabs, move history, reload, and read page text without launching an external app.
+Unsupported Chromium-only features include Chrome extensions, CDP-complete network interception, HAR/trace/screencast/video recording, browser-process internals, and cross-origin iframe internals. Network tools report WebKit-observed coverage rather than CDP parity.
 
-### CDP endpoint
+## Environment
 
-CEF remote debugging exposes Chromium targets on localhost. Agent-browser, Chrome DevTools MCP, and Kaji's MCP adapter attach to this endpoint instead of launching Chrome.
-
-### MCP adapter
-
-The MCP adapter is a stdio process installed as `~/.kaji/bin/kaji-browser-mcp`. The checked-in entrypoint stays tiny and loads modular support files from `~/.kaji/bin/kaji-browser/`.
-
-The adapter has two tool layers:
-
-- Kaji tools talk to the broker first and expose `kaji_browser_status`, `kaji_browser_current`, `kaji_browser_navigate`, `kaji_browser_new_tab`, history, reload, read-page, and screenshot tools.
-- Playwright tools are forwarded to `@playwright/mcp` through `--cdp-endpoint`, so agents get the standard `browser_*` surface for snapshots, screenshots, tabs, hover, click, keyboard, console, network, dialogs, waits, and form operations without Kaji reimplementing those tools.
-
-The Playwright MCP process starts lazily on the first `browser_*` tool call. `tools/list` never waits for the browser panel or CDP endpoint, so agent startup stays fast even when the embedded browser is closed. Unsafe Playwright tools are hidden unless `KAJI_BROWSER_ALLOW_UNSAFE_TOOLS=1`.
-
-## Environment contract
-
-Kaji-launched terminals receive these values when the broker starts:
+Agent shims receive:
 
 - `KAJI_BROWSER_BROKER_URL`
 - `KAJI_BROWSER_MCP_TOKEN`
 - `KAJI_BROWSER_SESSION_ID`
-- `KAJI_BROWSER_CDP_URL`
-- `KAJI_BROWSER_CDP_PORT`
 - `KAJI_BROWSER_MCP_COMMAND`
-- `KAJI_CODEX_BROWSER_MCP_ARGS`
-- `KAJI_PI_BROWSER_MCP_CONFIG`
 
-`KAJI_BROWSER_CDP_URL` is only present after CEF has started.
-
-## Agent policy
-
-- Codex: inject runtime MCP config through the Codex module.
-- Claude: generate `.mcp.json` shape through the Claude module.
-- OpenCode: generate OpenCode MCP config through the OpenCode module.
-- Pi: write a Kaji-owned MCP config and launch with `--mcp-config` through the Pi module.
-- Shims only route executables and environment. They should not contain browser-specific protocol logic.
+The session file lives at `~/.kaji/browser/session.json` and contains the broker URL, token, session ID, and update timestamp.

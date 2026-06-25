@@ -19,7 +19,6 @@ GhosttyKit/ghostty.h
 *.dmg
 appcast*.xml
 .plans/
-.playwright-mcp/
 /kaji-markdown-remote-image-urlcache
 /External/pi-mono
 /KajiParentAgentRuntime/node_modules

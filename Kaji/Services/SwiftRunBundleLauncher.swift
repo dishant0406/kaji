@@ -37,14 +37,11 @@ enum SwiftRunBundleLauncher {
         let contents = appURL.appendingPathComponent("Contents", isDirectory: true)
         let macOS = contents.appendingPathComponent("MacOS", isDirectory: true)
         let resources = contents.appendingPathComponent("Resources", isDirectory: true)
-        let frameworks = contents.appendingPathComponent("Frameworks", isDirectory: true)
         try fileManager.createDirectory(at: macOS, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: resources, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: frameworks, withIntermediateDirectories: true)
         try writeInfoPlist(to: contents.appendingPathComponent("Info.plist"))
         try replaceLink(at: macOS.appendingPathComponent("Kaji"), destination: executableURL())
         linkResourceBundle(into: resources, projectRoot: projectRoot, fileManager: fileManager)
-        linkCEF(into: frameworks, projectRoot: projectRoot, fileManager: fileManager)
     }
 
     private static func writeInfoPlist(to url: URL) throws {
@@ -67,14 +64,6 @@ enum SwiftRunBundleLauncher {
         let source = executableURL().deletingLastPathComponent().appendingPathComponent("Kaji_Kaji.bundle")
         guard fileManager.fileExists(atPath: source.path) else { return }
         try? replaceLink(at: resources.appendingPathComponent("Kaji_Kaji.bundle"), destination: source)
-    }
-
-    private static func linkCEF(into frameworks: URL, projectRoot: URL, fileManager: FileManager) {
-        let release = projectRoot.appendingPathComponent(".dev-support/cef-runtime/build/tests/cefsimple/Release")
-        let entries = (try? fileManager.contentsOfDirectory(at: release, includingPropertiesForKeys: nil)) ?? []
-        for entry in entries where entry.pathExtension == "app" || entry.pathExtension == "framework" {
-            try? replaceLink(at: frameworks.appendingPathComponent(entry.lastPathComponent), destination: entry)
-        }
     }
 
     private static func executableURL() -> URL {
@@ -104,17 +93,9 @@ enum SwiftRunBundleLauncher {
     }
 
     private static func launchEnvironment(projectRoot: URL, environment: [String: String]) -> [(String, String)] {
-        let cefRoot = projectRoot.appendingPathComponent(".dev-support/cef-runtime/cef_binary")
-        let helper = projectRoot
-            .appendingPathComponent(".dev-support/cef-runtime/build/tests/cefsimple/Release")
-            .appendingPathComponent("cefsimple Helper.app/Contents/MacOS/cefsimple Helper")
-        let profile = projectRoot.appendingPathComponent(".build/KajiSwiftRunCEFProfile", isDirectory: true)
-        return [
+        [
             ("KAJI_PROJECT_ROOT", projectRoot.path),
             ("KAJI_APP_SUPPORT_DIR", environment["KAJI_APP_SUPPORT_DIR"]),
-            ("KAJI_CEF_ROOT", environment["KAJI_CEF_ROOT"] ?? cefRoot.path),
-            ("KAJI_CEF_HELPER_PATH", environment["KAJI_CEF_HELPER_PATH"] ?? helper.path),
-            ("KAJI_CEF_PROFILE_PATH", environment["KAJI_CEF_PROFILE_PATH"] ?? profile.path),
         ].compactMap { key, value in
             value.map { (key, $0) }
         }

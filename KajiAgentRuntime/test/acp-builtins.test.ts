@@ -516,30 +516,6 @@ describe("wave 3 commands", () => {
 		expect(session._todoPhases[0]?.tasks[0]?.status).toBe("in_progress");
 	});
 
-	// /browser
-	it("/browser visible: sets headless=false; second call is idempotent", async () => {
-		const { runtime } = createRuntime();
-		runtime.settings.set("browser.enabled" as never, true as never);
-		runtime.settings.set("browser.headless" as never, true as never);
-		const r1 = await executeAcpBuiltinSlashCommand("/browser visible", runtime);
-		expect(r1).toEqual({ consumed: true });
-		expect(runtime.settings.get("browser.headless" as never)).toBe(false);
-		const r2 = await executeAcpBuiltinSlashCommand("/browser visible", runtime);
-		expect(r2).toEqual({ consumed: true });
-		expect(runtime.settings.get("browser.headless" as never)).toBe(false);
-	});
-
-	it("/browser no-arg after /browser visible toggles to headless", async () => {
-		const { output, runtime } = createRuntime();
-		runtime.settings.set("browser.enabled" as never, true as never);
-		runtime.settings.set("browser.headless" as never, true as never);
-		await executeAcpBuiltinSlashCommand("/browser visible", runtime);
-		const r = await executeAcpBuiltinSlashCommand("/browser", runtime);
-		expect(r).toEqual({ consumed: true });
-		expect(output[output.length - 1]).toContain("headless");
-		expect(runtime.settings.get("browser.headless" as never)).toBe(true);
-	});
-
 	// /compact
 	it("/compact: reports Compaction complete. after session.compact resolves", async () => {
 		const { output, session, runtime } = createRuntime();

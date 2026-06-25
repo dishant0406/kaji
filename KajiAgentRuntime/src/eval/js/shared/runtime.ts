@@ -37,9 +37,8 @@ export interface RuntimeOptions {
 	initialCwd: string;
 	sessionId: string;
 	/**
-	 * Extra globals installed alongside `__omp_helpers__` / prelude. Use for stable, lifetime-
-	 * of-the-worker bindings (e.g. browser's `page`, `browser`). Per-run scope should be set
-	 * via `setRunScope()` instead.
+	 * Extra globals installed alongside `__omp_helpers__` / prelude. Use for stable worker
+	 * bindings. Per-run scope should be set via `setRunScope()` instead.
 	 */
 	extraGlobals?: Record<string, unknown>;
 }
@@ -114,10 +113,9 @@ function describeDataType(data: unknown): string {
 }
 
 /**
- * Shared JS runtime for the eval worker and the browser tab worker. Owns the prelude,
- * helper bag, console bridge, and indirect-eval execution. Emits text/display/tool-call
- * back through `RuntimeHooks` that the embedder supplies — wire format is the embedder's
- * concern.
+ * Shared JS runtime for eval workers. Owns the prelude, helper bag, console bridge, and
+ * indirect-eval execution. Emits text/display/tool-call back through `RuntimeHooks` that
+ * the embedder supplies.
  */
 export class JsRuntime {
 	readonly helpers: HelperBundle;
@@ -151,9 +149,8 @@ export class JsRuntime {
 	}
 
 	/**
-	 * Install per-run globals. Intended for run-scoped state (browser's `tab`, `display`
-	 * overrides, etc.). Overwrites previous assignments — caller is responsible for any
-	 * cleanup it wants.
+	 * Install per-run globals. Overwrites previous assignments — caller is responsible for
+	 * any cleanup it wants.
 	 */
 	setRunScope(scope: Record<string, unknown>): void {
 		Object.assign(globalThis, scope);
@@ -324,8 +321,7 @@ export class JsRuntime {
 			},
 			webcrypto: crypto,
 			// `process` is intentionally not overridden — user code gets the host worker's real
-			// `process` object. Subsetting it caused segfaults in workers that share state with
-			// puppeteer/worker_threads internals.
+			// `process` object. Subsetting it caused segfaults in workers that share state.
 			require: this.#buildDynamicRequire(),
 			createRequire,
 			fs,

@@ -187,7 +187,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProviderEventReceiver.shared.stop()
         ParentAgentController.shared.stop()
         BrowserControllerRegistry.closeAllRegisteredImmediately()
-        KajiBrowserRuntimeCoordinator.shared.shutdownForTermination()
         KajiBrowserControlBroker.shared.stop()
         TerminalViewRegistry.shared.removeAll()
         GhosttyService.shared.shutdown()

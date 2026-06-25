@@ -16,7 +16,7 @@ function browserState() {
 
 function browserStates() {
   const session = readSession();
-  return uniqueStates([environmentState(), sessionState(session)]).filter(state => state.brokerUrl || state.cdpUrl);
+  return uniqueStates([environmentState(), sessionState(session)]).filter(state => state.brokerUrl);
 }
 
 function environmentState() {
@@ -24,8 +24,6 @@ function environmentState() {
     brokerUrl: process.env.KAJI_BROWSER_BROKER_URL || '',
     token: process.env.KAJI_BROWSER_MCP_TOKEN || '',
     sessionId: process.env.KAJI_BROWSER_SESSION_ID || 'default',
-    cdpUrl: process.env.KAJI_BROWSER_CDP_URL || '',
-    cdpPort: process.env.KAJI_BROWSER_CDP_PORT || '',
     source: 'environment'
   };
 }
@@ -35,8 +33,6 @@ function sessionState(session) {
     brokerUrl: session.brokerUrl || '',
     token: session.token || '',
     sessionId: session.sessionId || process.env.KAJI_BROWSER_SESSION_ID || 'default',
-    cdpUrl: session.cdpUrl || '',
-    cdpPort: String(session.cdpPort || ''),
     updatedAt: session.updatedAt || '',
     source: 'session-file'
   };
@@ -46,7 +42,7 @@ function uniqueStates(states) {
   const seen = new Set();
   const out = [];
   for (const state of states) {
-    const key = `${state.brokerUrl}|${state.token}|${state.cdpUrl}`;
+    const key = `${state.brokerUrl}|${state.token}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(state);
@@ -59,8 +55,6 @@ function emptyState() {
     brokerUrl: '',
     token: '',
     sessionId: 'default',
-    cdpUrl: '',
-    cdpPort: '',
     source: 'empty'
   };
 }

@@ -32,7 +32,7 @@ struct KajiBrowserAgentEnvironmentTests {
     }
 
     @Test
-    func includesUnsafeToolsEnvironmentWhenEnabled() throws {
+    func omitsUnsupportedUnsafeToolsEnvironment() throws {
         _ = KajiBrowserControlBroker.shared.ensureStarted(sessionID: "unsafe-session")
         let values = Dictionary(uniqueKeysWithValues: KajiBrowserAgentEnvironment.variables(
             sessionID: "unsafe-session",
@@ -42,6 +42,6 @@ struct KajiBrowserAgentEnvironmentTests {
             unsafeToolsEnabled: true
         ).map { ($0.key, $0.value) })
 
-        #expect(values["KAJI_BROWSER_ALLOW_UNSAFE_TOOLS"] == "1")
+        #expect(values["KAJI_BROWSER_ALLOW_UNSAFE_TOOLS"] == nil)
     }
 }

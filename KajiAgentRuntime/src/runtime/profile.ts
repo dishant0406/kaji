@@ -63,7 +63,7 @@ function baseRpcProfile(): RuntimeProfile {
 	return {
 		id: "kaji-rpc-build",
 		mode: "rpc",
-		toolPatterns: ["read", "bash", "edit", "undo", "resolve", "task", "todo_write", "todo_read", "todo_verify", "find", "search", "lsp", "browser", "kaji_*", "runtime_profile_dump", "runtime_telemetry_dump", "tool_catalog_dump", "prompt_preview", "permission_rules_dump", "subagent_tree_dump"],
+		toolPatterns: ["read", "bash", "edit", "undo", "resolve", "task", "todo_write", "todo_read", "todo_verify", "find", "search", "lsp", "kaji_*", "runtime_profile_dump", "runtime_telemetry_dump", "tool_catalog_dump", "prompt_preview", "permission_rules_dump", "subagent_tree_dump"],
 		hiddenToolPatterns: ["yield", "report_finding", "report_tool_issue", "goal"],
 		defaultSettingPaths: KAJI_RPC_DEFAULT_SETTING_PATHS,
 		permissionMode: "read-allow",

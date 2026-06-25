@@ -7,7 +7,7 @@ describe("issue #1150 — binary build worker entrypoints", () => {
 
 	it("scripts/build-binary.ts lists every local worker as an explicit --compile entrypoint", async () => {
 		const source = await Bun.file(devScriptPath).text();
-		const devEntrypoints = ["./src/tools/browser/tab-worker-entry.ts", "./src/eval/js/worker-entry.ts"];
+		const devEntrypoints = ["./src/eval/js/worker-entry.ts"];
 		for (const entry of devEntrypoints) {
 			expect(
 				source.includes(`"${entry}"`),

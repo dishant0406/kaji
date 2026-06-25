@@ -2,19 +2,10 @@ import Foundation
 
 enum KajiBrowserMCPResourceLocator {
     static let supportFileNames = [
-        "broker-session.js",
-        "browser-provider.js",
-        "chrome-devtools-client.js",
-        "chrome-devtools-tools.js",
-        "kaji-tools.js",
         "framing.js",
+        "kaji-tools.js",
         "main.js",
-        "mcp-stdio-client.js",
-        "playwright-client.js",
-        "playwright-tool-cache.js",
-        "playwright-tools.js",
         "results.js",
-        "safety.js",
         "session.js",
     ]
 
@@ -33,6 +24,21 @@ enum KajiBrowserMCPResourceLocator {
         supportFileNames.compactMap { name in
             supportFileCandidates(name: name, fileManager: fileManager, projectRoot: projectRoot)
                 .first { fileManager.fileExists(atPath: $0.path) }
+        }
+    }
+
+    static func resourceURL(bundle: Bundle = .main) -> URL? {
+        bundle.url(forResource: "kaji-browser-mcp", withExtension: "js", subdirectory: "CodingAgents/Browser")
+    }
+
+    static func supportFileURLs(bundle: Bundle = .main) -> [URL] {
+        supportFileNames.compactMap { file in
+            let url = URL(fileURLWithPath: file)
+            return bundle.url(
+                forResource: url.deletingPathExtension().lastPathComponent,
+                withExtension: url.pathExtension,
+                subdirectory: "CodingAgents/Browser/kaji-browser"
+            )
         }
     }
 
@@ -89,9 +95,11 @@ enum KajiBrowserMCPResourceLocator {
         if let url = Bundle.appResources.url(forResource: basename, withExtension: "js") {
             urls.append(url)
         }
-        if let url = Bundle.appResources
-            .url(forResource: basename, withExtension: "js", subdirectory: "CodingAgents/Browser/kaji-browser")
-        {
+        if let url = Bundle.appResources.url(
+            forResource: basename,
+            withExtension: "js",
+            subdirectory: "CodingAgents/Browser/kaji-browser"
+        ) {
             urls.append(url)
         }
         if let resourceURL = Bundle.main.resourceURL {

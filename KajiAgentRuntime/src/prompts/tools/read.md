@@ -3,7 +3,7 @@ Read files, directories, archives, SQLite databases, images, documents, internal
 <instruction>
 - One tool for filesystem, archives, SQLite, images, documents (PDF/DOCX/PPTX/XLSX/RTF/EPUB/ipynb), internal URIs, and web URLs (reader-mode by default).
 - You SHOULD parallelize independent reads when exploring related files.
-- You SHOULD reach for `read` — not a browser/puppeteer tool — for fetching web content.
+- You SHOULD reach for `read` for fetching web content.
 </instruction>
 
 ## Parameters
@@ -74,7 +74,7 @@ For `.sqlite`, `.sqlite3`, `.db`, `.db3`:
 
 <critical>
 - You MUST use `read` for every file, directory, archive, and URL inspection. `cat`, `head`, `tail`, `less`, `more`, `ls`, `tar`, `unzip`, `curl`, `wget` are FORBIDDEN — any such bash call is a bug, regardless of how short or convenient it looks.
-- You MUST prefer `read` over a browser/puppeteer tool for URL content; only reach for a browser when `read` cannot deliver reasonable content.
+- You MUST prefer `read` for URL content.
 - You MUST always include `path`. NEVER call `read` with `{}`.
 - For line ranges, append the selector to `path` (`path="src/foo.ts:50-200"`, `path="src/foo.ts:50+150"`). NEVER substitute `sed -n`, `awk NR`, or `head`/`tail` pipelines.
 - Summary footer says `read <path>:raw …`? Re-issue the exact selector it names. NEVER guess what's inside `..` / `…` markers — they carry no content.

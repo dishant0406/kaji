@@ -54,7 +54,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>A process running in Kaji's terminal would like to access your photo library.</string>
 	<key>NSPrincipalClass</key>
-	<string>KajiCEFApplication</string>
+	<string>NSApplication</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>A process running in Kaji's terminal would like to access your reminders.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

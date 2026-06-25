@@ -9,7 +9,7 @@ The deep interaction audit covered every major user-facing surface in Kaji:
 - Global shell, top bar, app commands, keyboard shortcuts, overlays, modals, alerts, toasts, and window-level mouse navigation.
 - Workspace pane tree, tab strip, pane headers, split dividers, side panel resize handles, drop zones, footer controls, and shortcut reference popovers.
 - Terminal surface interactions, Ghostty mouse and keyboard forwarding, terminal search, context menus, file drops, and footer terminal transitions.
-- Browser tabs, toolbar, device selector, page text panel, native browser surface focus, page stack, navigation, DevTools, and read-page actions.
+- Browser tabs, toolbar, device selector, page text panel, native browser surface focus, page stack, navigation, automation, and read-page actions.
 - Editor pane focus, search and replace, markdown modes, outline, inline edit, code editor gutter, fold controls, text selection, editing shortcuts, and status surfaces.
 - Sidebar project and worktree rows, project context actions, logo cropper, footer controls, notifications, resource monitor, Agent Mission Control, and AI usage controls.
 - Ports and coding-agent process monitors, including refresh/filter/kill flows and destructive confirmations.
@@ -48,4 +48,4 @@ Preferred adoption strategy:
 2. Add `Pow` first if external effects are needed.
 3. Add `SwiftUI-Shimmer` only if Kaji needs polished loading skeletons quickly.
 4. Avoid Lottie/Rive unless there is a concrete designed asset pipeline.
-5. Keep AppKit/Ghostty/CEF surfaces native and animate their surrounding SwiftUI chrome instead of trying to animate embedded surfaces directly.
+5. Keep AppKit/Ghostty/WebKit surfaces native and animate their surrounding SwiftUI chrome instead of trying to animate embedded surfaces directly.

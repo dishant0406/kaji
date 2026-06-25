@@ -2122,36 +2122,6 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "tools", label: "Web Search", description: "Enable the web_search tool for web searching" },
 	},
 
-	"browser.enabled": {
-		type: "boolean",
-		default: true,
-		ui: {
-			tab: "tools",
-			label: "Browser",
-			description: "Enable the browser tool (Ulixee Hero)",
-		},
-	},
-
-	"browser.headless": {
-		type: "boolean",
-		default: true,
-		ui: {
-			tab: "tools",
-			label: "Headless Browser",
-			description: "Launch browser in headless mode (disable to show browser UI)",
-		},
-	},
-	"browser.screenshotDir": {
-		type: "string",
-		default: undefined,
-		ui: {
-			tab: "tools",
-			label: "Screenshot directory",
-			description:
-				"Directory to save screenshots. If unset, screenshots go to a temp file. Supports ~. Examples: ~/Downloads, ~/Desktop, /sdcard/Download (Android)",
-		},
-	},
-
 	// Tool execution
 	"tools.intentTracing": {
 		type: "boolean",

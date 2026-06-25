@@ -1,97 +1,65 @@
 import AppKit
-import CEFBridge
 import Foundation
+import WebKit
 
 @MainActor
 final class BrowserWebController {
-    private weak var surface: NativeBrowserSurfaceView?
-    private var page: BrowserPageState?
-    private var projectPath = ""
+    weak var surface: NativeBrowserSurfaceView?
+    var page: BrowserPageState?
     private var pageChanged: ((UUID, String) -> Void)?
-    private var popupRequested: ((UUID, String) -> Void)?
-    var browserView: KajiCEFBrowserView?
-    private var isStarting = false
-    private var activeState: Bool?
-    private var startURL = ""
+    var popupRequested: ((UUID, String) -> Void)?
+    private var navigationDelegate: KajiBrowserNavigationDelegate?
+    private var uiDelegate: KajiBrowserUIDelegate?
+    private var downloadDelegate: KajiBrowserDownloadDelegate?
+    var pendingDialogs: [KajiBrowserPendingDialog] = []
+    var popups: [KajiBrowserPopupWindow] = []
+    var activeState: Bool?
+    var startURL = ""
     private var startTask: Task<Void, Never>?
-    private var deviceProfile = BrowserDeviceProfiles.profile(for: BrowserDeviceProfiles.desktopID)
-    var appliedDeviceProfile: BrowserDeviceProfile?
+    var deviceProfile = BrowserDeviceProfiles.profile(for: BrowserDeviceProfiles.desktopID)
     private var isClosed = false
+    var appliedDeviceProfile: BrowserDeviceProfile?
+    var browserView: KajiBrowserWebView?
 
     var isReady: Bool { browserView != nil }
+    var isDownloading: Bool { downloadDelegate?.isActive == true }
 
     func attach(_ attachment: BrowserWebControllerAttachment) {
-        let surface = attachment.surface
-        let page = attachment.page
-        let previousSurface = self.surface
+        let previousSurface = surface
         if BrowserSurfaceAttachmentPolicy.shouldReleasePreviousSurface(
             hasPreviousSurface: previousSurface != nil,
-            sameSurface: previousSurface === surface
+            sameSurface: previousSurface === attachment.surface
         ) {
             previousSurface?.release(controller: self, browserView: browserView)
         }
-        self.surface = surface
-        self.page = page
-        projectPath = attachment.projectPath
+        surface = attachment.surface
+        page = attachment.page
         deviceProfile = attachment.deviceProfile
-        surface.applyDeviceProfile(deviceProfile)
         pageChanged = attachment.callbacks.pageChanged
         popupRequested = attachment.callbacks.popupRequested
-        surface.controller = self
-        if startURL.isEmpty {
-            startURL = page.url
-        }
+        attachment.surface.controller = self
+        attachment.surface.applyDeviceProfile(deviceProfile)
+        startURL = startURL.isEmpty ? attachment.page.url : startURL
         if let browserView {
-            if !surface.contains(browserView: browserView) {
-                surface.install(browserView: browserView)
-            }
-            if attachment.isActive {
-                applyDeviceProfile(deviceProfile)
-            }
-            updateActiveState(attachment.isActive, browserView: browserView)
+            installIfNeeded(browserView, active: attachment.isActive)
             return
         }
         activeState = attachment.isActive
         guard attachment.isActive else {
-            surface.show(status: "")
+            attachment.surface.show(status: "")
             return
         }
-        ensureStarted(url: page.url)
+        ensureStarted(url: attachment.page.url)
     }
 
     func detach(surface: NativeBrowserSurfaceView) {
         guard self.surface === surface else { return }
         surface.release(controller: self, browserView: browserView)
-        if BrowserSurfaceAttachmentPolicy.shouldDeactivateBrowserOnDetach(
-            isCurrentSurface: true,
-            hasBrowserView: browserView != nil
-        ), let browserView {
+        if let browserView {
             activeState = false
-            browserView.setActive(false)
+            browserView.allowsFocus = false
         }
         self.surface = nil
-    }
-
-    func navigate(to rawURL: String) {
-        guard let url = BrowserURLParser.url(from: rawURL)?.absoluteString else { return }
-        startURL = url
-        if let page {
-            page.url = url
-            pageChanged?(page.id, url)
-        }
-        guard let browserView else {
-            ensureStarted(url: url)
-            return
-        }
-        browserView.loadURL(url)
-    }
-
-    func setActive(_ active: Bool) {
-        guard let browserView else {
-            activeState = active
-            return
-        }
-        updateActiveState(active, browserView: browserView)
     }
 
     func ensureStarted(url: String) {
@@ -100,102 +68,126 @@ final class BrowserWebController {
         scheduleStart()
     }
 
-    func close() {
-        if BrowserStartupCompletionPolicy.shouldMarkStartedWhenControllerCloses(
-            runtimeInfo: KajiBrowserRuntimeCoordinator.shared.currentRuntime()
-        ) {
-            KajiBrowserRuntimeCoordinator.shared.markBrowserStartupComplete()
+    func navigate(to rawURL: String) {
+        guard let url = BrowserURLParser.url(from: rawURL)?.absoluteString else { return }
+        startURL = url
+        updatePageURL(url)
+        guard let browserView else {
+            ensureStarted(url: url)
+            return
         }
+        if let url = URL(string: url) {
+            browserView.load(URLRequest(url: url))
+        }
+    }
+
+    func setActive(_ active: Bool) {
+        activeState = active
+        browserView?.allowsFocus = active
+        if active {
+            surface?.focus(browserView: browserView)
+        }
+    }
+
+    func close() {
         isClosed = true
         startTask?.cancel()
         startTask = nil
-        startURL = ""
         if let surface {
             surface.release(controller: self, browserView: browserView)
         }
-        browserView?.pageChanged = nil
-        browserView?.popupRequested = nil
-        browserView?.closeBrowser()
+        popups.forEach { $0.close() }
+        popups.removeAll()
+        teardown(webView: browserView)
         browserView = nil
         appliedDeviceProfile = nil
         surface = nil
         page = nil
         pageChanged = nil
         popupRequested = nil
-        isStarting = false
-    }
-
-    private func startIfNeeded(url: String) {
-        guard !isClosed, surface != nil, browserView == nil, !isStarting else { return }
-        isStarting = true
-        defer { isStarting = false }
-        surface?.show(status: "Starting Chromium…")
-        do {
-            try startRuntime()
-            guard !isClosed, surface != nil else { return }
-            let browserView = KajiCEFBrowserView(url: BrowserURLParser.url(from: url)?.absoluteString ?? "about:blank")
-            browserView.pageChanged = { [weak self] url, title in
-                Task { @MainActor in self?.updatePage(url: url, title: title) }
-            }
-            browserView.popupRequested = { [weak self] url in
-                Task { @MainActor in self?.openPopup(url: url) }
-            }
-            self.browserView = browserView
-            surface?.install(browserView: browserView)
-            applyDeviceProfile(deviceProfile)
-            updateActiveState(
-                BrowserPaneActivationPolicy.browserActiveStateAfterStartup(requestedActiveState: activeState),
-                browserView: browserView
-            )
-            markStartupCompleteAfterStabilityDelay()
-        } catch {
-            surface?.show(status: error.localizedDescription)
-        }
+        pendingDialogs.removeAll()
     }
 
     private func scheduleStart() {
-        guard !isClosed, surface != nil, !projectPath.isEmpty, browserView == nil, !isStarting, startTask == nil else { return }
-        surface?.show(status: "Starting Chromium…")
+        guard !isClosed, surface != nil, browserView == nil, startTask == nil else { return }
+        surface?.show(status: "Starting WebKit…")
         startTask = Task { @MainActor [weak self] in
             await Task.yield()
             guard !Task.isCancelled, let self else { return }
-            self.startIfNeeded(url: self.startURL)
+            self.start(url: self.startURL)
             self.startTask = nil
         }
     }
 
-    private func startRuntime() throws {
-        _ = try KajiBrowserRuntimeCoordinator.shared.ensureStarted(projectPath: projectPath)
+    private func start(url: String) {
+        guard !isClosed, surface != nil, browserView == nil else { return }
+        let webView = KajiBrowserWebViewFactory.make()
+        browserView = webView
+        bind(webView)
+        installIfNeeded(webView, active: activeState ?? true)
+        applyDeviceProfile(deviceProfile)
+        let resolved = BrowserURLParser.url(from: url)?.absoluteString ?? "about:blank"
+        if let url = URL(string: resolved) {
+            webView.load(URLRequest(url: url))
+        }
     }
 
-    private func markStartupCompleteAfterStabilityDelay() {
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(3))
-            guard let self, !self.isClosed, self.browserView != nil else { return }
-            KajiBrowserRuntimeCoordinator.shared.markBrowserStartupComplete()
+    func installIfNeeded(_ webView: KajiBrowserWebView, active: Bool) {
+        if surface?.contains(browserView: webView) != true {
+            surface?.install(browserView: webView)
         }
+        setActive(active)
+    }
+
+    func bind(_ webView: KajiBrowserWebView) {
+        let navigationDelegate = KajiBrowserNavigationDelegate()
+        let uiDelegate = KajiBrowserUIDelegate()
+        let downloadDelegate = KajiBrowserDownloadDelegate()
+        navigationDelegate.popupRequested = { [weak self] url in self?.openPopup(url: url.absoluteString) }
+        navigationDelegate.started = { [weak self] webView in self?.updateLoading(webView, loading: true) }
+        navigationDelegate.finished = { [weak self] webView in self?.updateLoading(webView, loading: false) }
+        navigationDelegate.failed = { [weak self] webView, _ in self?.updateLoading(webView, loading: false) }
+        navigationDelegate.terminated = { [weak self] webView in self?.recoverTerminated(webView) }
+        navigationDelegate.downloadDelegate = downloadDelegate
+        uiDelegate.openPopup = { [weak self] configuration, features in self?.openPopup(configuration: configuration, features: features) }
+        uiDelegate.closeRequested = { [weak self] webView in self?.closePopup(webView: webView) }
+        uiDelegate.dialogRequested = { [weak self] dialog, _ in self?.pendingDialogs.append(dialog) }
+        webView.onBackMouse = { [weak self] in self?.goBack() }
+        webView.onForwardMouse = { [weak self] in self?.goForward() }
+        webView.navigationDelegate = navigationDelegate
+        webView.uiDelegate = uiDelegate
+        self.navigationDelegate = navigationDelegate
+        self.uiDelegate = uiDelegate
+        self.downloadDelegate = downloadDelegate
+    }
+
+    func teardown(webView: KajiBrowserWebView?) {
+        webView?.stopLoading()
+        webView?.navigationDelegate = nil
+        webView?.uiDelegate = nil
+        webView?.removeFromSuperview()
+        navigationDelegate = nil
+        uiDelegate = nil
+        downloadDelegate = nil
+    }
+
+    private func updateLoading(_ webView: WKWebView, loading _: Bool) {
+        guard webView === browserView else { return }
+        updatePage(url: webView.url?.absoluteString ?? startURL, title: webView.title ?? "Browser")
     }
 
     private func updatePage(url: String, title: String) {
         guard let page else { return }
-        if !url.isEmpty, page.url != url {
-            page.url = url
-            pageChanged?(page.id, url)
-        }
+        updatePageURL(url)
         let resolvedTitle = title.isEmpty ? "Browser" : title
         if page.title != resolvedTitle {
             page.title = resolvedTitle
         }
     }
 
-    private func openPopup(url: String) {
-        guard let page else { return }
-        popupRequested?(page.id, url)
-    }
-
-    private func updateActiveState(_ active: Bool, browserView: KajiCEFBrowserView) {
-        guard activeState != active else { return }
-        activeState = active
-        browserView.setActive(active)
+    private func updatePageURL(_ url: String) {
+        guard let page, !url.isEmpty, page.url != url else { return }
+        page.url = url
+        pageChanged?(page.id, url)
     }
 }

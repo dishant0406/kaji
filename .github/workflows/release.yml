@@ -62,8 +62,7 @@ jobs:
 
       - name: Build native dependencies
         run: |
-          chmod +x scripts/install-cef-runtime.sh scripts/build-parent-agent.sh scripts/build-kaji-agent-runtime.sh scripts/build-zlob.sh
-          scripts/install-cef-runtime.sh --arch "$ARCH"
+          chmod +x scripts/build-parent-agent.sh scripts/build-kaji-agent-runtime.sh scripts/build-zlob.sh
           scripts/build-parent-agent.sh
           scripts/build-kaji-agent-runtime.sh
           scripts/build-zlob.sh
@@ -76,7 +75,6 @@ jobs:
             GhosttyKit.xcframework/
 
             GhosttyKit/ghostty.h
-            .dev-support/cef-runtime/
             Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs
             Kaji/Resources/pi/kaji-agent.mjs
             Kaji/Resources/pi/oauth-login.mjs
@@ -134,11 +132,6 @@ jobs:
       - name: Restore executable permissions
         run: |
           chmod +x Kaji/Resources/Zlob/zlob 2>/dev/null || true
-          for helper in .dev-support/cef-runtime/build/tests/cefsimple/Release/cefsimple\ Helper*.app; do
-            [[ -d "$helper" ]] || continue
-            name="$(basename "$helper" .app)"
-            chmod +x "$helper/Contents/MacOS/$name" 2>/dev/null || true
-          done
           echo "Permissions restored"
 
       - name: Resolve Swift packages

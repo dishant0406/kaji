@@ -19,7 +19,6 @@ export * from "./ask";
 export * from "./ast-edit";
 export * from "./ast-grep";
 export * from "./bash";
-export * from "./browser";
 export * from "./checkpoint";
 export * from "./debug";
 export * from "./edit-safety";
@@ -127,7 +126,6 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 		if (name === "inspect_image") return session.settings.get("inspect_image.enabled");
 		if (name === "web_search") return session.settings.get("web_search.enabled");
 		if (name === "search_tool_bm25") return discoveryActive;
-		if (name === "browser") return session.settings.get("browser.enabled");
 		if (name === "checkpoint" || name === "rewind") return session.settings.get("checkpoint.enabled");
 		if (name === "irc") return isIrcAllowed(session);
 		if (name === "recipe") return session.settings.get("recipe.enabled");

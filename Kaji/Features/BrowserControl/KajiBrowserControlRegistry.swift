@@ -3,9 +3,7 @@ import Foundation
 @MainActor
 final class KajiBrowserControlRegistry {
     static let shared = KajiBrowserControlRegistry()
-
     private var sessions: [String: KajiBrowserSessionTarget] = [:]
-
     private init() {}
 
     func register(sessionID: String, state: BrowserPaneState, controllers: BrowserControllerRegistry, close: @escaping () -> Void) {
@@ -17,141 +15,72 @@ final class KajiBrowserControlRegistry {
     }
 
     func handle(_ command: KajiBrowserControlCommand) async -> String {
-        if command.action == "open_panel" {
-            requestOpenPanel()
-            return KajiBrowserControlJSON.body([
-                "connected": false,
-                "pending": true,
-                "action": command.action,
-                "sessionId": command.sessionID,
-            ])
-        }
-        if command.action == "close_panel" {
-            requestClosePanel()
-            return KajiBrowserControlJSON.body([
-                "connected": false,
-                "pending": true,
-                "action": command.action,
-                "sessionId": command.sessionID,
-            ])
-        }
+        if command.action == "open_panel" { return panelResult(command, notification: .openBrowserPanel) }
+        if command.action == "close_panel" { return panelResult(command, notification: .closeBrowserPanel) }
         guard let target = sessions[command.sessionID] else {
-            return KajiBrowserControlJSON.body([
-                "connected": false,
-                "error": "browser_panel_not_open",
-                "sessionId": command.sessionID,
-            ])
+            return KajiBrowserControlJSON.body(["connected": false, "error": "browser_panel_not_open", "sessionId": command.sessionID])
         }
-        let result = await run(command, target: target)
-        return KajiBrowserControlJSON.body(result)
+        return await KajiBrowserControlJSON.body(run(command, target: target))
     }
 
-    private func requestOpenPanel() {
-        NotificationCenter.default.post(name: .openBrowserPanel, object: nil)
-    }
-
-    private func requestClosePanel() {
-        NotificationCenter.default.post(name: .closeBrowserPanel, object: nil)
+    private func panelResult(_ command: KajiBrowserControlCommand, notification: Notification.Name) -> String {
+        NotificationCenter.default.post(name: notification, object: nil)
+        return KajiBrowserControlJSON.body(["connected": false, "pending": true, "action": command.action, "sessionId": command.sessionID])
     }
 
     private func run(_ command: KajiBrowserControlCommand, target: KajiBrowserSessionTarget) async -> [String: Any] {
-        switch command.action {
-        case "current":
-            return current(target: target)
-        case "navigate":
-            return navigate(command.arguments, target: target)
-        case "new_tab":
-            return newTab(command.arguments, target: target)
-        case "back":
-            target.selectedController?.goBack()
-            return current(target: target)
-        case "forward":
-            target.selectedController?.goForward()
-            return current(target: target)
-        case "reload":
-            target.selectedController?.reload()
-            return current(target: target)
-        case "read_page":
-            return await readPage(target: target)
-        case "screenshot":
-            return screenshot(target: target)
-        default:
-            return ["connected": true, "error": "unknown_action", "action": command.action]
-        }
-    }
-
-    private func navigate(_ arguments: [String: String], target: KajiBrowserSessionTarget) -> [String: Any] {
-        guard let url = arguments["url"], !url.isEmpty else {
-            return ["connected": true, "error": "missing_url"]
-        }
-        target.selectedController?.navigate(to: url)
-        return current(target: target)
-    }
-
-    private func newTab(_ arguments: [String: String], target: KajiBrowserSessionTarget) -> [String: Any] {
-        let page = target.state.openPage(url: arguments["url"] ?? BrowserPaneState.defaultURL)
-        target.controllers.controller(for: page.id).ensureStarted(url: page.url)
-        return pendingCurrent(target: target)
-    }
-
-    private func readPage(target: KajiBrowserSessionTarget) async -> [String: Any] {
-        let text = await readableText(target: target)
-        target.state.pageSummary = text
-        var result = current(target: target)
-        result["text"] = text
-        result["readable"] = readablePayload(text: text, target: target)
-        return result
-    }
-
-    private func readableText(target: KajiBrowserSessionTarget) async -> String {
-        for _ in 0 ..< 10 {
-            let text = await (try? target.selectedController?.readPage()) ?? ""
-            if text.trimmingCharacters(in: .whitespacesAndNewlines).count > 20 {
-                return text
+        do {
+            switch command.action {
+            case "current": return current(target: target)
+            case "navigate": return navigate(command.arguments, target: target)
+            case "new_tab": return newTab(command.arguments, target: target)
+            case "back": return back(target: target)
+            case "forward": return forward(target: target)
+            case "reload": return reload(target: target)
+            case "close": return close(command.arguments, target: target)
+            case "tabs": return tabs(command.arguments, target: target)
+            case "resize": return resize(command.arguments, target: target)
+            case "read_page": return try await readPage(target: target)
+            case "screenshot": return try await screenshot(command.arguments, target: target)
+            case "eval": return try await eval(command.arguments, target: target)
+            case "snapshot": return try await snapshot(command.arguments, target: target)
+            case "click": return try await click(command.arguments, target: target)
+            case "hover": return try await hover(command.arguments, target: target)
+            case "drag": return try await drag(command.arguments, target: target)
+            case "fill": return try await fill(command.arguments, target: target)
+            case "fill_form": return try await fillForm(command.arguments, target: target)
+            case "type": return try await type(command.arguments, target: target)
+            case "press_key": return try await pressKey(command.arguments, target: target)
+            case "select_option": return try await selectOption(command.arguments, target: target)
+            case "wait": return try await wait(command.arguments, target: target)
+            case "get_text": return try await getText(command.arguments, target: target)
+            case "get_html": return try await getHTML(command.arguments, target: target)
+            case "storage_get": return try await storageGet(command.arguments, target: target)
+            case "console_messages": return try await consoleMessages(command.arguments, target: target)
+            case "network_requests": return try await networkRequests(command.arguments, target: target)
+            case "network_request": return try await networkRequest(command.arguments, target: target)
+            case "handle_dialog": return handleDialog(command.arguments, target: target)
+            case "file_upload": return try await fileUpload(command.arguments, target: target)
+            case "drop": return try await drop(command.arguments, target: target)
+            default: return ["connected": true, "error": "unknown_action", "action": command.action]
             }
-            try? await Task.sleep(nanoseconds: 300_000_000)
+        } catch {
+            return ["connected": true, "error": error.localizedDescription, "action": command.action]
         }
-        return await (try? target.selectedController?.readPage()) ?? ""
     }
 
-    private func readablePayload(text: String, target: KajiBrowserSessionTarget) -> String {
-        let page = target.state.selectedPage
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return [
-            "Title: \(page?.title ?? "Browser")",
-            "URL: \(page?.url ?? "")",
-            "",
-            trimmed.isEmpty ? "No page text was exposed by Chromium yet. Use kaji_browser_screenshot for visual inspection." : text,
-        ].joined(separator: "\n")
-    }
-
-    private func screenshot(target: KajiBrowserSessionTarget) -> [String: Any] {
-        guard let data = target.selectedController?.screenshotPNG(), !data.isEmpty else {
-            return ["connected": false, "error": "screenshot_unavailable"]
-        }
-        var result = current(target: target)
-        result["mimeType"] = "image/png"
-        result["imageBase64"] = data.base64EncodedString()
-        result["bytes"] = data.count
-        return result
-    }
-
-    private func current(target: KajiBrowserSessionTarget) -> [String: Any] {
+    func current(target: KajiBrowserSessionTarget) -> [String: Any] {
         let page = target.state.selectedPage
         let controller = page.map { target.controllers.controller(for: $0.id) }
         return [
             "connected": controller?.isReady == true,
+            "engine": "webkit",
             "selectedTabId": page?.id.uuidString ?? "",
             "url": page?.url ?? "",
             "title": page?.title ?? "Browser",
+            "dialogs": controller?.pendingDialogPayloads() ?? [],
             "tabs": target.state.pages.map(pagePayload),
         ]
-    }
-
-    private func pendingCurrent(target: KajiBrowserSessionTarget) -> [String: Any] {
-        var result = current(target: target)
-        result["pending"] = true
-        return result
     }
 
     private func pagePayload(_ page: BrowserPageState) -> [String: Any] {
@@ -160,12 +89,9 @@ final class KajiBrowserControlRegistry {
 }
 
 @MainActor
-private struct KajiBrowserSessionTarget {
+struct KajiBrowserSessionTarget {
     let state: BrowserPaneState
     let controllers: BrowserControllerRegistry
     let close: () -> Void
-
-    var selectedController: BrowserWebController? {
-        state.selectedPage.map { controllers.controller(for: $0.id) }
-    }
+    var selectedController: BrowserWebController? { state.selectedPage.map { controllers.controller(for: $0.id) } }
 }

@@ -47,5 +47,6 @@ echo "==> Bundling Kaji parent agent runtime"
 
 perl -pi -e 's/[ \t]+$//' "$OUT_DIR/kaji-agent.mjs" "$OUT_DIR/oauth-login.mjs"
 perl -pi -e 's#https://github\.com/colinhacks/zod/commit/[0-9a-f]{40}#https://github.com/colinhacks/zod/commit/<redacted>#g' "$OUT_DIR/kaji-agent.mjs" "$OUT_DIR/oauth-login.mjs"
+perl -pi -e '$_="" if /^[ \t]*puppeteer:[ \t]*"[^"]+",[ \t]*$/' "$OUT_DIR/kaji-agent.mjs" "$OUT_DIR/oauth-login.mjs"
 
 echo "==> Parent agent runtime ready in $OUT_DIR"

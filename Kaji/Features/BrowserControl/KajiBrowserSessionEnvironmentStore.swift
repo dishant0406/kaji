@@ -10,17 +10,15 @@ enum KajiBrowserSessionEnvironmentStore {
 
     static func write(_ state: KajiBrowserBrokerState, fileManager: FileManager = .default) {
         let file = fileURL()
-        let values: [String: Any?] = [
+        let values: [String: Any] = [
             "brokerUrl": state.brokerURL,
             "token": state.token,
             "sessionId": state.sessionID,
-            "cdpUrl": state.cdpURL,
-            "cdpPort": state.cdpPort,
             "updatedAt": ISO8601DateFormatter().string(from: Date()),
         ]
         do {
             try fileManager.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let data = try JSONSerialization.data(withJSONObject: values.compactMapValues { $0 }, options: [.prettyPrinted, .sortedKeys])
+            let data = try JSONSerialization.data(withJSONObject: values, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: file, options: .atomic)
             try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
             try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: file.deletingLastPathComponent().path)

@@ -1102,10 +1102,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					}
 				},
 				enableProjectConfig: settings.get("mcp.enableProjectConfig") ?? true,
-				// Always filter Exa - we have native integration
 				filterExa: true,
-				// Filter browser MCP servers when builtin browser tool is active
-				filterBrowser: settings.get("browser.enabled") ?? false,
 				cacheStorage: settings.getStorage(),
 				authStorage,
 			});

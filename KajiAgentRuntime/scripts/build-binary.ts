@@ -54,7 +54,6 @@ async function main(): Promise<void> {
 					// `/$bunfs/root/packages/<pkg>/src/<worker>.js`, which is
 					// exactly what the literals at the spawn sites resolve to.
 					"../stats/src/sync-worker.ts",
-					"./src/tools/browser/tab-worker-entry.ts",
 					"./src/eval/js/worker-entry.ts",
 					// Legacy pi-* extension compat entrypoints served by
 					// `legacy-pi-compat.ts`. These are reached via computed bunfs paths

@@ -72,8 +72,6 @@ TRIPLE="${ARCH}-apple-macosx14.0"
 BUILD_NUMBER=$(git -C "$PROJECT_ROOT" rev-list --count HEAD)
 APP_BUNDLE="$BUILD_DIR/Kaji.app"
 DMG_NAME="Kaji-${VERSION}-${ARCH}.dmg"
-CEF_ROOT="$PROJECT_ROOT/.dev-support/cef-runtime/cef_binary"
-CEF_BUILD="$PROJECT_ROOT/.dev-support/cef-runtime/build/tests/cefsimple/Release"
 SIGNING_IDENTITY="${SIGN_IDENTITY:--}"
 
 sign_code() {
@@ -95,22 +93,6 @@ sign_sparkle() {
     sign_code "$sparkle_dir"
 }
 
-sign_cef_runtime() {
-    local framework_dir="$APP_BUNDLE/Contents/Frameworks/Chromium Embedded Framework.framework"
-
-    echo "==> Signing CEF runtime"
-    for library in "$framework_dir"/Libraries/*.dylib; do
-        [[ -f "$library" ]] || continue
-        sign_code "$library"
-    done
-    sign_code "$framework_dir"
-
-    for helper in "$APP_BUNDLE"/Contents/Frameworks/cefsimple\ Helper*.app; do
-        [[ -d "$helper" ]] || continue
-        sign_code_with_entitlements "$helper"
-    done
-}
-
 rm -rf "$APP_BUNDLE"
 
 
@@ -125,7 +107,6 @@ if $SKIP_NATIVE_DEPS; then
 fi
 rm -rf "$PROJECT_ROOT/.build/$TRIPLE/release/Kaji_Kaji.bundle"
 if ! $SKIP_NATIVE_DEPS; then
-    "$SCRIPT_DIR/install-cef-runtime.sh" --arch "$ARCH"
     "$SCRIPT_DIR/build-parent-agent.sh"
     "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
     "$SCRIPT_DIR/build-zlob.sh"
@@ -142,8 +123,6 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 cp "$SPM_BUILD_DIR/Kaji" "$APP_BUNDLE/Contents/MacOS/Kaji"
 cp "$SPM_BUILD_DIR/KajiHookClient" "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
-otool -l "$APP_BUNDLE/Contents/MacOS/Kaji" | grep -Fq "path @executable_path/../Frameworks" || install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/Kaji"
-install_name_tool -delete_rpath "$CEF_ROOT/Release" "$APP_BUNDLE/Contents/MacOS/Kaji" 2>/dev/null || true
 
 echo "==> Stripping local and debug symbols"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/Kaji"
@@ -155,14 +134,6 @@ fi
 "$SCRIPT_DIR/stage-kaji-agent-native-addon.sh" --arch "$ARCH" --destination "$APP_BUNDLE/Contents/Resources/native"
 
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
-if [[ -d "$CEF_ROOT/Release/Chromium Embedded Framework.framework" ]]; then
-    cp -R "$CEF_ROOT/Release/Chromium Embedded Framework.framework" "$APP_BUNDLE/Contents/Frameworks/Chromium Embedded Framework.framework"
-fi
-for helper in "$CEF_BUILD"/cefsimple\ Helper*.app; do
-    [[ -d "$helper" ]] || continue
-    cp -R "$helper" "$APP_BUNDLE/Contents/Frameworks/$(basename "$helper")"
-done
-
 cp "$PROJECT_ROOT/Kaji/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
@@ -189,8 +160,6 @@ if [[ -n "$SPARKLE_PUBLIC_KEY" ]]; then
 fi
 
 sign_sparkle
-sign_cef_runtime
-
 echo "==> Signing Kaji Agent native addon"
 for addon in "$APP_BUNDLE"/Contents/Resources/native/*.node; do
     [[ -f "$addon" ]] || continue
@@ -204,8 +173,6 @@ echo "==> Signing app bundle"
 sign_code_with_entitlements "$APP_BUNDLE"
 
 
-echo "==> Validating bundled CEF runtime"
-"$SCRIPT_DIR/validate-cef-bundle.sh" "$APP_BUNDLE" "$ARCH"
 
 SMOKE_ARGS=("$APP_BUNDLE")
 if [[ "$SMOKE_LAUNCH" == true ]]; then

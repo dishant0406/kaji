@@ -9,7 +9,6 @@ import { AskTool } from "./ask";
 import { AstEditTool } from "./ast-edit";
 import { AstGrepTool } from "./ast-grep";
 import { BashTool } from "./bash";
-import { BrowserTool } from "./browser";
 import { CheckpointTool, RewindTool } from "./checkpoint";
 import { DebugTool } from "./debug";
 import { EvalTool } from "./eval";
@@ -86,7 +85,6 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	search: s => new SearchTool(s),
 	lsp: LspTool.createIf,
 	inspect_image: s => new InspectImageTool(s),
-	browser: s => new BrowserTool(s),
 	checkpoint: CheckpointTool.createIf,
 	rewind: RewindTool.createIf,
 	task: s => TaskTool.create(s),
@@ -120,4 +118,3 @@ export const HIDDEN_TOOLS: Record<string, ToolFactory> = {
 };
 
 export type ToolName = keyof typeof BUILTIN_TOOLS;
-

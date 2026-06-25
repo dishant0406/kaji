@@ -1,6 +1,6 @@
 import AppKit
-import CEFBridge
 import SwiftUI
+import WebKit
 
 struct NativeBrowserSurface: NSViewRepresentable {
     let controller: BrowserWebController
@@ -39,10 +39,9 @@ struct NativeBrowserSurface: NSViewRepresentable {
 @MainActor
 final class NativeBrowserSurfaceView: NSView {
     private static let resizeEdgePassthrough: CGFloat = 28
-
     weak var controller: BrowserWebController?
-    private var status = "Starting Chromium…"
-    private weak var browserView: KajiCEFBrowserView?
+    private var status = "Starting WebKit…"
+    private weak var browserView: KajiBrowserWebView?
     private var deviceProfile = BrowserDeviceProfiles.profile(for: BrowserDeviceProfiles.desktopID)
 
     override init(frame frameRect: NSRect) {
@@ -59,23 +58,20 @@ final class NativeBrowserSurfaceView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        if isResizeEdge(point) {
-            return nil
-        }
-        return super.hitTest(point)
+        isResizeEdge(point) ? nil : super.hitTest(point)
     }
 
     override func mouseDown(with event: NSEvent) {
-        browserView?.focusBrowser()
+        focus(browserView: browserView)
         super.mouseDown(with: event)
     }
 
     override func becomeFirstResponder() -> Bool {
-        browserView?.focusBrowser()
+        focus(browserView: browserView)
         return true
     }
 
-    func install(browserView: KajiCEFBrowserView) {
+    func install(browserView: KajiBrowserWebView) {
         guard self.browserView !== browserView || browserView.superview !== self else {
             browserView.frame = browserFrame
             return
@@ -84,12 +80,12 @@ final class NativeBrowserSurfaceView: NSView {
         status = ""
         browserView.removeFromSuperview()
         browserView.frame = browserFrame
-        browserView.autoresizingMask = []
+        browserView.autoresizingMask = [.width, .height]
         addSubview(browserView)
         needsDisplay = true
     }
 
-    func release(controller: BrowserWebController, browserView: KajiCEFBrowserView?) {
+    func release(controller: BrowserWebController, browserView: KajiBrowserWebView?) {
         if self.controller === controller {
             self.controller = nil
         }
@@ -97,10 +93,8 @@ final class NativeBrowserSurfaceView: NSView {
         uninstall(browserView: browserView)
     }
 
-    func uninstall(browserView: KajiCEFBrowserView) {
-        guard BrowserSurfaceAttachmentPolicy.shouldUninstallBrowserView(
-            surfaceOwnsBrowserView: contains(browserView: browserView)
-        )
+    func uninstall(browserView: KajiBrowserWebView) {
+        guard BrowserSurfaceAttachmentPolicy.shouldUninstallBrowserView(surfaceOwnsBrowserView: contains(browserView: browserView))
         else { return }
         self.browserView = nil
         browserView.removeFromSuperview()
@@ -113,13 +107,18 @@ final class NativeBrowserSurfaceView: NSView {
         needsDisplay = true
     }
 
-    func contains(browserView: KajiCEFBrowserView) -> Bool {
+    func contains(browserView: KajiBrowserWebView) -> Bool {
         self.browserView === browserView && browserView.superview === self
     }
 
     func show(status: String) {
         self.status = status
         needsDisplay = true
+    }
+
+    func focus(browserView: KajiBrowserWebView?) {
+        guard let browserView, browserView.window != nil else { return }
+        window?.makeFirstResponder(browserView)
     }
 
     override func layout() {

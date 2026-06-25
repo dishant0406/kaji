@@ -82,8 +82,6 @@ enum CodingAgentShimTestHarness {
             "KAJI_CODE_GRAPH_JSON": "",
             "KAJI_CODE_GRAPH_OPENCODE_CONFIG": "",
             "KAJI_BROWSER_BROKER_URL": "",
-            "KAJI_BROWSER_CDP_PORT": "",
-            "KAJI_BROWSER_CDP_URL": "",
             "KAJI_BROWSER_MCP_COMMAND": "",
             "KAJI_BROWSER_MCP_TOKEN": "",
             "KAJI_BROWSER_SESSION_ID": "",

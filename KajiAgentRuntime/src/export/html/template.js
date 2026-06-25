@@ -1085,32 +1085,6 @@
         return html;
       }
 
-      function renderBrowser(name, args, result, ctx) {
-        const action = str(args.action) || '?';
-        const tabName = str(args.name);
-        const badges = [];
-        if (tabName) badges.push('name=' + tabName);
-        if (args.url) badges.push(String(args.url));
-        if (args.app && typeof args.app === 'object') {
-          if (args.app.path) badges.push('app=' + shortenPath(String(args.app.path)));
-          else if (args.app.cdp_url) badges.push('cdp=' + String(args.app.cdp_url));
-        }
-        if (args.all) badges.push('all');
-        if (args.kill) badges.push('kill');
-        let head = '<span class="tool-name">browser</span> <span class="tool-badge">' + escapeHtml(action) + '</span>';
-        for (const b of badges) head += ' <span class="tool-badge">' + escapeHtml(String(b)) + '</span>';
-        let html = '<div class="tool-header">' + head + '</div>';
-        if (action === 'run' && args.code) {
-          html += codeBlock(String(args.code), 'javascript');
-        }
-        if (result) {
-          html += ctx.renderResultImages();
-          const output = ctx.getResultText();
-          if (output) html += formatExpandableOutput(output, 10);
-        }
-        return html;
-      }
-
       function renderInspectImage(name, args, result, ctx) {
         const p = str(args.path == null ? args.url : args.path) || '';
         let html = toolHead('inspect_image', escapeHtml(shortenPath(p)));
@@ -1536,8 +1510,6 @@
         web_search: renderWebSearch,
         fetch: renderFetch,
         debug: renderDebug,
-        puppeteer: renderBrowser,
-        browser: renderBrowser,
         inspect_image: renderInspectImage,
         generate_image: renderGenerateImage,
         ask: renderAsk,
