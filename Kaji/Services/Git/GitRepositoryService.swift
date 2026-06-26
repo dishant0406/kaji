@@ -195,15 +195,25 @@ struct GitRepositoryService {
         return info
     }
 
-    func pullRequestInfo(repoPath: String, branch: String) async -> PRInfo? {
+    func pullRequestInfo(repoPath: String, branch: String, account: GitHubAccount? = nil) async -> PRInfo? {
         guard let ghPath = GitProcessRunner.resolveExecutable("gh") else { return nil }
         let jsonFields = "url,number,state,isDraft,baseRefName,mergeable,mergeStateStatus,statusCheckRollup"
+        let environment = await githubEnvironment(ghPath: ghPath, repoPath: repoPath, account: account)
 
-        if let info = await ghPRView(ghPath: ghPath, repoPath: repoPath, jsonFields: jsonFields) {
+        if let info = await ghPRView(
+            ghPath: ghPath,
+            repoPath: repoPath,
+            jsonFields: jsonFields,
+            environment: environment
+        ) {
             return info
         }
         return await ghPRView(
-            ghPath: ghPath, repoPath: repoPath, branch: branch, jsonFields: jsonFields
+            ghPath: ghPath,
+            repoPath: repoPath,
+            branch: branch,
+            jsonFields: jsonFields,
+            environment: environment
         )
     }
 
@@ -211,7 +221,8 @@ struct GitRepositoryService {
         ghPath: String,
         repoPath: String,
         branch: String? = nil,
-        jsonFields: String
+        jsonFields: String,
+        environment: [String: String]?
     ) async -> PRInfo? {
         var arguments = ["pr", "view"]
         if let branch {
@@ -222,7 +233,8 @@ struct GitRepositoryService {
         let result = try? await GitProcessRunner.runCommand(
             executable: ghPath,
             arguments: arguments,
-            workingDirectory: repoPath
+            workingDirectory: repoPath,
+            environment: environment
         )
         guard let result, result.status == 0 else { return nil }
         return GitPRParser.parsePRInfo(result.stdout)
@@ -325,11 +337,13 @@ struct GitRepositoryService {
         baseBranch: String,
         title: String,
         body: String,
-        draft: Bool = false
+        draft: Bool = false,
+        account: GitHubAccount? = nil
     ) async throws -> PRInfo {
         guard let ghPath = GitProcessRunner.resolveExecutable("gh") else {
             throw PRCreateError.ghNotInstalled
         }
+        let environment = try await githubEnvironmentOrThrow(ghPath: ghPath, repoPath: repoPath, account: account)
 
         var arguments: [String] = [
             "pr", "create",
@@ -346,7 +360,8 @@ struct GitRepositoryService {
         let createResult = try await GitProcessRunner.runCommand(
             executable: ghPath,
             arguments: arguments,
-            workingDirectory: repoPath
+            workingDirectory: repoPath,
+            environment: environment
         )
         guard createResult.status == 0 else {
             let message = createResult.stderr.isEmpty ? createResult.stdout : createResult.stderr
@@ -359,7 +374,7 @@ struct GitRepositoryService {
 
         GitMetadataCache.shared.invalidatePRInfo(repoPath: repoPath, branch: branch)
 
-        if let info = await pullRequestInfo(repoPath: repoPath, branch: branch) {
+        if let info = await pullRequestInfo(repoPath: repoPath, branch: branch, account: account) {
             return info
         }
 
@@ -369,6 +384,52 @@ struct GitRepositoryService {
                 ? "Pull request created but could not be read back."
                 : "Pull request created at \(fallbackURL) but could not be read back."
         )
+    }
+
+    private func githubEnvironment(
+        ghPath: String,
+        repoPath: String,
+        account: GitHubAccount?
+    ) async -> [String: String]? {
+        guard let account else {
+            return ["GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1"]
+        }
+        return try? await githubEnvironmentOrThrow(ghPath: ghPath, repoPath: repoPath, account: account)
+    }
+
+    private func githubEnvironmentOrThrow(
+        ghPath: String,
+        repoPath: String,
+        account: GitHubAccount?
+    ) async throws -> [String: String]? {
+        guard let account else {
+            return ["GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1"]
+        }
+        let tokenResult = try await GitProcessRunner.runCommand(
+            executable: ghPath,
+            arguments: ["auth", "token", "--hostname", account.host, "--user", account.login],
+            workingDirectory: repoPath,
+            environment: ["GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1"]
+        )
+        guard tokenResult.status == 0 else {
+            let message = tokenResult.stderr.isEmpty ? tokenResult.stdout : tokenResult.stderr
+            throw PRCreateError.commandFailed(message.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        let token = tokenResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else {
+            throw PRCreateError.commandFailed("Could not read GitHub token for \(account.login).")
+        }
+        var environment = [
+            "GH_HOST": account.host,
+            "GH_PROMPT_DISABLED": "1",
+            "GH_NO_UPDATE_NOTIFIER": "1",
+        ]
+        environment[githubTokenEnvironmentKey(for: account.host)] = token
+        return environment
+    }
+
+    private func githubTokenEnvironmentKey(for host: String) -> String {
+        host == "github.com" || host.hasSuffix(".ghe.com") ? "GH_TOKEN" : "GH_ENTERPRISE_TOKEN"
     }
 
     func mergePullRequest(

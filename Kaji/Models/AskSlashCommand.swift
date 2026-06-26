@@ -5,6 +5,7 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
     case worktree
     case provider
     case session
+    case pullRequest = "pr"
     case bookmark
     case sleep
     case lid
@@ -25,6 +26,8 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
             "Provider"
         case .session:
             "Session"
+        case .pullRequest:
+            "Create Pull Request"
         case .bookmark:
             "Bookmark Session"
         case .sleep:
@@ -44,6 +47,8 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
             "Switch between Terminal and enabled coding agents"
         case .session:
             "Pick Best Match, Existing Session, or New Terminal"
+        case .pullRequest:
+            "Create a GitHub pull request for the current branch"
         case .bookmark:
             "Save visible coding-agent sessions for later"
         case .sleep:

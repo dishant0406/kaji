@@ -130,6 +130,7 @@
     { "token": "/worktree", "detail": "Worktree picker" },
     { "token": "/provider", "detail": "Provider picker" },
     { "token": "/session", "detail": "Session mode picker" },
+    { "token": "/pr", "detail": "Create pull request" },
     { "token": "/bookmark", "detail": "Bookmark visible sessions" },
     { "token": "/sleep", "detail": "Toggle sleep prevention" },
     { "token": "/lid", "detail": "Toggle battery lid sleep" }

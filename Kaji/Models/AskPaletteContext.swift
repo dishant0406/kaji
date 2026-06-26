@@ -21,6 +21,7 @@ struct AskPaletteContext {
     let mentionOptions: [AskMentionOption]
     let directoryOptions: [AskDirectoryOption]
     let diffFiles: [DiffPaletteFile]
+    let createPullRequestTarget: CreatePullRequestPaletteTarget?
     let gitBranches: [String]
     let currentGitBranch: String?
     let isLoadingGitBranches: Bool
@@ -52,6 +53,7 @@ struct AskPaletteContext {
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
         diffFiles: [DiffPaletteFile] = [],
+        createPullRequestTarget: CreatePullRequestPaletteTarget? = nil,
         gitBranches: [String] = [],
         currentGitBranch: String? = nil,
         isLoadingGitBranches: Bool = false,
@@ -82,6 +84,7 @@ struct AskPaletteContext {
         self.mentionOptions = mentionOptions
         self.directoryOptions = directoryOptions
         self.diffFiles = diffFiles
+        self.createPullRequestTarget = createPullRequestTarget
         self.gitBranches = gitBranches
         self.currentGitBranch = currentGitBranch
         self.isLoadingGitBranches = isLoadingGitBranches

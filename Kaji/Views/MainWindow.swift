@@ -153,7 +153,7 @@ struct MainWindow: View {
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showCreateThemeModal)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: createWorktreeProjectID)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: projectLogoCropRequest?.id)
-                .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: modalCoordinator.route?.id)
+                .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: modalCoordinator.route?.animatedID)
                 .animation(KajiMotion.preferred(KajiMotion.fast, reduceMotion: reduceMotion), value: ToastState.shared.message != nil)
                 .task(id: activeQuickOpenProjectPath) {
                     guard let path = activeQuickOpenProjectPath else { return }
@@ -222,6 +222,9 @@ struct MainWindow: View {
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
                     showGoToLine = false
+                    if shouldShow {
+                        prepareActiveVCSStateForPullRequestEntry()
+                    }
                     showAsk = shouldShow
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openAskWithPrefill)) { _ in
@@ -698,6 +701,8 @@ struct MainWindow: View {
     private var askOverlay: some View {
         if showAsk {
             AskOverlay(
+                pullRequestTargetProvider: createPullRequestTarget,
+                onCreatePullRequest: presentCreatePullRequest,
                 onDismiss: { showAsk = false }
             )
         }
@@ -835,17 +840,31 @@ struct MainWindow: View {
     @ViewBuilder
     private var globalModalOverlay: some View {
         if let route = modalCoordinator.route {
-            KajiModalOverlay {
-                modalCoordinator.dismiss()
-            } content: {
-                switch route {
-                case let .subagent(agent):
+            switch route {
+            case let .subagent(agent):
+                KajiModalOverlay {
+                    modalCoordinator.dismiss()
+                } content: {
                     KajiAgentSubagentDetailView(agent: agent) {
                         modalCoordinator.dismiss()
                     }
-                case let .subagents(agents):
+                }
+            case let .subagents(agents):
+                KajiModalOverlay {
+                    modalCoordinator.dismiss()
+                } content: {
                     KajiAgentSubagentListDetailView(agents: agents) {
                         modalCoordinator.dismiss()
+                    }
+                }
+            case .createPullRequest:
+                if let state = modalCoordinator.createPullRequestState {
+                    CreatePRModalPresenter(state: state) {
+                        modalCoordinator.dismiss()
+                    }
+                    .transaction { transaction in
+                        transaction.animation = nil
+                        transaction.disablesAnimations = true
                     }
                 }
             }
@@ -1424,10 +1443,54 @@ struct MainWindow: View {
         return vcsStates[key]
     }
 
+    private func vcsState(projectID: UUID, worktreeID: UUID) -> VCSTabState? {
+        vcsStates[WorktreeKey(projectID: projectID, worktreeID: worktreeID)]
+    }
+
+    private func createPullRequestTarget(projectID: UUID?, worktreeID: UUID?) -> CreatePullRequestPaletteTarget? {
+        guard let projectID, let worktreeID else { return nil }
+        guard let project = projectStore.projects.first(where: { $0.id == projectID }) else { return nil }
+        guard let worktree = worktreeStore.worktree(projectID: projectID, worktreeID: worktreeID) else { return nil }
+        guard let state = vcsState(projectID: projectID, worktreeID: worktreeID) else { return nil }
+        guard case .canCreate = state.prLaunchState else { return nil }
+        guard let branchName = state.branchName else { return nil }
+        return CreatePullRequestPaletteTarget(
+            projectID: projectID,
+            worktreeID: worktreeID,
+            worktreePath: worktree.path,
+            projectName: project.name,
+            worktreeName: AskSessionCatalog.displayName(for: worktree),
+            branchName: branchName
+        )
+    }
+
+    private func presentCreatePullRequest(_ target: CreatePullRequestPaletteTarget) {
+        guard let project = projectStore.projects.first(where: { $0.id == target.projectID }) else { return }
+        guard let worktree = worktreeStore.worktree(projectID: target.projectID, worktreeID: target.worktreeID) else { return }
+        appState.selectProject(project, worktree: worktree)
+        ensureVCSState(projectID: project.id, worktree: worktree)
+        guard let state = vcsState(projectID: project.id, worktreeID: worktree.id) else { return }
+        modalCoordinator.presentCreatePullRequest(state: state)
+    }
+
     private func ensureVCSState(for project: Project) {
         guard let key = appState.activeWorktreeKey(for: project.id) else { return }
         guard vcsStates[key] == nil else { return }
         vcsStates[key] = VCSTabState(projectPath: activeWorktreePath(for: project))
+    }
+
+    private func ensureVCSState(projectID: UUID, worktree: Worktree) {
+        let key = WorktreeKey(projectID: projectID, worktreeID: worktree.id)
+        guard vcsStates[key] == nil else { return }
+        vcsStates[key] = VCSTabState(projectPath: worktree.path)
+    }
+
+    private func prepareActiveVCSStateForPullRequestEntry() {
+        guard let project = activeProject else { return }
+        ensureVCSState(for: project)
+        guard let state = activeVCSState else { return }
+        guard !state.hasCompletedInitialLoad, !state.isLoadingFiles else { return }
+        state.refresh()
     }
 
     private func activeWorktreePath(for project: Project) -> String {

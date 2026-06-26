@@ -150,13 +150,8 @@ enum AskPaletteEntries {
         }
 
         if trimmedPrompt.isEmpty {
-            let commands: [AskPaletteEntry] = AskSlashCommand.allCases.map { command in
-                .init(
-                    action: .command(command),
-                    title: command.title,
-                    detail: currentValue(for: command, context: context),
-                    annotation: command.trigger
-                )
+            let commands = visibleSlashCommands(context).map { command in
+                slashCommandEntry(command, context: context)
             }
             let sleepEntry = sleepPreventionEntry(
                 isEnabled: context.sleepPreventionIsEnabled,
@@ -177,7 +172,9 @@ enum AskPaletteEntries {
         context: AskPaletteContext
     ) -> [AskPaletteEntry] {
         guard let command = state.command, state.token == command.rawValue else {
-            return AskSlashCommand.matches(state.token).map {
+            return visibleSlashCommands(context).filter { command in
+                state.token.isEmpty || command.rawValue.hasPrefix(state.token.lowercased())
+            }.map {
                 .init(action: .command($0), title: $0.title, detail: $0.detail, annotation: $0.trigger)
             }
         }
@@ -191,6 +188,8 @@ enum AskPaletteEntries {
             return filteredProviders(query: state.filter)
         case .session:
             return filteredSessionModes(query: state.filter)
+        case .pullRequest:
+            return createPullRequestEntries(context.createPullRequestTarget, query: state.filter)
         case .bookmark:
             return bookmarkEntries(
                 context.bookmarkCandidates,
@@ -215,6 +214,44 @@ enum AskPaletteEntries {
     private static func filteredProjects(_ projects: [Project], query: String) -> [AskPaletteEntry] {
         let filtered = projects.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         return filtered.map { .init(action: .project($0), title: $0.name, detail: $0.path, annotation: nil) }
+    }
+
+    private static func visibleSlashCommands(_ context: AskPaletteContext) -> [AskSlashCommand] {
+        AskSlashCommand.allCases.filter { command in
+            command != .pullRequest || context.createPullRequestTarget != nil
+        }
+    }
+
+    private static func slashCommandEntry(_ command: AskSlashCommand, context: AskPaletteContext) -> AskPaletteEntry {
+        if command == .pullRequest, let entry = createPullRequestEntries(context.createPullRequestTarget, query: "").first {
+            return entry
+        }
+        return .init(
+            action: .command(command),
+            title: command.title,
+            detail: currentValue(for: command, context: context),
+            annotation: command.trigger
+        )
+    }
+
+    private static func createPullRequestEntries(
+        _ target: CreatePullRequestPaletteTarget?,
+        query: String
+    ) -> [AskPaletteEntry] {
+        guard let target else { return [] }
+        let tokens = ["create", "pull", "request", "pr", target.branchName, target.projectName, target.worktreeName]
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard normalized.isEmpty || tokens.contains(where: { $0.lowercased().localizedCaseInsensitiveContains(normalized) }) else {
+            return []
+        }
+        return [
+            .init(
+                action: .createPullRequest(target),
+                title: "Create Pull Request",
+                detail: "\(target.branchName) in \(target.worktreeName)",
+                annotation: "Enter"
+            ),
+        ]
     }
 
     private static func bookmarkEntries(
@@ -483,6 +520,8 @@ enum AskPaletteEntries {
             context.provider.title
         case .session:
             context.sessionMode.title
+        case .pullRequest:
+            context.createPullRequestTarget.map { "\($0.branchName) in \($0.worktreeName)" } ?? "Unavailable"
         case .bookmark:
             context.bookmarkCandidates.isEmpty ? "No agent sessions" : "\(context.bookmarkCandidates.count) available"
         case .sleep:

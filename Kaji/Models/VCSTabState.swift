@@ -46,6 +46,7 @@ final class VCSTabState {
         let branchStrategy: PRBranchStrategy
         let includeMode: PRIncludeMode
         let draft: Bool
+        let githubAccount: GitHubAccount?
     }
 
     let projectPath: String
@@ -63,6 +64,8 @@ final class VCSTabState {
     var defaultBranch: String?
     var remoteBranches: [String] = []
     var isLoadingRemoteBranches = false
+    var githubAccounts: [GitHubAccount] = []
+    var isLoadingGitHubAccounts = false
     var isGhInstalled = true
     var aheadBehind = GitRepositoryService.AheadBehind(ahead: 0, behind: 0, hasUpstream: false)
     var isOpeningPullRequest = false
@@ -129,10 +132,12 @@ final class VCSTabState {
     }
 
     @ObservationIgnored private let git = GitRepositoryService()
+    @ObservationIgnored private let githubAccountService = GitHubAccountService()
     @ObservationIgnored private var loadFilesTask: Task<Void, Never>?
     @ObservationIgnored private var branchTask: Task<Void, Never>?
     @ObservationIgnored private var prInfoTask: Task<Void, Never>?
     @ObservationIgnored private var loadBranchesTask: Task<Void, Never>?
+    @ObservationIgnored private var loadGitHubAccountsTask: Task<Void, Never>?
     @ObservationIgnored private var commitLogTask: Task<Void, Never>?
     @ObservationIgnored private var watcher: GitDirectoryWatcher?
     @ObservationIgnored nonisolated(unsafe) private var remoteChangeObserver: NSObjectProtocol?
@@ -156,6 +161,7 @@ final class VCSTabState {
         branchTask?.cancel()
         prInfoTask?.cancel()
         loadBranchesTask?.cancel()
+        loadGitHubAccountsTask?.cancel()
         commitLogTask?.cancel()
         diffCache.cancelAll()
         if let remoteChangeObserver {
@@ -825,6 +831,19 @@ final class VCSTabState {
         }
     }
 
+    func loadGitHubAccounts() {
+        guard !isLoadingGitHubAccounts else { return }
+        isLoadingGitHubAccounts = true
+        loadGitHubAccountsTask?.cancel()
+        loadGitHubAccountsTask = Task { [weak self] in
+            guard let self else { return }
+            defer { isLoadingGitHubAccounts = false }
+            let accounts = await githubAccountService.accounts(repoPath: projectPath)
+            guard !Task.isCancelled else { return }
+            githubAccounts = accounts
+        }
+    }
+
     func refreshPullRequest() {
         guard let branch = branchName else { return }
         guard !isRefreshingPullRequest else { return }
@@ -862,7 +881,8 @@ final class VCSTabState {
             body: request.body,
             branchStrategy: request.branchStrategy,
             includeMode: request.includeMode,
-            draft: request.draft
+            draft: request.draft,
+            githubAccount: request.githubAccount
         )
 
         Task { [weak self] in
@@ -903,7 +923,8 @@ final class VCSTabState {
             baseBranch: request.baseBranch,
             title: request.title,
             body: request.body,
-            draft: request.draft
+            draft: request.draft,
+            account: request.githubAccount
         )
 
         if Task.isCancelled { return }

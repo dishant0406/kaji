@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AskOverlay: View {
+    let pullRequestTargetProvider: (UUID?, UUID?) -> CreatePullRequestPaletteTarget?
+    let onCreatePullRequest: (CreatePullRequestPaletteTarget) -> Void
     let onDismiss: () -> Void
 
     @Environment(AppState.self) var appState
@@ -62,11 +64,7 @@ struct AskOverlay: View {
     @State var commitTask: Task<Void, Never>?
 
     var body: some View {
-        ZStack {
-            KajiTheme.bg.opacity(0.42)
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-
+        KajiCommandModalShell(width: modalWidth, height: modalHeight, onDismiss: onDismiss) {
             VStack(spacing: 0) {
                 if nativeCommandRunner.plan != nil {
                     NativeCommandRunnerView(
@@ -130,16 +128,6 @@ struct AskOverlay: View {
                     footer
                 }
             }
-            .frame(width: modalWidth, height: modalHeight)
-            .background(KajiTheme.bg)
-            .clipShape(RoundedRectangle(cornerRadius: KajiShape.modalRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: KajiShape.modalRadius)
-                    .stroke(KajiTheme.borderStrong.opacity(0.82), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.14), radius: 6, y: 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityAddTraits(.isModal)
         }
         .overlay { attachmentPreview }
         .background(AskAttachmentDropTarget { attachments.append(contentsOf: $0) })

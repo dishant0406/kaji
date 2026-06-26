@@ -260,6 +260,8 @@ extension AskOverlay {
             openDiffFile(file)
         case let .openDiffSummary(projectID, worktreeID, worktreePath):
             openDiffSummary(projectID: projectID, worktreeID: worktreeID, worktreePath: worktreePath)
+        case let .createPullRequest(target):
+            openCreatePullRequest(target)
         case let .gitCommand(request):
             runGitCommand(request)
         case let .gitBranch(name, _):
@@ -595,6 +597,11 @@ extension AskOverlay {
         onDismiss()
     }
 
+    func openCreatePullRequest(_ target: CreatePullRequestPaletteTarget) {
+        onCreatePullRequest(target)
+        onDismiss()
+    }
+
     func promptWithAttachments(_ base: String) -> String {
         guard !attachments.isEmpty else { return base }
         let paths = attachments.map { "- \($0.url.path)" }.joined(separator: "\n")
@@ -625,6 +632,8 @@ extension AskOverlay {
             bookmarkFolders: bookmarkStore.folderNames,
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
+            diffFiles: diffFiles,
+            createPullRequestTarget: createPullRequestTarget,
             gitBranches: gitBranches,
             currentGitBranch: currentGitBranch,
             isLoadingGitBranches: isLoadingGitBranches,
@@ -686,6 +695,7 @@ extension AskOverlay {
              .gitSwitchBranch,
              .gitCheckoutBranch,
              .gitCommitDiff,
+             .createPullRequest,
              .gitCommitStart,
              .gitCommitSelectAll,
              .gitCommitSelectFile,

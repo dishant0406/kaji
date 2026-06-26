@@ -13,6 +13,15 @@ enum GitProcessError: Error {
 }
 
 enum GitProcessRunner {
+    private struct ProcessInvocation {
+        let executable: String
+        let arguments: [String]
+        let workingDirectory: String?
+        let environment: [String: String]?
+        let lineLimit: Int?
+        let signpostName: StaticString
+    }
+
     private static let queue = DispatchQueue(
         label: "app.kaji.git-runner",
         qos: .userInitiated,
@@ -45,29 +54,32 @@ enum GitProcessRunner {
     ) async throws -> GitProcessResult {
         let fullArgs = ["git", "-C", repoPath] + arguments
         return try await dispatch {
-            try runProcessSync(
+            try runProcessSync(.init(
                 executable: "/usr/bin/env",
                 arguments: fullArgs,
                 workingDirectory: nil,
+                environment: nil,
                 lineLimit: lineLimit,
                 signpostName: "git"
-            )
+            ))
         }
     }
 
     static func runCommand(
         executable: String,
         arguments: [String],
-        workingDirectory: String
+        workingDirectory: String,
+        environment: [String: String]? = nil
     ) async throws -> GitProcessResult {
         try await dispatch {
-            try runProcessSync(
+            try runProcessSync(.init(
                 executable: executable,
                 arguments: arguments,
                 workingDirectory: workingDirectory,
+                environment: environment,
                 lineLimit: nil,
                 signpostName: "command"
-            )
+            ))
         }
     }
 
@@ -106,20 +118,17 @@ enum GitProcessRunner {
         }
     }
 
-    private static func runProcessSync(
-        executable: String,
-        arguments: [String],
-        workingDirectory: String?,
-        lineLimit: Int?,
-        signpostName: StaticString
-    ) throws -> GitProcessResult {
-        let signpostID = GitSignpost.begin(signpostName, arguments.prefix(3).joined(separator: " "))
-        defer { GitSignpost.end(signpostName, signpostID) }
+    private static func runProcessSync(_ invocation: ProcessInvocation) throws -> GitProcessResult {
+        let signpostID = GitSignpost.begin(invocation.signpostName, invocation.arguments.prefix(3).joined(separator: " "))
+        defer { GitSignpost.end(invocation.signpostName, signpostID) }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments
-        if let workingDirectory {
+        process.executableURL = URL(fileURLWithPath: invocation.executable)
+        process.arguments = invocation.arguments
+        if let environment = invocation.environment {
+            process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
+        }
+        if let workingDirectory = invocation.workingDirectory {
             process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
         }
 
@@ -138,7 +147,7 @@ enum GitProcessRunner {
             throw GitProcessError.launchFailed(error.localizedDescription)
         }
 
-        let stdoutData: Data = if let lineLimit {
+        let stdoutData: Data = if let lineLimit = invocation.lineLimit {
             try readWithLineLimit(handle: stdoutPipe.fileHandleForReading, process: process, lineLimit: lineLimit)
         } else {
             stdoutPipe.fileHandleForReading.readDataToEndOfFile()

@@ -24,6 +24,7 @@ enum AskPaletteAction: Hashable {
     case directory(AskDirectoryOption)
     case diffFile(DiffPaletteFile)
     case openDiffSummary(projectID: UUID, worktreeID: UUID, worktreePath: String)
+    case createPullRequest(CreatePullRequestPaletteTarget)
     case gitCommand(GitCommandRequest)
     case gitBranch(name: String, isCurrent: Bool)
     case gitSwitchBranch(String)
@@ -99,6 +100,8 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "diff-file:\(file.id)"
         case let .openDiffSummary(projectID, worktreeID, worktreePath):
             "diff-summary:\(projectID.uuidString):\(worktreeID.uuidString):\(worktreePath)"
+        case let .createPullRequest(target):
+            "create-pull-request:\(target.projectID.uuidString):\(target.worktreeID.uuidString):\(target.branchName)"
         case let .gitCommand(request):
             "git-command:\(request.id)"
         case let .gitBranch(name, isCurrent):

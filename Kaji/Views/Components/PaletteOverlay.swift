@@ -15,26 +15,12 @@ struct PaletteOverlay<Item: Identifiable & Sendable>: View {
     @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
-        ZStack {
-            KajiTheme.bg.opacity(0.42)
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-
+        KajiCommandModalShell(width: 580, height: 420, onDismiss: onDismiss) {
             VStack(spacing: 0) {
                 searchField
                 Divider().overlay(KajiTheme.border.opacity(0.75))
                 resultsList
             }
-            .frame(width: 580, height: 420)
-            .background(KajiTheme.bg)
-            .clipShape(RoundedRectangle(cornerRadius: KajiShape.modalRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: KajiShape.modalRadius)
-                    .stroke(KajiTheme.borderStrong.opacity(0.82), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.14), radius: 6, y: 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .accessibilityAddTraits(.isModal)
         }
         .onAppear {
             performSearch()

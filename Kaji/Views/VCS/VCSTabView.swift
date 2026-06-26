@@ -10,10 +10,10 @@ struct VCSTabView: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
+    @Environment(KajiModalCoordinator.self) private var modalCoordinator
     @State private var showDiscardAllConfirmation = false
     @State private var pendingDiscardPath: String?
     @State private var showCreateBranchModal = false
-    @State private var showCreatePRModal = false
     @State private var showWorktreePopover = false
     @State private var pendingClosePR: GitRepositoryService.PRInfo?
     private var commitEnabled: Bool {
@@ -42,7 +42,6 @@ struct VCSTabView: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onFocus)
         .overlay { branchModalOverlay }
-        .overlay { prModalOverlay }
         .onAppear {
             if !state.hasCompletedInitialLoad, !state.isLoadingFiles {
                 state.refresh()
@@ -131,16 +130,10 @@ struct VCSTabView: View {
         .padding(.horizontal, 10)
         .frame(height: 38)
         .background(KajiTheme.secondaryBackground)
-        .onChange(of: state.pullRequestInfo?.number) { _, number in
-            guard number != nil, showCreatePRModal else { return }
-            showCreatePRModal = false
-        }
     }
 
     private func requestOpenPR() {
-        state.openPullRequestError = nil
-        state.loadRemoteBranches()
-        showCreatePRModal = true
+        modalCoordinator.presentCreatePullRequest(state: state)
     }
 
     @ViewBuilder
@@ -197,45 +190,6 @@ struct VCSTabView: View {
                 )
             })
         }
-    }
-
-    @ViewBuilder
-    private var prModalOverlay: some View {
-        if showCreatePRModal {
-            KajiModalOverlay(onDismiss: dismissPRModal) {
-                CreatePRModal(
-                    context: .init(
-                        currentBranch: state.branchName ?? "",
-                        defaultBranch: state.defaultBranch,
-                        availableBaseBranches: state.remoteBranches,
-                        isLoadingBranches: state.isLoadingRemoteBranches,
-                        hasStagedChanges: state.hasStagedChanges,
-                        hasUnstagedChanges: !state.unstagedFiles.isEmpty
-                    ),
-                    inProgress: state.isOpeningPullRequest,
-                    errorMessage: state.openPullRequestError,
-                    onSubmit: { base, title, body, branchStrategy, includeMode, draft in
-                        ToastState.shared.show("Creating pull request…")
-                        state.openPullRequest(
-                            VCSTabState.PRCreateRequest(
-                                baseBranch: base,
-                                title: title,
-                                body: body,
-                                branchStrategy: branchStrategy,
-                                includeMode: includeMode,
-                                draft: draft
-                            )
-                        )
-                    },
-                    onCancel: dismissPRModal
-                )
-            }
-        }
-    }
-
-    private func dismissPRModal() {
-        state.openPullRequestError = nil
-        showCreatePRModal = false
     }
 
     private var worktreeTriggerLabel: String {

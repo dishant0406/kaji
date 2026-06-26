@@ -114,6 +114,32 @@ struct AskPaletteFeatureTests {
     }
 
     @Test
+    func emptyCommandListShowsCreatePullRequestWhenAvailable() {
+        let target = createPullRequestTarget()
+        let entries = AskPaletteEntries.build(context(fieldText: "", createPullRequestTarget: target))
+
+        #expect(entries.contains { $0.action == .createPullRequest(target) })
+    }
+
+    @Test
+    func emptyCommandListHidesCreatePullRequestWhenUnavailable() {
+        let entries = AskPaletteEntries.build(context(fieldText: ""))
+
+        #expect(!entries.contains { entry in
+            if case .createPullRequest = entry.action { return true }
+            return entry.action == .command(.pullRequest)
+        })
+    }
+
+    @Test
+    func pullRequestSlashCommandOpensCreatePullRequestAction() {
+        let target = createPullRequestTarget()
+        let entries = AskPaletteEntries.build(context(fieldText: "/pr", createPullRequestTarget: target))
+
+        #expect(entries.first?.action == .createPullRequest(target))
+    }
+
+    @Test
     func bookmarkFolderSelectionMovesToBookmarkList() {
         let entries = AskPaletteEntries.build(context(
             fieldText: ":bf:Age",
@@ -129,6 +155,7 @@ struct AskPaletteFeatureTests {
         mentionOptions: [AskMentionOption] = [],
         directoryOptions: [AskDirectoryOption] = [],
         diffFiles: [DiffPaletteFile] = [],
+        createPullRequestTarget: CreatePullRequestPaletteTarget? = nil,
         bookmarkFolders: [String] = [],
         gitBranches: [String] = []
     ) -> AskPaletteContext {
@@ -147,10 +174,22 @@ struct AskPaletteFeatureTests {
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             diffFiles: diffFiles,
+            createPullRequestTarget: createPullRequestTarget,
             gitBranches: gitBranches,
             currentGitBranch: "main",
             projectName: "muxy",
             worktreeName: "main"
+        )
+    }
+
+    private func createPullRequestTarget() -> CreatePullRequestPaletteTarget {
+        CreatePullRequestPaletteTarget(
+            projectID: UUID(),
+            worktreeID: UUID(),
+            worktreePath: "/repo",
+            projectName: "muxy",
+            worktreeName: "main",
+            branchName: "feature/pr"
         )
     }
 }

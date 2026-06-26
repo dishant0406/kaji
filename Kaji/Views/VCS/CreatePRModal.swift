@@ -1,16 +1,7 @@
 import SwiftUI
 
 struct CreatePRModal: View {
-    struct Context {
-        let currentBranch: String
-        let defaultBranch: String?
-        let availableBaseBranches: [String]
-        let isLoadingBranches: Bool
-        let hasStagedChanges: Bool
-        let hasUnstagedChanges: Bool
-    }
-
-    let context: Context
+    let context: CreatePRModalContext
     let inProgress: Bool
     let errorMessage: String?
     let onSubmit: (
@@ -19,7 +10,8 @@ struct CreatePRModal: View {
         _ body: String,
         _ branchStrategy: VCSTabState.PRBranchStrategy,
         _ includeMode: VCSTabState.PRIncludeMode,
-        _ draft: Bool
+        _ draft: Bool,
+        _ githubAccount: GitHubAccount?
     ) -> Void
     let onCancel: () -> Void
 
@@ -31,6 +23,7 @@ struct CreatePRModal: View {
     @State private var programmaticBranchNameChange = false
     @State private var includeAll = true
     @State private var draft = false
+    @State private var selectedGitHubAccountID = ""
     @State private var didApplyDefaults = false
     @State private var currentBranchSnapshot: String?
 
@@ -40,12 +33,17 @@ struct CreatePRModal: View {
     private var needsNewBranch: Bool { !baseBranch.isEmpty && baseBranch == resolvedCurrentBranch }
     private var hasAnyChanges: Bool { context.hasStagedChanges || context.hasUnstagedChanges }
     private var createEnabled: Bool {
-        !trimmedTitle.isEmpty && !baseBranch.isEmpty && (!needsNewBranch || !trimmedBranchName.isEmpty) && !inProgress
+        !trimmedTitle.isEmpty &&
+            !baseBranch.isEmpty &&
+            (!needsNewBranch || !trimmedBranchName.isEmpty) &&
+            !context.isLoadingGitHubAccounts &&
+            (!needsGitHubAccountSelection || selectedGitHubAccount != nil) &&
+            !inProgress
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            CreatePRModalHeader(onCancel: onCancel)
             Rectangle().fill(KajiTheme.border).frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -65,41 +63,29 @@ struct CreatePRModal: View {
                 .background(KajiTheme.bg.opacity(0.34))
             }
             Rectangle().fill(KajiTheme.border).frame(height: 1)
-            footer
+            CreatePRModalFooter(
+                inProgress: inProgress,
+                createEnabled: createEnabled,
+                onCancel: onCancel,
+                onSubmit: submit
+            )
         }
-        .frame(width: 620, height: 560)
-        .background(TranslucentSurface(base: KajiTheme.tertiaryBackground, material: .hudWindow, tintOpacity: 0.66, gradientOpacity: 0.08))
-        .clipShape(RoundedRectangle(cornerRadius: KajiShape.modalRadius))
-        .overlay(RoundedRectangle(cornerRadius: KajiShape.modalRadius).stroke(KajiTheme.border, lineWidth: 1))
-        .shadow(color: .black.opacity(0.16), radius: 8, y: 2)
         .onAppear(perform: applyDefaults)
         .onChange(of: context.availableBaseBranches) { _, _ in applyDefaults() }
+        .onChange(of: context.githubAccounts) { _, _ in applyDefaults() }
         .onChange(of: title) { _, newValue in
             guard !userEditedBranchName else { return }
             programmaticBranchNameChange = true
-            newBranchName = Self.slugify(newValue)
+            newBranchName = PullRequestBranchNameSlug.make(from: newValue)
         }
-    }
-
-    private var header: some View {
-        HStack {
-            Text("Create Pull Request")
-                .kajiFont(size: 13, weight: .semibold)
-                .foregroundStyle(KajiTheme.fg)
-            Spacer()
-            IconButton(symbol: "xmark", accessibilityLabel: "Close Pull Request Modal", action: onCancel)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(KajiTheme.chrome.opacity(0.42))
     }
 
     private var branchSection: some View {
-        CreateWorktreeFormSection(
+        KajiFormSection(
             "Target",
             detail: "Choose the base branch and decide whether this PR should stay on the current branch."
         ) {
-            CreateWorktreeLabeledField("Base branch") {
+            KajiLabeledField("Base branch") {
                 if context.isLoadingBranches, context.availableBaseBranches.isEmpty {
                     HStack(spacing: 8) {
                         KajiSpinner(size: 12, lineWidth: 1.4, color: KajiTheme.fgMuted)
@@ -116,7 +102,7 @@ struct CreatePRModal: View {
                 }
             }
             if needsNewBranch {
-                CreateWorktreeLabeledField("New branch") {
+                KajiLabeledField("New branch") {
                     KajiInput(placeholder: "feature-x", text: $newBranchName, monospaced: true)
                         .onChange(of: newBranchName) { _, _ in
                             guard !programmaticBranchNameChange else {
@@ -127,15 +113,20 @@ struct CreatePRModal: View {
                         }
                 }
             }
+            CreatePRGitHubAccountField(
+                isLoading: context.isLoadingGitHubAccounts,
+                accounts: context.githubAccounts,
+                selection: $selectedGitHubAccountID
+            )
         }
     }
 
     private var detailsSection: some View {
-        CreateWorktreeFormSection("Details", detail: "Write a clear title and optional context for reviewers.") {
-            CreateWorktreeLabeledField("Title") {
+        KajiFormSection("Details", detail: "Write a clear title and optional context for reviewers.") {
+            KajiLabeledField("Title") {
                 KajiInput(placeholder: "Short summary of the change", text: $title)
             }
-            CreateWorktreeLabeledField("Description") {
+            KajiLabeledField("Description") {
                 KajiTextArea(
                     placeholder: "What changed and what should reviewers focus on?",
                     text: $bodyText,
@@ -147,13 +138,13 @@ struct CreatePRModal: View {
     }
 
     private var optionsSection: some View {
-        CreateWorktreeFormSection("Options", showsDivider: false) {
+        KajiFormSection("Options", showsDivider: false) {
             if hasAnyChanges, context.hasStagedChanges, context.hasUnstagedChanges {
-                CreateWorktreeLabeledField("Include") {
+                KajiLabeledField("Include") {
                     SegmentedPicker(selection: $includeAll, options: [(true, "All changes"), (false, "Staged only")])
                 }
             }
-            SettingsDetailToggleRow(
+            KajiDetailToggleRow(
                 label: "Create as draft",
                 detail: "Open the pull request in draft mode until it is ready for review.",
                 isOn: $draft
@@ -161,31 +152,17 @@ struct CreatePRModal: View {
         }
     }
 
-    private var footer: some View {
-        HStack(spacing: 8) {
-            Spacer()
-            Button("Cancel", action: onCancel)
-                .buttonStyle(KajiButtonStyle(.secondary))
-                .disabled(inProgress)
-            Button(action: submit) {
-                HStack(spacing: 6) {
-                    if inProgress {
-                        KajiSpinner(size: 11, lineWidth: 1.4, color: KajiTheme.bg)
-                    }
-                    Text(inProgress ? "Creating..." : "Create PR")
-                }
-            }
-            .buttonStyle(KajiButtonStyle(.primary))
-            .opacity(createEnabled ? 1 : 0.42)
-            .disabled(!createEnabled)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(KajiTheme.chrome.opacity(0.42))
-    }
-
     private var branchOptions: [KajiSelectOption<String>] {
         context.availableBaseBranches.map { KajiSelectOption(id: $0, title: $0, value: $0) }
+    }
+
+    private var needsGitHubAccountSelection: Bool {
+        context.githubAccounts.count > 1
+    }
+
+    private var selectedGitHubAccount: GitHubAccount? {
+        if context.githubAccounts.count == 1 { return context.githubAccounts.first }
+        return context.githubAccounts.first { $0.id == selectedGitHubAccountID }
     }
 
     private func applyDefaults() {
@@ -198,17 +175,14 @@ struct CreatePRModal: View {
             includeAll = true
             didApplyDefaults = true
         }
+        if selectedGitHubAccountID.isEmpty {
+            selectedGitHubAccountID = context.githubAccounts.first(where: \.isActive)?.id ?? context.githubAccounts.first?.id ?? ""
+        }
     }
 
     private func submit() {
         let branchStrategy: VCSTabState.PRBranchStrategy = needsNewBranch ? .createNew(name: trimmedBranchName) : .useCurrent
         let includeMode: VCSTabState.PRIncludeMode = !hasAnyChanges ? .none : (includeAll ? .all : .stagedOnly)
-        onSubmit(baseBranch, trimmedTitle, bodyText, branchStrategy, includeMode, draft)
-    }
-
-    private static func slugify(_ title: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
-        let scalars = title.lowercased().unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
-        return String(String(scalars).split(separator: "-", omittingEmptySubsequences: true).joined(separator: "-").prefix(20))
+        onSubmit(baseBranch, trimmedTitle, bodyText, branchStrategy, includeMode, draft, selectedGitHubAccount)
     }
 }

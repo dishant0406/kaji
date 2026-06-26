@@ -36,6 +36,7 @@ extension AskOverlay {
             mentionOptions: mentionOptions,
             directoryOptions: directoryOptions,
             diffFiles: diffFiles,
+            createPullRequestTarget: createPullRequestTarget,
             gitBranches: gitBranches,
             currentGitBranch: currentGitBranch,
             isLoadingGitBranches: isLoadingGitBranches,
@@ -165,6 +166,10 @@ extension AskOverlay {
 
     var selectedWorktreeName: String {
         selectedWorktree.map(AskSessionCatalog.displayName(for:)) ?? "No worktree"
+    }
+
+    var createPullRequestTarget: CreatePullRequestPaletteTarget? {
+        pullRequestTargetProvider(projectID, worktreeID)
     }
 
     var filteredSessions: [AskSessionOption] {

@@ -132,6 +132,8 @@ private struct AskPaletteRow: View {
         case .diffFile,
              .openDiffSummary:
             "file.diff"
+        case .createPullRequest:
+            "arrow.triangle.pull"
         case .gitCommand:
             "terminal"
         case .gitBranch,
