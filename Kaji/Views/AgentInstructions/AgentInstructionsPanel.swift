@@ -11,14 +11,17 @@ struct AgentInstructionsPanel: View {
             header
             Rectangle().fill(KajiTheme.border).frame(height: 1)
             if state.groups.isEmpty {
-                emptyState
+                placeholder
             } else {
                 content
             }
         }
         .background(KajiTheme.bg)
         .task(id: refreshID) {
-            state.refresh(projectPath: projectPath, enabledLaunchers: enabledLaunchers)
+            state.refreshIfNeeded(projectPath: projectPath, enabledLaunchers: enabledLaunchers)
+        }
+        .onDisappear {
+            state.cancelRefresh()
         }
     }
 
@@ -41,6 +44,7 @@ struct AgentInstructionsPanel: View {
         VStack(spacing: 0) {
             agentTabs
             Rectangle().fill(KajiTheme.border).frame(height: 1)
+            statusStrip
             if selectedDocuments.count > 1 {
                 AgentInstructionDocumentTabs(
                     documents: selectedDocuments,
@@ -72,14 +76,77 @@ struct AgentInstructionsPanel: View {
         .background(KajiTheme.secondaryBackground)
     }
 
+    @ViewBuilder
+    private var statusStrip: some View {
+        if state.isLoading {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.mini)
+                Text("Refreshing instruction files")
+                    .kajiFont(size: 11)
+                    .foregroundStyle(KajiTheme.fgDim)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 26)
+            .background(KajiTheme.secondaryBackground)
+            Rectangle().fill(KajiTheme.border.opacity(0.8)).frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var placeholder: some View {
+        if state.isLoading {
+            loadingState
+        } else if let errorMessage = state.errorMessage {
+            errorState(errorMessage)
+        } else {
+            emptyState
+        }
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Loading agent instructions")
+                .kajiFont(size: 13, weight: .semibold)
+                .foregroundStyle(KajiTheme.fg)
+            Text("Scanning instruction files off the main thread.")
+                .kajiFont(size: 12)
+                .foregroundStyle(KajiTheme.fgDim)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            KajiIcon(systemName: "exclamationmark.triangle", size: 22)
+                .foregroundStyle(KajiTheme.diffHunkFg)
+            Text("Could not load instructions")
+                .kajiFont(size: 13, weight: .semibold)
+                .foregroundStyle(KajiTheme.fg)
+            Text(message)
+                .kajiFont(size: 12)
+                .foregroundStyle(KajiTheme.fgDim)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 280)
+            Button("Retry") {
+                state.refresh(projectPath: projectPath, enabledLaunchers: enabledLaunchers)
+            }
+            .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private var emptyState: some View {
         VStack(spacing: 10) {
             KajiIcon(systemName: "doc.text", size: 22)
                 .foregroundStyle(KajiTheme.fgDim)
-            Text("No enabled coding agents")
+            Text(emptyTitle)
                 .kajiFont(size: 13, weight: .semibold)
                 .foregroundStyle(KajiTheme.fg)
-            Text("Enable Claude Code, Codex, OpenCode, or Pi in Settings to inspect their instruction files.")
+            Text(emptyMessage)
                 .kajiFont(size: 12)
                 .foregroundStyle(KajiTheme.fgDim)
                 .multilineTextAlignment(.center)
@@ -94,5 +161,16 @@ struct AgentInstructionsPanel: View {
 
     private var selectedDocuments: [AgentInstructionDocument] {
         state.selectedGroup?.documents ?? []
+    }
+
+    private var emptyTitle: String {
+        enabledLaunchers.isEmpty ? "No enabled coding agents" : "No instruction files found"
+    }
+
+    private var emptyMessage: String {
+        if enabledLaunchers.isEmpty {
+            return "Enable Claude Code, Codex, OpenCode, or Pi in Settings to inspect their instruction files."
+        }
+        return "No AGENTS.md or agent-specific instruction files were found for the enabled agents."
     }
 }

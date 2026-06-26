@@ -1414,16 +1414,12 @@ struct MainWindow: View {
     }
 
     private func toggleAgentInstructionPanel() {
-        guard let project = activeProject else {
+        guard activeProject != nil else {
             withSidePanelAnimation { agentInstructionPanelVisible = false }
             return
         }
 
         activateWorkspace()
-        agentInstructionState.refresh(
-            projectPath: activeWorktreePath(for: project),
-            enabledLaunchers: cliLauncherSettings.enabledLaunchers
-        )
         let isShowing = !agentInstructionPanelVisible
         withSidePanelAnimation {
             agentInstructionPanelVisible = isShowing

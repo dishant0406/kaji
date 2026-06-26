@@ -22,3 +22,19 @@ struct AgentInstructionGroup: Identifiable, Hashable {
     let iconName: String
     let documents: [AgentInstructionDocument]
 }
+
+struct AgentInstructionAgentDescriptor: Hashable {
+    let id: String
+    let displayName: String
+    let iconName: String
+    let globalInstructionFiles: [String]
+    let projectInstructionFiles: [String]
+
+    init(definition: CodingAgentDefinition) {
+        id = definition.id
+        displayName = definition.displayName
+        iconName = definition.iconName
+        globalInstructionFiles = definition.globalInstructionFiles
+        projectInstructionFiles = definition.projectInstructionFiles
+    }
+}

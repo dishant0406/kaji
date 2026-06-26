@@ -2,7 +2,8 @@ import Foundation
 
 enum AgentInstructionDiscovery {
     private static let skippedDirectories = Set([
-        ".build", ".git", ".swiftpm", "DerivedData", "node_modules", "Pods", "vendor", "Vendor",
+        ".build", ".git", ".next", ".swiftpm", ".turbo", "DerivedData", "Pods", "build", "coverage",
+        "dist", "node_modules", "target", "vendor", "Vendor",
     ])
 
     static func discover(
@@ -11,13 +12,27 @@ enum AgentInstructionDiscovery {
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default
     ) -> [AgentInstructionGroup] {
-        definitions.map { definition in
+        discover(
+            projectPath: projectPath,
+            descriptors: definitions.map(AgentInstructionAgentDescriptor.init),
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        )
+    }
+
+    static func discover(
+        projectPath: String,
+        descriptors: [AgentInstructionAgentDescriptor],
+        homeDirectory: String = NSHomeDirectory(),
+        fileManager: FileManager = .default
+    ) -> [AgentInstructionGroup] {
+        descriptors.map { descriptor in
             AgentInstructionGroup(
-                id: definition.id,
-                displayName: definition.displayName,
-                iconName: definition.iconName,
+                id: descriptor.id,
+                displayName: descriptor.displayName,
+                iconName: descriptor.iconName,
                 documents: documents(
-                    for: definition,
+                    for: descriptor,
                     projectPath: projectPath,
                     homeDirectory: homeDirectory,
                     fileManager: fileManager
@@ -27,25 +42,25 @@ enum AgentInstructionDiscovery {
     }
 
     private static func documents(
-        for definition: CodingAgentDefinition,
+        for descriptor: AgentInstructionAgentDescriptor,
         projectPath: String,
         homeDirectory: String,
         fileManager: FileManager
     ) -> [AgentInstructionDocument] {
-        let globals = globalDocuments(for: definition, homeDirectory: homeDirectory, fileManager: fileManager)
-        let project = projectDocuments(for: definition, projectPath: projectPath, fileManager: fileManager)
+        let globals = globalDocuments(for: descriptor, homeDirectory: homeDirectory, fileManager: fileManager)
+        let project = projectDocuments(for: descriptor, projectPath: projectPath, fileManager: fileManager)
         return globals + project
     }
 
     private static func globalDocuments(
-        for definition: CodingAgentDefinition,
+        for descriptor: AgentInstructionAgentDescriptor,
         homeDirectory: String,
         fileManager: FileManager
     ) -> [AgentInstructionDocument] {
-        definition.globalInstructionFiles.compactMap { relativePath in
+        descriptor.globalInstructionFiles.compactMap { relativePath in
             let path = (homeDirectory as NSString).appendingPathComponent(relativePath)
             return document(
-                agentID: definition.id,
+                agentID: descriptor.id,
                 scope: .global,
                 path: path,
                 displayPath: "~/\(relativePath)",
@@ -55,16 +70,16 @@ enum AgentInstructionDiscovery {
     }
 
     private static func projectDocuments(
-        for definition: CodingAgentDefinition,
+        for descriptor: AgentInstructionAgentDescriptor,
         projectPath: String,
         fileManager: FileManager
     ) -> [AgentInstructionDocument] {
-        let names = Set(definition.projectInstructionFiles)
+        let names = Set(descriptor.projectInstructionFiles)
         guard !names.isEmpty else { return [] }
         return projectInstructionPaths(projectPath: projectPath, names: names, fileManager: fileManager).compactMap { path in
             let relativePath = relativePath(path: path, root: projectPath)
             return document(
-                agentID: definition.id,
+                agentID: descriptor.id,
                 scope: relativePath.contains("/") ? .nested : .project,
                 path: path,
                 displayPath: relativePath,
@@ -95,6 +110,10 @@ enum AgentInstructionDiscovery {
     }
 
     private static func shouldSkip(url: URL, enumerator: FileManager.DirectoryEnumerator) -> Bool {
+        if isSymbolicLink(url: url) {
+            enumerator.skipDescendants()
+            return true
+        }
         guard isDirectory(url: url) else { return false }
         if skippedDirectories.contains(url.lastPathComponent) {
             enumerator.skipDescendants()
@@ -145,5 +164,9 @@ enum AgentInstructionDiscovery {
 
     private static func isRegularFile(url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+    }
+
+    private static func isSymbolicLink(url: URL) -> Bool {
+        (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true
     }
 }
