@@ -26,13 +26,13 @@ final class AppState {
             filePath: String = "",
             isStaged: Bool = false,
             files: [GitStatusFile] = [],
-            source: GitDiffSource = .workingTree
+            source: GitDiffSource? = nil
         ) {
             self.vcs = vcs
             self.filePath = filePath
             self.isStaged = isStaged
             self.files = files
-            self.source = source
+            self.source = source ?? vcs.diffSource
         }
     }
 

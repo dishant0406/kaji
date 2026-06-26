@@ -486,7 +486,7 @@ struct MainWindow: View {
                         min(AttachedVCSLayout.maxWidth, vcsPanelWidth - delta)
                     )
                 }
-                VCSTabView(state: state, focused: false, onFocus: {})
+                VCSTabView(state: state, focused: false, presentationMode: .attachedSidebar, onFocus: {})
                     .frame(width: vcsPanelWidth)
             }
         } else if problemsPanelVisible {

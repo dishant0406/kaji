@@ -4,6 +4,7 @@ import SwiftUI
 struct VCSTabView: View {
     @Bindable var state: VCSTabState
     let focused: Bool
+    var presentationMode: VCSPresentationMode = .workspaceTab
     let onFocus: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState
@@ -424,6 +425,7 @@ struct VCSTabView: View {
                 commitArea
                 SectionSplitLayout(
                     state: state,
+                    presentationMode: presentationMode,
                     onFocus: onFocus,
                     showDiscardAllConfirmation: $showDiscardAllConfirmation,
                     pendingDiscardPath: $pendingDiscardPath,
@@ -1044,6 +1046,7 @@ struct PRPopover: View {
 
 private struct SectionSplitLayout: View {
     @Bindable var state: VCSTabState
+    let presentationMode: VCSPresentationMode
     let onFocus: () -> Void
     @Binding var showDiscardAllConfirmation: Bool
     @Binding var pendingDiscardPath: String?
@@ -1292,7 +1295,9 @@ private struct SectionSplitLayout: View {
         switch section {
         case .staged:
             diffModeToggle
-            expandCollapseButton(for: state.stagedFiles)
+            if presentationMode.showsInlineFileDiffs {
+                expandCollapseButton(for: state.stagedFiles)
+            }
             IconButton(symbol: "minus", size: 11, accessibilityLabel: "Unstage All") {
                 state.unstageAll()
             }
@@ -1300,7 +1305,9 @@ private struct SectionSplitLayout: View {
 
         case .changes:
             diffModeToggle
-            expandCollapseButton(for: state.unstagedFiles)
+            if presentationMode.showsInlineFileDiffs {
+                expandCollapseButton(for: state.unstagedFiles)
+            }
             IconButton(symbol: "plus", size: 11, accessibilityLabel: "Stage All") {
                 state.stageAll()
             }
@@ -1351,21 +1358,19 @@ private struct SectionSplitLayout: View {
     }
 
     private func fileSection(_ file: GitStatusFile, isStaged: Bool) -> some View {
-        let expanded = state.expandedFilePaths.contains(file.path)
+        let expanded = presentationMode.showsInlineFileDiffs && state.expandedFilePaths.contains(file.path)
         let stats = state.displayedStats(for: file)
         let statusText = isStaged ? file.stagedStatusText : file.unstagedStatusText
 
         return VStack(spacing: 0) {
-            FileRow(
+            VCSChangedFileRow(
                 file: file,
                 statusText: statusText,
                 expanded: expanded,
+                showsInlineDisclosure: presentationMode.showsInlineFileDiffs,
                 stats: stats,
                 isStaged: isStaged,
-                onToggle: {
-                    onFocus()
-                    withAnimation(KajiMotion.panel) { state.toggleExpanded(filePath: file.path) }
-                },
+                onPrimaryAction: { handleFilePrimaryAction(filePath: file.path, isStaged: isStaged) },
                 onStage: { state.stageFile(file.path) },
                 onUnstage: { state.unstageFile(file.path) },
                 onDiscard: { pendingDiscardPath = file.path },
@@ -1373,7 +1378,7 @@ private struct SectionSplitLayout: View {
                 onOpenDiff: { onOpenDiff(file.path, isStaged) }
             )
 
-            if expanded {
+            if presentationMode.showsInlineFileDiffs, expanded {
                 expandedDiff(for: file)
                     .transition(KajiMotion.disclosureTransition(reduceMotion: reduceMotion))
             }
@@ -1382,6 +1387,15 @@ private struct SectionSplitLayout: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(KajiMotion.panel, value: expanded)
+    }
+
+    private func handleFilePrimaryAction(filePath: String, isStaged: Bool) {
+        onFocus()
+        guard presentationMode.showsInlineFileDiffs else {
+            onOpenDiff(filePath, isStaged)
+            return
+        }
+        withAnimation(KajiMotion.panel) { state.toggleExpanded(filePath: filePath) }
     }
 
     private func expandedDiff(for file: GitStatusFile) -> some View {
@@ -1417,109 +1431,5 @@ private enum SectionKind: Hashable {
 private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
-    }
-}
-
-private struct FileRow: View {
-    let file: GitStatusFile
-    let statusText: String
-    let expanded: Bool
-    let stats: VCSTabState.FileStats
-    let isStaged: Bool
-    let onToggle: () -> Void
-    let onStage: () -> Void
-    let onUnstage: () -> Void
-    let onDiscard: () -> Void
-    let onOpenInEditor: () -> Void
-    let onOpenDiff: () -> Void
-    @State private var hovered = false
-
-    private var statusColor: Color {
-        switch statusText.first {
-        case "A":
-            KajiTheme.diffAddFg
-        case "D":
-            KajiTheme.diffRemoveFg
-        case "M":
-            KajiTheme.accent
-        case "R":
-            KajiTheme.accent
-        case "U":
-            KajiTheme.diffAddFg
-        default:
-            KajiTheme.fgMuted
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            KajiIcon(systemName: expanded ? "chevron.down" : "chevron.right", size: 10)
-                .foregroundStyle(KajiTheme.fgDim)
-                .frame(width: 12)
-
-            Text(statusText)
-                .kajiFont(size: 11, weight: .bold, design: .monospaced)
-                .foregroundStyle(statusColor)
-                .frame(width: 14)
-
-            FileDiffIcon()
-                .stroke(statusColor, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                .frame(width: 11, height: 11)
-
-            Text(file.path)
-                .kajiFont(size: 12, weight: .medium)
-                .foregroundStyle(KajiTheme.fg)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if hovered {
-                actionButtons
-            }
-
-            if stats.binary {
-                Text("Binary")
-                    .kajiFont(size: 12, weight: .medium)
-                    .foregroundStyle(KajiTheme.fgMuted)
-            } else {
-                if let additions = stats.additions {
-                    Text("+\(additions)")
-                        .kajiFont(size: 12, weight: .semibold, design: .monospaced)
-                        .foregroundStyle(KajiTheme.diffAddFg)
-                }
-                if let deletions = stats.deletions {
-                    Text("-\(deletions)")
-                        .kajiFont(size: 12, weight: .semibold, design: .monospaced)
-                        .foregroundStyle(KajiTheme.diffRemoveFg)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .frame(height: 36)
-        .background(hovered ? KajiTheme.hover : Color.clear)
-        .contentShape(Rectangle())
-        .onHover { hovered = $0 }
-        .animation(KajiMotion.fast, value: expanded)
-        .animation(KajiMotion.hover, value: hovered)
-        .kajiChangeFeedback(KajiMotion.selectionFeedback, value: expanded, isEnabled: expanded)
-        .onTapGesture(perform: onToggle)
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 0) {
-            IconButton(symbol: "doc.text", size: 11, accessibilityLabel: "Open in Editor", action: onOpenInEditor)
-                .help("Open in Editor")
-            IconButton(symbol: "rectangle.split.2x1", size: 11, accessibilityLabel: "Open Diff in New Tab", action: onOpenDiff)
-                .help("Open Diff in New Tab")
-            if isStaged {
-                IconButton(symbol: "minus", size: 11, accessibilityLabel: "Unstage", action: onUnstage)
-                    .help("Unstage")
-            } else {
-                IconButton(symbol: "plus", size: 11, accessibilityLabel: "Stage", action: onStage)
-                    .help("Stage")
-                IconButton(symbol: "arrow.uturn.backward", size: 11, accessibilityLabel: "Discard Changes", action: onDiscard)
-                    .help("Discard changes")
-            }
-        }
     }
 }
