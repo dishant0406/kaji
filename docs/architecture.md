@@ -40,10 +40,10 @@ Project -> Worktree -> WorktreeWorkspace -> WorkspaceTab -> SplitNode -> TabArea
 - A `Worktree` is either the primary project checkout or a git worktree discovered or created for that project.
 - `WorktreeWorkspace` owns the ordered top-level tabs for a worktree and remembers which workspace tab is active.
 - `WorkspaceTab` is the user-facing tab in the title bar. It owns one full-canvas split tree plus the focused pane inside that tree.
-- `SplitNode` stores the pane tree inside one workspace tab.
+- `SplitNode` stores the pane tree inside one workspace tab. `SplitContainer` renders each branch through the local `Bonsplit` package, which wraps native `NSSplitView` resizing while Kaji remains the source of truth for pane identity, focus, tabs, and persistence.
 - `TabArea` remains the leaf model used by the split tree, but after the tab rewrite it acts as a pane container for one active content stack rather than as the app's primary tab concept. Inactive terminal, browser, and parent-agent panes stay mounted for live session continuity. Each pane owns one stable Monaco host for all editor tabs in that pane; switching files rebinds the existing web view to the next editor state and swaps Monaco models instead of rebuilding WebKit. Older clean editor backing stores can still be released by budget policy, while preview, diff, VCS, problems, and graph panes unmount their SwiftUI/AppKit content when inactive.
 - `TerminalTab` is the content model hosted by a leaf pane and can represent a terminal, editor, VCS view, or diff viewer.
-- `TabDragCoordinator` now serves pane-level arrangement only. Title-bar tabs are workspace tabs, not pane-local tabs.
+- `TabDragCoordinator` serves pane-local tab drag targets. `PaneReorderCoordinator` serves full-pane drag targets from the pane header: center drops swap two panes, while edge drops move the source pane into a new split beside the target pane.
 
 Workspace state is persisted per worktree so every project can keep separate workspace tabs, split layouts, focus state, terminal sessions, editor tabs, and VCS layouts across launches. A project can also remain selected with no workspace root when its tabs are closed or before any tab has been opened.
 

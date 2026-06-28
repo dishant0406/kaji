@@ -8,7 +8,7 @@ struct MainWindow: View {
     @Environment(GhosttyService.self) private var ghostty
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragCoordinator = TabDragCoordinator()
-    @State private var paneDragCoordinator = PaneDragCoordinator()
+    @State private var paneReorderCoordinator = PaneReorderCoordinator()
     @State private var modalCoordinator = KajiModalCoordinator()
     private enum AttachedVCSLayout {
         static let minWidth: CGFloat = 200
@@ -161,7 +161,7 @@ struct MainWindow: View {
                 }
                 .coordinateSpace(name: DragCoordinateSpace.mainWindow)
                 .environment(dragCoordinator)
-                .environment(paneDragCoordinator)
+                .environment(paneReorderCoordinator)
                 .background(MainWindowShortcutInterceptor(
                     onShortcut: { action in handleShortcutAction(action) },
                     onMouseBack: { appState.goBack() },

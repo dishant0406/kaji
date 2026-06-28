@@ -74,3 +74,7 @@ struct DropZoneHighlight: View {
 }
 
 typealias AreaFramePreferenceKey = UUIDFramePreferenceKey<AreaFrameTag>
+
+enum PaneAreaFrameTag {}
+
+typealias PaneAreaFramePreferenceKey = UUIDFramePreferenceKey<PaneAreaFrameTag>

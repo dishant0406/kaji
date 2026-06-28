@@ -194,6 +194,10 @@ enum WorkspaceReducer {
             guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state) else { break }
             SplitReducer.movePane(request, key: key, state: &state)
 
+        case let .swapPanes(projectID, sourceAreaID, targetAreaID):
+            guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state) else { break }
+            SplitReducer.swapPanes(sourceAreaID: sourceAreaID, targetAreaID: targetAreaID, key: key, state: &state)
+
         case let .focusArea(projectID, areaID):
             FocusReducer.focusArea(projectID: projectID, areaID: areaID, state: &state)
 

@@ -5,12 +5,14 @@ import PackageDescription
 let package = Package(
     name: "Kaji",
     platforms: [
-        .macOS(.v14),
+        .macOS(.v15),
     ],
     dependencies: [
         .package(url: "https://github.com/EmergeTools/Pow", from: "1.0.5"),
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.1"),
         .package(url: "https://github.com/siteline/swiftui-introspect", from: "26.0.0"),
+        .package(url: "https://github.com/dishant0406/reorderable", exact: "1.3.2-kaji.3"),
+        .package(path: "Vendor/Bonsplit"),
     ],
     targets: [
         .target(
@@ -33,6 +35,8 @@ let package = Package(
                 "FFFKit",
                 "GhosttyKit",
                 "SwiftyDiff",
+                .product(name: "Reorderable", package: "reorderable"),
+                .product(name: "Bonsplit", package: "Bonsplit"),
                 .product(name: "Pow", package: "Pow"),
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "SwiftUIIntrospect", package: "swiftui-introspect"),

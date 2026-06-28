@@ -1,3 +1,4 @@
+import Reorderable
 import SwiftUI
 
 enum SidebarLayout {
@@ -65,7 +66,7 @@ struct Sidebar: View {
                     onMove: { source, destination in
                         projectStore.reorder(
                             fromOffsets: IndexSet(integer: source),
-                            toOffset: destination
+                            toOffset: ReorderMoveDestination.arrayMoveOffset(from: source, to: destination)
                         )
                     },
                     onDragStateChange: { dragging in
@@ -80,6 +81,7 @@ struct Sidebar: View {
             .padding(.horizontal, expanded ? 10 : 8)
             .padding(.vertical, 6)
         }
+        .autoScrollOnEdges()
         .coordinateSpace(name: "sidebar")
     }
 

@@ -112,6 +112,19 @@ enum SplitReducer {
         FocusReducer.focusArea(request.sourceAreaID, key: key, state: &state)
     }
 
+    static func swapPanes(
+        sourceAreaID: UUID,
+        targetAreaID: UUID,
+        key: WorktreeKey,
+        state: inout WorkspaceState
+    ) {
+        guard sourceAreaID != targetAreaID else { return }
+        guard let root = state.workspaceRoots[key] else { return }
+        guard root.swapAreas(sourceAreaID, targetAreaID) else { return }
+        state.workspaceRoots[key] = root
+        FocusReducer.focusArea(sourceAreaID, key: key, state: &state)
+    }
+
     private static func collapseEmptyArea(
         _ areaID: UUID,
         key: WorktreeKey,

@@ -53,7 +53,7 @@ enum SwiftRunBundleLauncher {
             "CFBundlePackageType": "APPL",
             "CFBundleShortVersionString": "0.0.0",
             "CFBundleVersion": "0",
-            "LSMinimumSystemVersion": "14.0",
+            "LSMinimumSystemVersion": "15.0",
             "NSPrincipalClass": "NSApplication",
         ]
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)

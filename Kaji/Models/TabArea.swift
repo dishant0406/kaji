@@ -262,7 +262,14 @@ final class TabArea: Identifiable {
     }
 
     func reorderTab(fromOffsets source: IndexSet, toOffset destination: Int) {
-        tabs.move(fromOffsets: source, toOffset: destination)
+        guard source.count == 1, let sourceIndex = source.first else { return }
+        let constrainedDestination = PinnedReorderPolicy.constrainedDestination(
+            sourceIndex: sourceIndex,
+            destination: destination,
+            items: tabs,
+            isPinned: { $0.isPinned }
+        )
+        tabs.move(fromOffsets: source, toOffset: constrainedDestination)
     }
 
     func removeTab(_ tabID: UUID) -> TerminalTab? {

@@ -39,7 +39,7 @@ Long Kaji Agent threads slow down during streaming, and the timeline can intermi
 - Apple documents `LazyVStack` as lazy: it creates items only as needed for rendering. This improves long-list creation cost, but it does not remove the cost of frequent state invalidation, expensive visible rows, or dynamic height measurement. Source: Apple `LazyVStack` docs, https://developer.apple.com/documentation/swiftui/lazyvstack.
 - Apple’s WWDC23 “Demystify SwiftUI performance” emphasizes dependency scoping: reduce dependencies, pass only the data a view needs, and avoid forcing list/table identity work by using variable row counts inside `ForEach`. Source: https://developer.apple.com/videos/play/wwdc2023/10160/.
 - Apple’s WWDC23 “Discover Observation in SwiftUI” explains that `@Observable` tracks properties read by a view. This helps only when mutable state is split so unchanged rows do not depend on the root array that changes every delta. Source: https://developer.apple.com/videos/play/wwdc2023/10149/.
-- Apple’s modern scroll APIs for macOS 14+ use `scrollPosition` with `scrollTargetLayout()` for identity-based scrolling, avoiding AppKit subtree searches for SwiftUI scroll targets. Sources: https://developer.apple.com/documentation/swiftui/scrollposition and https://developer.apple.com/documentation/swiftui/view/scrolltargetlayout%28isenabled:%29.
+- Apple’s modern scroll APIs for macOS 15+ use `scrollPosition` with `scrollTargetLayout()` for identity-based scrolling, avoiding AppKit subtree searches for SwiftUI scroll targets. Sources: https://developer.apple.com/documentation/swiftui/scrollposition and https://developer.apple.com/documentation/swiftui/view/scrolltargetlayout%28isenabled:%29.
 - Public macOS SwiftUI reports match the shape of this issue: `ScrollView + LazyVStack` with dynamic row heights can jump or render poorly when row heights vary and update during scrolling. This supports treating high-frequency dynamic-height streaming inside the lazy stack as a risk, not relying on lazy view creation alone. Example: https://stackoverflow.com/questions/74853727/swiftui-lazyvstack-that-contains-items-of-different-heights-does-not-work-well.
 
 ## Design direction
@@ -149,7 +149,7 @@ Use SwiftUI laziness where it helps and avoid lazy-stack dynamic-height churn wh
 
 Reduce AppKit interop and animation conflicts.
 
-- Replace `KajiAgentTurnAnchor` plus recursive `findView(withIdentifier:)` where possible with SwiftUI `.id`, `.scrollTargetLayout()`, and `ScrollPosition`/`scrollPosition` on macOS 14+.
+- Replace `KajiAgentTurnAnchor` plus recursive `findView(withIdentifier:)` where possible with SwiftUI `.id`, `.scrollTargetLayout()`, and `ScrollPosition`/`scrollPosition` on macOS 15+.
 - Keep an AppKit fallback only if a measured macOS issue requires it.
 - Use non-animated scroll-to-bottom during streaming flushes when the user is already pinned to bottom.
 - Animate only explicit user actions such as “Jump to latest” or new-turn navigation.

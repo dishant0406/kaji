@@ -17,9 +17,9 @@ struct TabAreaView: View {
     let onSplit: (SplitDirection) -> Void
     let onCloseArea: () -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
-    let onMoveArea: (PaneDragCoordinator.DropResult) -> Void
+    let onMoveArea: (PaneReorderCoordinator.DropResult) -> Void
     @Environment(TabDragCoordinator.self) private var dragCoordinator
-    @Environment(PaneDragCoordinator.self) private var paneDragCoordinator
+    @Environment(PaneReorderCoordinator.self) private var paneReorderCoordinator
     @Environment(AppState.self) private var appState
     @Environment(\.workspaceOccluded) private var workspaceOccluded
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -30,7 +30,7 @@ struct TabAreaView: View {
                 PaneHeaderView(
                     title: PaneHeaderTitle.resolve(for: area),
                     isFocused: isFocused,
-                    isDragging: paneDragCoordinator.activeDrag?.sourceAreaID == area.id,
+                    isDragging: paneReorderCoordinator.activeDrag?.sourceAreaID == area.id,
                     onClose: onCloseArea,
                     onDragChanged: handlePaneDragChanged,
                     onDragEnded: handlePaneDragEnded
@@ -109,20 +109,22 @@ struct TabAreaView: View {
             .background(KajiTheme.bg)
             .overlay {
                 DropZoneHighlight(
-                    zone: paneDragCoordinator.hoveredZone ?? .left,
+                    zone: paneReorderCoordinator.hoveredZone ?? .left,
                     showsTabStripTarget: false
                 )
                 .opacity(
-                    paneDragCoordinator.activeDrag != nil &&
-                        paneDragCoordinator.hoveredAreaID == area.id &&
-                        paneDragCoordinator.hoveredZone != nil ? 1 : 0
+                    paneReorderCoordinator.activeDrag != nil &&
+                        paneReorderCoordinator.hoveredAreaID == area.id &&
+                        paneReorderCoordinator.hoveredZone != nil ? 1 : 0
                 )
-                .animation(KajiMotion.preferred(KajiMotion.fast, reduceMotion: reduceMotion), value: paneDragCoordinator.hoveredAreaID)
-                .animation(KajiMotion.preferred(KajiMotion.fast, reduceMotion: reduceMotion), value: paneDragCoordinator.hoveredZone)
+                .animation(KajiMotion.preferred(KajiMotion.fast, reduceMotion: reduceMotion), value: paneReorderCoordinator.hoveredAreaID)
+                .animation(KajiMotion.preferred(KajiMotion.fast, reduceMotion: reduceMotion), value: paneReorderCoordinator.hoveredZone)
             }
         }
         .background {
-            if paneDragCoordinator.activeDrag != nil || dragCoordinator.activeDrag != nil {
+            PaneAreaWindowFramePreferenceView(areaID: area.id)
+
+            if dragCoordinator.activeDrag != nil {
                 GeometryReader { geo in
                     Color.clear.preference(
                         key: AreaFramePreferenceKey.self,
@@ -155,16 +157,16 @@ struct TabAreaView: View {
         }
     }
 
-    private func handlePaneDragChanged(_ value: DragGesture.Value) {
-        if paneDragCoordinator.activeDrag == nil {
-            paneDragCoordinator.beginDrag(sourceAreaID: area.id, projectID: projectID)
+    private func handlePaneDragChanged(_ position: CGPoint) {
+        if paneReorderCoordinator.activeDrag == nil {
+            paneReorderCoordinator.beginReorder(sourceAreaID: area.id, projectID: projectID)
         }
-        paneDragCoordinator.updatePosition(value.location)
+        paneReorderCoordinator.updatePosition(position)
     }
 
-    private func handlePaneDragEnded(_ value: DragGesture.Value) {
-        paneDragCoordinator.updatePosition(value.location)
-        if let result = paneDragCoordinator.endDrag() {
+    private func handlePaneDragEnded(_ position: CGPoint) {
+        paneReorderCoordinator.updatePosition(position)
+        if let result = paneReorderCoordinator.endReorder() {
             onMoveArea(result)
         }
     }

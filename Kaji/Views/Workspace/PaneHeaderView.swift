@@ -5,8 +5,8 @@ struct PaneHeaderView: View {
     let isFocused: Bool
     let isDragging: Bool
     let onClose: () -> Void
-    let onDragChanged: (DragGesture.Value) -> Void
-    let onDragEnded: (DragGesture.Value) -> Void
+    let onDragChanged: (CGPoint) -> Void
+    let onDragEnded: (CGPoint) -> Void
     @State private var hovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -46,11 +46,12 @@ struct PaneHeaderView: View {
         .padding(.trailing, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 3, coordinateSpace: .named(DragCoordinateSpace.mainWindow))
-                .onChanged(onDragChanged)
-                .onEnded(onDragEnded)
-        )
+        .overlay {
+            PaneHeaderDragSurface(
+                onChanged: onDragChanged,
+                onEnded: onDragEnded
+            )
+        }
     }
 
     private var closeButton: some View {

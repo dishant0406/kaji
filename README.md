@@ -142,7 +142,7 @@ Download the latest release from the [releases page](https://github.com/dishant0
 
 ## Requirements
 
-- macOS 14+
+- macOS 15+
 - Swift 6.0+ for local development
 - Xcode command line tools
 - Ghostty installed only if you want to reuse local Ghostty themes

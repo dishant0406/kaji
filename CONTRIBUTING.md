@@ -16,7 +16,7 @@ You are welcome to use AI to help you write code, but the text you post on GitHu
 
 ### Prerequisites
 
-- macOS 14+
+- macOS 15+
 - Swift 6.0+
 - [SwiftLint](https://github.com/realm/SwiftLint) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) (`brew install swiftlint swiftformat`)
 

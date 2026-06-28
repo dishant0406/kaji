@@ -1,3 +1,4 @@
+import Reorderable
 import SwiftUI
 
 struct PaneTabStrip: View {
@@ -69,6 +70,7 @@ struct PaneTabStrip: View {
                         .frame(minWidth: geo.size.width, alignment: .leading)
                         .background(WindowDragRepresentable(alwaysEnabled: isWindowTitleBar))
                 }
+                .autoScrollOnEdges()
             }
             .frame(maxWidth: .infinity)
             .frame(height: 36)
@@ -117,7 +119,7 @@ struct PaneTabStrip: View {
                 onMove: { source, destination in
                     onReorderTab(
                         IndexSet(integer: source),
-                        destination
+                        ReorderMoveDestination.arrayMoveOffset(from: source, to: destination)
                     )
                 },
                 onDragStateChange: { dragging in
@@ -189,7 +191,10 @@ struct PaneTabStrip: View {
     }
 
     private func handleExternalDragEnded(tab _: TabSnapshot, value: DragGesture.Value) {
-        guard allowsExternalDrops else { return }
+        guard allowsExternalDrops else {
+            dragCoordinator.cancelDrag()
+            return
+        }
         dragCoordinator.updatePosition(value.location)
         if let result = dragCoordinator.endDrag() {
             onDropAction(result)

@@ -1,5 +1,5 @@
 {
-  "originHash" : "49a225850051f210c7d92f4ddf3a047c90aae2130da310c2948aa9b5194c3ca8",
+  "originHash" : "7dbbdf67120cb82b586b27bb28ba2004748faa4c2f0f40e964d9367a639eae8a",
   "pins" : [
     {
       "identity" : "pow",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "1b4b1dda28c50b95f0872927ee2226fe8b58950e",
         "version" : "1.0.6"
+      }
+    },
+    {
+      "identity" : "reorderable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dishant0406/reorderable",
+      "state" : {
+        "revision" : "9ca7489120f896bf78eae170e701c9cf084fe42c",
+        "version" : "1.3.2-kaji.3"
       }
     },
     {

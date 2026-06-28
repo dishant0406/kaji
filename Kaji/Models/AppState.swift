@@ -90,6 +90,7 @@ final class AppState {
         case focusPaneDown(projectID: UUID)
         case moveTab(projectID: UUID, request: TabMoveRequest)
         case movePane(projectID: UUID, request: PaneMoveRequest)
+        case swapPanes(projectID: UUID, sourceAreaID: UUID, targetAreaID: UUID)
         case selectNextProject(projects: [Project], worktrees: [UUID: [Worktree]])
         case selectPreviousProject(projects: [Project], worktrees: [UUID: [Worktree]])
         case navigate(projectID: UUID, worktreeID: UUID, areaID: UUID, tabID: UUID?)

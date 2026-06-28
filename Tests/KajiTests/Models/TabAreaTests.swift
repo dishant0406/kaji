@@ -380,6 +380,37 @@ struct TabAreaTests {
         #expect(area.tabs[0].id == thirdTabID)
     }
 
+    @Test("reorderTab keeps unpinned tabs after pinned tabs")
+    func reorderTabKeepsUnpinnedAfterPinned() {
+        let area = TabArea(projectPath: testPath)
+        area.createTab()
+        area.createTab()
+        area.togglePin(area.tabs[0].id)
+        let pinnedID = area.tabs[0].id
+        let unpinnedID = area.tabs[2].id
+
+        area.reorderTab(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(area.tabs[0].id == pinnedID)
+        #expect(area.tabs[1].id == unpinnedID)
+    }
+
+    @Test("reorderTab keeps pinned tabs before unpinned tabs")
+    func reorderTabKeepsPinnedBeforeUnpinned() {
+        let area = TabArea(projectPath: testPath)
+        area.createTab()
+        area.createTab()
+        area.togglePin(area.tabs[0].id)
+        area.togglePin(area.tabs[1].id)
+        let secondPinnedID = area.tabs[1].id
+        let unpinnedID = area.tabs[2].id
+
+        area.reorderTab(fromOffsets: IndexSet(integer: 1), toOffset: 3)
+
+        #expect(area.tabs[1].id == secondPinnedID)
+        #expect(area.tabs[2].id == unpinnedID)
+    }
+
     @Test("insertExistingTab adds and activates")
     func insertExistingTab() {
         let area = TabArea(projectPath: testPath)

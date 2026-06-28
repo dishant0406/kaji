@@ -17,7 +17,7 @@ struct PaneNode: View {
     let onSplit: (UUID, SplitDirection) -> Void
     let onCloseArea: (UUID) -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
-    let onMoveArea: (PaneDragCoordinator.DropResult) -> Void
+    let onMoveArea: (PaneReorderCoordinator.DropResult) -> Void
 
     var body: some View {
         switch node {

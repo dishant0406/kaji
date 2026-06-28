@@ -9,7 +9,7 @@ struct PaneMoveRequest {
 
 @MainActor
 @Observable
-final class PaneDragCoordinator {
+final class PaneReorderCoordinator {
     struct DragInfo: Equatable {
         let sourceAreaID: UUID
         let projectID: UUID
@@ -21,6 +21,14 @@ final class PaneDragCoordinator {
         let targetAreaID: UUID
 
         func action(projectID: UUID) -> AppState.Action {
+            guard zone != .center else {
+                return .swapPanes(
+                    projectID: projectID,
+                    sourceAreaID: drag.sourceAreaID,
+                    targetAreaID: targetAreaID
+                )
+            }
+
             let split = switch zone {
             case .left:
                 SplitPlacement(direction: .horizontal, position: .first)
@@ -57,7 +65,7 @@ final class PaneDragCoordinator {
         computeHover()
     }
 
-    func beginDrag(sourceAreaID: UUID, projectID: UUID) {
+    func beginReorder(sourceAreaID: UUID, projectID: UUID) {
         activeDrag = DragInfo(sourceAreaID: sourceAreaID, projectID: projectID)
     }
 
@@ -66,7 +74,7 @@ final class PaneDragCoordinator {
         computeHover()
     }
 
-    func endDrag() -> DropResult? {
+    func endReorder() -> DropResult? {
         guard let activeDrag,
               let hoveredAreaID,
               let hoveredZone,
@@ -97,9 +105,8 @@ final class PaneDragCoordinator {
 
         let areaFrames = areaFramesByProject[projectID] ?? [:]
         if let match = DropTargetFrameResolver.containingMatch(for: globalPosition, in: areaFrames) {
-            let zone = DropTargetFrameResolver.edgeZone(for: globalPosition, in: match.frame)
-            hoveredAreaID = zone == nil ? nil : match.areaID
-            hoveredZone = zone
+            hoveredAreaID = match.areaID
+            hoveredZone = DropTargetFrameResolver.zone(for: globalPosition, in: match.frame)
             return
         }
 

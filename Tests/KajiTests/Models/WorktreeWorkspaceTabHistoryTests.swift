@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Kaji
 
@@ -45,4 +46,33 @@ struct WorktreeWorkspaceTabHistoryTests {
 
         #expect(workspace.activeTabID == first.id)
     }
+    @Test("reorderTab keeps unpinned workspace tabs after pinned tabs")
+    func reorderTabKeepsUnpinnedWorkspaceTabsAfterPinnedTabs() {
+        let first = makeTab()
+        let second = makeTab()
+        let third = makeTab()
+        first.isPinned = true
+        let workspace = WorktreeWorkspace(tabs: [first, second, third], activeTabID: first.id)
+
+        workspace.reorderTab(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(workspace.tabs[0].id == first.id)
+        #expect(workspace.tabs[1].id == third.id)
+    }
+
+    @Test("reorderTab keeps pinned workspace tabs before unpinned tabs")
+    func reorderTabKeepsPinnedWorkspaceTabsBeforeUnpinnedTabs() {
+        let first = makeTab()
+        let second = makeTab()
+        let third = makeTab()
+        first.isPinned = true
+        second.isPinned = true
+        let workspace = WorktreeWorkspace(tabs: [first, second, third], activeTabID: first.id)
+
+        workspace.reorderTab(fromOffsets: IndexSet(integer: 1), toOffset: 3)
+
+        #expect(workspace.tabs[1].id == second.id)
+        #expect(workspace.tabs[2].id == third.id)
+    }
+
 }
