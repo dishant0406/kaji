@@ -18,7 +18,11 @@ struct BrowserPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            tabStrip
+            BrowserTabStrip(
+                state: state,
+                pendingURL: $pendingURL,
+                onClosePane: onClosePane
+            )
             toolbar
             Divider().overlay(KajiTheme.border)
             ZStack(alignment: .bottom) {
@@ -97,42 +101,6 @@ struct BrowserPane: View {
         }
     }
 
-    private var tabStrip: some View {
-        ViewThatFits(in: .horizontal) {
-            tabStripContent(scrolls: false)
-            ScrollView(.horizontal, showsIndicators: false) {
-                tabStripContent(scrolls: true)
-            }
-        }
-        .background(KajiTheme.secondaryBackground)
-    }
-
-    private func tabStripContent(scrolls: Bool) -> some View {
-        HStack(spacing: 6) {
-            ForEach(state.pages) { page in
-                BrowserTabButton(
-                    page: page,
-                    selected: page.id == state.selectedPageID,
-                    onSelect: {
-                        state.selectPage(id: page.id)
-                        pendingURL = page.url
-                    },
-                    onClose: { closeBrowserPage(page.id) }
-                )
-                .frame(maxWidth: scrolls ? nil : .infinity)
-            }
-            IconButton(symbol: "plus", accessibilityLabel: "New browser tab") {
-                let page = state.openPage()
-                pendingURL = page.url
-                state.controllers.controller(for: page.id).ensureStarted(url: page.url)
-            }
-            .fixedSize()
-            .help("New tab")
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-    }
-
     private var toolbar: some View {
         BrowserToolbar(
             pendingURL: $pendingURL,
@@ -166,16 +134,6 @@ struct BrowserPane: View {
 
     private var selectedDeviceProfile: BrowserDeviceProfile {
         BrowserDeviceProfiles.profile(for: state.selectedDeviceProfileID)
-    }
-
-    private func closeBrowserPage(_ pageID: UUID) {
-        guard state.pages.count > 1 else {
-            state.controllers.closeAll()
-            onClosePane()
-            return
-        }
-        state.closePage(id: pageID)
-        pendingURL = state.url
     }
 
     private func pageChanged(pageID: UUID, url: String) {

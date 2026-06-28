@@ -44,6 +44,49 @@ struct BrowserPaneStateTests {
         #expect(state.controllers.controllerIDs == [firstID])
     }
 
+    @Test("reorderPage moves browser pages forward and keeps selection")
+    func reorderPageMovesForwardAndKeepsSelection() throws {
+        let state = BrowserPaneState(projectPath: "/tmp/test")
+        let first = state.pages[0]
+        let second = state.openPage(url: "https://second.example")
+        let third = state.openPage(url: "https://third.example")
+        state.selectPage(id: second.id)
+
+        state.reorderPage(from: 0, to: 2)
+
+        #expect(state.pages.map(\.id) == [second.id, third.id, first.id])
+        #expect(state.selectedPageID == second.id)
+        #expect(state.url == "https://second.example")
+    }
+
+    @Test("reorderPage moves browser pages backward and keeps selection")
+    func reorderPageMovesBackwardAndKeepsSelection() throws {
+        let state = BrowserPaneState(projectPath: "/tmp/test")
+        let first = state.pages[0]
+        let second = state.openPage(url: "https://second.example")
+        let third = state.openPage(url: "https://third.example")
+        state.selectPage(id: third.id)
+
+        state.reorderPage(from: 2, to: 0)
+
+        #expect(state.pages.map(\.id) == [third.id, first.id, second.id])
+        #expect(state.selectedPageID == third.id)
+        #expect(state.url == "https://third.example")
+    }
+
+    @Test("reorderPage ignores invalid indexes")
+    func reorderPageIgnoresInvalidIndexes() throws {
+        let state = BrowserPaneState(projectPath: "/tmp/test")
+        let first = state.pages[0]
+        let second = state.openPage(url: "https://second.example")
+
+        state.reorderPage(from: -1, to: 1)
+        state.reorderPage(from: 0, to: 2)
+
+        #expect(state.pages.map(\.id) == [first.id, second.id])
+        #expect(state.selectedPageID == second.id)
+    }
+
     @Test("closePage keeps one reusable page")
     func closePageKeepsOneReusablePage() throws {
         let state = BrowserPaneState(projectPath: "/tmp/test", url: "https://example.com")

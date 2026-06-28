@@ -91,6 +91,15 @@ final class BrowserPaneState {
         pruneInactiveControllers()
     }
 
+    func reorderPage(from source: Int, to destination: Int) {
+        guard pages.indices.contains(source) else { return }
+        guard pages.indices.contains(destination) else { return }
+        pages.move(
+            fromOffsets: IndexSet(integer: source),
+            toOffset: ReorderMoveDestination.arrayMoveOffset(from: source, to: destination)
+        )
+    }
+
     convenience init(projectPath: String, snapshot: TerminalTabSnapshot) {
         let pageSnapshots = snapshot.browserPages ?? []
         guard !pageSnapshots.isEmpty else {
