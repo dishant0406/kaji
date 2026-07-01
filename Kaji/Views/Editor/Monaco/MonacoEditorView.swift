@@ -21,6 +21,8 @@ private struct MonacoEditorUpdateContext {
     let lineNavigationVersion: Int
     let inlineEditRequestVersion: Int
     let inlineEditApplyVersion: Int
+    let speechInsertText: String
+    let speechInsertVersion: Int
 }
 
 struct MonacoEditorView: NSViewRepresentable {
@@ -45,6 +47,8 @@ struct MonacoEditorView: NSViewRepresentable {
     let lineNavigationVersion: Int
     let inlineEditRequestVersion: Int
     let inlineEditApplyVersion: Int
+    let speechInsertText: String
+    let speechInsertVersion: Int
     let onModelActivated: (MonacoEditorRenderToken) -> Void
     let onFocus: () -> Void
 
@@ -92,7 +96,9 @@ struct MonacoEditorView: NSViewRepresentable {
                 quickOutlineRequestVersion: quickOutlineRequestVersion,
                 lineNavigationVersion: lineNavigationVersion,
                 inlineEditRequestVersion: inlineEditRequestVersion,
-                inlineEditApplyVersion: inlineEditApplyVersion
+                inlineEditApplyVersion: inlineEditApplyVersion,
+                speechInsertText: speechInsertText,
+                speechInsertVersion: speechInsertVersion
             )
         )
     }
@@ -134,6 +140,7 @@ struct MonacoEditorView: NSViewRepresentable {
         private var lastLineNavigationVersion = 0
         private var lastInlineEditRequestVersion = 0
         private var lastInlineEditApplyVersion = 0
+        private var lastSpeechInsertVersion = 0
         private var lastMarkdownEditorScrollRequestVersion = 0
 
         init(
@@ -226,6 +233,10 @@ struct MonacoEditorView: NSViewRepresentable {
             if lastInlineEditApplyVersion != context.inlineEditApplyVersion {
                 lastInlineEditApplyVersion = context.inlineEditApplyVersion
                 applyInlineEditProposal()
+            }
+            if lastSpeechInsertVersion != context.speechInsertVersion {
+                lastSpeechInsertVersion = context.speechInsertVersion
+                insertSpeechText(context.speechInsertText)
             }
             if context.searchNeedle != lastSearchNeedle || context.searchCaseSensitive != lastSearchCaseSensitive || context
                 .searchUseRegex != lastSearchUseRegex ||
@@ -403,6 +414,11 @@ struct MonacoEditorView: NSViewRepresentable {
         private func applyInlineEditProposal() {
             guard !state.inlineEditProposal.isEmpty else { return }
             send(command: "applyInlineEdit", payload: ["text": .string(state.inlineEditProposal)])
+        }
+
+        private func insertSpeechText(_ text: String) {
+            guard !text.isEmpty else { return }
+            send(command: "applyInlineEdit", payload: ["text": .string(text)])
         }
 
         private func sendSearchCommand(direction: EditorSearchNavigationDirection) {

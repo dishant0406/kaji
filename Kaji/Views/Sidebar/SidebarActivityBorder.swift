@@ -5,17 +5,30 @@ struct SidebarActivityBorder: View {
     let lineWidth: CGFloat
 
     @State private var angle = 0.0
+    @State private var settings = TerminalSettingsStore.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
             .strokeBorder(gradient, lineWidth: lineWidth)
             .shadow(color: KajiTheme.accent.opacity(0.16), radius: 4)
             .onAppear {
-                guard angle == 0 else { return }
+                guard shouldAnimate, angle == 0 else { return }
                 withAnimation(.linear(duration: 1.25).repeatForever(autoreverses: false)) {
                     angle = 360
                 }
             }
+            .onChange(of: shouldAnimate) { _, animate in
+                angle = 0
+                guard animate else { return }
+                withAnimation(.linear(duration: 1.25).repeatForever(autoreverses: false)) {
+                    angle = 360
+                }
+            }
+    }
+
+    private var shouldAnimate: Bool {
+        !reduceMotion && !settings.batteryOptimizedMode
     }
 
     private var gradient: AngularGradient {

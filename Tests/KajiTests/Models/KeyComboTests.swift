@@ -78,6 +78,12 @@ struct KeyComboTests {
         #expect(KeyCombo.scalar(for: 43)?.value == Unicode.Scalar(",").value)
     }
 
+    @Test("physical key code supports polling")
+    func physicalKeyCodeSupportsPolling() {
+        #expect(KeyCombo(key: "v", option: true).physicalKeyCode != nil)
+        #expect(KeyCombo(key: KeyCombo.spaceKey).physicalKeyCode != nil)
+    }
+
     @Test("normalized key with function key scalars")
     func normalizedFunctionKeys() {
         let leftArrowScalar = Unicode.Scalar(NSLeftArrowFunctionKey)!
@@ -91,6 +97,12 @@ struct KeyComboTests {
     func normalizedArrowNames() {
         #expect(KeyCombo.normalized(key: "LeftArrow") == "leftarrow")
         #expect(KeyCombo.normalized(key: "RIGHTARROW") == "rightarrow")
+    }
+
+    @Test("space key has readable display")
+    func spaceDisplay() {
+        let combo = KeyCombo(key: KeyCombo.spaceKey, command: true, shift: true)
+        #expect(combo.displayString == "⇧⌘Space")
     }
 
     @Test("Codable round-trip preserves values")

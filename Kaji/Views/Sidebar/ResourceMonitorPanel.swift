@@ -43,6 +43,9 @@ struct ResourceMonitorPanel: View {
         .task {
             service.start(appState: appState, projectStore: projectStore)
         }
+        .onDisappear {
+            service.stop()
+        }
     }
 
     private var header: some View {

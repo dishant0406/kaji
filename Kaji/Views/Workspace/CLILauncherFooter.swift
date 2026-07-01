@@ -44,6 +44,8 @@ struct CLILauncherFooter: View {
                     worktreePath: worktreePath
                 )
 
+                SpeechInputFooterControl()
+
                 if browserEnabled {
                     IconButton(symbol: "globe", accessibilityLabel: "Browser") {
                         NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)

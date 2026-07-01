@@ -1,0 +1,229 @@
+{
+  "schemaVersion" : 2,
+  "models" : [
+    {
+      "id" : "parakeet-eou-160ms",
+      "title" : "Parakeet EOU 120M · 160 ms",
+      "detail" : "Lowest-latency English streaming dictation. Best for very short hold-to-talk bursts.",
+      "engine" : "fluidAudio.parakeetEouStreaming",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-realtime-eou-120m-coreml",
+      "revision" : "main",
+      "subPath" : "160ms",
+      "cachePath" : "parakeet-eou-streaming/160ms",
+      "chunkSize" : "ms160",
+      "estimatedDownloadSize" : "213.67 MiB",
+      "downloadBytes" : 224047838,
+      "mode" : "liveStreaming",
+      "languageSummary" : "English",
+      "badges" : ["Live", "Lowest latency", "English"],
+      "pros" : ["Fastest current response", "Good for quick commands and short inserts"],
+      "cons" : ["English only", "More sensitive to pauses than slower tiers"],
+      "recommended" : false,
+      "requiredFiles" : [
+        "streaming_encoder.mlmodelc",
+        "decoder.mlmodelc",
+        "joint_decision.mlmodelc",
+        "vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-eou-320ms",
+      "title" : "Parakeet EOU 120M · 320 ms",
+      "detail" : "Balanced low-latency English streaming dictation. Recommended default for Kaji.",
+      "engine" : "fluidAudio.parakeetEouStreaming",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-realtime-eou-120m-coreml",
+      "revision" : "main",
+      "subPath" : "320ms",
+      "cachePath" : "parakeet-eou-streaming/320ms",
+      "chunkSize" : "ms320",
+      "estimatedDownloadSize" : "213.85 MiB",
+      "downloadBytes" : 224238270,
+      "mode" : "liveStreaming",
+      "languageSummary" : "English",
+      "badges" : ["Recommended", "Live", "English"],
+      "pros" : ["Best balance of latency and stability", "End-of-utterance aware"],
+      "cons" : ["English only", "Lower quality than larger TDT models"],
+      "recommended" : true,
+      "requiredFiles" : [
+        "streaming_encoder.mlmodelc",
+        "decoder.mlmodelc",
+        "joint_decision.mlmodelc",
+        "vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-eou-1280ms",
+      "title" : "Parakeet EOU 120M · 1280 ms",
+      "detail" : "Higher-stability English streaming dictation with more delay.",
+      "engine" : "fluidAudio.parakeetEouStreaming",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-realtime-eou-120m-coreml",
+      "revision" : "main",
+      "subPath" : "1280ms",
+      "cachePath" : "parakeet-eou-streaming/1280ms",
+      "chunkSize" : "ms1280",
+      "estimatedDownloadSize" : "214.12 MiB",
+      "downloadBytes" : 224525706,
+      "mode" : "liveStreaming",
+      "languageSummary" : "English",
+      "badges" : ["Live", "Stable", "English"],
+      "pros" : ["More stable for longer sentences", "Still streams while recording"],
+      "cons" : ["English only", "Noticeably slower than 160 ms and 320 ms"],
+      "recommended" : false,
+      "requiredFiles" : [
+        "streaming_encoder.mlmodelc",
+        "decoder.mlmodelc",
+        "joint_decision.mlmodelc",
+        "vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-tdt-v3-int8",
+      "title" : "Parakeet TDT v3 0.6B · Int8",
+      "detail" : "High-quality multilingual dictation for 25 European languages. Records while held, then transcribes on release.",
+      "engine" : "fluidAudio.parakeetTdt",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+      "revision" : "main",
+      "cachePath" : "parakeet-tdt-0.6b-v3",
+      "estimatedDownloadSize" : "460.73 MiB",
+      "downloadBytes" : 483105645,
+      "mode" : "releaseTranscription",
+      "languageSummary" : "25 European languages",
+      "badges" : ["Multilingual", "Best quality", "After release"],
+      "pros" : ["Best default quality for multilingual dictation", "Automatic punctuation and capitalization"],
+      "cons" : ["Not true live streaming", "Larger and slower to load than EOU"],
+      "runtime" : {
+        "asrVersion" : "v3",
+        "encoderPrecision" : "int8",
+        "melChunkContext" : false
+      },
+      "recommended" : false,
+      "requiredFiles" : [
+        "Preprocessor.mlmodelc",
+        "Encoder.mlmodelc",
+        "Decoder.mlmodelc",
+        "JointDecisionv3.mlmodelc",
+        "parakeet_vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-tdt-v3-int4",
+      "title" : "Parakeet TDT v3 0.6B · Int4",
+      "detail" : "Smaller multilingual Parakeet v3 download. Good when disk or memory pressure matters.",
+      "engine" : "fluidAudio.parakeetTdt",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-tdt-0.6b-v3-coreml",
+      "revision" : "main",
+      "cachePath" : "parakeet-tdt-0.6b-v3",
+      "estimatedDownloadSize" : "320.19 MiB",
+      "downloadBytes" : 335745501,
+      "mode" : "releaseTranscription",
+      "languageSummary" : "25 European languages",
+      "badges" : ["Multilingual", "Smaller", "After release"],
+      "pros" : ["Much smaller than v3 int8", "Same language family as v3 int8"],
+      "cons" : ["Quality needs validation against int8", "Not true live streaming"],
+      "runtime" : {
+        "asrVersion" : "v3",
+        "encoderPrecision" : "int4",
+        "melChunkContext" : false
+      },
+      "recommended" : false,
+      "requiredFiles" : [
+        "Preprocessor.mlmodelc",
+        "EncoderInt4.mlmodelc",
+        "Decoder.mlmodelc",
+        "JointDecisionv3.mlmodelc",
+        "parakeet_vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-tdt-v2-english",
+      "title" : "Parakeet TDT v2 0.6B · English",
+      "detail" : "English-only high-quality TDT dictation. Best when multilingual coverage is not needed.",
+      "engine" : "fluidAudio.parakeetTdt",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-tdt-0.6b-v2-coreml",
+      "revision" : "main",
+      "cachePath" : "parakeet-tdt-0.6b-v2",
+      "estimatedDownloadSize" : "442.90 MiB",
+      "downloadBytes" : 464413247,
+      "mode" : "releaseTranscription",
+      "languageSummary" : "English",
+      "badges" : ["English", "High quality", "After release"],
+      "pros" : ["Strong English-only recall", "Automatic punctuation and capitalization"],
+      "cons" : ["English only", "Not true live streaming"],
+      "runtime" : {
+        "asrVersion" : "v2",
+        "encoderPrecision" : "int8"
+      },
+      "recommended" : false,
+      "requiredFiles" : [
+        "Preprocessor.mlmodelc",
+        "Encoder.mlmodelc",
+        "Decoder.mlmodelc",
+        "JointDecision.mlmodelc",
+        "parakeet_vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-tdt-ctc-110m",
+      "title" : "Parakeet TDT-CTC 110M",
+      "detail" : "Smaller TDT-compatible dictation model with reduced footprint.",
+      "engine" : "fluidAudio.parakeetTdt",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-tdt-ctc-110m-coreml",
+      "revision" : "main",
+      "cachePath" : "parakeet-tdt-ctc-110m",
+      "estimatedDownloadSize" : "216.93 MiB",
+      "downloadBytes" : 227466209,
+      "mode" : "releaseTranscription",
+      "languageSummary" : "English",
+      "badges" : ["Small", "English", "After release"],
+      "pros" : ["Smallest TDT-compatible model", "Lower memory footprint than 0.6B TDT"],
+      "cons" : ["Lower ceiling than larger TDT models", "Not true live streaming"],
+      "runtime" : {
+        "asrVersion" : "tdtCtc110m",
+        "encoderPrecision" : "int8"
+      },
+      "recommended" : false,
+      "requiredFiles" : [
+        "Preprocessor.mlmodelc",
+        "Decoder.mlmodelc",
+        "JointDecision.mlmodelc",
+        "parakeet_vocab.json"
+      ]
+    },
+    {
+      "id" : "parakeet-tdt-japanese",
+      "title" : "Parakeet TDT 0.6B · Japanese",
+      "detail" : "Dedicated Japanese TDT dictation model.",
+      "engine" : "fluidAudio.parakeetTdt",
+      "registryBaseURL" : "https://huggingface.co",
+      "repo" : "FluidInference/parakeet-0.6b-ja-coreml",
+      "revision" : "main",
+      "cachePath" : "parakeet-ja",
+      "estimatedDownloadSize" : "590.39 MiB",
+      "downloadBytes" : 619065246,
+      "mode" : "releaseTranscription",
+      "languageSummary" : "Japanese",
+      "badges" : ["Japanese", "High quality", "After release"],
+      "pros" : ["Dedicated Japanese model", "Better fit than English/multilingual European models"],
+      "cons" : ["Large download", "Not true live streaming"],
+      "runtime" : {
+        "asrVersion" : "tdtJa",
+        "encoderPrecision" : "int8"
+      },
+      "recommended" : false,
+      "requiredFiles" : [
+        "Preprocessor.mlmodelc",
+        "Encoder.mlmodelc",
+        "Decoderv2.mlmodelc",
+        "Jointerv2.mlmodelc",
+        "vocab.json"
+      ]
+    }
+  ]
+}

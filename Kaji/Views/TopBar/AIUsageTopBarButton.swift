@@ -15,14 +15,14 @@ struct AIUsageTopBarButton: View {
         Group {
             if usageEnabled {
                 button
-            }
-        }
-        .task {
-            await service.refreshIfNeeded()
-        }
-        .onReceive(refreshTimer) { _ in
-            Task {
-                await service.refreshIfNeeded()
+                    .task {
+                        await service.refreshIfNeeded()
+                    }
+                    .onReceive(refreshTimer) { _ in
+                        Task {
+                            await service.refreshIfNeeded()
+                        }
+                    }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .toggleAIUsage)) { _ in

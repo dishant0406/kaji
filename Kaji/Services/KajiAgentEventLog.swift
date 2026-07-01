@@ -3,6 +3,7 @@ import Foundation
 enum KajiAgentEventLog {
     private static let lock = NSLock()
     private static let encoder = JSONEncoder()
+    private static let isEnabled = KajiAgentEventLogPolicy.isEnabled(environment: ProcessInfo.processInfo.environment)
     private static let fileURL: URL = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -16,11 +17,14 @@ enum KajiAgentEventLog {
         return directory.appendingPathComponent("events-\(safeTimestamp).jsonl")
     }()
 
-    static var path: String { fileURL.path }
+    private static let writer = KajiAgentEventLogWriter(fileURL: fileURL)
+
+    static var path: String { isEnabled ? fileURL.path : "" }
 
     static func record(_ event: String, fields: [String: KajiAgentJSONValue] = [:]) {
+        guard isEnabled else { return }
         var payload = fields
-        payload["timestamp"] = .string(ISO8601DateFormatter().string(from: Date()))
+        payload["timestamp"] = .string(timestamp())
         payload["event"] = .string(event)
         write(payload)
     }
@@ -44,13 +48,10 @@ enum KajiAgentEventLog {
         lock.lock()
         defer { lock.unlock() }
         guard let data = try? encoder.encode(payload) else { return }
-        if !FileManager.default.fileExists(atPath: fileURL.path) {
-            FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-        }
-        guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
-        defer { try? handle.close() }
-        try? handle.seekToEnd()
-        try? handle.write(contentsOf: data)
-        try? handle.write(contentsOf: Data([10]))
+        writer.writeLine(data)
+    }
+
+    private static func timestamp() -> String {
+        KajiAgentEventTimestampFormatter.shared.string(from: Date())
     }
 }

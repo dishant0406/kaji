@@ -74,7 +74,7 @@ enum FileTreeService {
             return NameClassification(visible: candidates, ignored: [])
         }
 
-        let ignored = ignoredNames(directoryAbsolutePath: directoryAbsolutePath, candidates: candidates)
+        let ignored = ignoredNames(directoryAbsolutePath: directoryAbsolutePath, repoRoot: repoRoot, candidates: candidates)
         let visible = candidates.filter { $0 != ".git" }
         return NameClassification(visible: visible, ignored: ignored)
     }
@@ -86,62 +86,17 @@ enum FileTreeService {
 
     private static func ignoredNames(
         directoryAbsolutePath: String,
+        repoRoot: String,
         candidates: [String]
     ) -> Set<String> {
         guard !candidates.isEmpty else { return [] }
-        guard let gitPath = GitProcessRunner.resolveExecutable("git") else { return [] }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: gitPath)
-        process.arguments = ["check-ignore", "-z", "--stdin"]
-        process.currentDirectoryURL = URL(fileURLWithPath: directoryAbsolutePath)
-
-        let stdinPipe = Pipe()
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardInput = stdinPipe
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        let finished = DispatchSemaphore(value: 0)
-        process.terminationHandler = { _ in finished.signal() }
-
-        do {
-            try process.run()
-        } catch {
-            return []
+        let paths = candidates.map { name in
+            directoryAbsolutePath.hasSuffix("/") ? directoryAbsolutePath + name : directoryAbsolutePath + "/" + name
         }
-
-        var payload = Data()
-        for name in candidates {
-            if let data = name.data(using: .utf8) {
-                payload.append(data)
-                payload.append(0)
-            }
-        }
-        stdinPipe.fileHandleForWriting.write(payload)
-        try? stdinPipe.fileHandleForWriting.close()
-
-        let outData = (try? stdoutPipe.fileHandleForReading.readToEnd()) ?? Data()
-        _ = try? stderrPipe.fileHandleForReading.readToEnd()
-        let timedOut = finished.wait(timeout: .now() + 5) == .timedOut
-        if timedOut {
-            process.terminate()
-            process.waitUntilExit()
-        }
-
-        var result: Set<String> = []
-        var current = Data()
-        for byte in outData {
-            if byte == 0 {
-                if let name = String(data: current, encoding: .utf8) {
-                    result.insert(name)
-                }
-                current.removeAll(keepingCapacity: true)
-            } else {
-                current.append(byte)
-            }
-        }
-        return result
+        let ignoredPaths = WorkspaceIgnoreClassifier().ignoredPaths(repoPath: repoRoot, paths: paths)
+        return Set(candidates.filter { name in
+            let path = directoryAbsolutePath.hasSuffix("/") ? directoryAbsolutePath + name : directoryAbsolutePath + "/" + name
+            return ignoredPaths.contains(path)
+        })
     }
 }

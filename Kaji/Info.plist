@@ -48,7 +48,7 @@
 	<key>NSLocationUsageDescription</key>
 	<string>A process running in Kaji's terminal would like to access your location information.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>A process running in Kaji's terminal would like to use your microphone.</string>
+	<string>Kaji uses your microphone for local speech to text dictation and terminal processes that request audio input.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>A process running in Kaji's terminal would like to access motion data.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

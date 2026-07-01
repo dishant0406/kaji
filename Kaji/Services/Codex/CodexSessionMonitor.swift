@@ -5,6 +5,9 @@ private let logger = Logger(subsystem: "app.kaji", category: "CodexSessionMonito
 
 final class CodexSessionMonitor: @unchecked Sendable {
     static let shared = CodexSessionMonitor()
+    private static let maxTrackedFiles = 200
+    private static let pollingInterval: TimeInterval = 2
+    private static let safetyScanInterval: TimeInterval = 60
 
     private struct FileState {
         var offset: UInt64
@@ -13,9 +16,14 @@ final class CodexSessionMonitor: @unchecked Sendable {
     }
 
     private let queue = DispatchQueue(label: "app.kaji.codex-session-monitor", qos: .utility)
+    private let scanner = CodexSessionFileScanner()
     private var timer: DispatchSourceTimer?
+    private var watcher: CodexSessionDirectoryWatcher?
     private var fileStates: [String: FileState] = [:]
+    private var trackedFileURLs: [URL] = []
     private var seenTurnIDs: [String: Date] = [:]
+    private var needsFileScan = false
+    private var nextSafetyScanDate = Date.distantPast
 
     private init() {}
 
@@ -43,9 +51,12 @@ final class CodexSessionMonitor: @unchecked Sendable {
         let rootURL = CodexSessionPathResolver.sessionsRootURL()
         guard FileManager.default.fileExists(atPath: rootURL.path) else { return }
 
-        bootstrapState(rootURL: rootURL)
+        scanFiles(rootURL: rootURL, bootstrap: true)
+        watcher = CodexSessionDirectoryWatcher(rootURL: rootURL, queue: queue) { [weak self] in
+            self?.needsFileScan = true
+        }
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 0.5, repeating: 1.0)
+        timer.schedule(deadline: .now() + 0.5, repeating: Self.pollingInterval, leeway: .milliseconds(800))
         timer.setEventHandler { [weak self] in
             self?.poll(rootURL: rootURL)
         }
@@ -57,53 +68,35 @@ final class CodexSessionMonitor: @unchecked Sendable {
     private func stopPolling() {
         timer?.cancel()
         timer = nil
+        watcher = nil
         fileStates.removeAll()
+        trackedFileURLs.removeAll()
         seenTurnIDs.removeAll()
-    }
-
-    private func bootstrapState(rootURL: URL) {
-        for fileURL in recentSessionFiles(rootURL: rootURL) {
-            let context = sessionContext(for: fileURL)
-            let offset = (try? fileSize(for: fileURL)) ?? 0
-            fileStates[fileURL.path] = FileState(offset: offset, partialLine: "", context: context)
-        }
+        needsFileScan = false
     }
 
     private func poll(rootURL: URL) {
         pruneSeenTurnIDs()
-        syncFileStates(rootURL: rootURL)
-        for fileURL in recentSessionFiles(rootURL: rootURL) {
+        if needsFileScan || Date() >= nextSafetyScanDate {
+            scanFiles(rootURL: rootURL, bootstrap: false)
+        }
+        for fileURL in trackedFileURLs {
             processFile(at: fileURL)
         }
     }
 
-    private func syncFileStates(rootURL: URL) {
-        let activePaths = Set(recentSessionFiles(rootURL: rootURL).map(\.path))
+    private func scanFiles(rootURL: URL, bootstrap: Bool) {
+        let fileURLs = scanner.recentSessionFiles(rootURL: rootURL, limit: Self.maxTrackedFiles)
+        let activePaths = Set(fileURLs.map(\.path))
         fileStates = fileStates.filter { activePaths.contains($0.key) }
-        for fileURL in recentSessionFiles(rootURL: rootURL) where fileStates[fileURL.path] == nil {
+        for fileURL in fileURLs where fileStates[fileURL.path] == nil {
             let context = sessionContext(for: fileURL)
-            fileStates[fileURL.path] = FileState(offset: 0, partialLine: "", context: context)
+            let offset = bootstrap ? (try? fileSize(for: fileURL)) ?? 0 : 0
+            fileStates[fileURL.path] = FileState(offset: offset, partialLine: "", context: context)
         }
-    }
-
-    private func recentSessionFiles(rootURL: URL) -> [URL] {
-        guard let enumerator = FileManager.default.enumerator(
-            at: rootURL,
-            includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )
-        else {
-            return []
-        }
-
-        let files = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "jsonl" }
-        return files.sorted { lhs, rhs in
-            let lhsDate = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            let rhsDate = (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            return lhsDate > rhsDate
-        }
-        .prefix(200)
-        .map(\.self)
+        trackedFileURLs = fileURLs
+        needsFileScan = false
+        nextSafetyScanDate = Date().addingTimeInterval(Self.safetyScanInterval)
     }
 
     private func sessionContext(for fileURL: URL) -> CodexSessionEventParser.FileContext {

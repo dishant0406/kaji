@@ -12,6 +12,7 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.1"),
         .package(url: "https://github.com/siteline/swiftui-introspect", from: "26.0.0"),
         .package(url: "https://github.com/dishant0406/reorderable", exact: "1.3.2-kaji.3"),
+        .package(url: "https://github.com/FluidInference/FluidAudio", exact: "0.15.4"),
         .package(path: "Vendor/Bonsplit"),
     ],
     targets: [
@@ -40,6 +41,7 @@ let package = Package(
                 .product(name: "Pow", package: "Pow"),
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "SwiftUIIntrospect", package: "swiftui-introspect"),
+                .product(name: "FluidAudio", package: "FluidAudio"),
             ],
             path: "Kaji",
             exclude: [
@@ -56,6 +58,7 @@ let package = Package(
                     "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
                 ]),
                 .linkedFramework("AppKit"),
+                .linkedFramework("AVFoundation"),
                 .linkedFramework("Carbon"),
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("CoreText"),
@@ -84,6 +87,7 @@ let package = Package(
                     "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
                 ]),
                 .linkedFramework("AppKit"),
+                .linkedFramework("AVFoundation"),
                 .linkedFramework("Carbon"),
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("CoreText"),

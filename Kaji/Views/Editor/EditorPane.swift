@@ -10,6 +10,7 @@ struct EditorPane: View {
     @Environment(AppTypographySettings.self) private var typography
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activatedMonacoRenderToken: MonacoEditorRenderToken?
+    @State private var markdownSplitRatio: CGFloat = 0.5
 
     var body: some View {
         VStack(spacing: 0) {
@@ -127,9 +128,10 @@ struct EditorPane: View {
                 case .preview:
                     markdownPreviewContainer(mode: .preview)
                 case .split:
-                    HSplitView {
+                    MarkdownEditorSplitView(ratio: $markdownSplitRatio) {
                         codeEditorContainer
                             .frame(minWidth: 320)
+                    } preview: {
                         markdownPreviewContainer(mode: .split)
                             .frame(minWidth: 320)
                     }
@@ -174,6 +176,8 @@ struct EditorPane: View {
                     lineNavigationVersion: state.lineNavigationVersion,
                     inlineEditRequestVersion: state.inlineEditRequestVersion,
                     inlineEditApplyVersion: state.inlineEditApplyVersion,
+                    speechInsertText: state.speechInsertText,
+                    speechInsertVersion: state.speechInsertVersion,
                     onModelActivated: { token in
                         activatedMonacoRenderToken = token
                     },

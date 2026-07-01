@@ -76,6 +76,8 @@ final class EditorTabState: Identifiable {
     var inlineEditProposal = ""
     var inlineEditRequestVersion = 0
     var inlineEditApplyVersion = 0
+    var speechInsertText = ""
+    var speechInsertVersion = 0
     var awaitingLargeFileConfirmation = false
     var largeFileSize: Int64 = 0
     var backingStore: TextBackingStore?
@@ -258,6 +260,12 @@ final class EditorTabState: Identifiable {
         inlineEditProposal = proposal
         inlineEditApplyVersion += 1
         inlineEditVisible = false
+    }
+
+    func insertSpeechText(_ text: String) {
+        speechInsertText = text
+        speechInsertVersion += 1
+        editorFocusVersion += 1
     }
 
     func applyMarkdownSyncOutput(_ output: MarkdownSyncCoordinator.Output) {

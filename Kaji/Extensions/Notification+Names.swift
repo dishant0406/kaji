@@ -5,6 +5,7 @@ extension Notification.Name {
     static let toggleThemePicker = Notification.Name("KajiToggleThemePicker")
     static let toggleSettings = Notification.Name("KajiToggleSettings")
     static let openParentAgentSettings = Notification.Name("KajiOpenParentAgentSettings")
+    static let openSpeechToTextSettings = Notification.Name("KajiOpenSpeechToTextSettings")
     static let openKajiAgentSession = Notification.Name("KajiOpenKajiAgentSession")
     static let dismissSettings = Notification.Name("KajiDismissSettings")
     static let themeDidChange = Notification.Name("KajiThemeDidChange")

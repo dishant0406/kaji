@@ -38,6 +38,9 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openParentAgentSettings)) { _ in
             selection = .agents
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openSpeechToTextSettings)) { _ in
+            selection = .speechToText
+        }
     }
 
     private var header: some View {
@@ -101,6 +104,8 @@ struct SettingsView: View {
                 AgentSettingsView()
             case .editor:
                 EditorSettingsView()
+            case .speechToText:
+                SpeechToTextSettingsView()
             case .shortcuts:
                 KeyboardShortcutsSettingsView()
             case .notifications:

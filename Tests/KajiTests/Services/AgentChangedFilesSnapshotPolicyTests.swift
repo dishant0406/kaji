@@ -5,13 +5,13 @@ import Testing
 
 struct AgentChangedFilesSnapshotPolicyTests {
     @Test
-    func ignoresGeneratedDependencyFolders() {
+    func ignoresGeneratedDependencyFoldersFromCatalog() {
         let policy = AgentChangedFilesSnapshotPolicy(maxStoredFiles: 10)
         let files = [
             changedFile("Kaji/App.swift"),
             changedFile("KajiAgentRuntime/node_modules/pkg/index.js"),
             changedFile(".build/debug/Kaji"),
-            changedFile("Sources/Feature.swift")
+            changedFile("Sources/Feature.swift"),
         ]
 
         let captured = policy.capturedFiles(from: files)
@@ -21,7 +21,7 @@ struct AgentChangedFilesSnapshotPolicyTests {
 
     @Test
     func capsStoredFiles() {
-        let policy = AgentChangedFilesSnapshotPolicy(ignoredPathComponents: [], maxStoredFiles: 2)
+        let policy = AgentChangedFilesSnapshotPolicy(ignoreClassifier: nil, maxStoredFiles: 2)
         let files = (0 ..< 5).map { changedFile("Sources/File\($0).swift") }
 
         let captured = policy.capturedFiles(from: files)

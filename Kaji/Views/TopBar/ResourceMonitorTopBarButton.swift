@@ -48,7 +48,14 @@ struct ResourceMonitorTopBarButton: View {
             )
         }
         .task {
-            service.start(appState: appState, projectStore: projectStore)
+            service.refresh(appState: appState, projectStore: projectStore)
+        }
+        .onChange(of: showPopover) { _, isVisible in
+            if isVisible {
+                service.start(appState: appState, projectStore: projectStore)
+            } else {
+                service.stop()
+            }
         }
     }
 

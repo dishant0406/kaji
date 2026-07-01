@@ -12,7 +12,13 @@ final class TerminalSettingsStore {
     var shellCursorEnabled: Bool { didSet { saveBool(shellCursorEnabled, key: "shellCursorEnabled") } }
     var shellSSHIntegrationEnabled: Bool { didSet { saveBool(shellSSHIntegrationEnabled, key: "shellSSHIntegrationEnabled") } }
     var shellSudoIntegrationEnabled: Bool { didSet { saveBool(shellSudoIntegrationEnabled, key: "shellSudoIntegrationEnabled") } }
-    var batteryOptimizedMode: Bool { didSet { saveBool(batteryOptimizedMode, key: "batteryOptimizedMode") } }
+    var batteryOptimizedMode: Bool {
+        didSet {
+            GhosttyTickSchedulerPolicyStore.shared.setBatteryOptimizedMode(batteryOptimizedMode)
+            saveBool(batteryOptimizedMode, key: "batteryOptimizedMode")
+        }
+    }
+
     var scrollSpeedProfile: String { didSet { saveOption(scrollSpeedProfile, key: "scrollSpeedProfile") } }
     var scrollbackProfile: String { didSet { saveOption(scrollbackProfile, key: "scrollbackProfile") } }
     var customScrollbackLimit: String { didSet { saveString(customScrollbackLimit, key: "customScrollbackLimit") } }
@@ -62,6 +68,7 @@ final class TerminalSettingsStore {
         glassBackgroundEnabled = Self.bool(defaults, "glassBackgroundEnabled", fallback.glassBackgroundEnabled)
         glassBackgroundOpacity = Self.double(defaults, "glassBackgroundOpacity", fallback.glassBackgroundOpacity)
         glassBlurMode = defaults.string(forKey: Self.key("glassBlurMode")) ?? fallback.glassBlurMode.rawValue
+        GhosttyTickSchedulerPolicyStore.shared.setBatteryOptimizedMode(batteryOptimizedMode)
     }
 
     func snapshot() -> TerminalSettingsSnapshot {

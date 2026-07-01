@@ -1,5 +1,6 @@
 import AppKit
 
+@MainActor
 enum KajiAgentScrollViewOperations {
     static func distanceFromBottom(_ scrollView: NSScrollView) -> CGFloat {
         let documentHeight = scrollView.documentView?.frame.height ?? 0

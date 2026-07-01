@@ -263,6 +263,13 @@ struct MainWindow: View {
                     showWorktreeSwitcher = false
                     showSettings = true
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .openSpeechToTextSettings)) { _ in
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    showSettings = true
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .requestCreateWorktreeModal)) { notification in
                     guard let projectID = notification.userInfo?["projectID"] as? UUID else { return }
                     requestCreateWorktree(projectID: projectID)
@@ -368,6 +375,11 @@ struct MainWindow: View {
                 .onChange(of: browserEnabled) { _, enabled in
                     if !enabled {
                         closeBrowserFeature()
+                    }
+                }
+                .onAppear {
+                    SpeechInputController.shared.updateEditorProvider {
+                        activeEditorState
                     }
                 }
         )

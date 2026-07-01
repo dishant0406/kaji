@@ -85,6 +85,9 @@ sign_sparkle() {
 rm -rf "$APP_BUNDLE"
 echo "==> Building for $ARCH ($TRIPLE)"
 cd "$PROJECT_ROOT"
+if [[ "${KAJI_SKIP_IGNORE_CATALOG_UPDATE:-0}" != "1" ]]; then
+    "$SCRIPT_DIR/update-ignore-catalog.py"
+fi
 if $SKIP_NATIVE_DEPS; then
     [[ -f "$PROJECT_ROOT/Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs" ]] || { echo "Error: Kaji Agent runtime is missing; run scripts/build-kaji-agent-runtime.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/kaji-agent.mjs" ]] || { echo "Error: Parent agent runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }

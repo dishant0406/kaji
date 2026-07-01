@@ -97,6 +97,38 @@ struct FileSearchServiceTests {
         #expect(files.count <= 3)
     }
 
+    @Test("index respects repository gitignore")
+    func indexRespectsRepositoryGitignore() async throws {
+        let rootURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: rootURL) }
+        try runGit(["init"], in: rootURL)
+        try "node_modules/\n".write(to: rootURL.appendingPathComponent(".gitignore"), atomically: true, encoding: .utf8)
+        try writeData(to: rootURL.appendingPathComponent("Sources/App.swift"))
+        try writeData(to: rootURL.appendingPathComponent("node_modules/pkg/index.js"))
+
+        let index = FileSearchIndex(cacheLifetime: 300, maxCachedProjects: 2, maxFilesPerProject: 100)
+        let files = await index.files(in: rootURL.path)
+
+        #expect(files.contains { $0.relativePath == "Sources/App.swift" })
+        #expect(!files.contains { $0.relativePath == "node_modules/pkg/index.js" })
+    }
+
+    private func writeData(to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: url)
+    }
+
+    private func runGit(_ arguments: [String], in directory: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = arguments
+        process.currentDirectoryURL = directory
+        try process.run()
+        process.waitUntilExit()
+        #expect(process.terminationStatus == 0)
+    }
+
     private func makeResult(_ relativePath: String) -> FileSearchResult {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         return FileSearchResult(

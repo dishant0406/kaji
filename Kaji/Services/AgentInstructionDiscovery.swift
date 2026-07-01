@@ -1,10 +1,7 @@
 import Foundation
 
 enum AgentInstructionDiscovery {
-    private static let skippedDirectories = Set([
-        ".build", ".git", ".next", ".swiftpm", ".turbo", "DerivedData", "Pods", "build", "coverage",
-        "dist", "node_modules", "target", "vendor", "Vendor",
-    ])
+    private static let fallbackIgnore = WorkspaceIgnoreClassifier()
 
     static func discover(
         projectPath: String,
@@ -93,6 +90,31 @@ enum AgentInstructionDiscovery {
         names: Set<String>,
         fileManager: FileManager
     ) -> [String] {
+        if let paths = gitInstructionPaths(projectPath: projectPath, names: names, fileManager: fileManager) {
+            return paths
+        }
+        return filesystemInstructionPaths(projectPath: projectPath, names: names, fileManager: fileManager)
+    }
+
+    private static func gitInstructionPaths(
+        projectPath: String,
+        names: Set<String>,
+        fileManager: FileManager
+    ) -> [String]? {
+        guard let paths = GitFileListProvider.filePathsSync(repoPath: projectPath) else { return nil }
+        return paths.compactMap { relativePath in
+            guard names.contains((relativePath as NSString).lastPathComponent) else { return nil }
+            let path = (projectPath as NSString).appendingPathComponent(relativePath)
+            guard fileManager.fileExists(atPath: path), !isSymbolicLink(url: URL(fileURLWithPath: path)) else { return nil }
+            return path
+        }.sorted { sortKey(path: $0, root: projectPath) < sortKey(path: $1, root: projectPath) }
+    }
+
+    private static func filesystemInstructionPaths(
+        projectPath: String,
+        names: Set<String>,
+        fileManager: FileManager
+    ) -> [String] {
         guard let enumerator = fileManager.enumerator(
             at: URL(fileURLWithPath: projectPath),
             includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey],
@@ -115,7 +137,7 @@ enum AgentInstructionDiscovery {
             return true
         }
         guard isDirectory(url: url) else { return false }
-        if skippedDirectories.contains(url.lastPathComponent) {
+        if fallbackIgnore.shouldSkipDirectoryName(url.lastPathComponent) {
             enumerator.skipDescendants()
             return true
         }

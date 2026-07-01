@@ -45,7 +45,12 @@ enum SwiftRunBundleLauncher {
     }
 
     private static func writeInfoPlist(to url: URL) throws {
-        let plist: [String: Any] = [
+        let data = try PropertyListSerialization.data(fromPropertyList: infoPlist(), format: .xml, options: 0)
+        try data.write(to: url, options: .atomic)
+    }
+
+    static func infoPlist() -> [String: Any] {
+        [
             "CFBundleExecutable": "Kaji",
             "CFBundleIdentifier": "com.kaji.swift-run",
             "CFBundleInfoDictionaryVersion": "6.0",
@@ -54,10 +59,21 @@ enum SwiftRunBundleLauncher {
             "CFBundleShortVersionString": "0.0.0",
             "CFBundleVersion": "0",
             "LSMinimumSystemVersion": "15.0",
+            "NSAppleEventsUsageDescription": "A process running in Kaji's terminal would like to use AppleScript.",
+            "NSBluetoothAlwaysUsageDescription": "A process running in Kaji's terminal would like to use Bluetooth.",
+            "NSCalendarsUsageDescription": "A process running in Kaji's terminal would like to access your calendar.",
+            "NSCameraUsageDescription": "A process running in Kaji's terminal would like to use the camera.",
+            "NSContactsUsageDescription": "A process running in Kaji's terminal would like to access your contacts.",
+            "NSLocalNetworkUsageDescription": "A process running in Kaji's terminal would like to access the local network.",
+            "NSLocationUsageDescription": "A process running in Kaji's terminal would like to access your location information.",
+            "NSMicrophoneUsageDescription": "Kaji uses your microphone for local speech to text dictation.",
+            "NSMotionUsageDescription": "A process running in Kaji's terminal would like to access motion data.",
+            "NSPhotoLibraryUsageDescription": "A process running in Kaji's terminal would like to access your photo library.",
             "NSPrincipalClass": "NSApplication",
+            "NSRemindersUsageDescription": "A process running in Kaji's terminal would like to access your reminders.",
+            "NSSpeechRecognitionUsageDescription": "A process running in Kaji's terminal would like to use speech recognition.",
+            "NSSystemAdministrationUsageDescription": "A process running in Kaji's terminal requires elevated privileges.",
         ]
-        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-        try data.write(to: url, options: .atomic)
     }
 
     private static func linkResourceBundle(into resources: URL, projectRoot _: URL, fileManager: FileManager) {
