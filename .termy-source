@@ -1,0 +1,5 @@
+repo=lassejlv/termy
+ref=99cbcedcf6dc2101460e6fa61aa1dc2c2da95fd9
+profile=release
+artifact=libtermy_ffi.dylib
+kaji_ffi_extensions=termy_terminal_child_pid,termy_terminal_reload_config_colors

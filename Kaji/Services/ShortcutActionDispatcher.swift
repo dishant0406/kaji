@@ -5,20 +5,20 @@ struct ShortcutActionDispatcher {
     let appState: AppState
     let projectStore: ProjectStore
     let worktreeStore: WorktreeStore
-    let ghostty: GhosttyService
+    let termy: TermyService
     let notificationCenter: NotificationCenter
 
     init(
         appState: AppState,
         projectStore: ProjectStore,
         worktreeStore: WorktreeStore,
-        ghostty: GhosttyService,
+        termy: TermyService,
         notificationCenter: NotificationCenter = .default
     ) {
         self.appState = appState
         self.projectStore = projectStore
         self.worktreeStore = worktreeStore
-        self.ghostty = ghostty
+        self.termy = termy
         self.notificationCenter = notificationCenter
     }
 
@@ -106,7 +106,8 @@ struct ShortcutActionDispatcher {
             )
             return true
         case .reloadConfig:
-            ghostty.reloadConfig()
+            termy.reloadConfig()
+            notificationCenter.post(name: .themeDidChange, object: nil)
             return true
         case .nextProject:
             appState.selectNextProject(projects: projectStore.projects, worktrees: worktreeStore.worktrees)
@@ -190,22 +191,6 @@ struct ShortcutActionDispatcher {
              .selectProject8,
              .selectProject9:
             return false
-        }
-    }
-
-    private func performRegisteredCommand(_ action: ShortcutAction) -> Bool {
-        guard let notification = editorCommandNotification(for: action) else { return false }
-        notificationCenter.post(name: notification, object: nil)
-        return true
-    }
-
-    private func editorCommandNotification(for action: ShortcutAction) -> Notification.Name? {
-        switch action {
-        case .saveFile: .saveActiveEditor
-        case .goToSymbol: .goToSymbol
-        case .goToLine: .goToLine
-        case .inlineEdit: .inlineEdit
-        default: nil
         }
     }
 }

@@ -25,11 +25,11 @@ You are welcome to use AI to help you write code, but the text you post on GitHu
 ```bash
 git clone https://github.com/kaji-app/kaji.git
 cd kaji
-scripts/setup.sh          # builds GhosttyKit.xcframework from dishant0406/ghostty
+scripts/setup.sh          # builds TermyKit/libtermy from pinned Termy source
 swift build               # verify everything compiles
 ```
 
-`scripts/setup.sh` expects Xcode and `gettext`. It will use a local Zig `0.15.2` when available or download that version temporarily if needed.
+`scripts/setup.sh` expects Xcode command line tools and a working Rust toolchain for building pinned Termy source.
 
 ### Running
 

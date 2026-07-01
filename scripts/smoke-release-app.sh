@@ -80,6 +80,17 @@ if otool -l "$EXECUTABLE" | grep -q ".dev-support"; then
     fail "Kaji binary has .dev-support load command"
 fi
 
+if otool -L "$EXECUTABLE" | grep -q "@rpath/libtermy_ffi.dylib"; then
+    TERMY_DYLIB="$APP_BUNDLE/Contents/Frameworks/libtermy_ffi.dylib"
+    [[ -f "$TERMY_DYLIB" ]] || fail "libtermy missing from app bundle"
+    codesign --verify "$TERMY_DYLIB" >/dev/null 2>&1 || fail "libtermy is not signed"
+    otool -l "$EXECUTABLE" | grep -q "@executable_path/../Frameworks" || fail "Kaji executable cannot resolve bundled libtermy"
+fi
+
+if otool -l "$EXECUTABLE" | grep -q "TermyKit/lib"; then
+    fail "Kaji binary has source-tree TermyKit rpath"
+fi
+
 if otool -L "$EXECUTABLE" | grep -q "@rpath/Sparkle.framework"; then
     [[ -d "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework" ]] || fail "Sparkle.framework missing from app bundle"
     otool -l "$EXECUTABLE" | grep -q "@executable_path/../Frameworks" || fail "Kaji executable cannot resolve bundled frameworks"

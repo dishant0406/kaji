@@ -7,7 +7,7 @@ struct KajiCommands: Commands {
     let worktreeStore: WorktreeStore
     let keyBindings: KeyBindingStore
     let config: KajiConfig
-    let ghostty: GhosttyService
+    let termy: TermyService
     let updateService: UpdateService
 
     private var isMainWindowFocused: Bool {
@@ -24,7 +24,7 @@ struct KajiCommands: Commands {
             appState: appState,
             projectStore: projectStore,
             worktreeStore: worktreeStore,
-            ghostty: ghostty
+            termy: termy
         )
     }
 
@@ -45,7 +45,7 @@ struct KajiCommands: Commands {
         CommandGroup(after: .appSettings) {
             Button {
                 NSWorkspace.shared.open(
-                    [config.ghosttyConfigURL],
+                    [config.termyConfigURL],
                     withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
                     configuration: NSWorkspace.OpenConfiguration()
                 )

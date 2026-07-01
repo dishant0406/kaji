@@ -13,7 +13,7 @@ final class SpeechInsertionRouter {
     func insert(_ text: String) throws {
         guard !text.isEmpty else { throw SpeechInputError.emptyTranscript }
         let responder = NSApp.keyWindow?.firstResponder
-        if let terminal = responder?.nearestResponder(of: GhosttyTerminalNSView.self) {
+        if let terminal = responder?.nearestResponder(of: TermyTerminalNSView.self) {
             terminal.sendText(text)
             return
         }

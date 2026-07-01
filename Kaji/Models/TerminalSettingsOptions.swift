@@ -11,7 +11,7 @@ enum TerminalShellIntegrationMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var ghosttyValue: String {
+    var termyValue: String {
         switch self {
         case .detect: "detect"
         case .disabled: "none"
@@ -49,7 +49,7 @@ enum TerminalScrollSpeedProfile: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var ghosttyValue: String {
+    var termyValue: String {
         switch self {
         case .native: "precision:1,discrete:3"
         case .fast: "precision:3,discrete:5"
@@ -83,7 +83,7 @@ enum TerminalClipboardAccess: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var ghosttyValue: String { rawValue.lowercased() }
+    var termyValue: String { rawValue.lowercased() }
 }
 
 enum TerminalOptionAsAltMode: String, CaseIterable, Identifiable {
@@ -94,7 +94,7 @@ enum TerminalOptionAsAltMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var ghosttyValue: String {
+    var termyValue: String {
         switch self {
         case .always: "true"
         case .never: "false"
@@ -110,7 +110,7 @@ enum TerminalGlassBlurMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var ghosttyValue: String {
+    var termyValue: String {
         switch self {
         case .regular: "macos-glass-regular"
         case .clear: "macos-glass-clear"

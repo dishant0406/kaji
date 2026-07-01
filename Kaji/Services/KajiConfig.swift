@@ -4,34 +4,33 @@ import Foundation
 final class KajiConfig {
     static let shared = KajiConfig()
 
-    let ghosttyConfigURL: URL
+    let termyConfigURL: URL
 
-    private static let ghosttyConfigFilename = "ghostty.conf"
-    private static let systemGhosttyConfigPath = NSHomeDirectory() + "/.config/ghostty/config"
+    private static let termyConfigFilename = "termy.conf"
 
     private init() {
         let dir = KajiFileStorage.appSupportDirectory()
-        ghosttyConfigURL = dir.appendingPathComponent(Self.ghosttyConfigFilename)
-        seedFromSystemGhosttyIfNeeded()
+        termyConfigURL = dir.appendingPathComponent(Self.termyConfigFilename)
+        seedConfigIfNeeded()
     }
 
-    var ghosttyConfigPath: String {
-        ghosttyConfigURL.path
+    var termyConfigPath: String {
+        termyConfigURL.path
     }
 
-    func readGhosttyConfig() -> String {
-        (try? String(contentsOf: ghosttyConfigURL, encoding: .utf8)) ?? ""
+    func readTermyConfig() -> String {
+        (try? String(contentsOf: termyConfigURL, encoding: .utf8)) ?? ""
     }
 
-    func writeGhosttyConfig(_ content: String) throws {
+    func writeTermyConfig(_ content: String) throws {
         let data = Data(content.utf8)
-        try data.write(to: ghosttyConfigURL, options: .atomic)
-        Self.restrictFilePermissions(ghosttyConfigURL)
+        try data.write(to: termyConfigURL, options: .atomic)
+        Self.restrictFilePermissions(termyConfigURL)
     }
 
     func updateConfigValue(_ key: String, value: String) {
         let entry = "\(key) = \(value)"
-        var content = readGhosttyConfig()
+        var content = readTermyConfig()
         var lines = content.components(separatedBy: "\n")
 
         if let index = findConfigLineIndex(for: key, in: lines) {
@@ -41,11 +40,11 @@ final class KajiConfig {
         }
 
         content = lines.joined(separator: "\n")
-        try? writeGhosttyConfig(content)
+        try? writeTermyConfig(content)
     }
 
     func configValue(for key: String) -> String? {
-        let lines = readGhosttyConfig().components(separatedBy: .newlines)
+        let lines = readTermyConfig().components(separatedBy: .newlines)
         guard let index = findConfigLineIndex(for: key, in: lines) else { return nil }
         let trimmed = lines[index].trimmingCharacters(in: .whitespaces)
         let afterKey = trimmed.dropFirst(key.count).trimmingCharacters(in: .whitespaces)
@@ -63,17 +62,9 @@ final class KajiConfig {
         return nil
     }
 
-    private func seedFromSystemGhosttyIfNeeded() {
-        guard !FileManager.default.fileExists(atPath: ghosttyConfigURL.path) else { return }
-
-        guard FileManager.default.fileExists(atPath: Self.systemGhosttyConfigPath),
-              let systemContent = try? String(contentsOfFile: Self.systemGhosttyConfigPath, encoding: .utf8)
-        else {
-            try? writeGhosttyConfig("")
-            return
-        }
-
-        try? writeGhosttyConfig(systemContent)
+    private func seedConfigIfNeeded() {
+        guard !FileManager.default.fileExists(atPath: termyConfigURL.path) else { return }
+        try? writeTermyConfig("")
     }
 
     private static func restrictFilePermissions(_ url: URL) {

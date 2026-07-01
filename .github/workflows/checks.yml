@@ -41,7 +41,7 @@ jobs:
       - name: Linting
         run: swiftlint lint --strict --quiet
 
-      - name: Setup GhosttyKit
+      - name: Setup TermyKit
         run: scripts/setup.sh
         env:
           GH_TOKEN: ${{ github.token }}

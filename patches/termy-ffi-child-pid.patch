@@ -1,0 +1,90 @@
+diff --git a/crates/ffi/include/termy.h b/crates/ffi/include/termy.h
+index 5c513f0..ba383a0 100644
+--- a/crates/ffi/include/termy.h
++++ b/crates/ffi/include/termy.h
+@@ -412,6 +412,10 @@ void termy_tmux_control_close(TermyFfiTmuxControl *session);
+ 
+ TermyFfiStatus termy_settings_prettify_config(void);
+ TermyFfiStatus termy_terminal_reload_default_config_colors(TermyFfiTerminal *terminal);
++TermyFfiStatus termy_terminal_reload_config_colors(
++    TermyFfiTerminal *terminal,
++    const TermyFfiConfig *config,
++    uint32_t system_appearance);
+ TermyFfiStatus termy_terminal_free(TermyFfiTerminal *terminal);
+ TermyFfiStatus termy_terminal_write(
+     TermyFfiTerminal *terminal,
+@@ -421,6 +425,9 @@ TermyFfiStatus termy_terminal_feed_output(
+     TermyFfiTerminal *terminal,
+     const uint8_t *bytes_ptr,
+     size_t bytes_len);
++TermyFfiStatus termy_terminal_child_pid(
++    TermyFfiTerminal *terminal,
++    uint32_t *out_pid);
+ TermyFfiStatus termy_terminal_encode_key(
+     TermyFfiTerminal *terminal,
+     const TermyFfiKeystroke *keystroke,
+diff --git a/crates/ffi/src/lib.rs b/crates/ffi/src/lib.rs
+index 2a90b9e..1057deb 100644
+--- a/crates/ffi/src/lib.rs
++++ b/crates/ffi/src/lib.rs
+@@ -2430,6 +2430,36 @@ pub unsafe extern "C" fn termy_terminal_reload_default_config_colors(
+     })
+ }
+ 
++#[unsafe(no_mangle)]
++pub unsafe extern "C" fn termy_terminal_reload_config_colors(
++    terminal: *mut TermyFfiTerminal,
++    config: *const TermyFfiConfig,
++    system_appearance: u32,
++) -> TermyFfiStatus {
++    ffi_status_guard(|| {
++        if terminal.is_null() || config.is_null() {
++            return TermyFfiStatus::Null;
++        }
++
++        let system_appearance = match system_appearance {
++            0 => termy_core::SystemAppearance::Light,
++            _ => termy_core::SystemAppearance::Dark,
++        };
++        let loaded = unsafe { &(*config).loaded };
++        let query_colors = termy_core::terminal_query_colors_from_resolved_theme(
++            &termy_core::resolve_theme_colors_from_app_config(
++                &loaded.app_config,
++                loaded.path.as_deref(),
++                system_appearance,
++            ),
++        );
++        unsafe {
++            (*terminal).terminal.set_query_colors(query_colors);
++        }
++        TermyFfiStatus::Ok
++    })
++}
++
+ #[unsafe(no_mangle)]
+ pub unsafe extern "C" fn termy_terminal_free(terminal: *mut TermyFfiTerminal) -> TermyFfiStatus {
+     ffi_status_guard(|| {
+@@ -2504,6 +2534,23 @@ pub unsafe extern "C" fn termy_terminal_feed_output(
+     })
+ }
+ 
++#[unsafe(no_mangle)]
++pub unsafe extern "C" fn termy_terminal_child_pid(
++    terminal: *mut TermyFfiTerminal,
++    out_pid: *mut u32,
++) -> TermyFfiStatus {
++    ffi_status_guard(|| {
++        if terminal.is_null() || out_pid.is_null() {
++            return TermyFfiStatus::Null;
++        }
++
++        unsafe {
++            *out_pid = (*terminal).terminal.child_pid().unwrap_or(0);
++        }
++        TermyFfiStatus::Ok
++    })
++}
++
+ #[unsafe(no_mangle)]
+ pub unsafe extern "C" fn termy_terminal_encode_key(
+     terminal: *mut TermyFfiTerminal,

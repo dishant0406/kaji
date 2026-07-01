@@ -6,13 +6,13 @@ enum MarkdownPreviewThemeFactory {
     static func theme() -> MarkdownPreviewTheme {
         MarkdownPreviewTheme(
             bg: hex(KajiTheme.nsBg),
-            fg: hex(GhosttyService.shared.foregroundColor),
-            muted: hex(GhosttyService.shared.foregroundColor.withAlphaComponent(0.72)),
-            dim: hex(GhosttyService.shared.foregroundColor.withAlphaComponent(0.46)),
-            surface: hex(mix(KajiTheme.nsBg, GhosttyService.shared.selectionBackgroundColor, amount: 0.2)),
-            border: hex(mix(KajiTheme.nsBg, GhosttyService.shared.foregroundColor, amount: 0.18)),
-            accent: hex(GhosttyService.shared.accentColor),
-            soft: hex(mix(KajiTheme.nsBg, GhosttyService.shared.accentColor, amount: 0.16))
+            fg: hex(TermyService.shared.foregroundColor),
+            muted: hex(TermyService.shared.foregroundColor.withAlphaComponent(0.72)),
+            dim: hex(TermyService.shared.foregroundColor.withAlphaComponent(0.46)),
+            surface: hex(mix(KajiTheme.nsBg, TermyService.shared.selectionBackgroundColor, amount: 0.2)),
+            border: hex(mix(KajiTheme.nsBg, TermyService.shared.foregroundColor, amount: 0.18)),
+            accent: hex(TermyService.shared.accentColor),
+            soft: hex(mix(KajiTheme.nsBg, TermyService.shared.accentColor, amount: 0.16))
         )
     }
 

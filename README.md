@@ -29,7 +29,7 @@ Kaji is a local operations layer for AI coding work.
 
 Instead of managing a pile of terminal windows, Kaji keeps projects, worktrees, panes, agent runs, notifications, changed files, diffs, and verification state inside one native macOS app.
 
-It is built with SwiftUI and embeds official upstream [libghostty](https://github.com/ghostty-org/ghostty) through `GhosttyKit` for native terminal rendering.
+It is built with SwiftUI and embeds pinned upstream [Termy](https://github.com/lassejlv/termy) through `TermyKit` and `TermySwiftEmbed` for native terminal emulation and AppKit rendering.
 
 ## Core Features
 
@@ -82,7 +82,7 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 
 ### Terminal, Editor, And VCS
 
-- Ghostty-powered terminal surfaces with Metal rendering.
+- Termy-powered native terminal surfaces with AppKit rendering.
 - Tabs, splits, pane focus, pane movement, terminal search, and long-running session continuity.
 - File tree, quick open, native editor tabs, markdown preview/split modes, and syntax highlighting.
 - Built-in VCS surface for status, diffs, branch switching, commit history, worktree creation, and PR actions through `gh`.
@@ -99,7 +99,7 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 ### Customization And Operations
 
 - Configurable keyboard shortcuts for tabs, panes, projects, quick open, Ask, Agent Command Center, VCS, worktrees, file tree, AI usage, and navigation.
-- Theme picker, Ghostty theme import/export, user themes, transparency settings, and shared Kaji UI tokens.
+- Theme picker, Termy theme import/export, user themes, transparency settings, and shared Kaji UI tokens.
 - CLI launcher settings for enabling/disabling agents and overriding commands.
 - AI usage board for supported providers including Codex, Claude Code, Copilot, Amp, Z.ai, MiniMax, Kimi, and Factory.
 - Sparkle update support for packaged releases.
@@ -145,7 +145,6 @@ Download the latest release from the [releases page](https://github.com/dishant0
 - macOS 15+
 - Swift 6.0+ for local development
 - Xcode command line tools
-- Ghostty installed only if you want to reuse local Ghostty themes
 - `gh` installed for GitHub PR actions
 - Node.js installed for the Parent Agent runtime
 - Optional provider CLIs: `codex`, `claude`, `opencode`, `pi`
@@ -153,14 +152,14 @@ Download the latest release from the [releases page](https://github.com/dishant0
 ## Local Development
 
 ```bash
-scripts/setup.sh          # Build GhosttyKit.xcframework from ghostty-org/ghostty
+scripts/setup.sh          # Build TermyKit/libtermy from pinned Termy source
 swift build               # Debug build
 swift run Kaji           # Run from SwiftPM
 ./start.sh                # Open the preview lab and launch a real Kaji.app bundle
 scripts/checks.sh --fix   # Format, lint, and build
 ```
 
-`scripts/setup.sh` requires Xcode and `gettext`. If a matching Zig toolchain is not already installed, the script downloads the Ghostty-required Zig version temporarily. See [docs/building-ghostty.md](docs/building-ghostty.md).
+`scripts/setup.sh` builds the pinned Termy FFI dylib and syncs Termy shell integration assets. See [docs/building-termy.md](docs/building-termy.md).
 
 `./start.sh` is the fastest supported app workflow in this repo. It opens `Kaji/Previews/DeveloperPreviewLab.swift` in Xcode for SwiftUI previews and launches a real `Kaji.app` bundle through `script/build_and_run.sh`.
 
@@ -170,14 +169,14 @@ scripts/checks.sh --fix   # Format, lint, and build
 Kaji/                       SwiftUI macOS app target
 KajiHookClient/             Native provider hook helper
 KajiParentAgentRuntime/      TypeScript Parent Agent runtime using Pi packages
-GhosttyKit/                  C module exposing ghostty.h
-GhosttyKit.xcframework/      Built libghostty artifact from ghostty-org/ghostty
+TermyKit/                    C module exposing termy.h and libtermy_ffi.dylib
+Vendor/TermySwiftEmbed/       Embedded Swift/AppKit Termy terminal surface
 Tests/KajiTests/            Swift Testing suite
 docs/                        Architecture, release, and integration docs
 scripts/                     Setup, checks, packaging, and release scripts
 ```
 
-Core runtime pieces include `GhosttyService`, `GhosttyTerminalNSView`, `AppState`, `WorkspaceReducer`, `CodingAgentRegistry`, `AgentRunStore`, and `ParentAgentController`.
+Core runtime pieces include `TermyService`, `TermyTerminalNSView`, `AppState`, `WorkspaceReducer`, `CodingAgentRegistry`, `AgentRunStore`, and `ParentAgentController`.
 
 Read the full architecture guide in [docs/architecture.md](docs/architecture.md). Provider hooks and custom notification usage are documented in [docs/notification-setup.md](docs/notification-setup.md).
 

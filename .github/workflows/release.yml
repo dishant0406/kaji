@@ -31,31 +31,8 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 
-      - name: Install GhosttyKit
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GH_PAT || github.token }}
-        run: |
-          EXPECTED_STAMP="$(cat .ghostty-source)"
-          CACHE_DIR="$(mktemp -d)"
-          trap 'rm -rf "$CACHE_DIR"' EXIT
-          if gh release download ghosttykit-cache \
-            --repo "$REPOSITORY_SLUG" \
-            --pattern "GhosttyKit.xcframework.zip" \
-            --dir "$CACHE_DIR" \
-            --clobber; then
-            unzip -oq "$CACHE_DIR/GhosttyKit.xcframework.zip" -d "$CACHE_DIR"
-            if [[ -d "$CACHE_DIR/GhosttyKit.xcframework" && -f "$CACHE_DIR/.ghostty-source" && "$(cat "$CACHE_DIR/.ghostty-source")" == "$EXPECTED_STAMP" ]]; then
-              rm -rf GhosttyKit.xcframework
-              cp -R "$CACHE_DIR/GhosttyKit.xcframework" GhosttyKit.xcframework
-              cp "$CACHE_DIR/GhosttyKit.xcframework/macos-arm64_x86_64/Headers/ghostty.h" GhosttyKit/ghostty.h
-              exit 0
-            fi
-            echo "Cached GhosttyKit does not match .ghostty-source; rebuilding from source"
-          else
-            echo "Cached GhosttyKit is unavailable; rebuilding from source"
-          fi
-          rm -rf GhosttyKit.xcframework
-          scripts/setup.sh
+      - name: Install TermyKit
+        run: scripts/setup.sh
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -72,9 +49,10 @@ jobs:
         with:
           name: native-deps
           path: |
-            GhosttyKit.xcframework/
-
-            GhosttyKit/ghostty.h
+            TermyKit/termy.h
+            TermyKit/module.modulemap
+            TermyKit/lib/libtermy_ffi.dylib
+            Kaji/Resources/termy/shell
             Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs
             Kaji/Resources/pi/kaji-agent.mjs
             Kaji/Resources/pi/oauth-login.mjs

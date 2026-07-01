@@ -6,7 +6,7 @@ struct EditorPane: View {
     let onFocus: () -> Void
     let project: Project?
     let worktree: Worktree?
-    @Environment(GhosttyService.self) private var ghostty
+    @Environment(TermyService.self) private var termy
     @Environment(AppTypographySettings.self) private var typography
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activatedMonacoRenderToken: MonacoEditorRenderToken?
@@ -160,7 +160,7 @@ struct EditorPane: View {
                     contentVisible: contentVisible,
                     contentRevealDuration: reduceMotion ? 0 : 0.08,
                     typography: typography,
-                    themeVersion: ghostty.configVersion,
+                    themeVersion: termy.configVersion,
                     showsVerticalScroller: true,
                     focused: focused,
                     searchNeedle: state.searchNeedle,

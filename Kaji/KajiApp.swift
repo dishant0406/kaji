@@ -41,7 +41,7 @@ struct KajiApp: App {
                 .environment(appState)
                 .environment(projectStore)
                 .environment(worktreeStore)
-                .environment(GhosttyService.shared)
+                .environment(TermyService.shared)
                 .environment(KajiConfig.shared)
                 .environment(ThemeService.shared)
                 .environment(AppTypographySettings.shared)
@@ -82,7 +82,7 @@ struct KajiApp: App {
                 worktreeStore: worktreeStore,
                 keyBindings: .shared,
                 config: .shared,
-                ghostty: .shared,
+                termy: .shared,
                 updateService: .shared
             )
         }
@@ -100,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
         HugeIconFont.registerIfNeeded()
         setAppIcon()
-        _ = GhosttyService.shared
+        _ = TermyService.shared
         _ = AppTypographySettings.shared
         ThemeService.shared.applyDefaultThemeIfNeeded()
         MonacoPreloadService.shared.start()
@@ -191,7 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         BrowserControllerRegistry.closeAllRegisteredImmediately()
         KajiBrowserControlBroker.shared.stop()
         TerminalViewRegistry.shared.removeAll()
-        GhosttyService.shared.shutdown()
+        TermyService.shared.shutdown()
         DebugFileLog.log("Lifecycle", "applicationWillTerminate completed")
     }
 

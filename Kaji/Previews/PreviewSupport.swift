@@ -47,7 +47,7 @@ struct PreviewStores {
     private static func sampleProjects() -> [Project] {
         [
             makeProject(name: "Kaji", sortOrder: 0, iconColor: "blue"),
-            makeProject(name: "Ghostty", sortOrder: 1, iconColor: "green"),
+            makeProject(name: "Termy", sortOrder: 1, iconColor: "green"),
             makeProject(name: "Website", sortOrder: 2, iconColor: "orange"),
         ]
     }

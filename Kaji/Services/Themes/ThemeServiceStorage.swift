@@ -33,31 +33,32 @@ extension ThemeService {
     ) -> String {
         var lines = content.components(separatedBy: .newlines)
         lines.removeAll { line in
-            managedThemeKeys.contains { key in isConfigLine(line, for: key) }
-                || GhosttyTypographyDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
-                || GhosttyTerminalConfigDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
+            line.trimmingCharacters(in: .whitespaces) == "[colors]"
+                || managedThemeKeys.contains { key in isConfigLine(line, for: key) }
+                || TermyTypographyDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
+                || TermyTerminalConfigDefaults.managedKeys.contains { key in isConfigLine(line, for: key) }
         }
 
-        let themeLines: [String] = if let theme, theme.source == .bundled {
+        let themeLines: [String] = if let theme {
             theme.content.components(separatedBy: .newlines).filter { !$0.hasPrefix("# kaji-") }
         } else {
             ["theme = \"\(themeIdentifier)\""]
         }
 
         let preserved = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-        let resolvedTypographyLines = typographyLines ?? GhosttyTypographyDefaults.lines(
+        let resolvedTypographyLines = typographyLines ?? TermyTypographyDefaults.lines(
             fontSize: AppTypographySettings.shared.fontSize,
             fontFamily: AppTypographySettings.shared.fontFamily
         )
         let resolvedTerminalLines = terminalLines
-            ?? GhosttyTerminalConfigDefaults.lines(settings: TerminalSettingsStore.shared.snapshot())
+            ?? TermyTerminalConfigDefaults.lines(settings: TerminalSettingsStore.shared.snapshot())
         return (themeLines + resolvedTypographyLines + resolvedTerminalLines + preserved).joined(separator: "\n")
     }
 
     nonisolated static func userThemesDirectoryURL() throws -> URL {
         let url = URL(fileURLWithPath: NSHomeDirectory())
             .appendingPathComponent(".config", isDirectory: true)
-            .appendingPathComponent("ghostty", isDirectory: true)
+            .appendingPathComponent("termy", isDirectory: true)
             .appendingPathComponent("themes", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
         return url
@@ -73,13 +74,11 @@ extension ThemeService {
 
     nonisolated private static func themeDirectories() -> [(path: String, source: ThemePreview.Source)] {
         var dirs: [(path: String, source: ThemePreview.Source)] = []
-        if let resourcesDir = getenv("GHOSTTY_RESOURCES_DIR").map({ String(cString: $0) }) {
+        if let resourcesDir = getenv("TERMY_RESOURCES_DIR").map({ String(cString: $0) }) {
             dirs.append((resourcesDir + "/themes", .external))
         }
         for path in [
-            "/Applications/Ghostty.app/Contents/Resources/ghostty/themes",
-            NSHomeDirectory() + "/Applications/Ghostty.app/Contents/Resources/ghostty/themes",
-            NSHomeDirectory() + "/.config/ghostty/themes",
+            NSHomeDirectory() + "/.config/termy/themes",
         ] where !dirs.contains(where: { $0.path == path }) {
             dirs.append((path, .external))
         }

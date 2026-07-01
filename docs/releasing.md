@@ -4,7 +4,7 @@
 
 ## Required Secrets
 
-- `GH_PAT`: token used by `scripts/setup.sh` when fetching Ghostty artifacts in CI
+- `GH_PAT`: token available to CI when `scripts/setup.sh` fetches pinned Termy source or GitHub-hosted assets
 - `DEVELOPER_ID_APPLICATION_CERTIFICATE`: base64-encoded Developer ID Application `.p12`
 - `DEVELOPER_ID_APPLICATION_PASSWORD`: password for that `.p12`
 - `KEYCHAIN_PASSWORD`: temporary CI keychain password

@@ -7,12 +7,12 @@ struct TerminalSelectionActionResolverTests {
     @Test
     func resolvesHttpsURL() throws {
         let action = TerminalSelectionActionResolver.action(
-            from: "https://ghostty.org/docs/config/reference",
+            from: "https://termy.org/docs/config/reference",
             workingDirectory: "/tmp"
         )
 
         #expect(action?.title == "Open Link")
-        #expect(action?.url.absoluteString == "https://ghostty.org/docs/config/reference")
+        #expect(action?.url.absoluteString == "https://termy.org/docs/config/reference")
     }
 
     @Test

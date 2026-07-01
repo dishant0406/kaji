@@ -41,11 +41,11 @@ enum KajiTheme {
     @MainActor private static var cachedSnapshot: Snapshot?
 
     @MainActor private static var snapshot: Snapshot {
-        let version = GhosttyService.shared.configVersion
+        let version = TermyService.shared.configVersion
         if let cached = cachedSnapshot, cachedVersion == version {
             return cached
         }
-        let newSnapshot = Snapshot(from: GhosttyService.shared)
+        let newSnapshot = Snapshot(from: TermyService.shared)
         cachedSnapshot = newSnapshot
         cachedVersion = version
         return newSnapshot
@@ -86,7 +86,7 @@ extension KajiTheme {
         let colorScheme: ColorScheme
 
         @MainActor
-        init(from service: GhosttyService) {
+        init(from service: TermyService) {
             let bgColor = service.backgroundColor
             let fgColor = service.foregroundColor
             let selectionColor = service.selectionBackgroundColor

@@ -74,7 +74,7 @@ struct TerminalSettingsView: View {
             if AppearanceCapabilities.supportsLiquidGlass {
                 SettingsDetailToggleRow(
                     label: "Glass terminal background",
-                    detail: "Uses Ghostty's native macOS glass blur. New terminals may be required.",
+                    detail: "Uses Termy's native macOS glass blur. New terminals may be required.",
                     isOn: $settings.glassBackgroundEnabled
                 )
                 SettingsSliderRow(

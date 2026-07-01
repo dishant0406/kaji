@@ -17,20 +17,4 @@ struct TerminalEnvironmentPolicyTests {
         #expect(result["COLORTERM"] == "truecolor")
         #expect(result["PATH"] == "/usr/bin")
     }
-
-    @Test
-    @MainActor
-    func startupCommandUsesInteractiveLoginShell() {
-        let command = GhosttyShellLaunchCommand.startupCommand("codex 'hello'", environment: ["SHELL": "/bin/zsh"])
-
-        #expect(command.contains(" -l -i -c "))
-        #expect(command.contains("codex"))
-    }
-
-    @Test
-    func defaultTerminalUsesUserShellForGhosttyIntegrationDetection() {
-        let command = GhosttyShellLaunchCommand.interactiveShell(environment: ["SHELL": "/bin/zsh"])
-
-        #expect(command == "/bin/zsh -l")
-    }
 }

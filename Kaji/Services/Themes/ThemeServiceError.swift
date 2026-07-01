@@ -9,7 +9,7 @@ enum ThemeServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidThemeFile:
-            "The selected file is not a valid Ghostty theme."
+            "The selected file is not a valid Termy theme."
         case .duplicateTheme:
             "A theme with this slug already exists."
         case .saveCancelled:

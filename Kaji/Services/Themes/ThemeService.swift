@@ -12,11 +12,28 @@ final class ThemeService {
         "theme",
         "background",
         "foreground",
+        "cursor",
         "cursor-color",
         "cursor-text",
         "selection-background",
         "selection-foreground",
         "palette",
+        "black",
+        "red",
+        "green",
+        "yellow",
+        "blue",
+        "magenta",
+        "cyan",
+        "white",
+        "bright_black",
+        "bright_red",
+        "bright_green",
+        "bright_yellow",
+        "bright_blue",
+        "bright_magenta",
+        "bright_cyan",
+        "bright_white",
     ]
 
     private let config: KajiConfig
@@ -58,7 +75,7 @@ final class ThemeService {
         if let current = currentThemeIdentifier(),
            let theme = Self.discoverTheme(identifier: current)
         {
-            let existing = config.readGhosttyConfig().trimmingCharacters(in: .whitespacesAndNewlines)
+            let existing = config.readTermyConfig().trimmingCharacters(in: .whitespacesAndNewlines)
             let expected = Self.updatedConfigContent(from: existing, themeIdentifier: current, theme: theme)
             if existing != expected {
                 applyTheme(current)
@@ -79,13 +96,13 @@ final class ThemeService {
         let sanitized = identifier.filter { $0 != "\"" && $0 != "\n" && $0 != "\r" }
         let theme = Self.discoverTheme(identifier: sanitized)
         let configContent = Self.updatedConfigContent(
-            from: config.readGhosttyConfig(),
+            from: config.readTermyConfig(),
             themeIdentifier: sanitized,
             theme: theme
         )
-        try? config.writeGhosttyConfig(configContent)
+        try? config.writeTermyConfig(configContent)
         UserDefaults.standard.set(sanitized, forKey: Self.selectedThemeNameKey)
-        GhosttyService.shared.reloadConfig()
+        TermyService.shared.reloadConfig()
         NotificationCenter.default.post(name: .themeDidChange, object: nil)
     }
 

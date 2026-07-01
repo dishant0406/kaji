@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Ghostty Configuration
-    url: https://ghostty.org/docs
-    about: For questions about Ghostty terminal configuration, refer to the Ghostty docs.
+  - name: Terminal Configuration
+    url: https://github.com/lassejlv/termy
+    about: For questions about Termy terminal configuration, refer to Kaji terminal settings and docs.

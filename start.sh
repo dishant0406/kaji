@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREVIEW_FILE="$ROOT_DIR/Kaji/Previews/DeveloperPreviewLab.swift"
 OPEN_XCODE="${START_OPEN_XCODE:-1}"
 
-if [[ ! -d "$ROOT_DIR/GhosttyKit.xcframework" || ! -f "$ROOT_DIR/.ghostty-source" ]]; then
+if [[ ! -f "$ROOT_DIR/TermyKit/lib/libtermy_ffi.dylib" || ! -f "$ROOT_DIR/.termy-source" ]]; then
     "$ROOT_DIR/scripts/setup.sh"
 fi
 

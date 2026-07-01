@@ -1,0 +1,4 @@
+module TermyKit {
+    header "termy.h"
+    export *
+}

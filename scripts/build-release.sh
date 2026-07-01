@@ -66,6 +66,7 @@ BUILD_NUMBER=$(git -C "$PROJECT_ROOT" rev-list --count HEAD)
 APP_BUNDLE="$BUILD_DIR/Kaji.app"
 DMG_NAME="Kaji-${VERSION}-${ARCH}.dmg"
 SIGNING_IDENTITY="${SIGN_IDENTITY:--}"
+TERMY_DYLIB="$PROJECT_ROOT/TermyKit/lib/libtermy_ffi.dylib"
 sign_code() {
     /usr/bin/codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$@"
 }
@@ -94,6 +95,7 @@ if $SKIP_NATIVE_DEPS; then
     [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/oauth-login.mjs" ]] || { echo "Error: Parent agent OAuth runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/Zlob/zlob" ]] || { echo "Error: Zlob runtime is missing; run scripts/build-zlob.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/MonacoEditor/index.html" ]] || { echo "Error: Monaco editor runtime is missing; run scripts/build-monaco-runtime.sh" >&2; exit 1; }
+    [[ -f "$TERMY_DYLIB" ]] || { echo "Error: libtermy is missing; run scripts/setup.sh" >&2; exit 1; }
 fi
 rm -rf "$PROJECT_ROOT/.build/$TRIPLE/release/Kaji_Kaji.bundle"
 if ! $SKIP_NATIVE_DEPS; then
@@ -138,6 +140,11 @@ cp -R "$SPARKLE_FRAMEWORK" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 if ! otool -l "$APP_BUNDLE/Contents/MacOS/Kaji" | grep -q "@executable_path/../Frameworks"; then
     install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BUNDLE/Contents/MacOS/Kaji"
 fi
+if otool -l "$APP_BUNDLE/Contents/MacOS/Kaji" | grep -q "$PROJECT_ROOT/TermyKit/lib"; then
+    install_name_tool -delete_rpath "$PROJECT_ROOT/TermyKit/lib" "$APP_BUNDLE/Contents/MacOS/Kaji"
+fi
+echo "==> Embedding libtermy"
+cp "$TERMY_DYLIB" "$APP_BUNDLE/Contents/Frameworks/libtermy_ffi.dylib"
 if [[ -n "$SPARKLE_PUBLIC_KEY" ]]; then
     echo "==> Injecting Sparkle keys into Info.plist"
     APP_PLIST="$APP_BUNDLE/Contents/Info.plist"
@@ -154,6 +161,8 @@ for addon in "$APP_BUNDLE"/Contents/Resources/native/*.node; do
 done
 echo "==> Signing KajiHookClient"
 sign_code "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
+echo "==> Signing libtermy"
+sign_code "$APP_BUNDLE/Contents/Frameworks/libtermy_ffi.dylib"
 echo "==> Signing app bundle"
 sign_code_with_entitlements "$APP_BUNDLE"
 SMOKE_ARGS=("$APP_BUNDLE")

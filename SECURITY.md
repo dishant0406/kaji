@@ -29,4 +29,4 @@ Instead, please use [GitHub's private vulnerability reporting](https://github.co
 
 ## Scope
 
-This policy applies to the Kaji application and its build tooling. For vulnerabilities in [libghostty](https://github.com/ghostty-org/ghostty), please report them to the Ghostty project directly.
+This policy applies to the Kaji application, its build tooling, and Kaji-owned Termy integration code. For vulnerabilities in upstream Termy itself, report them to the Termy project.

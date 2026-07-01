@@ -4,8 +4,8 @@ import Foundation
 @MainActor
 enum MonacoThemeMapper {
     static func theme() -> [String: MonacoJSONValue] {
-        let background = GhosttyService.shared.backgroundColor
-        let foreground = GhosttyService.shared.foregroundColor
+        let background = TermyService.shared.backgroundColor
+        let foreground = TermyService.shared.foregroundColor
         let isDark = background.kajiPerceivedBrightness < 0.5
         return [
             "name": .string("kaji-editor-theme"),

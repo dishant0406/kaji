@@ -67,7 +67,7 @@ struct TerminalBridge: NSViewRepresentable {
         Coordinator()
     }
 
-    func makeNSView(context: Context) -> GhosttyTerminalNSView {
+    func makeNSView(context: Context) -> TermyTerminalNSView {
         let registry = TerminalViewRegistry.shared
         let view = registry.view(
             for: state.id,
@@ -101,8 +101,8 @@ struct TerminalBridge: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: GhosttyTerminalNSView, context: Context) {
-        if nsView.envVars.isEmpty, nsView.surface == nil, let key = worktreeKey {
+    func updateNSView(_ nsView: TermyTerminalNSView, context: Context) {
+        if nsView.envVars.isEmpty, !nsView.hasTerminalRuntime, let key = worktreeKey {
             nsView.envVars = Self.buildEnvVars(paneID: state.id, worktreeKey: key, worktreePath: state.projectPath)
         }
         nsView.setInjectedCommand(state.injectedCommand)
@@ -161,6 +161,9 @@ struct TerminalBridge: NSViewRepresentable {
         if let hookClientPath = KajiNotificationHooks.hookClientPath {
             vars.append((key: "KAJI_HOOK_CLIENT_PATH", value: hookClientPath))
         }
+        if let resourceURL = Bundle.appResources.resourceURL?.appendingPathComponent("termy", isDirectory: true) {
+            vars.append((key: "TERMY_RESOURCES_DIR", value: resourceURL.path))
+        }
         vars.append(contentsOf: KajiCodeGraphInstructions.environment(projectID: key.projectID, worktreeID: key.worktreeID))
         vars.append(contentsOf: CodingAgentShimEnvironment.variables(
             projectID: key.projectID,
@@ -189,7 +192,7 @@ struct TerminalBridge: NSViewRepresentable {
         ))
     }
 
-    private func configureSearchCallbacks(_ view: GhosttyTerminalNSView) {
+    private func configureSearchCallbacks(_ view: TermyTerminalNSView) {
         view.onSearchStart = { [weak state] needle in
             guard let state else { return }
             let searchState = state.searchState

@@ -4,22 +4,22 @@ import AppKit
 final class TerminalViewRegistry {
     static let shared = TerminalViewRegistry()
 
-    private var views: [UUID: GhosttyTerminalNSView] = [:]
+    private var views: [UUID: TermyTerminalNSView] = [:]
     private var paneIDs: [ObjectIdentifier: UUID] = [:]
 
     private init() {}
 
-    func view(for paneID: UUID, workingDirectory: String, command: String? = nil) -> GhosttyTerminalNSView {
+    func view(for paneID: UUID, workingDirectory: String, command: String? = nil) -> TermyTerminalNSView {
         if let existing = views[paneID] {
             return existing
         }
-        let view = GhosttyTerminalNSView(workingDirectory: workingDirectory, command: command)
+        let view = TermyTerminalNSView(workingDirectory: workingDirectory, command: command)
         views[paneID] = view
         paneIDs[ObjectIdentifier(view)] = paneID
         return view
     }
 
-    func existingView(for paneID: UUID) -> GhosttyTerminalNSView? {
+    func existingView(for paneID: UUID) -> TermyTerminalNSView? {
         views[paneID]
     }
 
@@ -40,7 +40,7 @@ final class TerminalViewRegistry {
         views[paneID]?.needsConfirmQuit() ?? false
     }
 
-    func view(for paneID: UUID) -> GhosttyTerminalNSView? {
+    func view(for paneID: UUID) -> TermyTerminalNSView? {
         views[paneID]
     }
 
@@ -64,7 +64,7 @@ final class TerminalViewRegistry {
         )
     }
 
-    func paneID(for view: GhosttyTerminalNSView) -> UUID? {
+    func paneID(for view: TermyTerminalNSView) -> UUID? {
         paneIDs[ObjectIdentifier(view)]
     }
 }

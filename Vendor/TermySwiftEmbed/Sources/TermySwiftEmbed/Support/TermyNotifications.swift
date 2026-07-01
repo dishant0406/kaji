@@ -1,0 +1,9 @@
+import Foundation
+
+/// Posted whenever a setting is written to disk so open terminals can live-apply
+/// appearance changes.
+extension Notification.Name {
+    static let termySettingsChanged = Notification.Name("TermySettingsChanged")
+    static let termyNativeTabsChanged = Notification.Name("TermyNativeTabsChanged")
+    static let termyOpenSettingsRequested = Notification.Name("TermyOpenSettingsRequested")
+}

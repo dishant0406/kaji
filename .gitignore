@@ -8,9 +8,9 @@ xcuserdata/
 DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
-GhosttyKit.xcframework
-GhosttyKit/ghostty.h
-/ghostty
+TermyKit/lib/libtermy_ffi.dylib
+TermyKit/termy.h
+/termy
 /build
 /dist
 .dev-support/

@@ -82,7 +82,7 @@ struct DiffRenderTheme: @unchecked Sendable {
             rules: Self.buildRules(),
             additionColor: KajiTheme.nsDiffAdd,
             deletionColor: KajiTheme.nsDiffRemove,
-            defaultColor: GhosttyService.shared.foregroundColor,
+            defaultColor: TermyService.shared.foregroundColor,
             additionBackground: KajiTheme.nsDiffAdd.withAlphaComponent(0.16),
             deletionBackground: KajiTheme.nsDiffRemove.withAlphaComponent(0.16),
             hunkBackground: KajiTheme.nsDiffHunk.withAlphaComponent(0.1),

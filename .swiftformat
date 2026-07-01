@@ -2,7 +2,7 @@
 --minversion 0.54
 
 # File options
---exclude .build,GhosttyKit,Tests,scripts
+--exclude .build,TermyKit,Tests,scripts
 
 # Format options
 --indent 4

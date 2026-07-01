@@ -49,7 +49,7 @@ enum KajiShellBootstrapInstaller {
             export ZDOTDIR="$_kaji_proxy_zdotdir"
             fi
         fi
-        \(ghosttyIntegrationScript(for: name))
+        \(termyIntegrationScript(for: name))
         if [ -n "${KAJI_AGENT_SHIM_DIR:-}" ]; then
           _kaji_path=":$PATH:"
           case "$_kaji_path" in
@@ -69,11 +69,11 @@ enum KajiShellBootstrapInstaller {
         """
     }
 
-    private static func ghosttyIntegrationScript(for name: String) -> String {
+    private static func termyIntegrationScript(for name: String) -> String {
         guard name == ".zshrc" else { return "" }
         return """
-        if [ -n "${GHOSTTY_RESOURCES_DIR:-}" ] && [ -r "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]; then
-          . "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
+        if [ -n "${TERMY_RESOURCES_DIR:-}" ] && [ -r "$TERMY_RESOURCES_DIR/shell/termy.zsh" ]; then
+          . "$TERMY_RESOURCES_DIR/shell/termy.zsh"
         fi
         """
     }

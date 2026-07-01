@@ -3,6 +3,9 @@ import Foundation
 enum ThemeFileCodec {
     private static let namePrefix = "# kaji-name:"
     private static let slugPrefix = "# kaji-slug:"
+    private static let cursorTextPrefix = "# kaji-cursor-text:"
+    private static let selectionBackgroundPrefix = "# kaji-selection-background:"
+    private static let selectionForegroundPrefix = "# kaji-selection-foreground:"
 
     static func parseThemeFile(
         at url: URL,
@@ -34,10 +37,28 @@ enum ThemeFileCodec {
                 parsedSlug = String(line.dropFirst(slugPrefix.count)).trimmingCharacters(in: .whitespaces)
                 continue
             }
+            if line.hasPrefix(cursorTextPrefix) {
+                values["cursor-text"] = String(line.dropFirst(cursorTextPrefix.count)).trimmingCharacters(in: .whitespaces)
+                continue
+            }
+            if line.hasPrefix(selectionBackgroundPrefix) {
+                values["selection-background"] = String(line.dropFirst(selectionBackgroundPrefix.count))
+                    .trimmingCharacters(in: .whitespaces)
+                continue
+            }
+            if line.hasPrefix(selectionForegroundPrefix) {
+                values["selection-foreground"] = String(line.dropFirst(selectionForegroundPrefix.count))
+                    .trimmingCharacters(in: .whitespaces)
+                continue
+            }
+            if line == "[colors]" {
+                continue
+            }
             if line.hasPrefix("palette") {
                 parsePalette(line, into: &palette)
                 continue
             }
+            parseAnsiColor(line, into: &palette)
             parseValue(line, into: &values)
         }
 
@@ -50,7 +71,7 @@ enum ThemeFileCodec {
         let colors = ThemeColorSet(
             background: background,
             foreground: foreground,
-            cursorColor: normalizeHex(values["cursor-color"]) ?? resolvedPalette[3],
+            cursorColor: normalizeHex(values["cursor-color"]) ?? normalizeHex(values["cursor"]) ?? resolvedPalette[3],
             cursorText: normalizeHex(values["cursor-text"]) ?? background,
             selectionBackground: normalizeHex(values["selection-background"]) ?? resolvedPalette[4],
             selectionForeground: normalizeHex(values["selection-foreground"]) ?? foreground,
@@ -78,16 +99,17 @@ enum ThemeFileCodec {
         var lines = [
             "\(namePrefix) \(normalized.name)",
             "\(slugPrefix) \(normalized.slug)",
+            "\(cursorTextPrefix) \(normalized.colors.cursorText)",
+            "\(selectionBackgroundPrefix) \(normalized.colors.selectionBackground)",
+            "\(selectionForegroundPrefix) \(normalized.colors.selectionForeground)",
             "",
         ]
-        lines.append(contentsOf: normalized.colors.palette.enumerated().map { "palette = \($0.offset)=\($0.element)" })
+        lines.append("[colors]")
+        lines.append(contentsOf: zip(ThemeAnsiColorKeys.all, normalized.colors.palette).map { "\($0.0) = \($0.1)" })
         lines.append(contentsOf: [
             "background = \(normalized.colors.background)",
             "foreground = \(normalized.colors.foreground)",
-            "cursor-color = \(normalized.colors.cursorColor)",
-            "cursor-text = \(normalized.colors.cursorText)",
-            "selection-background = \(normalized.colors.selectionBackground)",
-            "selection-foreground = \(normalized.colors.selectionForeground)",
+            "cursor = \(normalized.colors.cursorColor)",
         ])
         return lines.joined(separator: "\n")
     }
@@ -158,13 +180,19 @@ enum ThemeFileCodec {
         values[key] = value
     }
 
+    private static func parseAnsiColor(_ line: String, into palette: inout [String?]) {
+        guard let eqIndex = line.firstIndex(of: "=") else { return }
+        let key = line[..<eqIndex].trimmingCharacters(in: .whitespaces)
+        let value = line[line.index(after: eqIndex)...].trimmingCharacters(in: .whitespaces)
+        guard let index = ThemeAnsiColorKeys.all.firstIndex(of: key), !value.isEmpty else { return }
+        palette[index] = value
+    }
+
     private static func parsePalette(_ line: String, into palette: inout [String?]) {
         guard let eqIndex = line.firstIndex(of: "=") else { return }
         let value = line[line.index(after: eqIndex)...].trimmingCharacters(in: .whitespaces)
         guard let splitIndex = value.firstIndex(of: "="),
-              let index = Int(value[..<splitIndex]),
-              index >= 0,
-              index < palette.count
+              let index = Int(value[..<splitIndex]), index >= 0, index < palette.count
         else { return }
         palette[index] = String(value[value.index(after: splitIndex)...]).trimmingCharacters(in: .whitespaces)
     }

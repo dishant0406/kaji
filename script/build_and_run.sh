@@ -33,14 +33,15 @@ stop_existing_app() {
     return
   fi
 
-  local target_binary
-  if [[ "$RUN_IN_PLACE" == "1" ]]; then
-    target_binary="$APP_BINARY"
-  else
-    target_binary="$INSTALL_APP_BUNDLE/Contents/MacOS/$APP_EXECUTABLE_NAME"
+  local pids
+  pids="$(pgrep -x "$APP_EXECUTABLE_NAME" || true)"
+  if [[ -z "$pids" ]]; then
+    return
   fi
 
-  pgrep -f "$target_binary" | xargs kill >/dev/null 2>&1 || true
+  while read -r pid; do
+    kill "$pid" >/dev/null 2>&1 || true
+  done <<<"$pids"
 }
 
 clean_spm_resource_bundles() {
@@ -58,6 +59,7 @@ HOOK_CLIENT_BINARY="$BUILD_BIN_DIR/KajiHookClient"
 RESOURCE_BUNDLE_NAME="${BUILD_PRODUCT_NAME}_${BUILD_PRODUCT_NAME}.bundle"
 RESOURCE_BUNDLE="$BUILD_BIN_DIR/$RESOURCE_BUNDLE_NAME"
 SPARKLE_FRAMEWORK="$ROOT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+TERMY_DYLIB="$ROOT_DIR/TermyKit/lib/libtermy_ffi.dylib"
 APP_ICONSET_SOURCE="$ROOT_DIR/Kaji/Resources/Assets.xcassets/AppIcon.appiconset"
 
 rm -rf "$APP_BUNDLE"
@@ -74,6 +76,10 @@ fi
 
 if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
   cp -R "$SPARKLE_FRAMEWORK" "$APP_FRAMEWORKS/Sparkle.framework"
+fi
+
+if [[ -f "$TERMY_DYLIB" ]]; then
+  cp "$TERMY_DYLIB" "$APP_FRAMEWORKS/libtermy_ffi.dylib"
 fi
 
 if [[ -d "$APP_ICONSET_SOURCE" ]]; then
@@ -131,8 +137,8 @@ case "$MODE" in
     ;;
   --telemetry|telemetry)
     open_app
-    /usr/bin/log show --last 5s --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.kaji\" && category == \"GhosttyPerf\""
-    /usr/bin/log stream --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.kaji\" && category == \"GhosttyPerf\""
+    /usr/bin/log show --last 5s --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.kaji\""
+    /usr/bin/log stream --info --debug --signpost --style compact --predicate "process == \"$APP_NAME\" && subsystem == \"app.kaji\""
     ;;
   --verify|verify)
     open_app

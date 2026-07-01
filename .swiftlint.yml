@@ -3,7 +3,7 @@ included:
 
 excluded:
   - .build
-  - GhosttyKit
+  - TermyKit
   - Tests
 
 disabled_rules:

@@ -1,6 +1,18 @@
 // swift-tools-version: 6.0
 
+import Foundation
 import PackageDescription
+
+let packageDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+let termyLibraryPath = packageDirectory.appendingPathComponent("TermyKit/lib").path
+let termyLinkerSettings: [LinkerSetting] = [
+    .unsafeFlags([
+        "-L", termyLibraryPath,
+        "-ltermy_ffi",
+        "-Xlinker", "-rpath",
+        "-Xlinker", termyLibraryPath,
+    ]),
+]
 
 let package = Package(
     name: "Kaji",
@@ -17,9 +29,14 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "GhosttyKit",
-            path: "GhosttyKit",
+            name: "TermyKit",
+            path: "TermyKit",
             publicHeadersPath: "."
+        ),
+        .target(
+            name: "TermySwiftEmbed",
+            dependencies: ["TermyKit"],
+            path: "Vendor/TermySwiftEmbed/Sources/TermySwiftEmbed"
         ),
         .target(
             name: "FFFKit",
@@ -34,7 +51,8 @@ let package = Package(
             name: "Kaji",
             dependencies: [
                 "FFFKit",
-                "GhosttyKit",
+                "TermyKit",
+                "TermySwiftEmbed",
                 "SwiftyDiff",
                 .product(name: "Reorderable", package: "reorderable"),
                 .product(name: "Bonsplit", package: "Bonsplit"),
@@ -53,10 +71,7 @@ let package = Package(
                 .copy("Resources/MonacoEditor"),
                 .process("Resources"),
             ],
-            linkerSettings: [
-                .unsafeFlags([
-                    "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
-                ]),
+            linkerSettings: termyLinkerSettings + [
                 .linkedFramework("AppKit"),
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("Carbon"),
@@ -80,12 +95,10 @@ let package = Package(
             dependencies: [
                 "Kaji",
                 "FFFKit",
+                "TermySwiftEmbed",
             ],
             path: "Tests/KajiTests",
             linkerSettings: [
-                .unsafeFlags([
-                    "GhosttyKit.xcframework/macos-arm64_x86_64/ghostty-internal.a",
-                ]),
                 .linkedFramework("AppKit"),
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("Carbon"),

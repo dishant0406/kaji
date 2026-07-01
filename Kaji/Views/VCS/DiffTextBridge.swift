@@ -258,14 +258,14 @@ struct DiffGutterBridge: NSViewRepresentable {
         view.lineHeight = diffLineHeight
         view.cachedBorderColor = KajiTheme.nsBg.blended(
             withFraction: 0.12,
-            of: GhosttyService.shared.foregroundColor
+            of: TermyService.shared.foregroundColor
         ) ?? .separatorColor
-        view.cachedNumberColor = GhosttyService.shared.foregroundColor.withAlphaComponent(0.4)
-        view.cachedNumberHoverColor = GhosttyService.shared.foregroundColor.withAlphaComponent(0.85)
+        view.cachedNumberColor = TermyService.shared.foregroundColor.withAlphaComponent(0.4)
+        view.cachedNumberHoverColor = TermyService.shared.foregroundColor.withAlphaComponent(0.85)
         view.cachedCommentBubbleBackgroundColor = KajiTheme.nsBg.blended(
             withFraction: 0.94,
-            of: GhosttyService.shared.foregroundColor
-        ) ?? GhosttyService.shared.foregroundColor
+            of: TermyService.shared.foregroundColor
+        ) ?? TermyService.shared.foregroundColor
         view.cachedCommentBubbleTextColor = KajiTheme.nsBg
         view.cachedAddColor = KajiTheme.nsDiffAdd
         view.cachedRemoveColor = KajiTheme.nsDiffRemove

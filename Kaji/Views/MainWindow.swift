@@ -5,7 +5,7 @@ struct MainWindow: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
     @Environment(WorktreeStore.self) private var worktreeStore
-    @Environment(GhosttyService.self) private var ghostty
+    @Environment(TermyService.self) private var termy
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dragCoordinator = TabDragCoordinator()
     @State private var paneReorderCoordinator = PaneReorderCoordinator()
@@ -169,7 +169,7 @@ struct MainWindow: View {
                 ))
                 .background(
                     WindowConfigurator(
-                        configVersion: ghostty.configVersion,
+                        configVersion: termy.configVersion,
                         interfaceModeRaw: interfaceModeRaw,
                         sidebarTransparencyEnabled: sidebarTransparencyEnabled
                     )
@@ -1146,7 +1146,7 @@ struct MainWindow: View {
             appState: appState,
             projectStore: projectStore,
             worktreeStore: worktreeStore,
-            ghostty: ghostty
+            termy: termy
         )
     }
 
