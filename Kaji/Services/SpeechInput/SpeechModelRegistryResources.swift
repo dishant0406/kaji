@@ -2,8 +2,10 @@ import Foundation
 
 enum SpeechModelRegistryResources {
     static func loadBundled() throws -> SpeechModelRegistryDocument {
-        let url = Bundle.module.url(forResource: "speech-models", withExtension: "json", subdirectory: "SpeechInput")
-            ?? Bundle.module.url(forResource: "speech-models", withExtension: "json")
+        let url = Bundle.appResources.url(forResource: "speech-models", withExtension: "json", subdirectory: "SpeechInput")
+            ?? Bundle.appResources.url(forResource: "speech-models", withExtension: "json")
+            ?? Bundle.main.url(forResource: "speech-models", withExtension: "json", subdirectory: "SpeechInput")
+            ?? Bundle.main.url(forResource: "speech-models", withExtension: "json")
         guard let url else { return SpeechModelRegistryDocument(schemaVersion: 2, models: fallbackModels) }
         let data = try Data(contentsOf: url)
         return try JSONDecoder().decode(SpeechModelRegistryDocument.self, from: data)

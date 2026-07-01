@@ -89,7 +89,7 @@ git diff --cached --quiet && { echo "Error: no staged changes to release" >&2; e
 git commit -m "$MESSAGE"
 git push "$REMOTE" "$BRANCH"
 
-if ! "$SCRIPT_DIR/build-release.sh" --arch "$ARCH" --version "$VERSION"; then
+if ! "$SCRIPT_DIR/build-release.sh" --arch "$ARCH" --version "$VERSION" --smoke-launch; then
     [[ -d "$BUILD_DIR/Kaji.app" ]] || { echo "Error: release app bundle was not created" >&2; exit 1; }
     echo "Continuing with hdiutil DMG packaging because create-dmg is unavailable."
 fi
@@ -193,7 +193,6 @@ if [[ "$TEST_INSTALL" == true ]]; then
     brew uninstall --cask kajikit --force
     rm -rf "$APPDIR"
 fi
-
 echo "Version: $VERSION"
 echo "Build: $BUILD_NUMBER"
 echo "DMG: $DMG_PATH"

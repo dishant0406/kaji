@@ -51,11 +51,10 @@ INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
 [[ -x "$EXECUTABLE" ]] || fail "Kaji executable missing"
 plutil -lint "$INFO_PLIST" >/dev/null
 
-RESOURCE_BUNDLE=$(find "$APP_BUNDLE/Contents/Resources" -maxdepth 1 -type d -name "*_Kaji.bundle" -print -quit)
-if [[ -z "$RESOURCE_BUNDLE" ]]; then
-    RESOURCE_BUNDLE=$(find "$APP_BUNDLE/Contents/Resources" -maxdepth 1 -type d -name "Kaji_Kaji.bundle" -print -quit)
-fi
-[[ -n "$RESOURCE_BUNDLE" ]] || fail "Kaji resource bundle missing"
+ROOT_RESOURCE_BUNDLE="$APP_BUNDLE/Kaji_Kaji.bundle"
+RESOURCE_BUNDLE="$APP_BUNDLE/Contents/Resources/Kaji_Kaji.bundle"
+[[ ! -e "$ROOT_RESOURCE_BUNDLE" ]] || fail "Kaji resource bundle must not be placed in the app bundle root"
+[[ -d "$RESOURCE_BUNDLE" ]] || fail "Kaji resource bundle missing at $RESOURCE_BUNDLE"
 RUNTIME_FILE=""
 for candidate in \
     "$RESOURCE_BUNDLE/kaji-agent-runtime.mjs" \

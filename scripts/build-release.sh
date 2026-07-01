@@ -113,9 +113,13 @@ cp "$SPM_BUILD_DIR/KajiHookClient" "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
 echo "==> Stripping local and debug symbols"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/Kaji"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
-if [[ -d "$SPM_BUILD_DIR/Kaji_Kaji.bundle" ]]; then
-    cp -R "$SPM_BUILD_DIR/Kaji_Kaji.bundle" "$APP_BUNDLE/Contents/Resources/Kaji_Kaji.bundle"
+RESOURCE_BUNDLE_NAME="Kaji_Kaji.bundle"
+RESOURCE_BUNDLE_SOURCE="$SPM_BUILD_DIR/$RESOURCE_BUNDLE_NAME"
+if [[ ! -d "$RESOURCE_BUNDLE_SOURCE" ]]; then
+    echo "Error: Kaji resource bundle not found at $RESOURCE_BUNDLE_SOURCE"
+    exit 1
 fi
+cp -R "$RESOURCE_BUNDLE_SOURCE" "$APP_BUNDLE/Contents/Resources/$RESOURCE_BUNDLE_NAME"
 "$SCRIPT_DIR/stage-kaji-agent-native-addon.sh" --arch "$ARCH" --destination "$APP_BUNDLE/Contents/Resources/native"
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 cp "$PROJECT_ROOT/Kaji/Info.plist" "$APP_BUNDLE/Contents/Info.plist"

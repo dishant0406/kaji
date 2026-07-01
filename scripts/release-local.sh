@@ -123,7 +123,7 @@ git add "$INFO_PLIST"
 git commit -m "$MESSAGE"
 git push "$PUSH_REMOTE" "$current_branch"
 
-"$SCRIPT_DIR/build-release.sh" --arch "$ARCH" --version "$VERSION"
+"$SCRIPT_DIR/build-release.sh" --arch "$ARCH" --version "$VERSION" --smoke-launch
 
 DMG_PATH="$PROJECT_ROOT/build/Kaji-${VERSION}-${ARCH}.dmg"
 if [[ ! -f "$DMG_PATH" ]]; then
