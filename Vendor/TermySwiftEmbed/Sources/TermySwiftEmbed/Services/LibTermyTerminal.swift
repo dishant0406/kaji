@@ -557,7 +557,7 @@ final class LibTermyTerminal {
         return changed
     }
 
-    private static func loadConfig(_ source: TermyConfigurationSource) throws -> OpaquePointer? {
+    static func loadConfig(_ source: TermyConfigurationSource) throws -> OpaquePointer? {
         switch source {
         case .defaultConfig:
             try loadDefaultConfig()

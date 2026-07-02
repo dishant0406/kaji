@@ -13,6 +13,7 @@ enum TermyTerminalConfigDefaults {
         "padding_y",
         "mouse_scroll_multiplier",
         "scrollback_history",
+        "inactive_tab_scrollback",
         "copy_on_select",
         "copy_on_select_toast",
         "background_opacity",
@@ -36,6 +37,7 @@ enum TermyTerminalConfigDefaults {
             "padding_y = \(format(settings.paddingY))",
             "mouse_scroll_multiplier = \(settings.scrollSpeedProfile.termyMultiplier)",
             "scrollback_history = \(settings.scrollbackProfile.limit(customValue: settings.customScrollbackLimit))",
+            "inactive_tab_scrollback = \(settings.scrollbackProfile.inactiveLimit(customValue: settings.customScrollbackLimit))",
             "copy_on_select = \(settings.copyOnSelect)",
             "copy_on_select_toast = false",
         ]

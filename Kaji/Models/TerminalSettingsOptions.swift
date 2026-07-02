@@ -30,15 +30,24 @@ enum TerminalScrollbackProfile: String, CaseIterable, Identifiable {
     case legacy = "Legacy"
     case custom = "Custom"
 
+    static let defaultLimit = 10000
+    static let minimumCustomLimit = 100
+    static let maximumCustomLimit = 100_000
+    private static let maximumInactiveLimit = 10000
+
     var id: String { rawValue }
 
     func limit(customValue: Int) -> Int {
         switch self {
-        case .compact: 500_000
-        case .balanced: 2_000_000
-        case .legacy: 5_000_000
-        case .custom: min(max(customValue, 100_000), 50_000_000)
+        case .compact: 1000
+        case .balanced: Self.defaultLimit
+        case .legacy: 50000
+        case .custom: min(max(customValue, Self.minimumCustomLimit), Self.maximumCustomLimit)
         }
+    }
+
+    func inactiveLimit(customValue: Int) -> Int {
+        min(max(limit(customValue: customValue) / 10, 250), Self.maximumInactiveLimit)
     }
 }
 

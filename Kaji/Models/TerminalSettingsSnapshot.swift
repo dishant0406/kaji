@@ -49,7 +49,7 @@ struct TerminalSettingsSnapshot: Equatable {
         cursorBlink: false,
         scrollSpeedProfile: .fast,
         scrollbackProfile: .balanced,
-        customScrollbackLimit: 2_000_000,
+        customScrollbackLimit: TerminalScrollbackProfile.defaultLimit,
         copyOnSelect: false,
         clipboardRead: .ask,
         clipboardWrite: .allow,

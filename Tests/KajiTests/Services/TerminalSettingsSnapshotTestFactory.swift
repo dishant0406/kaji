@@ -9,7 +9,9 @@ extension TerminalSettingsSnapshot {
         paddingX: Double = 12,
         paddingY: Double = 8,
         cursorStyle: TerminalCursorStyle = .line,
-        cursorBlink: Bool = false
+        cursorBlink: Bool = false,
+        scrollbackProfile: TerminalScrollbackProfile = .balanced,
+        customScrollbackLimit: Int = TerminalScrollbackProfile.defaultLimit
     ) -> TerminalSettingsSnapshot {
         TerminalSettingsSnapshot(
             shellIntegrationMode: shellIntegrationMode,
@@ -25,8 +27,8 @@ extension TerminalSettingsSnapshot {
             cursorStyle: cursorStyle,
             cursorBlink: cursorBlink,
             scrollSpeedProfile: .fast,
-            scrollbackProfile: .balanced,
-            customScrollbackLimit: 2_000_000,
+            scrollbackProfile: scrollbackProfile,
+            customScrollbackLimit: customScrollbackLimit,
             copyOnSelect: false,
             clipboardRead: .ask,
             clipboardWrite: .allow,

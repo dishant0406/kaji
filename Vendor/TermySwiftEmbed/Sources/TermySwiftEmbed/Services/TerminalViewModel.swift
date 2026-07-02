@@ -154,6 +154,7 @@ final class TerminalViewModel: ObservableObject {
         }
 
         do {
+            configuration = TermyRuntimeConfigurationLoader.loadOrDefault(source: configurationSource)
             let terminal = try LibTermyTerminal(
                 configurationSource: configurationSource,
                 workingDirectoryOverride: initialWorkingDirectory,
@@ -161,6 +162,7 @@ final class TerminalViewModel: ObservableObject {
                 envVars: envVars
             )
             self.terminal = terminal
+            applyConfiguredScrollbackLimit()
             terminal.startWakeupMonitor { [weak self] in
                 self?.handleTerminalWakeup()
             }
@@ -373,7 +375,7 @@ final class TerminalViewModel: ObservableObject {
     }
 
     func reloadConfiguration() {
-        configuration = .default
+        configuration = TermyRuntimeConfigurationLoader.loadOrDefault(source: configurationSource)
         applyConfiguredScrollbackLimit()
         if !configuration.native.progressIndicatorEnabled {
             progress = .clear
@@ -389,7 +391,7 @@ final class TerminalViewModel: ObservableObject {
             ? configuration.inactiveTabScrollback ?? configuration.scrollbackHistory
             : configuration.scrollbackHistory
         do {
-            try terminal?.setScrollbackHistory(max(0, limit))
+            try terminal?.setScrollbackHistory(TermyRuntimeConfiguration.clampedScrollbackHistory(limit))
         } catch {
             report(error)
         }

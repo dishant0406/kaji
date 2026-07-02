@@ -29,6 +29,39 @@ struct TermySwiftEmbedConfigurationSourceTests {
         #expect(config.cursorStyle == .line)
     }
 
+    @Test
+    func loadsRuntimeScrollbackFromExplicitContents() throws {
+        let config = try TermyRuntimeConfigurationLoader.load(source: .contents("""
+        scrollback_history = 777
+        inactive_tab_scrollback = 123
+        """))
+
+        #expect(config.scrollbackHistory == 777)
+        #expect(config.inactiveTabScrollback == 123)
+    }
+
+    @Test
+    func clampsOversizedRuntimeScrollbackFromStaleContents() throws {
+        let config = try TermyRuntimeConfigurationLoader.load(source: .contents("""
+        scrollback_history = 2000000
+        inactive_tab_scrollback = 500000
+        """))
+
+        #expect(config.scrollbackHistory == 100_000)
+        #expect(config.inactiveTabScrollback == 10_000)
+    }
+
+    @Test
+    func clampsInactiveScrollbackToActiveLimit() throws {
+        let config = try TermyRuntimeConfigurationLoader.load(source: .contents("""
+        scrollback_history = 2000
+        inactive_tab_scrollback = 5000
+        """))
+
+        #expect(config.scrollbackHistory == 2_000)
+        #expect(config.inactiveTabScrollback == 2_000)
+    }
+
     private static let kajiConfig = """
     [colors]
     black = #242424

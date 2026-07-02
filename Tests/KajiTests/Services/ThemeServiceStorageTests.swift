@@ -35,7 +35,8 @@ struct ThemeServiceStorageTests {
         #expect(content.contains("padding_y = 8"))
         #expect(content.contains("shell_integration_enabled = true"))
         #expect(content.contains("mouse_scroll_multiplier = 3.0"))
-        #expect(content.contains("scrollback_history = 2000000"))
+        #expect(content.contains("scrollback_history = 10000"))
+        #expect(content.contains("inactive_tab_scrollback = 1000"))
         #expect(content.contains("copy_on_select = false"))
     }
 }

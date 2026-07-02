@@ -74,8 +74,8 @@ struct TerminalSettingsView: View {
             picker("Scroll speed", selection: $settings.scrollSpeedProfile, options: TerminalScrollSpeedProfile.allCases.map(\.rawValue))
             picker("Scrollback", selection: $settings.scrollbackProfile, options: TerminalScrollbackProfile.allCases.map(\.rawValue))
             SettingsInputRow(
-                label: "Custom scrollback bytes",
-                placeholder: "2000000",
+                label: "Custom scrollback lines",
+                placeholder: "10000",
                 text: $settings.customScrollbackLimit,
                 monospaced: true
             )

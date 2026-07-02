@@ -100,7 +100,7 @@ final class TerminalSettingsStore {
             cursorBlink: cursorBlink,
             scrollSpeedProfile: TerminalScrollSpeedProfile(rawValue: scrollSpeedProfile) ?? .fast,
             scrollbackProfile: TerminalScrollbackProfile(rawValue: scrollbackProfile) ?? .balanced,
-            customScrollbackLimit: Int(customScrollbackLimit) ?? 2_000_000,
+            customScrollbackLimit: Int(customScrollbackLimit) ?? TerminalSettingsSnapshot.default.customScrollbackLimit,
             copyOnSelect: copyOnSelect,
             clipboardRead: TerminalClipboardAccess(rawValue: clipboardRead) ?? .ask,
             clipboardWrite: TerminalClipboardAccess(rawValue: clipboardWrite) ?? .allow,

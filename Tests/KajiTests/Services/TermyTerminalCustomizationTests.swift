@@ -46,6 +46,28 @@ struct TermyTerminalCustomizationTests {
         #expect(lines.contains("cursor_blink = true"))
         #expect(lines.contains("padding_x = 14"))
         #expect(lines.contains("padding_y = 6"))
+        #expect(lines.contains("scrollback_history = 10000"))
+        #expect(lines.contains("inactive_tab_scrollback = 1000"))
+    }
+
+    @Test
+    func scrollbackProfilesUseLineBasedCaps() {
+        #expect(TerminalScrollbackProfile.compact.limit(customValue: 0) == 1_000)
+        #expect(TerminalScrollbackProfile.balanced.limit(customValue: 0) == 10_000)
+        #expect(TerminalScrollbackProfile.legacy.limit(customValue: 0) == 50_000)
+        #expect(TerminalScrollbackProfile.custom.limit(customValue: 50) == 100)
+        #expect(TerminalScrollbackProfile.custom.limit(customValue: 250_000) == 100_000)
+    }
+
+    @Test
+    func customScrollbackWritesActiveAndInactiveCaps() {
+        let lines = TermyTerminalConfigDefaults.lines(settings: .test(
+            scrollbackProfile: .custom,
+            customScrollbackLimit: 250_000
+        ))
+
+        #expect(lines.contains("scrollback_history = 100000"))
+        #expect(lines.contains("inactive_tab_scrollback = 10000"))
     }
 
     @Test
