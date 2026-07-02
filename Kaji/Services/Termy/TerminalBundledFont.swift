@@ -26,7 +26,7 @@ enum TerminalBundledFont {
     ]
 
     @discardableResult
-    static func registerIfNeeded(bundle: Bundle = .module) -> Bool {
+    static func registerIfNeeded(bundle: Bundle = .appResources) -> Bool {
         if isAvailable() {
             return true
         }

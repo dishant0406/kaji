@@ -44,6 +44,7 @@ require_native_addon() {
 
 [[ -n "$APP_BUNDLE" ]] || fail "app bundle path is required"
 [[ -d "$APP_BUNDLE" ]] || fail "app bundle not found at $APP_BUNDLE"
+APP_BUNDLE="$(cd "$APP_BUNDLE" && pwd -P)"
 
 EXECUTABLE="$APP_BUNDLE/Contents/MacOS/Kaji"
 INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
@@ -99,7 +100,13 @@ fi
 if [[ "$LAUNCH" == true || "${KAJI_RELEASE_SMOKE_LAUNCH:-}" == "1" ]]; then
     open -n "$APP_BUNDLE"
     sleep "${KAJI_RELEASE_SMOKE_SECONDS:-5}"
-    PID="$(pgrep -f "$EXECUTABLE" | head -1 || true)"
+    PID=""
+    while read -r candidate; do
+        [[ -n "$candidate" ]] || continue
+        [[ "$(ps -p "$candidate" -o comm= 2>/dev/null | xargs)" == "$EXECUTABLE" ]] || continue
+        PID="$candidate"
+        break
+    done < <(pgrep -x "$(basename "$EXECUTABLE")" || true)
     [[ -n "$PID" ]] || fail "Kaji did not stay running during smoke launch"
     kill "$PID" >/dev/null 2>&1 || true
 fi
