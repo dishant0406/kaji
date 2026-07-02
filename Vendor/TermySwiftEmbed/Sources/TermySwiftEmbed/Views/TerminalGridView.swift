@@ -273,7 +273,7 @@ final class TerminalGridNSView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        clearBackingStore(in: dirtyRect)
+        super.draw(dirtyRect)
         guard terminalFrame.cols > 0, terminalFrame.rows > 0 else {
             return
         }
@@ -287,15 +287,6 @@ final class TerminalGridNSView: NSView {
         drawStrokeGlyphs(in: dirtyRect, dirtyBounds: dirtyBounds)
         drawText(in: dirtyRect, dirtyBounds: dirtyBounds)
         drawHoveredLink(in: dirtyRect, dirtyBounds: dirtyBounds)
-    }
-
-    private func clearBackingStore(in dirtyRect: NSRect) {
-        guard let context = NSGraphicsContext.current?.cgContext else {
-            return
-        }
-        context.saveGState()
-        context.clear(dirtyRect)
-        context.restoreGState()
     }
 
     private var backingScale: CGFloat {

@@ -38,28 +38,4 @@ final class TerminalGridOcclusionTests: XCTestCase {
         XCTAssertTrue(view.layer?.needsDisplay() ?? false, "resize must schedule a layer repaint")
     }
 
-    func testDrawClearsDirtyRectBeforeRendering() {
-        var pixels = [UInt8](repeating: 255, count: 4 * 4 * 4)
-        let context = CGContext(
-            data: &pixels,
-            width: 4,
-            height: 4,
-            bitsPerComponent: 8,
-            bytesPerRow: 16,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )
-        guard let context else {
-            XCTFail("Expected bitmap context")
-            return
-        }
-
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
-        TerminalGridNSView(frame: NSRect(x: 0, y: 0, width: 4, height: 4))
-            .draw(NSRect(x: 0, y: 0, width: 4, height: 4))
-        NSGraphicsContext.restoreGraphicsState()
-
-        XCTAssertTrue(pixels.allSatisfy { $0 == 0 })
-    }
 }

@@ -37,7 +37,7 @@ struct TerminalPane: View {
                         let view = TerminalViewRegistry.shared.existingView(for: state.id)
                         view?.endSearch()
                         DispatchQueue.main.async {
-                            view?.window?.makeFirstResponder(view)
+                            view?.focusTerminalInput()
                         }
                     }
                 )
@@ -95,7 +95,7 @@ struct TerminalBridge: NSViewRepresentable {
         context.coordinator.wasVisible = visible
         if focused, !overlayActive {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                view.window?.makeFirstResponder(view)
+                view.focusTerminalInput()
             }
         }
         return view
@@ -138,7 +138,7 @@ struct TerminalBridge: NSViewRepresentable {
         } else if focused, !wasFocused || wasOverlayActive {
             nsView.notifySurfaceFocused()
             DispatchQueue.main.async {
-                nsView.window?.makeFirstResponder(nsView)
+                nsView.focusTerminalInput()
             }
         } else if !focused, wasFocused {
             nsView.notifySurfaceUnfocused()

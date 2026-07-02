@@ -168,4 +168,23 @@ final class TerminalFrameStoreTests: XCTestCase {
         XCTAssertTrue(result.changed)
         XCTAssertEqual(result.effectiveDamage, .full)
     }
+
+    func testHistorySizeChangeForcesFullDamage() {
+        let store = TerminalFrameStore()
+        let initial = TerminalFrame.plainTextPreview("abc", cols: 3, rows: 1)
+        store.reset(to: initial)
+
+        let result = store.apply(TerminalFrameUpdate(
+            cols: initial.cols,
+            rows: initial.rows,
+            cells: [],
+            cursor: nil,
+            displayOffset: 0,
+            historySize: 1,
+            damage: .none
+        ))
+
+        XCTAssertTrue(result.changed)
+        XCTAssertEqual(result.effectiveDamage, .full)
+    }
 }
