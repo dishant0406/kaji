@@ -42,11 +42,21 @@ extension TermyTerminalNSView {
     }
 
     func flushInjectedCommandIfNeeded() {
-        guard !injectedCommandSent, let injectedCommand, terminal != nil else { return }
-        injectedCommandSent = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.terminal?.sendText(injectedCommand)
-            self?.terminal?.sendReturnKey()
+        guard terminal != nil, let command = injectedCommandDelivery.prepareDelivery() else { return }
+        injectedCommandTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled, let self else { return }
+            guard let terminal else {
+                injectedCommandDelivery.cancelPendingDelivery(command)
+                return
+            }
+            guard injectedCommandDelivery.completePendingDelivery(command) else { return }
+            injectedCommandTask = nil
+            if surfaceVisible {
+                terminal.resume()
+            }
+            terminal.sendText(command)
+            terminal.sendReturnKey()
         }
     }
 }

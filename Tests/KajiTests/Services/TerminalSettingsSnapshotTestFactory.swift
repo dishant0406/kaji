@@ -3,7 +3,7 @@
 extension TerminalSettingsSnapshot {
     static func test(
         shellIntegrationMode: TerminalShellIntegrationMode = .detect,
-        fontFamily: String = "SF Mono",
+        fontFamily: String = TerminalBundledFont.familyName,
         fontSize: Double = 13,
         lineHeight: Double = 1.2,
         paddingX: Double = 12,

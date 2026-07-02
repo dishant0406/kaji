@@ -13,7 +13,7 @@ struct TermyRenderConfig: Equatable {
     let selectionBackground: TermyRGBA
 
     static let `default` = TermyRenderConfig(
-        fontFamily: "SF Mono",
+        fontFamily: TerminalBundledFont.familyName,
         fontSize: 13,
         lineHeight: 1.2,
         cellWidth: 8,

@@ -55,7 +55,7 @@ final class TerminalSettingsStore {
         shellSSHIntegrationEnabled = Self.bool(defaults, "shellSSHIntegrationEnabled", fallback.shellSSHIntegrationEnabled)
         shellSudoIntegrationEnabled = Self.bool(defaults, "shellSudoIntegrationEnabled", fallback.shellSudoIntegrationEnabled)
         batteryOptimizedMode = Self.bool(defaults, "batteryOptimizedMode", fallback.batteryOptimizedMode)
-        fontFamily = defaults.string(forKey: Self.key("fontFamily")) ?? fallback.fontFamily
+        fontFamily = TerminalSettingsFontMigration.resolvedFontFamily(defaults: defaults, fallback: fallback.fontFamily)
         fontSize = Self.double(defaults, "fontSize", fallback.fontSize)
         lineHeight = Self.double(defaults, "lineHeight", fallback.lineHeight)
         paddingX = Self.double(defaults, "paddingX", fallback.paddingX)

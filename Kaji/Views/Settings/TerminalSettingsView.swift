@@ -15,6 +15,7 @@ struct TerminalSettingsView: View {
             TerminalConfigDiagnosticsSection()
         }
         .task {
+            TerminalBundledFont.registerIfNeeded()
             monoFonts = AppTypographySettings.availableMonospacedFonts
         }
     }
@@ -52,10 +53,7 @@ struct TerminalSettingsView: View {
     }
 
     private var fontOptions: [String] {
-        let current = settings.fontFamily.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = monoFonts.isEmpty ? [TerminalSettingsSnapshot.default.fontFamily] : monoFonts
-        guard !current.isEmpty, !base.contains(current) else { return base }
-        return ([current] + base).sorted()
+        TerminalFontOptions.options(current: settings.fontFamily, installedFonts: monoFonts)
     }
 
     private var shellSection: some View {

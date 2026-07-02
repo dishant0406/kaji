@@ -99,6 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         HugeIconFont.registerIfNeeded()
+        TerminalBundledFont.registerIfNeeded()
         setAppIcon()
         _ = TermyService.shared
         _ = AppTypographySettings.shared

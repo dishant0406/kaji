@@ -6,8 +6,8 @@ final class TermyTerminalNSView: NSView {
     let workingDirectory: String
     let command: String?
     var envVars: [(key: String, value: String)] = []
-    var injectedCommand: String?
-    var injectedCommandSent = false
+    var injectedCommandDelivery = TerminalInjectedCommandDelivery()
+    var injectedCommandTask: Task<Void, Never>?
     var onTitleChange: ((String) -> Void)?
     var onFocus: (() -> Void)?
     var onProcessExit: (() -> Void)?
@@ -100,6 +100,9 @@ final class TermyTerminalNSView: NSView {
     func destroySurface() {
         stopThemeObservation()
         stopStatePolling()
+        injectedCommandTask?.cancel()
+        injectedCommandTask = nil
+        injectedCommandDelivery.cancelPendingDelivery()
         terminal?.stop()
         terminal = nil
         hostingView?.removeFromSuperview()
@@ -116,9 +119,10 @@ final class TermyTerminalNSView: NSView {
     }
 
     func setInjectedCommand(_ command: String?) {
-        let normalized = command?.trimmingCharacters(in: .whitespacesAndNewlines)
-        injectedCommand = normalized?.isEmpty == false ? normalized : nil
-        injectedCommandSent = false
+        if injectedCommandDelivery.setCommand(command) {
+            injectedCommandTask?.cancel()
+            injectedCommandTask = nil
+        }
         flushInjectedCommandIfNeeded()
     }
 
@@ -154,6 +158,13 @@ final class TermyTerminalNSView: NSView {
 
     func setSurfaceVisible(_ visible: Bool) {
         guard surfaceVisible != visible else {
+            if visible {
+                startStatePolling()
+                terminal?.resume()
+            } else {
+                terminal?.suspend()
+                stopStatePolling()
+            }
             return
         }
         surfaceVisible = visible

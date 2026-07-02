@@ -40,7 +40,7 @@ struct TerminalSettingsSnapshot: Equatable {
         shellSSHIntegrationEnabled: true,
         shellSudoIntegrationEnabled: false,
         batteryOptimizedMode: false,
-        fontFamily: "SF Mono",
+        fontFamily: TerminalBundledFont.familyName,
         fontSize: 13,
         lineHeight: 1.2,
         paddingX: 12,

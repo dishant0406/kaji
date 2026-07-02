@@ -14,6 +14,29 @@ struct TermyTerminalCustomizationTests {
     }
 
     @Test
+    func defaultTerminalFontUsesBundledPromptFont() {
+        #expect(TerminalSettingsSnapshot.default.fontFamily == TerminalBundledFont.familyName)
+        #expect(TermyRenderConfig.default.fontFamily == TerminalBundledFont.familyName)
+    }
+
+    @Test
+    func bundledTerminalFontRegistersAndSupportsPromptGlyphs() {
+        #expect(TerminalBundledFont.registerIfNeeded())
+        #expect(TerminalBundledFont.isAvailable())
+        #expect(TerminalBundledFont.supportsPromptGlyphs())
+    }
+
+    @Test
+    func fontOptionsPreferBundledFontAndKeepCurrentSelection() {
+        let options = TerminalFontOptions.options(
+            current: "Custom Mono",
+            installedFonts: ["Menlo", TerminalBundledFont.familyName, "Menlo"]
+        )
+
+        #expect(options == [TerminalBundledFont.familyName, "Menlo", "Custom Mono"])
+    }
+
+    @Test
     func terminalDefaultsWriteModernTermySettings() {
         let lines = TermyTerminalConfigDefaults.lines(settings: .test(paddingX: 14, paddingY: 6, cursorStyle: .block, cursorBlink: true))
 

@@ -110,6 +110,8 @@ final class TerminalViewModel: ObservableObject {
     private var lastSearchRefreshAt: Date?
     private var lastAutoCopiedSelectionText: String?
     private var pendingWakeupPoll = false
+    private var inputEchoRefreshPolicy = TerminalInputEchoRefreshPolicy()
+    private var inputEchoFallbackTask: Task<Void, Never>?
     private var renderedFrameCount = 0
     private var skippedPresentCount = 0
     private var fullRebuildCount = 0
@@ -219,15 +221,13 @@ final class TerminalViewModel: ObservableObject {
     }
 
     private func handleTerminalWakeup() {
-        // The wake channel only needs to rouse an *idle* terminal: while active,
-        // the display link is already polling at 60 Hz, so a per-PTY-chunk
-        // wakeup poll is redundant. Without this guard, streaming output (`yes`,
-        // `cat bigfile`) schedules an extra full poll per chunk on top of the
-        // 60 Hz link — `pendingWakeupPoll` only coalesces within a single
-        // runloop turn, so the effective poll rate is otherwise unbounded.
-        guard terminal != nil, cadence != .active, !pendingWakeupPoll else {
+        guard terminal != nil,
+              !pendingWakeupPoll,
+              inputEchoRefreshPolicy.acceptsWakeup(cadence: cadence, isSuspended: isSuspended)
+        else {
             return
         }
+        let inputGeneration = inputEchoRefreshPolicy.activeInputGenerationForWakeup(cadence: cadence)
         pendingWakeupPoll = true
         Task { @MainActor [weak self] in
             guard let self else {
@@ -237,7 +237,10 @@ final class TerminalViewModel: ObservableObject {
             if self.isSuspended {
                 self.drainEventsWhileSuspended()
             } else {
-                self.pollAndPresent()
+                let outcome = self.pollAndPresent()
+                if let inputGeneration {
+                    self.recordInputEchoPoll(upTo: inputGeneration, outcome: outcome)
+                }
             }
         }
     }
@@ -346,6 +349,9 @@ final class TerminalViewModel: ObservableObject {
         terminal?.stopWakeupMonitor()
         pendingResizeRefresh?.cancel()
         pendingResizeRefresh = nil
+        inputEchoFallbackTask?.cancel()
+        inputEchoFallbackTask = nil
+        inputEchoRefreshPolicy.reset()
         pendingWakeupPoll = false
         isSuspended = false
         observers.removeAll()
@@ -457,6 +463,8 @@ final class TerminalViewModel: ObservableObject {
         }
         do {
             try terminal?.write(bytes)
+            let inputGeneration = inputEchoRefreshPolicy.noteInput()
+            scheduleInputEchoFallback()
             noteActivity()
             resetCursorBlinkPhase()
             // Don't force a full-grid frame on input: `noteActivity()` keeps the
@@ -464,10 +472,50 @@ final class TerminalViewModel: ObservableObject {
             // ordinary partial damage. Forcing here serialized the entire grid
             // across the FFI (three full copies) and repainted the whole window
             // on every keystroke and scroll-wheel tick.
-            pollAndPresent()
+            let outcome = pollAndPresent()
+            recordInputEchoPoll(upTo: inputGeneration, outcome: outcome)
         } catch {
             report(error)
         }
+    }
+
+    private func scheduleInputEchoFallback() {
+        guard inputEchoFallbackTask == nil else {
+            return
+        }
+        inputEchoFallbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(8))
+            guard !Task.isCancelled, let self else {
+                return
+            }
+            self.inputEchoFallbackTask = nil
+            guard self.inputEchoRefreshPolicy.hasPendingInput else {
+                return
+            }
+            guard let generation = self.inputEchoRefreshPolicy.pendingInputGenerationForRefresh else {
+                return
+            }
+            if self.isSuspended {
+                self.drainEventsWhileSuspended()
+                self.recordInputEchoPoll(upTo: generation, outcome: .empty)
+            } else {
+                let outcome = self.pollAndPresent()
+                self.recordInputEchoPoll(upTo: generation, outcome: outcome)
+            }
+        }
+    }
+
+    private func recordInputEchoPoll(upTo generation: UInt64, outcome: TerminalPollOutcome) {
+        inputEchoRefreshPolicy.recordPoll(
+            upTo: generation,
+            observedFrameActivity: outcome.hasInputEchoActivity
+        )
+        guard !inputEchoRefreshPolicy.hasPendingInput else {
+            scheduleInputEchoFallback()
+            return
+        }
+        inputEchoFallbackTask?.cancel()
+        inputEchoFallbackTask = nil
     }
 
     /// Forces the cursor solid and restarts the blink interval, e.g. on input
@@ -759,7 +807,8 @@ final class TerminalViewModel: ObservableObject {
         pollAndPresent(force: true)
     }
 
-    private func pollAndPresent(force: Bool = false) {
+    @discardableResult
+    private func pollAndPresent(force: Bool = false) -> TerminalPollOutcome {
         do {
             let events = try terminal?.drainEvents() ?? []
             handle(events)
@@ -771,6 +820,13 @@ final class TerminalViewModel: ObservableObject {
                     effectiveDamage: .none,
                     patchedCellCount: 0
                 )
+            let baseOutcome = TerminalPollOutcome(
+                receivedEvents: !events.isEmpty,
+                patchedCellCount: applyResult.patchedCellCount,
+                changedFrame: applyResult.changed,
+                publishedFrame: false,
+                forcedFullRefresh: forceFull
+            )
             if let update {
                 nativeRenderMetricsRecorder.recordFrameUpdate(update, applyResult: applyResult)
             }
@@ -797,13 +853,13 @@ final class TerminalViewModel: ObservableObject {
             guard forceFull || applyResult.changed else {
                 presentCursorBlink(toggled: blinkToggled)
                 updateDebugMetrics(renderedFrame: false)
-                return
+                return baseOutcome
             }
 
             guard update != nil else {
                 presentCursorBlink(toggled: blinkToggled)
                 updateDebugMetrics(renderedFrame: false)
-                return
+                return baseOutcome
             }
 
             publishFrameState()
@@ -838,8 +894,16 @@ final class TerminalViewModel: ObservableObject {
             renderRevision &+= 1
             updateDebugMetrics(renderedFrame: true)
             refreshSearchMatches(resetActive: false, revealActive: false, force: false)
+            return TerminalPollOutcome(
+                receivedEvents: baseOutcome.receivedEvents,
+                patchedCellCount: baseOutcome.patchedCellCount,
+                changedFrame: baseOutcome.changedFrame,
+                publishedFrame: true,
+                forcedFullRefresh: baseOutcome.forcedFullRefresh
+            )
         } catch {
             report(error)
+            return .empty
         }
     }
 

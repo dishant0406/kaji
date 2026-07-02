@@ -165,7 +165,6 @@ private struct TermyEmbeddedTerminalBody: View {
                 lastSize = proxy.size
                 resizeTerminal(to: proxy.size)
             }
-            .onDisappear { terminal.suspendRefresh() }
             .onChange(of: proxy.size) { _, size in
                 lastSize = size
                 resizeTerminal(to: size)
