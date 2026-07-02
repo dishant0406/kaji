@@ -18,7 +18,7 @@ struct ThemeServiceStorageTests {
             from: "font_size = 16",
             themeIdentifier: preview.identifier,
             theme: preview,
-            typographyLines: TermyTypographyDefaults.lines(fontSize: 18, fontFamily: "JetBrains Mono"),
+            typographyLines: TermyTypographyDefaults.lines(settings: .test(fontFamily: "JetBrains Mono", fontSize: 18)),
             terminalLines: TermyTerminalConfigDefaults.lines()
         )
 
@@ -26,8 +26,13 @@ struct ThemeServiceStorageTests {
         #expect(content.contains("background = #000000"))
         #expect(content.contains("font_size = 18"))
         #expect(content.contains("font_family = \"JetBrains Mono\""))
+        #expect(content.contains("line_height = 1.2"))
+        #expect(content.contains("term = xterm-256color"))
+        #expect(content.contains("colorterm = truecolor"))
         #expect(content.contains("cursor_style = line"))
         #expect(content.contains("cursor_blink = false"))
+        #expect(content.contains("padding_x = 12"))
+        #expect(content.contains("padding_y = 8"))
         #expect(content.contains("shell_integration_enabled = true"))
         #expect(content.contains("mouse_scroll_multiplier = 3.0"))
         #expect(content.contains("scrollback_history = 2000000"))

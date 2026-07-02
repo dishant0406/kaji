@@ -46,10 +46,8 @@ extension ThemeService {
         }
 
         let preserved = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-        let resolvedTypographyLines = typographyLines ?? TermyTypographyDefaults.lines(
-            fontSize: AppTypographySettings.shared.fontSize,
-            fontFamily: AppTypographySettings.shared.fontFamily
-        )
+        let resolvedTypographyLines = typographyLines
+            ?? TermyTypographyDefaults.lines(settings: TerminalSettingsStore.shared.snapshot())
         let resolvedTerminalLines = terminalLines
             ?? TermyTerminalConfigDefaults.lines(settings: TerminalSettingsStore.shared.snapshot())
         return (themeLines + resolvedTypographyLines + resolvedTerminalLines + preserved).joined(separator: "\n")

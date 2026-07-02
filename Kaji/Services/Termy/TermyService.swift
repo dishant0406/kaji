@@ -8,6 +8,7 @@ final class TermyService {
 
     private(set) var configVersion = 0
     private(set) var configContents = ""
+    private(set) var diagnostics: [TermyConfigDiagnostic] = []
     private var renderConfig = TermyRenderConfig.default
 
     private init() {
@@ -26,6 +27,7 @@ final class TermyService {
 
     func reloadConfig() {
         configContents = KajiConfig.shared.readTermyConfig()
+        diagnostics = TermyConfigDiagnostics.load(contents: configContents)
         renderConfig = TermyRenderConfig.load(contents: configContents)
         configVersion += 1
     }

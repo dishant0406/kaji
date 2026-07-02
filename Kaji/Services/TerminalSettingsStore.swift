@@ -18,6 +18,14 @@ final class TerminalSettingsStore {
         }
     }
 
+    var fontFamily: String { didSet { saveString(fontFamily, key: "fontFamily") } }
+    var fontSize: Double { didSet { saveDouble(fontSize, key: "fontSize") } }
+    var lineHeight: Double { didSet { saveDouble(lineHeight, key: "lineHeight") } }
+    var paddingX: Double { didSet { saveDouble(paddingX, key: "paddingX") } }
+    var paddingY: Double { didSet { saveDouble(paddingY, key: "paddingY") } }
+    var cursorStyle: String { didSet { saveOption(cursorStyle, key: "cursorStyle") } }
+    var cursorBlink: Bool { didSet { saveBool(cursorBlink, key: "cursorBlink") } }
+
     var scrollSpeedProfile: String { didSet { saveOption(scrollSpeedProfile, key: "scrollSpeedProfile") } }
     var scrollbackProfile: String { didSet { saveOption(scrollbackProfile, key: "scrollbackProfile") } }
     var customScrollbackLimit: String { didSet { saveString(customScrollbackLimit, key: "customScrollbackLimit") } }
@@ -47,6 +55,13 @@ final class TerminalSettingsStore {
         shellSSHIntegrationEnabled = Self.bool(defaults, "shellSSHIntegrationEnabled", fallback.shellSSHIntegrationEnabled)
         shellSudoIntegrationEnabled = Self.bool(defaults, "shellSudoIntegrationEnabled", fallback.shellSudoIntegrationEnabled)
         batteryOptimizedMode = Self.bool(defaults, "batteryOptimizedMode", fallback.batteryOptimizedMode)
+        fontFamily = defaults.string(forKey: Self.key("fontFamily")) ?? fallback.fontFamily
+        fontSize = Self.double(defaults, "fontSize", fallback.fontSize)
+        lineHeight = Self.double(defaults, "lineHeight", fallback.lineHeight)
+        paddingX = Self.double(defaults, "paddingX", fallback.paddingX)
+        paddingY = Self.double(defaults, "paddingY", fallback.paddingY)
+        cursorStyle = defaults.string(forKey: Self.key("cursorStyle")) ?? fallback.cursorStyle.rawValue
+        cursorBlink = Self.bool(defaults, "cursorBlink", fallback.cursorBlink)
         scrollSpeedProfile = defaults.string(forKey: Self.key("scrollSpeedProfile")) ?? fallback.scrollSpeedProfile.rawValue
         scrollbackProfile = defaults.string(forKey: Self.key("scrollbackProfile")) ?? fallback.scrollbackProfile.rawValue
         customScrollbackLimit = defaults.string(forKey: Self.key("customScrollbackLimit")) ?? String(fallback.customScrollbackLimit)
@@ -76,6 +91,13 @@ final class TerminalSettingsStore {
             shellSSHIntegrationEnabled: shellSSHIntegrationEnabled,
             shellSudoIntegrationEnabled: shellSudoIntegrationEnabled,
             batteryOptimizedMode: batteryOptimizedMode,
+            fontFamily: Self.normalizedFontFamily(fontFamily),
+            fontSize: min(max(fontSize, 9), 36),
+            lineHeight: min(max(lineHeight, 0.9), 2),
+            paddingX: min(max(paddingX, 0), 48),
+            paddingY: min(max(paddingY, 0), 48),
+            cursorStyle: TerminalCursorStyle(rawValue: cursorStyle) ?? .line,
+            cursorBlink: cursorBlink,
             scrollSpeedProfile: TerminalScrollSpeedProfile(rawValue: scrollSpeedProfile) ?? .fast,
             scrollbackProfile: TerminalScrollbackProfile(rawValue: scrollbackProfile) ?? .balanced,
             customScrollbackLimit: Int(customScrollbackLimit) ?? 2_000_000,
@@ -136,6 +158,11 @@ final class TerminalSettingsStore {
     private static func double(_ defaults: UserDefaults, _ key: String, _ fallback: Double) -> Double {
         guard defaults.object(forKey: Self.key(key)) != nil else { return fallback }
         return defaults.double(forKey: Self.key(key))
+    }
+
+    private static func normalizedFontFamily(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? TerminalSettingsSnapshot.default.fontFamily : trimmed
     }
 
     private static func key(_ name: String) -> String {

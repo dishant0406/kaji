@@ -104,6 +104,20 @@ enum TerminalOptionAsAltMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum TerminalCursorStyle: String, CaseIterable, Identifiable {
+    case line = "Line"
+    case block = "Block"
+
+    var id: String { rawValue }
+
+    var termyValue: String {
+        switch self {
+        case .line: "line"
+        case .block: "block"
+        }
+    }
+}
+
 enum TerminalGlassBlurMode: String, CaseIterable, Identifiable {
     case regular = "Regular Glass"
     case clear = "Clear Glass"

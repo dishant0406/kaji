@@ -2,15 +2,60 @@ import SwiftUI
 
 struct TerminalSettingsView: View {
     @State private var settings = TerminalSettingsStore.shared
+    @State private var monoFonts: [String] = []
 
     var body: some View {
         SettingsContainer {
+            appearanceSection
             shellSection
             performanceSection
             securitySection
             quickTerminalSection
             graphicsSection
+            TerminalConfigDiagnosticsSection()
         }
+        .task {
+            monoFonts = AppTypographySettings.availableMonospacedFonts
+        }
+    }
+
+    private var appearanceSection: some View {
+        SettingsSection("Terminal Appearance") {
+            picker("Font", selection: $settings.fontFamily, options: fontOptions)
+            SettingsSliderRow(
+                label: "Font size",
+                value: $settings.fontSize,
+                range: 9 ... 36,
+                valueText: { value in "\(Int(value.rounded())) px" }
+            )
+            SettingsSliderRow(
+                label: "Line height",
+                value: $settings.lineHeight,
+                range: 0.9 ... 2,
+                valueText: { value in String(format: "%.2fx", value) }
+            )
+            SettingsSliderRow(
+                label: "Horizontal padding",
+                value: $settings.paddingX,
+                range: 0 ... 48,
+                valueText: { value in "\(Int(value.rounded())) px" }
+            )
+            SettingsSliderRow(
+                label: "Vertical padding",
+                value: $settings.paddingY,
+                range: 0 ... 48,
+                valueText: { value in "\(Int(value.rounded())) px" }
+            )
+            picker("Cursor", selection: $settings.cursorStyle, options: TerminalCursorStyle.allCases.map(\.rawValue))
+            SettingsToggleRow(label: "Blink cursor", isOn: $settings.cursorBlink)
+        }
+    }
+
+    private var fontOptions: [String] {
+        let current = settings.fontFamily.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = monoFonts.isEmpty ? [TerminalSettingsSnapshot.default.fontFamily] : monoFonts
+        guard !current.isEmpty, !base.contains(current) else { return base }
+        return ([current] + base).sorted()
     }
 
     private var shellSection: some View {
