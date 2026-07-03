@@ -5,7 +5,7 @@ import Testing
 
 struct KajiShellBootstrapInstallerTests {
     @Test
-    func sourcesUserZshThenRestoresShimPath() throws {
+    func sourcesUserZshAndTermyWithoutAgentOverrides() throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let home = root.appendingPathComponent("home", isDirectory: true)
@@ -28,26 +28,24 @@ struct KajiShellBootstrapInstallerTests {
         #expect(values["KAJI_USER_ZDOTDIR"] == userZdotdir.path)
         #expect(zshrc.contains(". \"$_kaji_user_zdotdir/.zshrc\""))
         #expect(zshrc.contains("$TERMY_RESOURCES_DIR/shell/termy.zsh"))
-        #expect(zshrc.contains("PATH=\"$KAJI_AGENT_SHIM_DIR:$PATH\""))
+        #expect(!zshrc.contains("KAJI_AGENT_SHIM_DIR"))
+        #expect(!zshrc.contains("codex()"))
     }
 
     @Test
-    func agentFunctionsOverrideUserPathChanges() throws {
+    func userPathDecidesAgentExecutable() throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let home = root.appendingPathComponent("home", isDirectory: true)
         let userZdotdir = root.appendingPathComponent("user-zsh", isDirectory: true)
         let realBin = root.appendingPathComponent("real-bin", isDirectory: true)
-        let shimBin = root.appendingPathComponent("shim-bin", isDirectory: true)
         defer { try? fileManager.removeItem(at: root) }
 
         try fileManager.createDirectory(at: userZdotdir, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: realBin, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: shimBin, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
         try Data("export PATH=\(realBin.path):$PATH\n".utf8).write(to: userZdotdir.appendingPathComponent(".zshrc"))
         try executable("codex", output: "real", in: realBin, fileManager: fileManager)
-        try executable("codex", output: "shim", in: shimBin, fileManager: fileManager)
 
         let values = Dictionary(uniqueKeysWithValues: KajiShellBootstrapInstaller.install(
             homeDirectory: home.path,
@@ -58,14 +56,13 @@ struct KajiShellBootstrapInstallerTests {
             env: [
                 "HOME": home.path,
                 "PATH": "/usr/bin:/bin",
-                "KAJI_AGENT_SHIM_DIR": shimBin.path,
                 "KAJI_USER_ZDOTDIR": userZdotdir.path,
                 "ZDOTDIR": values["ZDOTDIR"] ?? "",
             ],
             command: "codex hello"
         )
 
-        #expect(output == "shim:hello")
+        #expect(output == "real:hello")
     }
 
     private func executable(

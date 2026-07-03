@@ -63,18 +63,6 @@ enum KajiAgentHostToolRegistry {
             await KajiAgentFFFHostTools.find(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         case "kaji_fff_search":
             await KajiAgentFFFHostTools.search(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        case "kaji_code_graph_status":
-            KajiAgentCodeGraphStatusTool.status(appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        case "kaji_code_graph_report":
-            KajiAgentCodeGraphHostTools.report(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        case "kaji_code_graph_search":
-            KajiAgentCodeGraphHostTools.search(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        case "kaji_code_graph_neighbors":
-            KajiAgentCodeGraphHostTools.neighbors(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        case "kaji_code_graph_path":
-            KajiAgentCodeGraphHostTools.path(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        case "kaji_code_graph_hotspots":
-            KajiAgentCodeGraphHostTools.hotspots(frame, appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
         default:
             KajiAgentHostToolResult.error("Unsupported Kaji host tool: \(frame.toolName ?? "unknown")")
         }

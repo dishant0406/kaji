@@ -50,22 +50,7 @@ enum KajiShellBootstrapInstaller {
             fi
         fi
         \(termyIntegrationScript(for: name))
-        if [ -n "${KAJI_AGENT_SHIM_DIR:-}" ]; then
-          _kaji_path=":$PATH:"
-          case "$_kaji_path" in
-            *":$KAJI_AGENT_SHIM_DIR:"*) PATH="$KAJI_AGENT_SHIM_DIR:${PATH//$KAJI_AGENT_SHIM_DIR:/}" ;;
-            *) PATH="$KAJI_AGENT_SHIM_DIR:$PATH" ;;
-          esac
-          export PATH
-          for _kaji_agent in codex claude claude-code opencode pi; do
-            if [ -x "$KAJI_AGENT_SHIM_DIR/$_kaji_agent" ]; then
-              eval "$_kaji_agent() { \\"$KAJI_AGENT_SHIM_DIR/$_kaji_agent\\" \\"\\$@\\"; }"
-            fi
-          done
-          hash -r 2>/dev/null || true
-          unset _kaji_path
-        fi
-        unset _kaji_agent _kaji_proxy_zdotdir _kaji_user_zdotdir
+        unset _kaji_proxy_zdotdir _kaji_user_zdotdir
         """
     }
 

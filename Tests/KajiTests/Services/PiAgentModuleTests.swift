@@ -20,7 +20,12 @@ struct PiAgentModuleTests {
     @Test
     @MainActor
     func resumeCommandUsesSessionFlag() {
-        let command = AskCommandDispatcher.resumeCommand(for: .pi, sessionID: "session-123", prompt: "continue")
+        let command = AskCommandDispatcher.resumeCommand(
+            for: .pi,
+            sessionID: "session-123",
+            prompt: "continue",
+            resolveCommand: { $0 }
+        )
 
         #expect(command.contains("--session session-123"))
         #expect(command.hasSuffix("continue"))

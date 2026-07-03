@@ -68,11 +68,10 @@ describe("runtime debug tools", () => {
 			getRuntimeTelemetrySnapshot: () => ({
 				totalEvents: 8,
 				toolStarts: 2,
-				toolEnds: 2,
-				toolFailures: 1,
-				toolFailuresByName: { bash: 1 },
-				toolCallsByName: { bash: 1, kaji_code_graph_search: 1 },
-				codeGraphToolCalls: 1,
+					toolEnds: 2,
+					toolFailures: 1,
+					toolFailuresByName: { bash: 1 },
+					toolCallsByName: { bash: 1, search: 1 },
 				autoRetryStarts: 1,
 				autoRetryEnds: 1,
 				autoCompactionStarts: 0,
@@ -106,7 +105,7 @@ describe("runtime debug tools", () => {
 		} as never);
 		const result = await tool.execute("telemetry", {});
 
-		expect(result.details?.telemetry.codeGraphToolCalls).toBe(1);
+			expect(result.details?.telemetry.toolCallsByName.search).toBe(1);
 		expect(result.details?.permission.denyCount).toBe(1);
 		expect(result.content[0]?.type === "text" ? result.content[0].text : "").toContain("Session tokens: 30");
 		expect(result.content[0]?.type === "text" ? result.content[0].text : "").toContain("Browser permissions: 1 asks");

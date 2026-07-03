@@ -7,10 +7,14 @@ struct AskCommandDispatcherTests {
     @Test
     @MainActor
     func startupCommandUsesProviderNativePromptShape() {
-        let codex = AskCommandDispatcher.startupCommand(for: .codex, prompt: "whats this repo about")
-        let claude = AskCommandDispatcher.startupCommand(for: .claude, prompt: "hello")
-        let opencode = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "hello world")
-        let empty = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "")
+        let codex = AskCommandDispatcher.startupCommand(
+            for: .codex,
+            prompt: "whats this repo about",
+            resolveCommand: { $0 }
+        )
+        let claude = AskCommandDispatcher.startupCommand(for: .claude, prompt: "hello", resolveCommand: { $0 })
+        let opencode = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "hello world", resolveCommand: { $0 })
+        let empty = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "", resolveCommand: { $0 })
 
         #expect(commandExecutableName(codex) == "codex")
         #expect(codex.hasSuffix("'whats this repo about'"))
@@ -34,9 +38,24 @@ struct AskCommandDispatcherTests {
             updatedAt: Date()
         )
 
-        let codex = AskCommandDispatcher.resumeCommand(for: .codex, history: history, prompt: "continue")
-        let claude = AskCommandDispatcher.resumeCommand(for: .claude, history: history, prompt: "continue")
-        let opencode = AskCommandDispatcher.resumeCommand(for: .opencode, history: history, prompt: "continue")
+        let codex = AskCommandDispatcher.resumeCommand(
+            for: .codex,
+            history: history,
+            prompt: "continue",
+            resolveCommand: { $0 }
+        )
+        let claude = AskCommandDispatcher.resumeCommand(
+            for: .claude,
+            history: history,
+            prompt: "continue",
+            resolveCommand: { $0 }
+        )
+        let opencode = AskCommandDispatcher.resumeCommand(
+            for: .opencode,
+            history: history,
+            prompt: "continue",
+            resolveCommand: { $0 }
+        )
 
         #expect(codex.contains("resume 'session one' -- continue"))
         #expect(claude.contains("--resume 'session one' continue"))
@@ -49,10 +68,24 @@ struct AskCommandDispatcherTests {
         let command = AskCommandDispatcher.resumeCommand(
             for: .codex,
             sessionID: "session-one",
-            prompt: "--help"
+            prompt: "--help",
+            resolveCommand: { $0 }
         )
 
         #expect(command.contains("resume session-one -- --help"))
+    }
+
+    @Test
+    @MainActor
+    func startupCommandUsesResolvedLauncherCommand() {
+        let command = AskCommandDispatcher.startupCommand(
+            for: .codex,
+            prompt: "hello",
+            resolveCommand: { raw in raw.hasPrefix("codex") ? raw.replacingOccurrences(of: "codex", with: "/opt/kaji-test/bin/codex", options: .anchored) : raw }
+        )
+
+        #expect(command.hasPrefix("/opt/kaji-test/bin/codex "))
+        #expect(command.hasSuffix(" hello"))
     }
 
     @Test

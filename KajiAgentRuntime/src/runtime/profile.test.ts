@@ -50,7 +50,7 @@ describe("kaji runtime profile", () => {
 			"kaji-subagent-default",
 			"kaji-subagent-explore-lite",
 		]);
-		expect(getRuntimeProfile("kaji-subagent-explore-lite").toolPatterns).toContain("kaji_code_graph_*");
+			expect(getRuntimeProfile("kaji-subagent-explore-lite").toolPatterns).not.toContain("kaji_code_graph_*");
 		expect(getRuntimeProfile("kaji-rpc-plan").toolPatterns).not.toContain("edit");
 	});
 });

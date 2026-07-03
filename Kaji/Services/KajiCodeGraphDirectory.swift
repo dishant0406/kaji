@@ -72,31 +72,6 @@ enum KajiCodeGraphDirectory {
             .appendingPathComponent("index.json")
     }
 
-    static func instructionDirectory(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("instructions", isDirectory: true)
-    }
-
-    static func instructionFile(projectID: UUID, worktreeID: UUID) -> URL {
-        instructionDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("AGENTS.md")
-    }
-
-    static func codexBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("AGENTS.md")
-    }
-
-    static func claudeBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("CLAUDE.md")
-    }
-
-    static func openCodeConfigFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("opencode.json")
-    }
-
     static func createBaseDirectories() throws {
         let manager = FileManager.default
         for url in [root, adapter, logDirectory] {

@@ -33,7 +33,9 @@ struct KajiCodeGraphFooterControl: View {
                     onBuild: { build(context, mode: "build") },
                     onUpdate: { build(context, mode: "update") },
                     onDelete: { confirmsDelete = true },
-                    onShowAgent: { showAgent(context) }
+                    onShowAgent: { showAgent(context) },
+                    onCopyCodeGraph: { KajiCodeGraphPromptClipboard.copyCodeGraphDocument() },
+                    onCopyAgentsReference: { KajiCodeGraphPromptClipboard.copyAgentsReference() }
                 )
             }
             .alert("Delete Code Graph?", isPresented: $confirmsDelete) {

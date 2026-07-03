@@ -80,9 +80,9 @@ private struct AgentEditCLIProvider: AgentEditProviding {
         if let launcherID = provider.launcherID {
             let saved = CLILauncherSettings.shared.command(for: launcherID)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !saved.isEmpty { return saved }
+            if !saved.isEmpty { return CLILauncherCommandResolver.resolve(saved) }
         }
-        return provider.definition?.defaultCommand ?? provider.rawValue
+        return CLILauncherCommandResolver.resolve(provider.definition?.defaultCommand ?? provider.rawValue)
     }
 
     private func cleaned(_ output: String) -> String {

@@ -102,27 +102,6 @@ final class KajiCodeGraphStore {
             .appendingPathComponent("GRAPH_REPORT.md")
     }
 
-    func instructionFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("instructions", isDirectory: true)
-            .appendingPathComponent("AGENTS.md")
-    }
-
-    func codexBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("AGENTS.md")
-    }
-
-    func claudeBridgeFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("CLAUDE.md")
-    }
-
-    func openCodeConfigFile(projectID: UUID, worktreeID: UUID) -> URL {
-        projectDirectory(projectID: projectID, worktreeID: worktreeID)
-            .appendingPathComponent("opencode.json")
-    }
-
     private var pythonURL: URL {
         rootDirectory
             .appendingPathComponent(".venv", isDirectory: true)

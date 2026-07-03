@@ -64,10 +64,8 @@ const baseRenderContext: prompt.TemplateContext = {
 		mcp: { discoveryMode: false, servers: [] },
 		host: {
 			hasNativeTools: false,
-			hasCodeGraphTools: false,
 			hasWorkspaceTools: false,
 			nativeTools: [],
-			codeGraphTools: [],
 			workspaceTools: [],
 		},
 		debug: { hasDebugTools: false, tools: [] },
@@ -87,8 +85,6 @@ const baseRenderContext: prompt.TemplateContext = {
 		ast_edit: "ast_edit",
 		grep: "grep",
 		write: "write",
-		kaji_code_graph_search: "kaji_code_graph_search",
-		kaji_code_graph_report: "kaji_code_graph_report",
 		kaji_get_open_tabs: "kaji_get_open_tabs",
 		todo_verify: "todo_verify",
 		runtime_profile_dump: "runtime_profile_dump",
@@ -389,8 +385,6 @@ describe("system Handlebars prompt templates", () => {
 			rules: [],
 			toolNames: [
 				"read",
-				"kaji_code_graph_report",
-				"kaji_code_graph_search",
 				"kaji_get_open_tabs",
 				"todo_verify",
 				"runtime_profile_dump",
@@ -405,8 +399,8 @@ describe("system Handlebars prompt templates", () => {
 
 		const promptText = systemPrompt.join("\n\n");
 
-		expect(promptText).toContain("## Kaji Code Graph");
-		expect(promptText).toContain("use `kaji_code_graph_search` or `kaji_code_graph_report`");
+		expect(promptText).not.toContain("## Kaji Code Graph");
+		expect(promptText).not.toContain("kaji_code_graph");
 		expect(promptText).toContain("## Kaji Workspace Context");
 		expect(promptText).toContain("## Todo Verification");
 		expect(promptText).toContain("call `todo_verify`");

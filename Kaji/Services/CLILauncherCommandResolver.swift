@@ -1,14 +1,42 @@
 import Foundation
 
 enum CLILauncherCommandResolver {
-    static func resolve(_ command: String) -> String {
+    static func resolve(
+        _ command: String,
+        env: [String: String] = ProcessInfo.processInfo.environment,
+        homeDirectory: String = NSHomeDirectory(),
+        fileManager: FileManager = .default
+    ) -> String {
         let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
-        let parts = trimmed.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false)
-        guard let first = parts.first else { return trimmed }
-        let executable = String(first)
+        guard let executable = executableToken(in: trimmed) else { return trimmed }
         guard !executable.contains("/") else { return trimmed }
-        guard let resolved = AIProviderExecutableLocator.resolvePath(for: executable) else { return trimmed }
-        guard parts.count == 2 else { return ShellEscaper.escape(resolved) }
-        return "\(ShellEscaper.escape(resolved)) \(parts[1])"
+        guard isResolvable(executable) else { return trimmed }
+        let legacyShimDirectory = legacyShimDirectory(homeDirectory: homeDirectory)
+        guard let resolved = AIProviderExecutableLocator.preferredRealPath(
+            for: executable,
+            env: env,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager,
+            excluding: legacyShimDirectory
+        )
+        else { return trimmed }
+        let suffix = trimmed.dropFirst(executable.count)
+        return ShellEscaper.escape(resolved) + suffix
+    }
+
+    private static func executableToken(in command: String) -> String? {
+        guard let first = command.first else { return nil }
+        guard first != "'", first != "\"" else { return nil }
+        return command.split(whereSeparator: \.isWhitespace).first.map(String.init)
+    }
+
+    private static func isResolvable(_ executable: String) -> Bool {
+        !executable.contains("=") && !["env", "sudo", "arch"].contains(executable)
+    }
+
+    private static func legacyShimDirectory(homeDirectory: String) -> URL {
+        URL(fileURLWithPath: homeDirectory, isDirectory: true)
+            .appendingPathComponent(".kaji", isDirectory: true)
+            .appendingPathComponent("bin", isDirectory: true)
     }
 }

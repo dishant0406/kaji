@@ -38,7 +38,6 @@ function formatRuntimeTelemetryDump(details: RuntimeTelemetryDumpDetails): strin
 	return [
 		`Events: ${details.telemetry.totalEvents}`,
 		`Tool executions: ${details.telemetry.toolEnds} (${details.telemetry.toolFailures} failures)`,
-		`Code graph tool calls: ${details.telemetry.codeGraphToolCalls}`,
 		`Retries: ${details.telemetry.autoRetryStarts} started, ${details.telemetry.autoRetryEnds} ended`,
 		`Compactions: ${details.telemetry.autoCompactionStarts} started, ${details.telemetry.autoCompactionEnds} ended`,
 		`Prompt rebuilds: ${details.telemetry.promptRebuilds} (${details.telemetry.lastPromptCharacterCount} chars)`,
@@ -58,7 +57,6 @@ function emptyTelemetry(): RuntimeTelemetrySnapshot {
 		toolFailures: 0,
 		toolFailuresByName: {},
 		toolCallsByName: {},
-		codeGraphToolCalls: 0,
 		autoRetryStarts: 0,
 		autoRetryEnds: 0,
 		autoCompactionStarts: 0,

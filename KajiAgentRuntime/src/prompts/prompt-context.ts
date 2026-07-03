@@ -25,10 +25,8 @@ export interface KajiPromptContext {
 	};
 	host: {
 		hasNativeTools: boolean;
-		hasCodeGraphTools: boolean;
 		hasWorkspaceTools: boolean;
 		nativeTools: string[];
-		codeGraphTools: string[];
 		workspaceTools: string[];
 	};
 	debug: {
@@ -51,7 +49,6 @@ export interface BuildKajiPromptContextOptions {
 
 export function buildKajiPromptContext(options: BuildKajiPromptContextOptions): KajiPromptContext {
 	const nativeTools = options.toolNames.filter(name => name.startsWith("kaji_"));
-	const codeGraphTools = nativeTools.filter(name => name.startsWith("kaji_code_graph_"));
 	const workspaceTools = nativeTools.filter(name => name.startsWith("kaji_get_"));
 	const debugTools = options.toolNames.filter(name =>
 		[
@@ -88,10 +85,8 @@ export function buildKajiPromptContext(options: BuildKajiPromptContextOptions): 
 		},
 		host: {
 			hasNativeTools: nativeTools.length > 0,
-			hasCodeGraphTools: codeGraphTools.length > 0,
 			hasWorkspaceTools: workspaceTools.length > 0,
 			nativeTools,
-			codeGraphTools,
 			workspaceTools,
 		},
 		debug: {

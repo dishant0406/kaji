@@ -39,7 +39,7 @@ describe("PermissionService", () => {
 
 	test("maps tool names to central permission keys", () => {
 		expect(permissionKeyForTool("mcp__github__search")).toBe("mcp:mcp__github__search");
-		expect(permissionKeyForTool("kaji_code_graph_search")).toBe("kaji:kaji_code_graph_search");
+			expect(permissionKeyForTool("kaji_fff_search")).toBe("kaji:kaji_fff_search");
 		expect(permissionKeyForTool("undo")).toBe("write");
 		expect(permissionKeyForTool("browser")).toBe("browser");
 	});

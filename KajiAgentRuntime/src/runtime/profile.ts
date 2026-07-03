@@ -111,7 +111,7 @@ export function kajiSubagentExploreLiteRuntimeProfile(): RuntimeProfile {
 		...baseRpcProfile(),
 		id: "kaji-subagent-explore-lite",
 		mode: "subagent",
-		toolPatterns: ["read", "find", "search", "ast_grep", "lsp", "todo_read", "todo_verify", "kaji_fff_*", "kaji_code_graph_*"],
+		toolPatterns: ["read", "find", "search", "ast_grep", "lsp", "todo_read", "todo_verify", "kaji_fff_*"],
 		hiddenToolPatterns: ["yield", "report_finding"],
 		permissionMode: "read-allow",
 		subagents: { ...baseRpcProfile().subagents, maxRecursionDepth: 0 },

@@ -164,12 +164,7 @@ struct TerminalBridge: NSViewRepresentable {
         if let resourceURL = Bundle.appResources.resourceURL?.appendingPathComponent("termy", isDirectory: true) {
             vars.append((key: "TERMY_RESOURCES_DIR", value: resourceURL.path))
         }
-        vars.append(contentsOf: KajiCodeGraphInstructions.environment(projectID: key.projectID, worktreeID: key.worktreeID))
-        vars.append(contentsOf: CodingAgentShimEnvironment.variables(
-            projectID: key.projectID,
-            worktreeID: key.worktreeID,
-            worktreePath: worktreePath
-        ))
+        vars.append(contentsOf: KajiTerminalShellEnvironment.variables())
         return vars
     }
 

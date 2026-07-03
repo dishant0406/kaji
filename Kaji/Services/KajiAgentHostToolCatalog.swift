@@ -2,7 +2,6 @@ enum KajiAgentHostToolCatalog {
     static let definitions: [KajiAgentHostToolDefinition] = KajiAgentBasicHostToolDefinitions.definitions
         + KajiAgentWorkspaceHostToolDefinitions.definitions
         + KajiAgentFFFHostToolDefinitions.definitions
-        + KajiAgentCodeGraphHostToolDefinitions.definitions
 
     static let uriSchemes: [KajiAgentHostURISchemeDefinition] = [
         KajiAgentHostURISchemeDefinition(

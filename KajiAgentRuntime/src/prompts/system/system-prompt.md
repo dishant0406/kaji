@@ -128,16 +128,6 @@ Some values in tool output are intentionally redacted as `#XXXX#` tokens. Treat 
 If the task may involve external systems, SaaS APIs, chat, tickets, databases, deployments, or other non-local integrations, you SHOULD call `{{toolRefs.search_tool_bm25}}` before concluding no such tool exists.
 {{/if}}
 
-{{#if promptContext.host.hasCodeGraphTools}}
-## Kaji Code Graph
-Kaji's code graph is available in this session.
-- For architecture, dependency, entrypoint, ownership, or codebase navigation questions, call `{{#has tools "kaji_code_graph_status"}}{{toolRefs.kaji_code_graph_status}}{{else}}kaji_code_graph_status{{/has}}` first.
-- If the status reports ready, use `{{#has tools "kaji_code_graph_search"}}{{toolRefs.kaji_code_graph_search}}{{else}}kaji_code_graph_search{{/has}}` or `{{#has tools "kaji_code_graph_report"}}{{toolRefs.kaji_code_graph_report}}{{else}}kaji_code_graph_report{{/has}}` before broad repository exploration.
-- If the status reports missing graph/report artifacts, do not retry CodeGraph tools in a loop; use normal repo tools and mention that the graph needs to be built from the Code Graph footer button.
-- Use exact text/content search for string matching and code graph tools for symbols, dependencies, neighbors, paths, and hotspots.
-- Retrieve targeted graph neighborhoods instead of dumping the whole graph.
-{{/if}}
-
 {{#if promptContext.host.hasWorkspaceTools}}
 ## Kaji Workspace Context
 Native Kaji workspace tools are available.

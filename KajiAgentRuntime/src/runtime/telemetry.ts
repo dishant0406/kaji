@@ -5,7 +5,6 @@ export interface RuntimeTelemetrySnapshot {
 	toolFailures: number;
 	toolFailuresByName: Record<string, number>;
 	toolCallsByName: Record<string, number>;
-	codeGraphToolCalls: number;
 	autoRetryStarts: number;
 	autoRetryEnds: number;
 	autoCompactionStarts: number;
@@ -31,7 +30,6 @@ export class RuntimeTelemetry {
 	#toolFailures = 0;
 	#toolFailuresByName = new Map<string, number>();
 	#toolCallsByName = new Map<string, number>();
-	#codeGraphToolCalls = 0;
 	#autoRetryStarts = 0;
 	#autoRetryEnds = 0;
 	#autoCompactionStarts = 0;
@@ -81,7 +79,6 @@ export class RuntimeTelemetry {
 			toolFailures: this.#toolFailures,
 			toolFailuresByName: Object.fromEntries(this.#toolFailuresByName),
 			toolCallsByName: Object.fromEntries(this.#toolCallsByName),
-			codeGraphToolCalls: this.#codeGraphToolCalls,
 			autoRetryStarts: this.#autoRetryStarts,
 			autoRetryEnds: this.#autoRetryEnds,
 			autoCompactionStarts: this.#autoCompactionStarts,
@@ -98,7 +95,6 @@ export class RuntimeTelemetry {
 	#recordToolEnd(toolName: string, isError: boolean): void {
 		this.#toolEnds++;
 		this.#toolCallsByName.set(toolName, (this.#toolCallsByName.get(toolName) ?? 0) + 1);
-		if (toolName.startsWith("kaji_code_graph_")) this.#codeGraphToolCalls++;
 		if (!isError) return;
 		this.#toolFailures++;
 		this.#toolFailuresByName.set(toolName, (this.#toolFailuresByName.get(toolName) ?? 0) + 1);

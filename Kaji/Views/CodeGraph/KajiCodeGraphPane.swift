@@ -2,7 +2,6 @@ import SwiftUI
 
 struct KajiCodeGraphPane: View {
     @Bindable var state: KajiCodeGraphTabState
-    @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -112,8 +111,12 @@ struct KajiCodeGraphPane: View {
                     onSelect: { state.loadVersion($0) }
                 )
             }
-            Button("Edit AGENTS.md") {
-                openInstructions()
+            Button("Copy CODE_GRAPH.md") {
+                KajiCodeGraphPromptClipboard.copyCodeGraphDocument()
+            }
+            .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+            Button("Copy AGENTS.md Reference") {
+                KajiCodeGraphPromptClipboard.copyAgentsReference()
             }
             .buttonStyle(KajiButtonStyle(.secondary, size: .small))
         }
@@ -182,12 +185,5 @@ struct KajiCodeGraphPane: View {
 
     private func selectNode(_ nodeID: String?) {
         state.selectedNodeID = nodeID
-    }
-
-    private func openInstructions() {
-        guard let file = KajiCodeGraphInstructions.ensureFile(projectID: state.projectID, worktreeID: state.worktreeID) else {
-            return
-        }
-        appState.openFile(file.path, projectID: state.projectID)
     }
 }

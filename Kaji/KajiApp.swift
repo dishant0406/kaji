@@ -113,7 +113,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemWakeCoordinator.shared.start()
         _ = SleepPreventionController.shared
         _ = CLILauncherSettings.shared
-        _ = CodingAgentShimInstaller.install()
         AIProviderRegistry.shared.installAll()
         _ = AIUsageSettingsStore.isUsageEnabled()
         DebugFileLog.log("Lifecycle", "applicationDidFinishLaunching completed")

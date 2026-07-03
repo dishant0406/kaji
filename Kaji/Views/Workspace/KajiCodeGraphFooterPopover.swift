@@ -10,6 +10,8 @@ struct KajiCodeGraphFooterPopover: View {
     let onUpdate: () -> Void
     let onDelete: () -> Void
     let onShowAgent: () -> Void
+    let onCopyCodeGraph: () -> Void
+    let onCopyAgentsReference: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -32,6 +34,8 @@ struct KajiCodeGraphFooterPopover: View {
                 if hasAgentSession {
                     action(title: "Show Graph Agent", icon: "sparkles", disabled: false, action: onShowAgent)
                 }
+                action(title: "Copy CODE_GRAPH.md", icon: "doc.on.doc", disabled: false, action: onCopyCodeGraph)
+                action(title: "Copy AGENTS.md Reference", icon: "link", disabled: false, action: onCopyAgentsReference)
             }
         }
         .padding(10)
