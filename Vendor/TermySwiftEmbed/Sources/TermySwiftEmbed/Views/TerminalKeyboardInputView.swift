@@ -5,7 +5,6 @@ struct TerminalKeyboardInputView: NSViewRepresentable {
     var cols: Int
     var rows: Int
     var renderConfig: TerminalRenderConfig
-    var isFocused: Bool
     var isInputEnabled: Bool
     var isSearchVisible: Bool
     var canCopy: Bool
@@ -45,9 +44,7 @@ struct TerminalKeyboardInputView: NSViewRepresentable {
 
     func updateNSView(_ view: KeyboardCaptureView, context: Context) {
         view.apply(configuration: self)
-        if isFocused, isInputEnabled {
-            view.focus()
-        }
+        view.focus(trigger: .renderUpdate)
     }
 }
 
@@ -55,7 +52,6 @@ final class KeyboardCaptureView: NSView {
     var cols = 0
     var rows = 0
     var renderConfig = TerminalRenderConfig.default
-    var isTerminalFocused = false
     var isInputEnabled = true
     var isSearchVisible = false
     var canCopy = false
@@ -128,7 +124,7 @@ final class KeyboardCaptureView: NSView {
         }
 
         onFocus()
-        focus()
+        focus(trigger: .dropInput)
         onBytes(bytes)
         return true
     }
@@ -163,9 +159,7 @@ final class KeyboardCaptureView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if isTerminalFocused, isInputEnabled {
-            focus()
-        }
+        focus(trigger: .windowAttachment)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -185,14 +179,14 @@ final class KeyboardCaptureView: NSView {
             if isSearchVisible {
                 onFocus()
                 onDismissSearch()
-                focus()
+                focus(trigger: .pointerInput)
                 return
             }
             super.mouseDown(with: event)
             return
         }
         onFocus()
-        focus()
+        focus(trigger: .pointerInput)
         didDragSelection = false
 
         if button == .left,
@@ -248,7 +242,7 @@ final class KeyboardCaptureView: NSView {
             return
         }
         onFocus()
-        focus()
+        focus(trigger: .pointerInput)
         didDragSelection = false
 
         if event.modifierFlags.contains(.control) {
@@ -515,7 +509,14 @@ final class KeyboardCaptureView: NSView {
         }
     }
 
-    func focus() {
+    func focus(trigger: TerminalKeyboardFocusTrigger = .explicitHostRequest) {
+        guard TerminalKeyboardFocusPolicy.allowsFirstResponderRequest(
+            isInputEnabled: isInputEnabled,
+            trigger: trigger
+        )
+        else {
+            return
+        }
         guard let window, window.firstResponder !== self else {
             return
         }
@@ -915,7 +916,6 @@ private extension KeyboardCaptureView {
         cols = configuration.cols
         rows = configuration.rows
         renderConfig = configuration.renderConfig
-        isTerminalFocused = configuration.isFocused
         isInputEnabled = configuration.isInputEnabled
         isSearchVisible = configuration.isSearchVisible
         canCopy = configuration.canCopy

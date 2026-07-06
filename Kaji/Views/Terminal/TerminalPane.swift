@@ -129,7 +129,7 @@ struct TerminalBridge: NSViewRepresentable {
         }
 
         if overlayActive {
-            if nsView.window?.firstResponder === nsView || nsView.window?.firstResponder === nsView.inputContext {
+            if nsView.ownsFirstResponder(nsView.window?.firstResponder) {
                 nsView.window?.makeFirstResponder(nil)
             }
             if !wasOverlayActive {

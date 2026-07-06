@@ -32,6 +32,11 @@ extension TermyTerminalNSView {
         window?.makeFirstResponder(candidate)
     }
 
+    func ownsFirstResponder(_ responder: NSResponder?) -> Bool {
+        guard let view = responder as? NSView else { return false }
+        return view === self || view.isDescendant(of: self)
+    }
+
     func firstFocusableDescendant(in view: NSView) -> NSView? {
         for subview in view.subviews {
             if subview.acceptsFirstResponder { return subview }

@@ -94,7 +94,6 @@ private struct TermyEmbeddedTerminalBody: View {
                     cols: terminal.frameMetadata.cols,
                     rows: terminal.frameMetadata.rows,
                     renderConfig: terminal.renderConfig,
-                    isFocused: isFocused,
                     isInputEnabled: isInputEnabled,
                     isSearchVisible: isSearchVisible,
                     canCopy: terminal.canCopySelection,
