@@ -839,7 +839,7 @@ struct GitRepositoryService {
     }
 
     func commit(repoPath: String, message: String) async throws -> String {
-        let result = try await GitProcessRunner.runGit(repoPath: repoPath, arguments: ["commit", "-m", message])
+        let result = try await GitProcessRunner.runGit(repoPath: repoPath, arguments: Self.commitArguments(message: message))
         guard result.status == 0 else {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to commit." : result.stderr)
         }

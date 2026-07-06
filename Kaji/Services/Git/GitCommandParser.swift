@@ -53,6 +53,7 @@ enum GitCommandParser {
     }
 
     static func request(arguments: [String]) -> GitCommandRequest {
+        let arguments = GitCommitNoVerifyPolicy.normalized(arguments)
         let display = "git \(arguments.joined(separator: " "))".trimmingCharacters(in: .whitespacesAndNewlines)
         return GitCommandRequest(
             arguments: arguments,

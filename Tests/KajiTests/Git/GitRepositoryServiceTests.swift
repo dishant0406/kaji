@@ -43,6 +43,31 @@ struct GitRepositoryServiceTests {
         #expect(diff.rows.contains { $0.kind == .addition && $0.newText == "Next" })
     }
 
+    @Test
+    func commitArgumentsBypassHooks() {
+        #expect(GitRepositoryService.commitArguments(message: "Ship") == ["commit", "--no-verify", "-m", "Ship"])
+    }
+
+    @Test
+    func commitBypassesPreCommitHook() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try seedRepository(at: directory)
+        let hook = directory.appendingPathComponent(".git/hooks/pre-commit")
+        try "#!/bin/sh\nexit 1\n".write(to: hook, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path)
+        try "Initial\nNext\n".write(to: directory.appendingPathComponent("README.md"), atomically: true, encoding: .utf8)
+        try runGit(["add", "README.md"], in: directory)
+
+        let hash = try await GitRepositoryService().commit(repoPath: directory.path, message: "Update readme")
+        let subject = try gitOutput(["log", "-1", "--pretty=%s"], in: directory)
+
+        #expect(!hash.isEmpty)
+        #expect(subject == "Update readme")
+    }
+
     private func seedRepository(at directory: URL) throws {
         try runGit(["init"], in: directory)
         try runGit(["config", "user.email", "test@example.com"], in: directory)

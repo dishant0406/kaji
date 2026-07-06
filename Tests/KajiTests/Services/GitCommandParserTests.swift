@@ -27,9 +27,26 @@ struct GitCommandParserTests {
     }
 
     @Test
+    func gitCommitRequestAddsNoVerify() {
+        let request = GitCommandParser.request(command: .git, input: "commit -m \"feat: branch picker\"")
+
+        #expect(request.arguments == ["commit", "--no-verify", "-m", "feat: branch picker"])
+        #expect(request.displayCommand == "git commit --no-verify -m feat: branch picker")
+        #expect(request.canRun)
+    }
+
+    @Test
+    func gitCommitRequestReplacesVerify() {
+        let request = GitCommandParser.request(command: .git, input: "commit --verify -m test")
+
+        #expect(request.arguments == ["commit", "--no-verify", "-m", "test"])
+    }
+
+    @Test
     func blocksInteractiveCommit() {
         let request = GitCommandParser.request(command: .git, input: "commit")
 
+        #expect(request.arguments == ["commit", "--no-verify"])
         #expect(request.blockedMessage != nil)
         #expect(!request.canRun)
     }
