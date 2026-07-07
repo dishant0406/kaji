@@ -46,6 +46,14 @@ struct KajiApp: App {
                 .environment(ThemeService.shared)
                 .environment(AppTypographySettings.shared)
                 .preferredColorScheme(KajiTheme.colorScheme)
+                .onOpenURL { url in
+                    KajiURLCommandHandler.handle(
+                        url: url,
+                        appState: appState,
+                        projectStore: projectStore,
+                        worktreeStore: worktreeStore
+                    )
+                }
                 .onAppear {
                     NotificationStore.shared.appState = appState
                     NotificationStore.shared.worktreeStore = worktreeStore

@@ -57,6 +57,12 @@ enum SwiftRunBundleLauncher {
             "CFBundleName": "Kaji",
             "CFBundlePackageType": "APPL",
             "CFBundleShortVersionString": "0.0.0",
+            "CFBundleURLTypes": [
+                [
+                    "CFBundleURLName": "com.kaji.app.open-project",
+                    "CFBundleURLSchemes": ["kaji"],
+                ],
+            ],
             "CFBundleVersion": "0",
             "LSMinimumSystemVersion": "15.0",
             "NSAppleEventsUsageDescription": "A process running in Kaji's terminal would like to use AppleScript.",

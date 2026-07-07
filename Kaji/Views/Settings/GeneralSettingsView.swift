@@ -57,6 +57,8 @@ struct GeneralSettingsView: View {
                 )
             }
 
+            KajiCLICommandSettingsSection()
+
             SettingsSection(
                 "Power",
                 footer: "The battery lid-close override uses administrator permission and changes a system-wide pmset setting.",

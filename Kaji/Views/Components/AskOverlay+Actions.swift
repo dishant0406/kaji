@@ -550,23 +550,18 @@ extension AskOverlay {
     }
 
     func addProject(_ rawPath: String) {
-        let path = AskDirectorySearchService.expandHome(rawPath).trimmingCharacters(in: .whitespacesAndNewlines)
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { return }
-        if let existing = projectStore.projects.first(where: { $0.path == path }) {
-            guard let primary = worktreeStore.primary(for: existing.id) else { return }
-            projectID = existing.id
-            appState.selectProject(existing, worktree: primary)
+        do {
+            let result = try ProjectSelectionService.selectOrAddProject(
+                path: AskDirectorySearchService.expandHome(rawPath),
+                appState: appState,
+                projectStore: projectStore,
+                worktreeStore: worktreeStore
+            )
+            projectID = result.projectID
             onDismiss()
-            return
+        } catch {
+            DebugFileLog.log("AskOverlay", "Failed to add project \(rawPath): \(error.localizedDescription)")
         }
-        let project = Project(name: URL(fileURLWithPath: path).lastPathComponent, path: path, sortOrder: projectStore.projects.count)
-        projectStore.add(project)
-        worktreeStore.ensurePrimary(for: project)
-        guard let primary = worktreeStore.primary(for: project.id) else { return }
-        projectID = project.id
-        appState.selectProject(project, worktree: primary)
-        onDismiss()
     }
 
     func openDiffFile(_ diffFile: DiffPaletteFile) {
