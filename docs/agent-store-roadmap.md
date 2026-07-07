@@ -201,7 +201,7 @@ Attribution rule:
 | Situation | Behavior |
 | --- | --- |
 | Provider reports session-specific changed files | Show exact files for that run. |
-| Only one run is active in a worktree | Show git worktree snapshot with `snapshot` attribution. |
+| Only one run is active in a worktree | Show worktree snapshot with `snapshot` attribution. |
 | Multiple runs overlap in the same worktree | Do not claim exact files; show `shared worktree` until provider-specific evidence exists. |
 | Run uses a separate worktree | Show that worktree's files independently. |
 

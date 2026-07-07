@@ -79,6 +79,8 @@ if [[ "${TERMY_FORCE_REBUILD:-0}" != "1" ]] \
     && nm -gU "$DYLIB_PATH" | grep -q "_termy_terminal_reload_config_colors" \
     && [[ -d "$RUNTIME_RESOURCES_DIR/shell" ]]; then
     echo "==> TermyKit already matches $TERMY_REPO@$TERMY_REF"
+    echo "==> Building Rift"
+    bash "$SCRIPT_DIR/build-rift.sh"
     invalidate_swiftpm_termy_products
     exit 0
 fi
@@ -133,6 +135,9 @@ rm -rf "$RUNTIME_RESOURCES_DIR/shell"
 cp -R "$SOURCE_SHELL_DIR" "$RUNTIME_RESOURCES_DIR/shell"
 printf "%s\n" "$EXPECTED_STAMP" > "$STAMP_FILE"
 invalidate_swiftpm_termy_products
+
+echo "==> Building Rift"
+bash "$SCRIPT_DIR/build-rift.sh"
 
 echo "==> Building Kaji Agent runtime"
 if command -v bun >/dev/null 2>&1; then

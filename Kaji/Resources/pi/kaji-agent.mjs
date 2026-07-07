@@ -153017,7 +153017,7 @@ function kajiTools(context, pendingTools2) {
     tool("kaji_jump_to_agent", "Navigate Kaji to a child agent run by runID.", typebox_exports.Object({ runID: typebox_exports.String() }), context),
     tool(
       "kaji_create_worktree",
-      "Create and select an isolated Git worktree for a project. By default creates a new branch; pass createBranch false to use an existing branch.",
+      "Create and select an isolated Rift workspace for a project. By default creates a new branch; pass createBranch false to use an existing branch.",
       typebox_exports.Object({
         project: typebox_exports.Optional(typebox_exports.String()),
         name: typebox_exports.String(),

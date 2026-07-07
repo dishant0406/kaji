@@ -78,7 +78,7 @@ struct WorktreePopover: View {
                 }
             ),
             PopoverFooterAction(
-                title: "New Worktree…",
+                title: "New Workspace…",
                 icon: "plus.square.dashed",
                 action: onRequestCreate
             ),
@@ -86,7 +86,7 @@ struct WorktreePopover: View {
     }
 
     private func requestRemove(worktree: Worktree) async {
-        let hasChanges = await GitWorktreeService.shared.hasUncommittedChanges(worktreePath: worktree.path)
+        let hasChanges = await GitRepositoryService().hasUncommittedChanges(repoPath: worktree.path)
         if !hasChanges {
             performRemove(worktree: worktree)
             return
@@ -217,7 +217,7 @@ private struct WorktreePopoverRow: View {
         }
         .contextMenu {
             if worktree.isPrimary {
-                Text("Primary worktree").kajiFont(size: 11)
+                Text("Primary workspace").kajiFont(size: 11)
             } else if let onRemove {
                 Button("Rename") { startRename() }
                 Divider()
@@ -225,7 +225,7 @@ private struct WorktreePopoverRow: View {
             } else {
                 Button("Rename") { startRename() }
                 Divider()
-                Text("External worktree").kajiFont(size: 11)
+                Text("External Rift workspace").kajiFont(size: 11)
             }
         }
     }

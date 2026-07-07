@@ -65,7 +65,7 @@ Type these anywhere in the Ask palette prompt, then choose from the highlighted 
 
 - Kaji includes a native Parent Agent surface backed by a bundled Kaji runtime that uses Pi npm packages.
 - The Parent Agent can plan work, choose provider/model options, spawn child agents, send follow-up prompts, observe runs, stop/resume agents, and jump back to live panes.
-- It can create isolated git worktrees for subagents, collect changed files, open native diffs, and start verification while Kaji remains the source of truth for projects, worktrees, pane IDs, permissions, and UI state.
+- It can create isolated Rift workspaces for subagents, collect changed files, open native diffs, and start verification while Kaji remains the source of truth for projects, worktrees, pane IDs, permissions, and UI state.
 - Kaji also supports Pi as a normal coding provider alongside Codex, Claude Code, and OpenCode.
 - **Codex**: launcher, history/resume support, local session monitoring, activity hooks, completion events, usage tracking.
 - **Claude Code**: launcher, history support, user-prompt, stop, notification, and permission-request hooks, usage tracking.
@@ -152,14 +152,14 @@ Download the latest release from the [releases page](https://github.com/dishant0
 ## Local Development
 
 ```bash
-scripts/setup.sh          # Build TermyKit/libtermy from pinned Termy source
+scripts/setup.sh          # Build TermyKit/libtermy and bundled Rift from pinned sources
 swift build               # Debug build
 swift run Kaji           # Run from SwiftPM
 ./start.sh                # Open the preview lab and launch a real Kaji.app bundle
 scripts/checks.sh --fix   # Format, lint, and build
 ```
 
-`scripts/setup.sh` builds the pinned Termy FFI dylib and syncs Termy shell integration assets. See [docs/building-termy.md](docs/building-termy.md).
+`scripts/setup.sh` builds the pinned Termy FFI dylib, syncs Termy shell integration assets, and installs the patched bundled Rift binary used for isolated workspaces. See [docs/building-termy.md](docs/building-termy.md).
 
 `./start.sh` is the fastest supported app workflow in this repo. It opens `Kaji/Previews/DeveloperPreviewLab.swift` in Xcode for SwiftUI previews and launches a real `Kaji.app` bundle through `script/build_and_run.sh`.
 

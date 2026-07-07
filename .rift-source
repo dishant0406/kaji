@@ -1,0 +1,5 @@
+repo=anomalyco/rift
+ref=18ca9d199cfa0033e1adf63b1eb6625fab89478a
+profile=release
+artifact=rift
+kaji_patches=apfs_provenance_xattr

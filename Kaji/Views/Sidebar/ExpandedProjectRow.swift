@@ -89,7 +89,7 @@ struct ExpandedProjectRow: View {
             }
         }
         .task(id: project.path) {
-            isGitRepo = await GitWorktreeService.shared.isGitRepository(project.path)
+            isGitRepo = await GitRepositoryService().isGitRepository(project.path)
             if autoExpandWorktrees, isActive, isGitRepo {
                 worktreesExpanded = true
             }
@@ -436,7 +436,7 @@ struct ExpandedProjectRow: View {
     }
 
     private func requestRemove(worktree: Worktree) async {
-        let hasChanges = await GitWorktreeService.shared.hasUncommittedChanges(worktreePath: worktree.path)
+        let hasChanges = await GitRepositoryService().hasUncommittedChanges(repoPath: worktree.path)
         if !hasChanges {
             performRemove(worktree: worktree)
             return

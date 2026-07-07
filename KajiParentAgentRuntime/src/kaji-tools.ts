@@ -91,7 +91,7 @@ export function kajiTools(context: RuntimeContext, pendingTools: Map<string, Pen
 		tool("kaji_jump_to_agent", "Navigate Kaji to a child agent run by runID.", Type.Object({ runID: Type.String() }), context),
 		tool(
 			"kaji_create_worktree",
-			"Create and select an isolated Git worktree for a project. By default creates a new branch; pass createBranch false to use an existing branch.",
+			"Create and select an isolated Rift workspace for a project. By default creates a new branch; pass createBranch false to use an existing branch.",
 			Type.Object({
 				project: Type.Optional(Type.String()),
 				name: Type.String(),

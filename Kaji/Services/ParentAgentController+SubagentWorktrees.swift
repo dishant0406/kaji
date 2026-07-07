@@ -10,12 +10,13 @@ extension ParentAgentController {
         let suffix = String(UUID().uuidString.prefix(8)).lowercased()
         let name = "agent-\(worktreeSlug(from: title))-\(suffix)"
         let branch = "kaji-agent-\(suffix)"
-        let path = KajiFileStorage.worktreeDirectory(forProjectID: project.id, name: worktreeSlug(from: name))
-            .path(percentEncoded: false)
-        guard !FileManager.default.fileExists(atPath: path) else { return nil }
         do {
-            try await GitWorktreeService.shared.addWorktree(repoPath: project.path, path: path, branch: branch, createBranch: true)
-            let worktree = Worktree(name: name, path: path, branch: branch, ownsBranch: true, isPrimary: false)
+            let worktree = try await RiftWorkspaceCreator.create(RiftWorkspaceCreationRequest(
+                project: project,
+                name: name,
+                branch: branch,
+                createBranch: true
+            ))
             worktreeStore.add(worktree, to: project.id)
             return worktree
         } catch {

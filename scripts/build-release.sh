@@ -67,6 +67,7 @@ APP_BUNDLE="$BUILD_DIR/Kaji.app"
 DMG_NAME="Kaji-${VERSION}-${ARCH}.dmg"
 SIGNING_IDENTITY="${SIGN_IDENTITY:--}"
 TERMY_DYLIB="$PROJECT_ROOT/TermyKit/lib/libtermy_ffi.dylib"
+RIFT_BINARY="$PROJECT_ROOT/Kaji/Resources/Rift/rift"
 sign_code() {
     /usr/bin/codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$@"
 }
@@ -96,11 +97,13 @@ if $SKIP_NATIVE_DEPS; then
     [[ -f "$PROJECT_ROOT/Kaji/Resources/Zlob/zlob" ]] || { echo "Error: Zlob runtime is missing; run scripts/build-zlob.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/MonacoEditor/index.html" ]] || { echo "Error: Monaco editor runtime is missing; run scripts/build-monaco-runtime.sh" >&2; exit 1; }
     [[ -f "$TERMY_DYLIB" ]] || { echo "Error: libtermy is missing; run scripts/setup.sh" >&2; exit 1; }
+    [[ -x "$RIFT_BINARY" ]] || { echo "Error: Rift runtime is missing; run scripts/build-rift.sh" >&2; exit 1; }
 fi
 rm -rf "$PROJECT_ROOT/.build/$TRIPLE/release/Kaji_Kaji.bundle"
 if ! $SKIP_NATIVE_DEPS; then
     "$SCRIPT_DIR/build-parent-agent.sh"
     "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
+    "$SCRIPT_DIR/build-rift.sh"
     "$SCRIPT_DIR/build-zlob.sh"
     "$SCRIPT_DIR/build-monaco-runtime.sh"
 fi

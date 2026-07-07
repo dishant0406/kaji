@@ -147,6 +147,29 @@ struct GitRepositoryService {
         static let unknown = DiffHints(hasStaged: true, hasUnstaged: true, isUntrackedOrNew: false)
     }
 
+    func isGitRepository(_ path: String) async -> Bool {
+        guard let result = try? await GitProcessRunner.runGit(
+            repoPath: path,
+            arguments: ["rev-parse", "--is-inside-work-tree"]
+        )
+        else {
+            return false
+        }
+        return result.status == 0 && result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+    }
+
+    func hasUncommittedChanges(repoPath: String) async -> Bool {
+        guard let result = try? await GitProcessRunner.runGit(
+            repoPath: repoPath,
+            arguments: ["status", "--porcelain=1", "--untracked-files=all"]
+        )
+        else {
+            return false
+        }
+        guard result.status == 0 else { return false }
+        return !result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     func currentBranch(repoPath: String) async throws -> String {
         let result = try await GitProcessRunner.runGit(
             repoPath: repoPath,
@@ -931,6 +954,19 @@ struct GitRepositoryService {
         let result = try await GitProcessRunner.runGit(repoPath: repoPath, arguments: ["switch", "-c", trimmedName])
         guard result.status == 0 else {
             throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to create branch." : result.stderr)
+        }
+    }
+
+    func deleteLocalBranch(repoPath: String, branch: String, force: Bool = true) async throws {
+        guard let trimmedName = Self.normalizedBranchName(branch) else {
+            throw GitError.commandFailed("Invalid branch name.")
+        }
+        let result = try await GitProcessRunner.runGit(
+            repoPath: repoPath,
+            arguments: ["branch", force ? "-D" : "-d", "--", trimmedName]
+        )
+        guard result.status == 0 else {
+            throw GitError.commandFailed(result.stderr.isEmpty ? "Failed to delete branch \(trimmedName)." : result.stderr)
         }
     }
 

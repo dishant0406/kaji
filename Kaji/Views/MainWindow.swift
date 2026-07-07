@@ -1599,7 +1599,7 @@ struct MainWindow: View {
     private func handleCreateWorktreeResult(_ result: CreateWorktreeResult, project: Project) {
         guard case let .created(worktree, runSetup) = result else { return }
         appState.selectWorktree(projectID: project.id, worktree: worktree)
-        ToastState.shared.show("Worktree created")
+        ToastState.shared.show("Workspace created")
         guard runSetup,
               let paneID = appState.focusedArea(for: project.id)?.activeTab?.content.pane?.id
         else { return }

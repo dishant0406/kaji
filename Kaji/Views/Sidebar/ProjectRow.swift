@@ -96,7 +96,7 @@ struct ProjectRow: View {
                 onSelect()
             }
             .task(id: project.path) {
-                isGitRepo = await GitWorktreeService.shared.isGitRepository(project.path)
+                isGitRepo = await GitRepositoryService().isGitRepository(project.path)
             }
             .overlay {
                 SecondaryClickView {

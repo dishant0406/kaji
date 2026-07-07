@@ -1,0 +1,14 @@
+diff --git a/crates/core/src/strategy/apfs.rs b/crates/core/src/strategy/apfs.rs
+index 9b401de..be5cb14 100644
+--- a/crates/core/src/strategy/apfs.rs
++++ b/crates/core/src/strategy/apfs.rs
+@@ -169,6 +169,9 @@ fn copy_xattrs_apfs(from: &Path, to: &Path) -> Result<()> {
+         .split(|byte| *byte == 0)
+         .filter(|name| !name.is_empty())
+     {
++        if name == b"com.apple.provenance" {
++            continue;
++        }
+         let name = std::ffi::CString::new(name)
+             .map_err(|_| Error::Path("extended attribute name contains a null byte".into()))?;
+         // SAFETY: `from` and `name` are valid C strings. A null buffer with

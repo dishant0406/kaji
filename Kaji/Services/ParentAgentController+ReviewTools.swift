@@ -25,15 +25,13 @@ extension ParentAgentController {
             return
         }
         let createBranch = message.arguments?["createBranch"] != "false"
-        let path = KajiFileStorage.worktreeDirectory(forProjectID: project.id, name: worktreeSlug(from: name))
-            .path(percentEncoded: false)
-        guard !FileManager.default.fileExists(atPath: path) else {
-            sendToolError(id: toolID, message: "A worktree with this name already exists on disk.")
-            return
-        }
         do {
-            try await GitWorktreeService.shared.addWorktree(repoPath: project.path, path: path, branch: branch, createBranch: createBranch)
-            let worktree = Worktree(name: name, path: path, branch: branch, ownsBranch: createBranch, isPrimary: false)
+            let worktree = try await RiftWorkspaceCreator.create(RiftWorkspaceCreationRequest(
+                project: project,
+                name: name,
+                branch: branch,
+                createBranch: createBranch
+            ))
             worktreeStore.add(worktree, to: project.id)
             appState.selectProject(project, worktree: worktree)
             process.send(ParentAgentEnvelope(
@@ -42,7 +40,7 @@ extension ParentAgentController {
                 ok: true,
                 result: ParentAgentToolResult(
                     activeProject: projectContext(project),
-                    message: "Created worktree \(worktree.name).",
+                    message: "Created Rift workspace \(worktree.name).",
                     worktree: worktreeContext(worktree)
                 )
             ))

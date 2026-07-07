@@ -125,7 +125,7 @@ struct SidebarWorktreeRow: View {
         }
         .contextMenu {
             if worktree.isPrimary {
-                Text("Primary worktree").kajiFont(size: 11)
+                Text("Primary workspace").kajiFont(size: 11)
             } else if let onRemove {
                 Button("Rename") { startRename() }
                 Divider()
@@ -133,7 +133,7 @@ struct SidebarWorktreeRow: View {
             } else {
                 Button("Rename") { startRename() }
                 Divider()
-                Text("External worktree").kajiFont(size: 11)
+                Text("External Rift workspace").kajiFont(size: 11)
             }
         }
     }
@@ -175,7 +175,7 @@ struct SidebarNewWorktreeRow: View {
             HStack(spacing: 8) {
                 KajiIcon(systemName: "plus", size: 11)
                     .foregroundStyle(hovered ? KajiTheme.fg : KajiTheme.fgDim)
-                Text("New Worktree")
+                Text("New Workspace")
                     .kajiFont(size: 12, weight: .medium)
                     .foregroundStyle(hovered ? KajiTheme.fg : KajiTheme.fgMuted)
                 Spacer()
@@ -190,6 +190,6 @@ struct SidebarNewWorktreeRow: View {
         .kajiHoverEffect(isActive: hovered, scale: 1.012)
         .kajiChangeFeedback(KajiMotion.tapFeedback, value: hovered, isEnabled: hovered)
         .kajiPointer()
-        .accessibilityLabel("New Worktree")
+        .accessibilityLabel("New Workspace")
     }
 }

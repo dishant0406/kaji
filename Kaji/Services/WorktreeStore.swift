@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-private let logger = Logger(subsystem: "app.kaji", category: "WorktreeStore")
+let worktreeStoreLogger = Logger(subsystem: "app.kaji", category: "WorktreeStore")
 
 @MainActor
 @Observable
@@ -9,17 +9,17 @@ final class WorktreeStore {
     private(set) var worktrees: [UUID: [Worktree]] = [:]
     private var projectIDByPath: [String: UUID] = [:]
     private let persistence: any WorktreePersisting
-    private let listGitWorktrees: @Sendable (String) async throws -> [GitWorktreeRecord]
+    let listRiftWorkspaces: @Sendable (String) async throws -> [RiftWorkspaceRecord]
 
     init(
         persistence: any WorktreePersisting,
-        listGitWorktrees: @escaping @Sendable (String) async throws -> [GitWorktreeRecord] = {
-            try await GitWorktreeService.shared.listWorktrees(repoPath: $0)
+        listRiftWorkspaces: @escaping @Sendable (String) async throws -> [RiftWorkspaceRecord] = {
+            try await RiftWorkspaceService.shared.listWorkspaces(of: $0)
         },
         projects: [Project] = []
     ) {
         self.persistence = persistence
-        self.listGitWorktrees = listGitWorktrees
+        self.listRiftWorkspaces = listRiftWorkspaces
         guard !projects.isEmpty else { return }
         loadAll(projects: projects)
     }
@@ -34,7 +34,7 @@ final class WorktreeStore {
                 }
                 setWorktrees(sortPrimaryFirst(loaded), for: project.id)
             } catch {
-                logger.error("Failed to load worktrees for project \(project.id): \(error)")
+                worktreeStoreLogger.error("Failed to load worktrees for project \(project.id): \(error)")
                 setWorktrees([makePrimary(for: project)], for: project.id)
                 save(projectID: project.id)
             }
@@ -86,131 +86,6 @@ final class WorktreeStore {
         save(projectID: projectID)
     }
 
-    func refreshFromGit(project: Project) async throws -> [Worktree] {
-        ensurePrimary(for: project)
-        let records = try await listGitWorktrees(project.path).filter { !$0.isBare && !$0.isPrunable }
-        var list = worktrees[project.id] ?? []
-        let projectKey = Self.canonicalPath(project.path)
-        let recordKeys = Set(records.map { Self.canonicalPath($0.path) })
-
-        if let primaryIndex = list.firstIndex(where: \.isPrimary) {
-            list[primaryIndex].path = project.path
-            list[primaryIndex].name = project.name
-        } else {
-            list.insert(makePrimary(for: project), at: 0)
-        }
-
-        var existingByKey: [String: Worktree] = [:]
-        for worktree in list {
-            let key = Self.canonicalPath(worktree.path)
-            if let existing = existingByKey[key] {
-                if worktree.isPrimary, !existing.isPrimary {
-                    existingByKey[key] = worktree
-                }
-            } else {
-                existingByKey[key] = worktree
-            }
-        }
-
-        for record in records {
-            let recordKey = Self.canonicalPath(record.path)
-            if recordKey == projectKey {
-                if let primaryIndex = list.firstIndex(where: \.isPrimary) {
-                    list[primaryIndex].branch = record.branch
-                }
-                continue
-            }
-
-            if let existing = existingByKey[recordKey],
-               let index = list.firstIndex(where: { $0.id == existing.id })
-            {
-                list[index].branch = record.branch
-                if list[index].isPrimary {
-                    list[index].name = project.name
-                    list[index].path = project.path
-                }
-                continue
-            }
-
-            list.append(Worktree(
-                name: defaultName(for: record),
-                path: record.path,
-                branch: record.branch,
-                source: .external,
-                isPrimary: false
-            ))
-        }
-
-        let sorted = sortPrimaryFirst(list.filter {
-            !$0.isExternallyManaged || recordKeys.contains(Self.canonicalPath($0.path))
-        })
-        setWorktrees(sorted, for: project.id)
-        save(projectID: project.id)
-        return sorted
-    }
-
-    private static func canonicalPath(_ path: String) -> String {
-        URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path
-    }
-
-    static func cleanupOnDisk(
-        worktree: Worktree,
-        repoPath: String
-    ) async {
-        guard worktree.canBeRemoved else { return }
-        do {
-            try await GitWorktreeService.shared.removeWorktree(
-                repoPath: repoPath,
-                path: worktree.path,
-                force: true
-            )
-        } catch {
-            logger.error("Failed to remove git worktree at \(worktree.path): \(error)")
-        }
-
-        if worktree.ownsBranch,
-           let branch = worktree.branch?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !branch.isEmpty
-        {
-            do {
-                try await GitWorktreeService.shared.deleteBranch(repoPath: repoPath, branch: branch)
-            } catch {
-                logger.error("Failed to delete branch \(branch) for worktree \(worktree.path): \(error)")
-            }
-        }
-
-        try? FileManager.default.removeItem(atPath: worktree.path)
-        removeParentDirectoryIfEmpty(for: worktree.path)
-    }
-
-    static func cleanupOnDisk(for project: Project, knownWorktrees: [Worktree]) async {
-        let secondaryWorktrees = knownWorktrees.filter(\.canBeRemoved)
-        for worktree in secondaryWorktrees {
-            await cleanupOnDisk(worktree: worktree, repoPath: project.path)
-        }
-
-        let root = KajiFileStorage.worktreeRoot(forProjectID: project.id)
-        guard FileManager.default.fileExists(atPath: root.path) else { return }
-        let children = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
-        for child in children {
-            let childPath = root.appendingPathComponent(child).path
-            try? await GitWorktreeService.shared.removeWorktree(
-                repoPath: project.path,
-                path: childPath,
-                force: true
-            )
-            try? FileManager.default.removeItem(atPath: childPath)
-        }
-        try? FileManager.default.removeItem(at: root)
-    }
-
-    private static func removeParentDirectoryIfEmpty(for path: String) {
-        let parent = URL(fileURLWithPath: path).deletingLastPathComponent()
-        let children = (try? FileManager.default.contentsOfDirectory(atPath: parent.path)) ?? []
-        guard children.isEmpty else { return }
-        try? FileManager.default.removeItem(at: parent)
-    }
-
     func rename(worktreeID: UUID, in projectID: UUID, to newName: String) {
         guard var list = worktrees[projectID],
               let index = list.firstIndex(where: { $0.id == worktreeID })
@@ -239,11 +114,11 @@ final class WorktreeStore {
         do {
             try persistence.removeWorktrees(projectID: projectID)
         } catch {
-            logger.error("Failed to remove worktrees file for project \(projectID): \(error)")
+            worktreeStoreLogger.error("Failed to remove worktrees file for project \(projectID): \(error)")
         }
     }
 
-    private func setWorktrees(_ list: [Worktree], for projectID: UUID) {
+    func setWorktrees(_ list: [Worktree], for projectID: UUID) {
         if let previous = worktrees[projectID] {
             for worktree in previous where projectIDByPath[worktree.path] == projectID {
                 projectIDByPath.removeValue(forKey: worktree.path)
@@ -255,37 +130,29 @@ final class WorktreeStore {
         worktrees[projectID] = list
     }
 
-    private func makePrimary(for project: Project) -> Worktree {
+    func makePrimary(for project: Project) -> Worktree {
         Worktree(
             name: project.name,
             path: project.path,
             branch: nil,
             source: .kaji,
+            backend: .primary,
             isPrimary: true
         )
     }
 
-    private func sortPrimaryFirst(_ list: [Worktree]) -> [Worktree] {
+    func sortPrimaryFirst(_ list: [Worktree]) -> [Worktree] {
         let primary = list.filter(\.isPrimary)
         let others = list.filter { !$0.isPrimary }.sorted { $0.createdAt < $1.createdAt }
         return primary + others
     }
 
-    private func save(projectID: UUID) {
+    func save(projectID: UUID) {
         guard let list = worktrees[projectID] else { return }
         do {
             try persistence.saveWorktrees(list, projectID: projectID)
         } catch {
-            logger.error("Failed to save worktrees for project \(projectID): \(error)")
+            worktreeStoreLogger.error("Failed to save worktrees for project \(projectID): \(error)")
         }
-    }
-
-    private func defaultName(for record: GitWorktreeRecord) -> String {
-        if let branch = record.branch?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !branch.isEmpty
-        {
-            return branch
-        }
-        return URL(fileURLWithPath: record.path).lastPathComponent
     }
 }

@@ -66,9 +66,11 @@ let package = Package(
                 "Info.plist",
                 "Kaji.entitlements",
                 "Resources/MonacoEditor",
+                "Resources/Rift",
             ],
             resources: [
                 .copy("Resources/MonacoEditor"),
+                .copy("Resources/Rift"),
                 .process("Resources"),
             ],
             linkerSettings: termyLinkerSettings + [

@@ -15,7 +15,6 @@ struct CreateWorktreeModal: View {
     @State private var inProgress = false
     @State private var errorMessage: String?
     private let gitRepository = GitRepositoryService()
-    private let gitWorktree = GitWorktreeService.shared
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -23,8 +22,8 @@ struct CreateWorktreeModal: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     CreateWorktreeFormSection(
-                        "Worktree",
-                        detail: "Create a named worktree with a matching folder and branch target."
+                        "Workspace",
+                        detail: "Create a Rift workspace with a matching folder and branch target."
                     ) {
                         CreateWorktreeLabeledField("Name") {
                             KajiInput(placeholder: "feature-x", text: $name, monospaced: true)
@@ -65,15 +64,7 @@ struct CreateWorktreeModal: View {
                         )
                     }
                     if let errorMessage {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Rectangle().fill(KajiTheme.border).frame(height: 1)
-                            Text(errorMessage)
-                                .kajiFont(size: 11)
-                                .foregroundStyle(KajiTheme.diffRemoveFg)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 14)
-                        }
+                        CreateWorktreeErrorSection(message: errorMessage)
                     }
                 }
                 .background(
@@ -115,7 +106,7 @@ struct CreateWorktreeModal: View {
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Create Worktree")
+                Text("Create Workspace")
                     .kajiFont(size: 13, weight: .semibold)
                     .foregroundStyle(KajiTheme.fg)
                 Text(project.name)
@@ -188,16 +179,13 @@ struct CreateWorktreeModal: View {
         errorMessage = nil
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         let branch = createNewBranch ? branchName.trimmingCharacters(in: .whitespaces) : selectedExistingBranch
-        let path = KajiFileStorage.worktreeDirectory(forProjectID: project.id, name: Self.slug(from: trimmedName))
-            .path(percentEncoded: false)
-        guard !FileManager.default.fileExists(atPath: path) else {
-            inProgress = false
-            errorMessage = "A worktree with this name already exists on disk."
-            return
-        }
         do {
-            try await gitWorktree.addWorktree(repoPath: project.path, path: path, branch: branch, createBranch: createNewBranch)
-            let worktree = Worktree(name: trimmedName, path: path, branch: branch, ownsBranch: createNewBranch, isPrimary: false)
+            let worktree = try await RiftWorkspaceCreator.create(RiftWorkspaceCreationRequest(
+                project: project,
+                name: trimmedName,
+                branch: branch,
+                createBranch: createNewBranch
+            ))
             worktreeStore.add(worktree, to: project.id)
             inProgress = false
             onFinish(.created(worktree, runSetup: runSetup))
@@ -205,13 +193,5 @@ struct CreateWorktreeModal: View {
             inProgress = false
             errorMessage = error.localizedDescription
         }
-    }
-
-    private static func slug(from name: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._-"))
-        let collapsed = String(name.unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" })
-            .split(separator: "-", omittingEmptySubsequences: true)
-            .joined(separator: "-")
-        return collapsed.isEmpty ? UUID().uuidString : collapsed
     }
 }

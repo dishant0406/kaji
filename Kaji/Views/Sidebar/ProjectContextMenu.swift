@@ -49,7 +49,7 @@ struct ProjectContextMenu: View {
                     isBusy: isRefreshingWorktrees,
                     action: onRefreshWorktrees
                 )
-                ProjectContextMenuButton(title: "New Worktree...", icon: "plus", action: onNewWorktree)
+                ProjectContextMenuButton(title: "New Workspace...", icon: "plus", action: onNewWorktree)
                 if canSwitchWorktree {
                     ProjectContextMenuButton(title: "Switch Worktree...", icon: "arrow.left.arrow.right", action: onSwitchWorktree)
                 }
