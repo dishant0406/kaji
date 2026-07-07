@@ -5,7 +5,7 @@ struct KajiSpinner: View {
     var lineWidth: CGFloat = 1.6
     var color: Color = KajiTheme.fgMuted
     @State private var rotating = false
-    @State private var settings = TerminalSettingsStore.shared
+    @State private var animationGeneration = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -17,22 +17,31 @@ struct KajiSpinner: View {
             )
             .frame(width: size, height: size)
             .rotationEffect(.degrees(rotating ? 360 : 0))
-            .onAppear {
-                guard shouldAnimate else { return }
-                withAnimation(.linear(duration: 0.85).repeatForever(autoreverses: false)) {
-                    rotating = true
-                }
-            }
-            .onChange(of: shouldAnimate) { _, animate in
-                rotating = false
-                guard animate else { return }
-                withAnimation(.linear(duration: 0.85).repeatForever(autoreverses: false)) {
-                    rotating = true
-                }
-            }
+            .onAppear(perform: restartAnimation)
+            .onDisappear(perform: stopAnimation)
+            .onChange(of: shouldAnimate) { _, _ in restartAnimation() }
     }
 
     private var shouldAnimate: Bool {
-        !reduceMotion && !settings.batteryOptimizedMode
+        KajiSpinnerAnimationPolicy.shouldAnimate(reduceMotion: reduceMotion)
+    }
+
+    private func restartAnimation() {
+        animationGeneration += 1
+        let generation = animationGeneration
+        rotating = false
+        guard shouldAnimate else { return }
+        Task { @MainActor in
+            await Task.yield()
+            guard animationGeneration == generation, shouldAnimate else { return }
+            withAnimation(.linear(duration: KajiSpinnerAnimationPolicy.duration).repeatForever(autoreverses: false)) {
+                rotating = true
+            }
+        }
+    }
+
+    private func stopAnimation() {
+        animationGeneration += 1
+        rotating = false
     }
 }
