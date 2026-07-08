@@ -12,10 +12,12 @@ enum KajiTerminalShellEnvironment {
             KajiBrowserSessionEnvironmentStore.remove(homeDirectory: homeDirectory, fileManager: fileManager)
         }
 
-        return KajiShellBootstrapInstaller.install(
+        var variables = KajiShellBootstrapInstaller.install(
             homeDirectory: homeDirectory,
             userZdotdir: environment[KajiShellBootstrapInstaller.zdotdirKey],
             fileManager: fileManager
         )
+        variables.append(contentsOf: AIGatewayLaunchEnvironment.variables())
+        return variables
     }
 }

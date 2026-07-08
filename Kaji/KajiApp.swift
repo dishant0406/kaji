@@ -121,6 +121,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemWakeCoordinator.shared.start()
         _ = SleepPreventionController.shared
         _ = CLILauncherSettings.shared
+        let gatewayStore = AIGatewaySettingsStore.shared
+        if gatewayStore.settings.isEnabled, gatewayStore.settings.autoStart {
+            Task {
+                await AIGatewayRuntimeController.shared.start(settings: gatewayStore.settings, token: gatewayStore.ensureToken())
+            }
+        } else {
+            AIGatewayRuntimeController.shared.refreshInstallState()
+        }
         AIProviderRegistry.shared.installAll()
         _ = AIUsageSettingsStore.isUsageEnabled()
         DebugFileLog.log("Lifecycle", "applicationDidFinishLaunching completed")
@@ -187,6 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func applicationWillTerminate(_ notification: Notification) {
         DebugFileLog.log("Lifecycle", "applicationWillTerminate started")
+        AIGatewayRuntimeController.shared.stop()
         onTerminate?()
         AgentRunStore.shared.flushPersistence()
         NotificationStore.shared.saveToDisk()
@@ -292,7 +301,6 @@ struct WindowConfigurator: NSViewRepresentable {
             let name = NSStringFromClass(type(of: view))
             guard name.contains("NSTitlebarContainerView") else { continue }
 
-            // Make the container itself transparent
             view.wantsLayer = true
             view.layer?.backgroundColor = CGColor.clear
             view.layer?.isOpaque = false

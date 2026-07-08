@@ -98,6 +98,8 @@ struct SettingsView: View {
                 TerminalSettingsView()
             case .cli:
                 CLILauncherSettingsView()
+            case .aiGateway:
+                AIGatewaySettingsView()
             case .extensions:
                 ExtensionsSettingsView()
             case .agents:
