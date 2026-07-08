@@ -24,13 +24,21 @@ final class GitMetadataCache: @unchecked Sendable {
     private var defaultBranch: [String: DefaultBranchEntry] = [:]
     private var ghInstalled: Bool?
 
-    private let prTTL: TimeInterval = 60
+    private let positivePRTTL: TimeInterval
+    private let negativePRTTL: TimeInterval
     private let maxPRInfoEntries: Int
     private let maxDefaultBranchEntries: Int
 
-    init(maxPRInfoEntries: Int = 200, maxDefaultBranchEntries: Int = 200) {
+    init(
+        maxPRInfoEntries: Int = 200,
+        maxDefaultBranchEntries: Int = 200,
+        positivePRTTL: TimeInterval = 60,
+        negativePRTTL: TimeInterval = 5
+    ) {
         self.maxPRInfoEntries = maxPRInfoEntries
         self.maxDefaultBranchEntries = maxDefaultBranchEntries
+        self.positivePRTTL = positivePRTTL
+        self.negativePRTTL = negativePRTTL
     }
 
     func cachedPRInfo(repoPath: String, branch: String, headSha: String) -> GitRepositoryService.PRInfo?? {
@@ -38,7 +46,8 @@ final class GitMetadataCache: @unchecked Sendable {
         defer { lock.unlock() }
         let key = PRKey(repoPath: repoPath, branch: branch, headSha: headSha)
         guard let entry = prInfo[key] else { return nil }
-        if Date().timeIntervalSince(entry.storedAt) > prTTL {
+        let ttl = entry.info == nil ? negativePRTTL : positivePRTTL
+        if Date().timeIntervalSince(entry.storedAt) > ttl {
             prInfo.removeValue(forKey: key)
             return nil
         }

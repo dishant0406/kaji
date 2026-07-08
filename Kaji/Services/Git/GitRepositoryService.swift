@@ -204,7 +204,8 @@ struct GitRepositoryService {
         repoPath: String,
         branch: String,
         headSha: String,
-        forceFresh: Bool
+        forceFresh: Bool,
+        account: GitHubAccount? = nil
     ) async -> PRInfo? {
         if !forceFresh, let cached = GitMetadataCache.shared.cachedPRInfo(
             repoPath: repoPath,
@@ -213,9 +214,13 @@ struct GitRepositoryService {
         ) {
             return cached
         }
-        let info = await pullRequestInfo(repoPath: repoPath, branch: branch)
+        let info = await pullRequestInfo(repoPath: repoPath, branch: branch, account: account)
         GitMetadataCache.shared.storePRInfo(info, repoPath: repoPath, branch: branch, headSha: headSha)
         return info
+    }
+
+    func cachePullRequestInfo(_ info: PRInfo?, repoPath: String, branch: String, headSha: String) {
+        GitMetadataCache.shared.storePRInfo(info, repoPath: repoPath, branch: branch, headSha: headSha)
     }
 
     func pullRequestInfo(repoPath: String, branch: String, account: GitHubAccount? = nil) async -> PRInfo? {

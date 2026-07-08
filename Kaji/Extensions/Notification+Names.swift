@@ -34,6 +34,7 @@ extension Notification.Name {
     static let toggleNotificationPanel = Notification.Name("KajiToggleNotificationPanel")
     static let toggleAIUsage = Notification.Name("KajiToggleAIUsage")
     static let vcsRepoDidChange = Notification.Name("KajiVCSRepoDidChange")
+    static let vcsPullRequestDidChange = Notification.Name("KajiVCSPullRequestDidChange")
     static let requestCreateWorktreeModal = Notification.Name("KajiRequestCreateWorktreeModal")
     static let requestCreateThemeModal = Notification.Name("KajiRequestCreateThemeModal")
     static let requestProjectLogoCropper = Notification.Name("KajiRequestProjectLogoCropper")
