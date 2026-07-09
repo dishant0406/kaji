@@ -33,6 +33,7 @@ final class TerminalViewModel: ObservableObject {
     /// Marks are exact only while history stays below the scrollback cap; once
     /// the buffer fills, eviction would drift them, so tracking stops.
     private var commandMarkTrackingActive = true
+    var onExit: (() -> Void)?
 
     func setMarkedText(_ text: String) {
         markedText = text
@@ -1164,7 +1165,10 @@ final class TerminalViewModel: ObservableObject {
             case .resetTitle:
                 resetTerminalTitle()
             case .exit:
-                isExited = true
+                if !isExited {
+                    isExited = true
+                    onExit?()
+                }
                 progress = .clear
             case let .progress(progress):
                 if configuration.native.progressIndicatorEnabled {

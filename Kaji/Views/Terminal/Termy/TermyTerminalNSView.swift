@@ -63,7 +63,6 @@ final class TermyTerminalNSView: NSView {
     var hasLiveSurface: Bool { terminal != nil && !processExitHandled }
     var hasTerminalRuntime: Bool { terminal != nil }
     var isTerminalSurfaceVisible: Bool { surfaceVisible }
-    var closesOnCommandExit: Bool { command != nil }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -83,12 +82,13 @@ final class TermyTerminalNSView: NSView {
             envVars: envVars,
             configurationSource: .path(KajiConfig.shared.termyConfigPath)
         )
+        terminal.onExit = { [weak self] in
+            self?.handleProcessExit()
+        }
         self.terminal = terminal
         processExitHandled = false
         installHostingView()
-        if surfaceVisible {
-            startStatePolling()
-        }
+        startStatePolling()
         startThemeObservation()
         terminal.start()
         if !surfaceVisible {
@@ -103,6 +103,7 @@ final class TermyTerminalNSView: NSView {
         injectedCommandTask?.cancel()
         injectedCommandTask = nil
         injectedCommandDelivery.cancelPendingDelivery()
+        terminal?.onExit = nil
         terminal?.stop()
         terminal = nil
         hostingView?.removeFromSuperview()
@@ -126,22 +127,6 @@ final class TermyTerminalNSView: NSView {
         flushInjectedCommandIfNeeded()
     }
 
-    func foregroundProcessGroupID() -> Int32? {
-        terminal?.foregroundProcessGroupID()
-    }
-
-    func ttyName() -> String? {
-        nil
-    }
-
-    func visibleText() -> String? {
-        terminal?.visibleText()
-    }
-
-    func needsConfirmQuit() -> Bool {
-        terminal?.needsConfirmQuit() ?? false
-    }
-
     func notifySurfaceFocused() {
         isFocused = true
         terminal?.setFocused(true)
@@ -154,6 +139,7 @@ final class TermyTerminalNSView: NSView {
     func notifySurfaceUnfocused() {
         isFocused = false
         terminal?.setFocused(false)
+        clearFirstResponderIfOwned()
     }
 
     func setSurfaceVisible(_ visible: Bool) {
@@ -162,8 +148,8 @@ final class TermyTerminalNSView: NSView {
                 startStatePolling()
                 terminal?.resume()
             } else {
+                clearFirstResponderIfOwned()
                 terminal?.suspend()
-                stopStatePolling()
             }
             return
         }
@@ -172,8 +158,8 @@ final class TermyTerminalNSView: NSView {
             startStatePolling()
             terminal?.resume()
         } else {
+            clearFirstResponderIfOwned()
             terminal?.suspend()
-            stopStatePolling()
         }
         syncHostedView()
     }

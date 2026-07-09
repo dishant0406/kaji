@@ -61,7 +61,7 @@ enum ProcessResourceSampler {
         )
     }
 
-    private static func sampleProcess(pid: Int32) -> ProcessResourceSample? {
+    static func sampleProcess(pid: Int32) -> ProcessResourceSample? {
         guard pid > 0 else { return nil }
 
         var usage = rusage_info_current()

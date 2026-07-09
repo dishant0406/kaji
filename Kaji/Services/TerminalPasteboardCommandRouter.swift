@@ -10,15 +10,18 @@ protocol TerminalPasteboardCommandTarget: AnyObject {
 
 @MainActor
 struct TerminalPasteboardCommandRouter {
+    private let firstResponderTargetProvider: () -> TerminalPasteboardCommandTarget?
     private let targetProvider: () -> TerminalPasteboardCommandTarget?
     private let pasteboardTextProvider: () -> String?
     private let shouldDeferToResponder: () -> Bool
 
     init(
+        firstResponderTargetProvider: @escaping () -> TerminalPasteboardCommandTarget? = { nil },
         targetProvider: @escaping () -> TerminalPasteboardCommandTarget?,
         pasteboardTextProvider: @escaping () -> String?,
         shouldDeferToResponder: @escaping () -> Bool = { false }
     ) {
+        self.firstResponderTargetProvider = firstResponderTargetProvider
         self.targetProvider = targetProvider
         self.pasteboardTextProvider = pasteboardTextProvider
         self.shouldDeferToResponder = shouldDeferToResponder
@@ -26,8 +29,7 @@ struct TerminalPasteboardCommandRouter {
 
     func copy() -> Bool {
         guard !shouldDeferToResponder(),
-              let target = targetProvider(),
-              target.canReceiveTerminalPasteboardCommand
+              let target = commandTarget()
         else {
             return false
         }
@@ -38,13 +40,22 @@ struct TerminalPasteboardCommandRouter {
         guard !shouldDeferToResponder(),
               let text = pasteboardTextProvider(),
               !text.isEmpty,
-              let target = targetProvider(),
-              target.canReceiveTerminalPasteboardCommand
+              let target = commandTarget()
         else {
             return false
         }
         target.focusTerminalInput()
         return target.pasteTextIntoTerminal(text)
+    }
+
+    private func commandTarget() -> TerminalPasteboardCommandTarget? {
+        if let target = firstResponderTargetProvider(), target.canReceiveTerminalPasteboardCommand {
+            return target
+        }
+        guard let target = targetProvider(), target.canReceiveTerminalPasteboardCommand else {
+            return nil
+        }
+        return target
     }
 }
 
@@ -54,6 +65,9 @@ extension TerminalPasteboardCommandRouter {
         registry: TerminalViewRegistry = .shared
     ) -> TerminalPasteboardCommandRouter {
         TerminalPasteboardCommandRouter(
+            firstResponderTargetProvider: {
+                registry.viewOwningFirstResponder(NSApp.keyWindow?.firstResponder)
+            },
             targetProvider: {
                 guard let projectID = appState.activeProjectID,
                       let pane = appState.focusedArea(for: projectID)?.activeTab?.content.pane

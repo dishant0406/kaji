@@ -3,6 +3,10 @@ import Foundation
 @MainActor
 public final class TermyEmbeddedTerminal: ObservableObject {
     let terminal: TerminalViewModel
+    public var onExit: (() -> Void)? {
+        get { terminal.onExit }
+        set { terminal.onExit = newValue }
+    }
 
     public init(
         workingDirectory: String,
@@ -110,6 +114,10 @@ public final class TermyEmbeddedTerminal: ObservableObject {
     }
 
     public func foregroundProcessGroupID() -> Int32? {
+        terminal.childProcessID()
+    }
+
+    public func childProcessID() -> Int32? {
         terminal.childProcessID()
     }
 }

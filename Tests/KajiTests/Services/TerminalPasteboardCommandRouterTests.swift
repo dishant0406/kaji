@@ -18,6 +18,39 @@ struct TerminalPasteboardCommandRouterTests {
     }
 
     @Test
+    func pastePrefersFirstResponderTerminalOverFocusedFallback() {
+        let firstResponderTarget = PasteboardTarget()
+        let focusedTarget = PasteboardTarget()
+        let router = TerminalPasteboardCommandRouter(
+            firstResponderTargetProvider: { firstResponderTarget },
+            targetProvider: { focusedTarget },
+            pasteboardTextProvider: { "hello" }
+        )
+
+        #expect(router.paste())
+        #expect(firstResponderTarget.focusCount == 1)
+        #expect(firstResponderTarget.pastedText == ["hello"])
+        #expect(focusedTarget.focusCount == 0)
+        #expect(focusedTarget.pastedText.isEmpty)
+    }
+
+    @Test
+    func pasteFallsBackWhenFirstResponderTerminalCannotReceiveCommands() {
+        let firstResponderTarget = PasteboardTarget()
+        let focusedTarget = PasteboardTarget()
+        firstResponderTarget.canReceiveTerminalPasteboardCommand = false
+        let router = TerminalPasteboardCommandRouter(
+            firstResponderTargetProvider: { firstResponderTarget },
+            targetProvider: { focusedTarget },
+            pasteboardTextProvider: { "hello" }
+        )
+
+        #expect(router.paste())
+        #expect(firstResponderTarget.pastedText.isEmpty)
+        #expect(focusedTarget.pastedText == ["hello"])
+    }
+
+    @Test
     func pasteReturnsFalseWhenPasteboardIsEmpty() {
         let target = PasteboardTarget()
         let router = TerminalPasteboardCommandRouter(

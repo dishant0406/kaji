@@ -20,11 +20,14 @@ extension TermyTerminalNSView {
             lastTitle = terminal.title
             onTitleChange?(terminal.title)
         }
-        if terminal.isExited, !processExitHandled {
-            processExitHandled = true
-            if closesOnCommandExit { onProcessExit?() }
-        }
+        if terminal.isExited { handleProcessExit() }
         if searchVisible { publishSearchState() }
+    }
+
+    func handleProcessExit() {
+        guard !processExitHandled else { return }
+        processExitHandled = true
+        onProcessExit?()
     }
 
     func focusKeyboardCapture() {
@@ -35,6 +38,11 @@ extension TermyTerminalNSView {
     func ownsFirstResponder(_ responder: NSResponder?) -> Bool {
         guard let view = responder as? NSView else { return false }
         return view === self || view.isDescendant(of: self)
+    }
+
+    func clearFirstResponderIfOwned() {
+        guard ownsFirstResponder(window?.firstResponder) else { return }
+        window?.makeFirstResponder(nil)
     }
 
     func firstFocusableDescendant(in view: NSView) -> NSView? {

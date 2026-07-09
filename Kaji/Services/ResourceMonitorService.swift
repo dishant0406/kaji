@@ -55,24 +55,26 @@ final class ResourceMonitorService {
         let now = Date()
         let descriptors = ResourceMonitorTerminalLocator.locate(appState: appState, projects: projectStore.projects)
         let readings = descriptors.map { buildReading(for: $0, now: now) }
-        let activeProcessGroupIDs = Set(readings.compactMap(\.processGroupID))
+        let activeProcessRootIDs = Set(descriptors.compactMap {
+            TerminalViewRegistry.shared.terminalProcessRootID(for: $0.paneID)
+        })
 
         appSnapshot = buildAppSnapshot(now: now)
         projects = ResourceMonitorAggregator.buildProjects(from: readings, orderedProjects: projectStore.projects)
-        pruneBaselines(using: activeProcessGroupIDs)
+        pruneBaselines(using: activeProcessRootIDs)
         lastRefreshDate = now
         isRefreshing = false
     }
 
     private func buildReading(for descriptor: ResourceMonitorTerminalDescriptor, now: Date) -> ResourceMonitorTerminalReading {
         let view = TerminalViewRegistry.shared.view(for: descriptor.paneID)
-        let processGroupID = view?.foregroundProcessGroupID()
+        let processRootID = view?.terminalProcessRootID()
         let ttyName = view?.ttyName()
-        let sample = processGroupID.flatMap(ProcessResourceSampler.sampleProcessGroup(id:))
+        let sample = processRootID.flatMap(ProcessResourceSampler.sampleProcessTree(rootPID:))
         let cpuPercent = sample.flatMap { resolveCPUPercent(for: $0, now: now) }
 
         if let sample {
-            baselines[sample.processGroupID] = RefreshBaseline(
+            baselines[sample.rootPID] = RefreshBaseline(
                 cpuTimeNanos: sample.cpuTimeNanos,
                 timestamp: now
             )
@@ -80,13 +82,23 @@ final class ResourceMonitorService {
 
         return ResourceMonitorTerminalReading(
             descriptor: descriptor,
-            processGroupID: sample?.processGroupID ?? processGroupID,
+            processGroupID: sample?.representativeProcessGroupID ?? processRootID,
             pid: sample?.representativePID,
             processName: sample?.processName,
             ttyName: ttyName,
             cpuPercent: cpuPercent,
             memoryBytes: sample?.memoryBytes,
             threadCount: sample?.threadCount
+        )
+    }
+
+    private func resolveCPUPercent(for sample: ProcessTreeResourceSample, now: Date) -> Double? {
+        guard let baseline = baselines[sample.rootPID] else { return nil }
+        let elapsed = now.timeIntervalSince(baseline.timestamp)
+        return ResourceMonitorCPUPercentResolver.resolve(
+            currentCPUTimeNanos: sample.cpuTimeNanos,
+            baselineCPUTimeNanos: baseline.cpuTimeNanos,
+            elapsed: elapsed
         )
     }
 

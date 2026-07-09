@@ -514,8 +514,7 @@ final class AppState {
 
     func forceCloseTab(_ tabID: UUID, areaID: UUID, projectID: UUID) {
         clearPendingProcessCloseIfMatching(tabID: tabID, areaID: areaID, projectID: projectID)
-        unpinTabIfNeeded(tabID, areaID: areaID, projectID: projectID)
-        dispatch(.closeTab(projectID: projectID, areaID: areaID, tabID: tabID))
+        dispatchCloseTab(tabID, areaID: areaID, projectID: projectID)
     }
 
     func closeMonitoredTerminal(_ tabID: UUID, areaID: UUID, projectID: UUID) {
@@ -600,13 +599,13 @@ final class AppState {
             pendingLastTabClose = PendingTabClose(projectID: projectID, areaID: areaID, tabID: tabID)
             return
         }
-        dispatch(.closeTab(projectID: projectID, areaID: areaID, tabID: tabID))
+        dispatchCloseTab(tabID, areaID: areaID, projectID: projectID)
     }
 
     func confirmCloseLastTab() {
         guard let pending = pendingLastTabClose else { return }
         pendingLastTabClose = nil
-        dispatch(.closeTab(projectID: pending.projectID, areaID: pending.areaID, tabID: pending.tabID))
+        dispatchCloseTab(pending.tabID, areaID: pending.areaID, projectID: pending.projectID)
     }
 
     func cancelCloseLastTab() {
@@ -620,6 +619,11 @@ final class AppState {
               tab.isPinned
         else { return }
         workspace.togglePin(tabID)
+    }
+
+    private func dispatchCloseTab(_ tabID: UUID, areaID: UUID, projectID: UUID) {
+        unpinTabIfNeeded(tabID, areaID: areaID, projectID: projectID)
+        dispatch(.closeTab(projectID: projectID, areaID: areaID, tabID: tabID))
     }
 
     private func isLastTabInProject(_ tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {

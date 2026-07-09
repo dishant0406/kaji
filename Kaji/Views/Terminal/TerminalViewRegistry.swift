@@ -23,6 +23,11 @@ final class TerminalViewRegistry {
         views[paneID]
     }
 
+    func viewOwningFirstResponder(_ responder: NSResponder?) -> TermyTerminalNSView? {
+        guard let responder else { return nil }
+        return views.values.first { $0.ownsFirstResponder(responder) }
+    }
+
     func removeView(for paneID: UUID) {
         guard let view = views.removeValue(forKey: paneID) else { return }
         paneIDs.removeValue(forKey: ObjectIdentifier(view))
@@ -46,6 +51,10 @@ final class TerminalViewRegistry {
 
     func foregroundProcessGroupID(for paneID: UUID) -> Int32? {
         views[paneID]?.foregroundProcessGroupID()
+    }
+
+    func terminalProcessRootID(for paneID: UUID) -> Int32? {
+        views[paneID]?.terminalProcessRootID()
     }
 
     func ttyName(for paneID: UUID) -> String? {
