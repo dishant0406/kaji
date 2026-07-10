@@ -46,6 +46,7 @@ struct KajiApp: App {
                 .environment(ThemeService.shared)
                 .environment(AppTypographySettings.shared)
                 .preferredColorScheme(KajiTheme.colorScheme)
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 .onOpenURL { url in
                     KajiURLCommandHandler.handle(
                         url: url,
@@ -100,7 +101,6 @@ struct KajiApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var onTerminate: (() -> Void)?
     var hasUnsavedEditorTabs: (() -> [EditorTabState])?
-
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
         DebugFileLog.log("Lifecycle", "applicationDidFinishLaunching started")

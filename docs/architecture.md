@@ -21,7 +21,7 @@ The optional AI Gateway installs Claude Code Router externally into Application 
 
 ## Core Runtime
 
-- `Kaji/KajiApp.swift` wires the app scene graph, stores, in-app settings modal flow, and app delegate lifecycle.
+- `Kaji/KajiApp.swift` wires the app scene graph, stores, in-app settings modal flow, and app delegate lifecycle. The main scene advertises that it accepts external events so `kaji://` CLI project commands route into an existing window before `KajiURLCommandHandler` selects or adds the project.
 - `KajiHookClient/` is a native Swift executable bundled beside the app binary. Provider hooks call it directly, and it posts normalized provider events to Kaji through macOS `DistributedNotificationCenter`.
 - `Kaji/Services/AppEnvironment.swift` builds the concrete dependencies used by the app state.
 - `Kaji/Models/AppState.swift` owns project selection, worktree selection, workspace tabs, split trees, and workspace persistence. Project selection is separate from workspace creation, so a selected project can render an empty state until the first tab is opened.
