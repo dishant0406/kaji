@@ -41,7 +41,10 @@ struct TopBarIDERow: View {
     }
 
     private var detail: String {
-        switch ide.source {
+        if ide.openBehavior == .finder {
+            return "Open active worktree in Finder"
+        }
+        return switch ide.source {
         case .builtIn:
             "Open active worktree"
         case .custom:

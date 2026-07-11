@@ -84,6 +84,29 @@ struct ExternalIDEOpenServiceTests {
 
     @Test
     @MainActor
+    func opensProjectInFinder() async throws {
+        let project = try temporaryDirectory()
+        let finderOpener = RecordingFinderOpener()
+        let service = ExternalIDEOpenService(
+            catalog: ExternalIDECatalog(resolver: ExternalIDEFakeResolver()),
+            workspaceOpener: RecordingWorkspaceOpener(),
+            commandOpener: RecordingCommandOpener(),
+            finderOpener: finderOpener
+        )
+        let finder = ExternalIDE(
+            id: "finder",
+            displayName: "Finder",
+            bundleIdentifiers: ["com.apple.finder"],
+            openBehavior: .finder
+        )
+
+        try await service.open(projectPath: project.path, in: finder)
+
+        #expect(finderOpener.url == project.standardizedFileURL)
+    }
+
+    @Test
+    @MainActor
     func throwsWhenProjectIsMissing() async throws {
         let resolver = ExternalIDEFakeResolver(
             applications: ["com.example.Editor": URL(fileURLWithPath: "/Applications/Editor.app")]
@@ -125,5 +148,14 @@ final class RecordingCommandOpener: ExternalIDECommandOpening {
 
     func open(executablePath: String, arguments: [String]) async throws {
         call = (executablePath, arguments)
+    }
+}
+
+@MainActor
+final class RecordingFinderOpener: ExternalIDEFinderOpening {
+    private(set) var url: URL?
+
+    func open(url: URL) async throws {
+        self.url = url
     }
 }

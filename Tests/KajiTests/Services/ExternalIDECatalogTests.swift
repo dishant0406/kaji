@@ -8,10 +8,12 @@ struct ExternalIDECatalogTests {
     func listsInstalledBuiltInAndCustomIDEs() {
         let resolver = ExternalIDEFakeResolver(
             applications: [
+                "com.apple.finder": URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app"),
                 "com.microsoft.VSCode": URL(fileURLWithPath: "/Applications/Visual Studio Code.app"),
                 "com.example.Custom": URL(fileURLWithPath: "/Applications/Custom.app"),
             ],
             existingPaths: [
+                "/System/Library/CoreServices/Finder.app",
                 "/Applications/Visual Studio Code.app",
                 "/Applications/Custom.app",
             ]
@@ -27,7 +29,22 @@ struct ExternalIDECatalogTests {
 
         #expect(ides.map(\.displayName).contains("VS Code"))
         #expect(ides.map(\.displayName).contains("Custom"))
+        #expect(ides.first?.id == "finder")
         #expect(!ides.map(\.displayName).contains("Zed"))
+    }
+
+    @Test
+    func listsFinderAsBuiltInOpenTarget() {
+        let resolver = ExternalIDEFakeResolver(
+            applications: ["com.apple.finder": URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app")],
+            existingPaths: ["/System/Library/CoreServices/Finder.app"]
+        )
+        let catalog = ExternalIDECatalog(resolver: resolver)
+
+        let finder = catalog.installedIDEs(customApplications: []).first { $0.id == "finder" }
+
+        #expect(finder?.displayName == "Finder")
+        #expect(finder?.openBehavior == .finder)
     }
 
     @Test

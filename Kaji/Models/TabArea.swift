@@ -192,7 +192,7 @@ final class TabArea: Identifiable {
 
     static func editorLaunchCommand(command: String, filePath: String) -> String {
         if command.contains("{file}") {
-            return command.replacingOccurrences(of: "{file}", with: filePath)
+            return command.replacingOccurrences(of: "{file}", with: shellEscapedPath(filePath))
         }
         return command + " " + shellEscapedPath(filePath)
     }

@@ -28,6 +28,11 @@ protocol ExternalIDECommandOpening {
     func open(executablePath: String, arguments: [String]) async throws
 }
 
+@MainActor
+protocol ExternalIDEFinderOpening {
+    func open(url: URL) async throws
+}
+
 struct ExternalIDEWorkspaceOpener: ExternalIDEWorkspaceOpening {
     func open(urls: [URL], applicationURL: URL, arguments: [String]) async throws {
         let configuration = NSWorkspace.OpenConfiguration()
@@ -56,21 +61,32 @@ struct ExternalIDECommandOpener: ExternalIDECommandOpening {
     }
 }
 
+struct ExternalIDEFinderOpener: ExternalIDEFinderOpening {
+    func open(url: URL) async throws {
+        guard NSWorkspace.shared.open(url) else {
+            throw ExternalIDEOpenError.launchFailed("Finder could not open the project folder.")
+        }
+    }
+}
+
 struct ExternalIDEOpenService {
     let catalog: ExternalIDECatalog
     let workspaceOpener: ExternalIDEWorkspaceOpening
     let commandOpener: ExternalIDECommandOpening
+    let finderOpener: ExternalIDEFinderOpening
     let fileManager: FileManager
 
     init(
         catalog: ExternalIDECatalog = ExternalIDECatalog(),
         workspaceOpener: ExternalIDEWorkspaceOpening = ExternalIDEWorkspaceOpener(),
         commandOpener: ExternalIDECommandOpening = ExternalIDECommandOpener(),
+        finderOpener: ExternalIDEFinderOpening = ExternalIDEFinderOpener(),
         fileManager: FileManager = .default
     ) {
         self.catalog = catalog
         self.workspaceOpener = workspaceOpener
         self.commandOpener = commandOpener
+        self.finderOpener = finderOpener
         self.fileManager = fileManager
     }
 
@@ -82,6 +98,10 @@ struct ExternalIDEOpenService {
             throw ExternalIDEOpenError.projectMissing(url.path)
         }
         do {
+            if ide.openBehavior == .finder {
+                try await finderOpener.open(url: url)
+                return
+            }
             if let appURL = catalog.resolvedApplicationURL(for: ide) {
                 try await workspaceOpener.open(urls: [url], applicationURL: appURL, arguments: ide.launchArguments)
                 return

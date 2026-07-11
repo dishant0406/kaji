@@ -15,6 +15,7 @@ struct GlobalSearchPanel: View {
     @State private var replaceMessage: String?
     @State private var replacePreview: ProjectTextReplacePreview?
     @State private var searchTask: Task<Void, Never>?
+    @State private var searchGeneration = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var searchFocused: Bool
 
@@ -35,7 +36,10 @@ struct GlobalSearchPanel: View {
         .background(KajiTheme.bg)
         .overlay { replaceConfirmationOverlay }
         .onAppear { searchFocused = true }
-        .onDisappear { searchTask?.cancel() }
+        .onDisappear {
+            searchGeneration += 1
+            searchTask?.cancel()
+        }
         .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: replaceVisible)
     }
 
@@ -130,8 +134,13 @@ struct GlobalSearchPanel: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(groups) { group in
-                            GlobalSearchFileGroupView(group: group, onOpenMatch: onOpenMatch)
+                        ForEach(resultRows) { row in
+                            switch row {
+                            case let .file(group):
+                                GlobalSearchFileHeaderView(group: group)
+                            case let .match(match):
+                                GlobalSearchMatchRow(match: match, onOpen: { onOpenMatch(match) })
+                            }
                         }
                     }
                     .padding(8)
@@ -139,6 +148,10 @@ struct GlobalSearchPanel: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var resultRows: [ProjectTextSearchDisplayRow] {
+        ProjectTextSearchDisplayRow.rows(from: groups)
     }
 
     private var statusText: String {
@@ -162,9 +175,11 @@ struct GlobalSearchPanel: View {
 
     private func scheduleSearch() {
         searchTask?.cancel()
+        searchGeneration += 1
         replaceMessage = nil
         replacePreview = nil
         let currentQuery = query
+        let generation = searchGeneration
         guard !currentQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             groups = []
             isSearching = false
@@ -176,7 +191,7 @@ struct GlobalSearchPanel: View {
             guard !Task.isCancelled else { return }
             let results = await ProjectTextSearchService.search(query: currentQuery, in: projectPath)
             await MainActor.run {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, generation == searchGeneration else { return }
                 groups = results
                 isSearching = false
             }
@@ -185,13 +200,21 @@ struct GlobalSearchPanel: View {
 
     private func performSearch() {
         searchTask?.cancel()
+        searchGeneration += 1
         replaceMessage = nil
         replacePreview = nil
-        isSearching = true
         let currentQuery = query
+        let generation = searchGeneration
+        guard !currentQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            groups = []
+            isSearching = false
+            return
+        }
+        isSearching = true
         searchTask = Task {
             let results = await ProjectTextSearchService.search(query: currentQuery, in: projectPath)
             await MainActor.run {
+                guard !Task.isCancelled, generation == searchGeneration else { return }
                 groups = results
                 isSearching = false
             }
@@ -274,34 +297,26 @@ private struct GlobalSearchTextButtonStyle: ButtonStyle {
     }
 }
 
-private struct GlobalSearchFileGroupView: View {
+private struct GlobalSearchFileHeaderView: View {
     let group: ProjectTextSearchFileGroup
-    let onOpenMatch: (ProjectTextSearchMatch) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 7) {
-                KajiIcon(systemName: fileIcon, size: 11)
-                    .foregroundStyle(KajiTheme.fgMuted)
-                    .frame(width: 14)
-                Text(group.relativePath)
-                    .kajiFont(size: 11, weight: .semibold)
-                    .foregroundStyle(KajiTheme.fg)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer()
-                Text("\(group.matches.count)")
-                    .kajiFont(size: 10, design: .monospaced)
-                    .foregroundStyle(KajiTheme.fgDim)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 5)
-
-            ForEach(group.matches) { match in
-                GlobalSearchMatchRow(match: match, onOpen: { onOpenMatch(match) })
-            }
+        HStack(spacing: 7) {
+            KajiIcon(systemName: fileIcon, size: 11)
+                .foregroundStyle(KajiTheme.fgMuted)
+                .frame(width: 14)
+            Text(group.relativePath)
+                .kajiFont(size: 11, weight: .semibold)
+                .foregroundStyle(KajiTheme.fg)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer()
+            Text("\(group.matches.count)")
+                .kajiFont(size: 10, design: .monospaced)
+                .foregroundStyle(KajiTheme.fgDim)
         }
-        .padding(6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(KajiTheme.chrome.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
     }
 
@@ -326,7 +341,6 @@ private struct GlobalSearchFileGroupView: View {
 private struct GlobalSearchMatchRow: View {
     let match: ProjectTextSearchMatch
     let onOpen: () -> Void
-    @State private var hovered = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -342,9 +356,8 @@ private struct GlobalSearchMatchRow: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 5)
-        .background(hovered ? KajiTheme.secondaryBackground : .clear, in: RoundedRectangle(cornerRadius: 6))
+        .background(KajiTheme.secondaryBackground.opacity(0.35), in: RoundedRectangle(cornerRadius: 6))
         .contentShape(Rectangle())
-        .onHover { hovered = $0 }
         .onTapGesture(perform: onOpen)
     }
 }

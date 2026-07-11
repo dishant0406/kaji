@@ -27,7 +27,7 @@ enum FFFSearchResultMapper {
                 relativePath: relativePath,
                 line: Int(item.line_number),
                 column: column,
-                preview: lineContent.trimmingCharacters(in: .whitespacesAndNewlines)
+                preview: ProjectTextSearchService.previewText(from: lineContent, column: column)
             )
         }
     }

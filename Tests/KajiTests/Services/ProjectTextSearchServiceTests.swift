@@ -40,6 +40,36 @@ struct ProjectTextSearchServiceTests {
         #expect(groups[0].matches.map(\.line) == [1, 2])
     }
 
+    @Test("preview text caps long lines")
+    func previewTextCapsLongLines() {
+        let line = String(repeating: "a", count: 1_000)
+
+        let preview = ProjectTextSearchService.previewText(from: line, column: 500, maxCharacters: 80)
+
+        #expect(preview.count <= 86)
+        #expect(preview.hasPrefix("..."))
+        #expect(preview.hasSuffix("..."))
+    }
+
+    @Test("preview text leaves short lines unchanged")
+    func previewTextLeavesShortLinesUnchanged() {
+        let preview = ProjectTextSearchService.previewText(from: "  let value = needle  ", column: 15, maxCharacters: 80)
+
+        #expect(preview == "let value = needle")
+    }
+
+    @Test("display rows flatten groups into lazy render units")
+    func displayRowsFlattenGroupsIntoLazyRenderUnits() {
+        let first = ProjectTextSearchMatch(id: "m1", filePath: "/tmp/a.swift", relativePath: "a.swift", line: 1, column: 1, preview: "a")
+        let second = ProjectTextSearchMatch(id: "m2", filePath: "/tmp/a.swift", relativePath: "a.swift", line: 2, column: 1, preview: "b")
+        let group = ProjectTextSearchFileGroup(id: "/tmp/a.swift", filePath: "/tmp/a.swift", relativePath: "a.swift", matches: [first, second])
+
+        let rows = ProjectTextSearchDisplayRow.rows(from: [group])
+
+        #expect(rows.map(\.id) == ["file:/tmp/a.swift", "match:m1", "match:m2"])
+        #expect(rows == [.file(group), .match(first), .match(second)])
+    }
+
     @Test("replace preview counts files and matches")
     func replacePreviewCounts() {
         let groups = [

@@ -226,10 +226,16 @@ struct TabAreaTests {
         #expect(command == "vim '/tmp/test/it'\\''s a file.swift'")
     }
 
-    @Test("file placeholder uses raw path for user-controlled quoting")
-    func filePlaceholderRawPath() {
+    @Test("file placeholder shell escapes path")
+    func filePlaceholderShellEscapesPath() {
         let command = TabArea.editorLaunchCommand(command: "vim \"{file}\"", filePath: "/tmp/test/my file.swift")
-        #expect(command == "vim \"/tmp/test/my file.swift\"")
+        #expect(command == "vim \"'/tmp/test/my file.swift'\"")
+    }
+
+    @Test("file placeholder escapes shell metacharacters")
+    func filePlaceholderEscapesShellMetacharacters() {
+        let command = TabArea.editorLaunchCommand(command: "vim {file}", filePath: "/tmp/test/file;rm -rf test.swift")
+        #expect(command == "vim '/tmp/test/file;rm -rf test.swift'")
     }
 
     @Test("createExternalEditorTab reuses matching external editor tab")

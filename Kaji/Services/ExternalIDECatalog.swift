@@ -60,6 +60,13 @@ struct ExternalIDECatalog {
 
     static let builtInIDEs: [ExternalIDE] = [
         .init(
+            id: "finder",
+            displayName: "Finder",
+            bundleIdentifiers: ["com.apple.finder"],
+            appPaths: ["/System/Library/CoreServices/Finder.app"],
+            openBehavior: .finder
+        ),
+        .init(
             id: "vscode",
             displayName: "VS Code",
             bundleIdentifiers: ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders"],

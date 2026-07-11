@@ -44,7 +44,7 @@ struct TopBarIDEPickerPopover: View {
                 Text("Open Project")
                     .kajiFont(size: 12, weight: .semibold)
                     .foregroundStyle(KajiTheme.fg)
-                Text("Select an IDE for the active worktree")
+                Text("Select where to open the active worktree")
                     .kajiFont(size: 10)
                     .foregroundStyle(KajiTheme.fgMuted)
             }
@@ -56,7 +56,7 @@ struct TopBarIDEPickerPopover: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Text("No supported IDEs found")
+            Text("No supported apps found")
                 .kajiFont(size: 12, weight: .medium)
                 .foregroundStyle(KajiTheme.fg)
             Text("Choose an application to add it here.")

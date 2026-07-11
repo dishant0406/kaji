@@ -144,7 +144,7 @@ final class ProjectTextSearchResultParser: @unchecked Sendable {
         else { return nil }
         let relativePath = String(parts[0])
         let filePath = URL(fileURLWithPath: projectPath).appendingPathComponent(relativePath).path
-        let preview = String(parts[3]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let preview = ProjectTextSearchService.previewText(from: String(parts[3]), column: column)
         return ProjectTextSearchMatch(
             id: "\(filePath):\(line):\(column)",
             filePath: filePath,

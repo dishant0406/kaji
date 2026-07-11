@@ -60,7 +60,7 @@ struct TopBarIDEPicker: View {
         .kajiHoverEffect(isActive: active)
         .kajiPointer()
         .help(helpText)
-        .accessibilityLabel("Open Project in IDE")
+        .accessibilityLabel("Open Project Externally")
         .kajiPopover(isPresented: $showPopover, preferredEdge: .bottom) {
             TopBarIDEPickerPopover(
                 ides: state.ides,
@@ -91,7 +91,7 @@ struct TopBarIDEPicker: View {
     }
 
     private var helpText: String {
-        guard let selected = state.selectedIDE else { return "Choose an IDE" }
+        guard let selected = state.selectedIDE else { return "Choose where to open the active worktree" }
         return "Open active worktree in \(selected.displayName)"
     }
 

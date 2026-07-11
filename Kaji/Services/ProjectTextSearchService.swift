@@ -2,6 +2,7 @@ import Foundation
 
 enum ProjectTextSearchService {
     static let maxMatches = 200
+    static let maxPreviewCharacters = 360
 
     static func search(query: String, in projectPath: String) async -> [ProjectTextSearchFileGroup] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -35,6 +36,21 @@ enum ProjectTextSearchService {
                 }
             )
         }
+    }
+
+    static func previewText(from lineContent: String, column: Int, maxCharacters: Int = maxPreviewCharacters) -> String {
+        let trimmed = lineContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard maxCharacters > 1 else { return "" }
+        guard trimmed.count > maxCharacters else { return trimmed }
+
+        let focusOffset = max(0, min(column - 1, trimmed.count))
+        let halfWindow = maxCharacters / 2
+        let startOffset = min(max(0, focusOffset - halfWindow), max(0, trimmed.count - maxCharacters))
+        let start = trimmed.index(trimmed.startIndex, offsetBy: startOffset)
+        let end = trimmed.index(start, offsetBy: maxCharacters, limitedBy: trimmed.endIndex) ?? trimmed.endIndex
+        let prefix = start == trimmed.startIndex ? "" : "..."
+        let suffix = end == trimmed.endIndex ? "" : "..."
+        return prefix + trimmed[start ..< end] + suffix
     }
 
     private static func replaceSync(query: String, groups: [ProjectTextSearchFileGroup], with replacement: String) throws -> [String] {

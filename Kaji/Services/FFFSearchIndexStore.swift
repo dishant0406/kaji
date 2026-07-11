@@ -1,6 +1,9 @@
 import CryptoKit
 import FFFKit
 import Foundation
+import os
+
+private let fffSearchLogger = Logger(subsystem: "app.kaji", category: "FFFSearch")
 
 actor FFFSearchIndexStore {
     static let shared = FFFSearchIndexStore()
@@ -130,7 +133,7 @@ final class FFFSearchIndex: @unchecked Sendable {
         defer { lock.unlock() }
         try waitForScanLocked()
         guard let result = query
-            .withCString({ library.liveGrep(handle, $0, 0, 10 * 1024 * 1024, 100, true, 0, UInt32(limit), 0, 0, 0, true) })
+            .withCString({ library.liveGrep(handle, $0, 0, 10 * 1024 * 1024, 30, true, 0, UInt32(limit), 150, 0, 0, true) })
         else {
             throw FFFSearchError.processFailed("FFF grep returned nil")
         }
@@ -144,6 +147,9 @@ final class FFFSearchIndex: @unchecked Sendable {
     }
 
     private func waitForScanLocked(timeoutMs: UInt64 = 10000) throws {
+        if Thread.isMainThread {
+            fffSearchLogger.fault("FFF wait/search reached the main thread")
+        }
         guard let result = library.waitForScan(handle, timeoutMs) else { throw FFFSearchError.processFailed("FFF wait returned nil") }
         defer { library.freeResult(result) }
         guard result.pointee.success else {
