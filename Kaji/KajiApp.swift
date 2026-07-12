@@ -66,18 +66,16 @@ struct KajiApp: App {
                         appState.unsavedEditorTabs()
                     }
                     appState.onProjectsEmptied = { [projectStore, worktreeStore] projectIDs in
-                        for id in projectIDs {
-                            if let project = projectStore.projects.first(where: { $0.id == id }) {
-                                let knownWorktrees = worktreeStore.list(for: id)
-                                Task.detached {
-                                    await WorktreeStore.cleanupOnDisk(
-                                        for: project,
-                                        knownWorktrees: knownWorktrees
-                                    )
-                                }
+                        Task { @MainActor in
+                            for id in projectIDs {
+                                guard let project = projectStore.projects.first(where: { $0.id == id }) else { continue }
+                                await ProjectRemovalCoordinator.remove(
+                                    project: project,
+                                    appState: appState,
+                                    projectStore: projectStore,
+                                    worktreeStore: worktreeStore
+                                )
                             }
-                            projectStore.remove(id: id)
-                            worktreeStore.removeProject(id)
                         }
                     }
                 }

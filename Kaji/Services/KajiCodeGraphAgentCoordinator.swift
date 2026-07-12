@@ -96,6 +96,19 @@ final class KajiCodeGraphAgentCoordinator {
         }
     }
 
+    func close(projectID: UUID) {
+        let prefix = "\(projectID.uuidString)-"
+        let closing = sessions.filter { $0.key.hasPrefix(prefix) }
+        for session in closing {
+            session.controller.stop()
+            visibleKeys.remove(session.key)
+        }
+        sessions.removeAll { $0.key.hasPrefix(prefix) }
+        if let selectedSessionID, !sessions.contains(where: { $0.id == selectedSessionID }) {
+            self.selectedSessionID = sessions.first?.id
+        }
+    }
+
     var selectedSession: KajiCodeGraphAgentSession? {
         if let selectedSessionID,
            let session = sessions.first(where: { $0.id == selectedSessionID })

@@ -11,6 +11,7 @@ final class KajiCodeGraphRuntime {
     var runningKeys: Set<String> = []
     var lastStatus: [String: KajiCodeGraphStatus] = [:]
     var lastError: [String: String] = [:]
+    private var cancelledProjectIDs: Set<UUID> = []
     @ObservationIgnored private let finalizer: KajiCodeGraphFinalizer
 
     init(finalizer: KajiCodeGraphFinalizer = KajiCodeGraphFinalizer()) {
@@ -23,6 +24,14 @@ final class KajiCodeGraphRuntime {
 
     func hasGraph(projectID: UUID, worktreeID: UUID) -> Bool {
         FileManager.default.fileExists(atPath: kajiGraphURL(projectID: projectID, worktreeID: worktreeID).path)
+    }
+
+    func clear(projectID: UUID) {
+        cancelledProjectIDs.insert(projectID)
+        let prefix = "\(projectID.uuidString)-"
+        runningKeys = runningKeys.filter { !$0.hasPrefix(prefix) }
+        lastStatus = lastStatus.filter { !$0.key.hasPrefix(prefix) }
+        lastError = lastError.filter { !$0.key.hasPrefix(prefix) }
     }
 
     func kajiGraphURL(projectID: UUID, worktreeID: UUID) -> URL {
@@ -57,24 +66,42 @@ final class KajiCodeGraphRuntime {
     ) async {
         let runKey = key(projectID: request.projectID, worktreeID: request.worktreeID)
         guard !runningKeys.contains(runKey) else { return }
+        cancelledProjectIDs.remove(request.projectID)
         runningKeys.insert(runKey)
         lastError[runKey] = nil
-        defer { runningKeys.remove(runKey) }
+        defer {
+            runningKeys.remove(runKey)
+            if cancelledProjectIDs.contains(request.projectID) {
+                lastStatus.removeValue(forKey: runKey)
+                lastError.removeValue(forKey: runKey)
+            }
+        }
 
         do {
+            try Task.checkCancellation()
             try validateParentAgent()
             try validateGraphifySkill()
             try KajiCodeGraphDirectory.createBaseDirectories()
+            try checkProjectRemovalCancellation(request.projectID)
             let status = try await executeWithParentAgent(
                 request,
                 appState: appState,
                 projectStore: projectStore,
                 worktreeStore: worktreeStore
             )
+            try checkProjectRemovalCancellation(request.projectID)
             lastStatus[runKey] = status
+        } catch is CancellationError {
         } catch {
             lastError[runKey] = error.localizedDescription
             kajiCodeGraphRuntimeLogger.error("KajiCodeGraph run failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func checkProjectRemovalCancellation(_ projectID: UUID) throws {
+        try Task.checkCancellation()
+        if cancelledProjectIDs.contains(projectID) {
+            throw CancellationError()
         }
     }
 
@@ -168,6 +195,7 @@ final class KajiCodeGraphRuntime {
     ) async throws -> KajiCodeGraphStatus {
         let deadline = Date().addingTimeInterval(14400)
         while Date() < deadline {
+            try checkProjectRemovalCancellation(request.projectID)
             if let status = finalizer.readFinalStatus(output: output, buildID: buildID) {
                 return status
             }

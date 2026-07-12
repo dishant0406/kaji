@@ -24,6 +24,17 @@ actor FFFSearchIndexStore {
         return index
     }
 
+    func remove(projectPath: String) {
+        indexes.removeValue(forKey: projectPath)
+        accessOrder.removeAll { $0 == projectPath }
+    }
+
+    func remove(projectPaths: [String]) {
+        for projectPath in Set(projectPaths) {
+            remove(projectPath: projectPath)
+        }
+    }
+
     private func touch(_ projectPath: String) {
         accessOrder.removeAll { $0 == projectPath }
         accessOrder.append(projectPath)

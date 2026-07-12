@@ -22,6 +22,12 @@ final class CodingAgentSessionMetadataStore {
         sessionsByPaneID.removeValue(forKey: paneID)
     }
 
+    func remove(paneIDs: [UUID]) {
+        for paneID in paneIDs {
+            sessionsByPaneID.removeValue(forKey: paneID)
+        }
+    }
+
     func reset() {
         sessionsByPaneID.removeAll()
     }

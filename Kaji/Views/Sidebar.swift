@@ -1,3 +1,4 @@
+import AppKit
 import Reorderable
 import SwiftUI
 
@@ -133,13 +134,57 @@ struct Sidebar: View {
     }
 
     private func remove(_ project: Project) {
-        let capturedProject = project
-        let knownWorktrees = worktreeStore.list(for: project.id)
-        Task.detached {
-            await WorktreeStore.cleanupOnDisk(for: capturedProject, knownWorktrees: knownWorktrees)
+        let impact = ProjectRemovalCoordinator.impact(project: project, appState: appState, worktreeStore: worktreeStore)
+        presentRemoveConfirmation(project: project, impact: impact) {
+            Task { @MainActor in
+                await ProjectRemovalCoordinator.remove(
+                    project: project,
+                    appState: appState,
+                    projectStore: projectStore,
+                    worktreeStore: worktreeStore
+                )
+            }
         }
-        appState.removeProject(project.id)
-        projectStore.remove(id: project.id)
-        worktreeStore.removeProject(project.id)
+    }
+
+    private func presentRemoveConfirmation(project: Project, impact: ProjectRemovalImpact, onConfirm: @escaping () -> Void) {
+        let alert = NSAlert()
+        alert.messageText = "Remove project \"\(project.name)\" from Kaji?"
+        alert.informativeText = removeConfirmationMessage(impact: impact)
+        alert.alertStyle = impact.hasRunningWork || impact.hasUnsavedEditors ? .warning : .informational
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Remove")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons[0].keyEquivalent = "\r"
+        alert.buttons[1].keyEquivalent = "\u{1b}"
+
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
+            if alert.runModal() == .alertFirstButtonReturn {
+                onConfirm()
+            }
+            return
+        }
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            onConfirm()
+        }
+    }
+
+    private func removeConfirmationMessage(impact: ProjectRemovalImpact) -> String {
+        var lines = ["This removes Kaji workspace state for this project. The project folder is not deleted."]
+        if impact.worktreeCount > 1 {
+            lines.append("Kaji-managed worktrees for this project will be cleaned up.")
+        }
+        if impact.hasUnsavedEditors {
+            lines.append("Unsaved editor changes in this project will be discarded.")
+        }
+        if impact.hasRunningTerminals {
+            lines.append("Running terminal processes in this project will be stopped.")
+        }
+        if impact.hasRunningAgents || impact.hasCodeGraphSessions {
+            lines.append("Running agent work for this project will be stopped and marked stale.")
+        }
+        return lines.joined(separator: "\n\n")
     }
 }

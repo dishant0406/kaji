@@ -13,6 +13,10 @@ final class FooterTerminalStateStore {
         visibleProjectIDs.contains(projectID)
     }
 
+    var projectIDs: Set<UUID> {
+        Set(states.keys).union(visibleProjectIDs)
+    }
+
     @discardableResult
     func show(projectID: UUID, projectPath: String) -> TerminalPaneState {
         let state = states[projectID] ?? TerminalPaneState(projectPath: projectPath, title: "Footer Terminal")

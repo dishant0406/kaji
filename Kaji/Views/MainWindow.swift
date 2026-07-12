@@ -348,6 +348,7 @@ struct MainWindow: View {
                     pruneVCSStates()
                     pruneFileTreeStates()
                     pruneBrowserStates()
+                    pruneFooterTerminalStates()
                 }
                 .onChange(of: vcsEnsureSignature) {
                     guard let project = activeProject else { return }
@@ -1624,6 +1625,18 @@ struct MainWindow: View {
         TerminalViewRegistry.shared.removeView(for: state.id)
         _ = footerTerminalStore.remove(projectID: projectID)
         footerTerminalCleanupTasks[projectID] = nil
+    }
+
+    private func pruneFooterTerminalStates() {
+        let validProjectIDs = Set(projectStore.projects.map(\.id))
+        let staleProjectIDs = footerTerminalStore.projectIDs.union(footerTerminalCleanupTasks.keys).filter { !validProjectIDs.contains($0) }
+        for projectID in staleProjectIDs {
+            footerTerminalCleanupTasks[projectID]?.cancel()
+            footerTerminalCleanupTasks[projectID] = nil
+            if let state = footerTerminalStore.remove(projectID: projectID) {
+                TerminalViewRegistry.shared.removeView(for: state.id)
+            }
+        }
     }
 
     private func withSidePanelAnimation(_ updates: () -> Void) {

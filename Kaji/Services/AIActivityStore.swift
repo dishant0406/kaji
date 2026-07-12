@@ -173,6 +173,11 @@ final class AIActivityStore {
         }
     }
 
+    func markProjectStale(projectID: UUID, message: String) {
+        markActivitiesStale(where: { $0.projectID == projectID }, message: message)
+        AgentRunStore.shared.markProjectStale(projectID: projectID, message: message)
+    }
+
     func appendTranscript(providerID: String, paneID: UUID, kind: String, text: String) {
         guard var activity = activitiesByPaneID[paneID], activity.providerID == providerID else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -7,7 +7,9 @@ enum FFFSearchService {
     private static let queue = DispatchQueue(label: "app.kaji.fff-search", qos: .userInitiated)
 
     static func warm(projectPath: String) async throws {
+        try Task.checkCancellation()
         let index = try await FFFSearchIndexStore.shared.index(for: projectPath)
+        try Task.checkCancellation()
         try await offMain {
             try index.waitForScan()
         }
@@ -35,6 +37,10 @@ enum FFFSearchService {
             try Task.checkCancellation()
             return try ProjectTextSearchService.group(index.searchText(query: trimmed, limit: limit))
         }
+    }
+
+    static func removeIndexes(projectPaths: [String]) async {
+        await FFFSearchIndexStore.shared.remove(projectPaths: projectPaths)
     }
 
     private static func offMain<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {

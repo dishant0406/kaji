@@ -270,6 +270,28 @@ final class AppState {
         workspaceTabs(for: projectID).flatMap { $0.root.allAreas() }
     }
 
+    func terminalPaneIDs(for projectID: UUID) -> [UUID] {
+        allAreas(for: projectID).flatMap { area in
+            area.tabs.compactMap { $0.content.pane?.id }
+        }
+    }
+
+    func parentAgentIDs(for projectID: UUID) -> [UUID] {
+        allAreas(for: projectID).flatMap { area in
+            area.tabs.compactMap { $0.content.parentAgentState?.id }
+        }
+    }
+
+    func hasUnsavedEditorTabs(projectID: UUID) -> Bool {
+        allAreas(for: projectID).contains { area in
+            area.tabs.contains { $0.content.editorState?.isModified == true }
+        }
+    }
+
+    func hasRunningTerminalProcesses(projectID: UUID) -> Bool {
+        terminalPaneIDs(for: projectID).contains { terminalViews.needsConfirmQuit(for: $0) }
+    }
+
     func parentAgentScope(projectID: UUID, worktreeID: UUID) -> KajiAgentScope? {
         parentAgentTabMatch(in: WorktreeKey(projectID: projectID, worktreeID: worktreeID))?.state.scope
     }

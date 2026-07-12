@@ -281,6 +281,14 @@ final class NotificationStore {
         scheduleSave()
     }
 
+    func remove(projectID: UUID) {
+        let originalCount = notifications.count
+        notifications.removeAll { $0.projectID == projectID }
+        guard notifications.count != originalCount else { return }
+        readStateVersion += 1
+        scheduleSave()
+    }
+
     func clear() {
         notifications.removeAll()
         scheduleSave()

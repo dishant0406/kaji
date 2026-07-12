@@ -20,6 +20,7 @@ final class KajiAgentStoreRegistry {
     func stop(projectID: UUID) {
         let keys = stores.keys.filter { $0.projectID == projectID }
         for key in keys {
+            stores[key]?.stop()
             stores[key]?.stopProcess()
             stores.removeValue(forKey: key)
         }

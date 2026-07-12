@@ -114,6 +114,17 @@ final class AgentRunStore {
         persist()
     }
 
+    func markProjectStale(projectID: UUID, message: String) {
+        let matchingIndexes = runs.indices.filter { index in
+            runs[index].projectID == projectID && isOpen(runs[index].status)
+        }
+        for index in matchingIndexes {
+            appendEvent(.init(kind: .stopped, label: "stale", text: message), to: &runs[index])
+            runs[index].status = .stale
+        }
+        persist()
+    }
+
     func complete(providerID: String, paneID: UUID, message: String) {
         if updateRuns(providerID: providerID, paneID: paneID, openOnly: true, update: { run in
             appendEvent(.init(kind: .completed, label: "done", text: message), to: &run)
