@@ -122,9 +122,10 @@ struct ShortcutReferencePopover: View {
         guard !query.isEmpty else { return ShortcutReferenceCatalog.keyboardGroups }
         return ShortcutReferenceCatalog.keyboardGroups.compactMap { group in
             let actions = group.actions.filter { action in
-                action.displayName.localizedCaseInsensitiveContains(query) ||
+                let shortcutLabel = shortcutDisplayLabel(for: action)
+                return actionDisplayName(action).localizedCaseInsensitiveContains(query) ||
                     group.title.localizedCaseInsensitiveContains(query) ||
-                    keyBindings.combo(for: action).displayString.localizedCaseInsensitiveContains(query)
+                    shortcutLabel.localizedCaseInsensitiveContains(query)
             }
             guard !actions.isEmpty else { return nil }
             return ShortcutReferenceGroup(title: group.title, actions: actions)
@@ -169,6 +170,14 @@ struct ShortcutReferencePopover: View {
     private var normalizedSearch: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    private func shortcutDisplayLabel(for action: ShortcutAction) -> String {
+        keyBindings.assignedCombo(for: action)?.displayString ?? "Command Palette"
+    }
+
+    private func actionDisplayName(_ action: ShortcutAction) -> String {
+        FooterLauncherShortcutResolver.displayName(for: action) ?? action.displayName
+    }
 }
 
 private struct ShortcutReferenceGroupView: View {
@@ -183,16 +192,24 @@ private struct ShortcutReferenceGroupView: View {
 
             ForEach(group.actions) { action in
                 HStack(spacing: 10) {
-                    Text(action.displayName)
+                    Text(actionDisplayName(action))
                         .kajiFont(size: 11)
                         .foregroundStyle(KajiTheme.fgMuted)
                         .lineLimit(1)
 
                     Spacer(minLength: 10)
 
-                    ShortcutBadge(label: keyBindings.combo(for: action).displayString, compact: true)
+                    ShortcutBadge(label: shortcutLabel(for: action), compact: true)
                 }
             }
         }
+    }
+
+    private func shortcutLabel(for action: ShortcutAction) -> String {
+        keyBindings.assignedCombo(for: action)?.displayString ?? "Palette"
+    }
+
+    private func actionDisplayName(_ action: ShortcutAction) -> String {
+        FooterLauncherShortcutResolver.displayName(for: action) ?? action.displayName
     }
 }

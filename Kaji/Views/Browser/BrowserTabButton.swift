@@ -88,6 +88,7 @@ struct BrowserTabButton: View {
         .opacity(hovered || selected ? 1 : 0.68)
         .kajiPointer()
         .help("Close tab")
+        .attachedShortcutHint(for: .browserClosePage)
         .accessibilityLabel("Close tab")
     }
 

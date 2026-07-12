@@ -25,7 +25,8 @@ struct CLILauncherFooter: View {
             ) {
                 appState.createParentAgentSplit(projectID: projectID)
             }
-            ForEach(enabledLaunchers) { launcher in
+            .attachedShortcutHint(for: .openKajiAgentSplit)
+            ForEach(Array(enabledLaunchers.enumerated()), id: \.element.id) { index, launcher in
                 LauncherSquareButton(
                     iconName: launcher.definition.iconName,
                     accessibilityLabel: launcher.definition.displayName,
@@ -33,6 +34,7 @@ struct CLILauncherFooter: View {
                 ) {
                     run(launcher)
                 }
+                .modifier(FooterLauncherShortcutHintModifier(index: index))
             }
 
             Spacer(minLength: 0)
@@ -51,12 +53,14 @@ struct CLILauncherFooter: View {
                         NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)
                     }
                     .help("Browser")
+                    .attachedShortcutHint(for: .toggleBrowserPanel)
                 }
 
                 IconButton(symbol: "mcp", accessibilityLabel: "MCP Servers") {
                     onOpenMCPControlPanel?()
                 }
                 .help("MCP Servers")
+                .attachedShortcutHint(for: .toggleMCPControlPanel)
 
                 IconButton(symbol: "keyboard", selected: showsShortcuts, accessibilityLabel: "Shortcuts") {
                     showsShortcuts.toggle()
@@ -70,11 +74,13 @@ struct CLILauncherFooter: View {
                     appState.splitFocusedArea(direction: .horizontal, projectID: projectID)
                 }
                 .help(shortcutTooltip("Split Right", for: .splitRight))
+                .attachedShortcutHint(for: .splitRight)
 
                 IconButton(symbol: "square.split.1x2", accessibilityLabel: "Split Down") {
                     appState.splitFocusedArea(direction: .vertical, projectID: projectID)
                 }
                 .help(shortcutTooltip("Split Down", for: .splitDown))
+                .attachedShortcutHint(for: .splitDown)
 
                 if let onToggleTerminal {
                     IconButton(
@@ -85,6 +91,7 @@ struct CLILauncherFooter: View {
                         onToggleTerminal()
                     }
                     .help(terminalExpanded ? "Hide Footer Terminal" : "Show Footer Terminal")
+                    .attachedShortcutHint(for: .toggleFooterTerminal)
                 }
             }
         }
@@ -110,5 +117,28 @@ struct CLILauncherFooter: View {
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {
         "\(name) (\(KeyBindingStore.shared.combo(for: action).displayString))"
+    }
+}
+
+private struct FooterLauncherShortcutHintModifier: ViewModifier {
+    let index: Int
+
+    func body(content: Content) -> some View {
+        if let action = action(for: index) {
+            content.attachedShortcutHint(for: action)
+        } else {
+            content
+        }
+    }
+
+    private func action(for index: Int) -> ShortcutAction? {
+        switch index {
+        case 0: .openFooterLauncher1
+        case 1: .openFooterLauncher2
+        case 2: .openFooterLauncher3
+        case 3: .openFooterLauncher4
+        case 4: .openFooterLauncher5
+        default: nil
+        }
     }
 }

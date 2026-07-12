@@ -62,7 +62,7 @@ struct TerminalArea: View {
                     },
                     onCloseArea: { areaID in
                         withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {
-                            appState.dispatch(.closeArea(projectID: project.id, areaID: areaID))
+                            appState.closeArea(areaID, projectID: project.id)
                         }
                     },
                     onDropAction: { result in

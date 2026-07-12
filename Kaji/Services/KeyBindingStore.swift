@@ -23,7 +23,11 @@ final class KeyBindingStore {
     }
 
     func combo(for action: ShortcutAction) -> KeyCombo {
-        binding(for: action).combo
+        assignedCombo(for: action) ?? KeyCombo(key: "", modifiers: 0)
+    }
+
+    func assignedCombo(for action: ShortcutAction) -> KeyCombo? {
+        bindings.first { $0.action == action }?.combo
     }
 
     func updateBinding(action: ShortcutAction, combo: KeyCombo) {
@@ -54,7 +58,7 @@ final class KeyBindingStore {
         let flags = event.modifierFlags.intersection(KeyCombo.supportedModifierMask).rawValue
         return ShortcutAction.allCases.first { action in
             guard scopes.contains(action.scope) else { return false }
-            let combo = combo(for: action)
+            guard let combo = assignedCombo(for: action) else { return false }
             return combo.key == normalizedKey && combo.modifiers == flags
         }
     }

@@ -55,6 +55,10 @@ struct TerminalBridge: NSViewRepresentable {
     let onSplitRequest: (SplitDirection, SplitPosition) -> Void
     @Environment(\.overlayActive) private var overlayActive
     @Environment(\.activeWorktreeKey) private var worktreeKey
+    @Environment(AppState.self) private var appState
+    @Environment(ProjectStore.self) private var projectStore
+    @Environment(WorktreeStore.self) private var worktreeStore
+    @Environment(TermyService.self) private var termy
 
     final class Coordinator {
         var wasFocused = false
@@ -85,6 +89,7 @@ struct TerminalBridge: NSViewRepresentable {
         view.onFocus = onFocus
         view.onProcessExit = onProcessExit
         view.onSplitRequest = onSplitRequest
+        view.onHostCommand = handleHostCommand
         view.onTitleChange = { [weak state] title in
             DispatchQueue.main.async {
                 state?.setTitle(title)
@@ -111,6 +116,7 @@ struct TerminalBridge: NSViewRepresentable {
         nsView.onFocus = onFocus
         nsView.onProcessExit = onProcessExit
         nsView.onSplitRequest = onSplitRequest
+        nsView.onHostCommand = handleHostCommand
         nsView.onTitleChange = { [weak state] title in
             DispatchQueue.main.async {
                 state?.setTitle(title)
@@ -217,5 +223,24 @@ struct TerminalBridge: NSViewRepresentable {
         view.onSearchSelected = { [weak state] selected in
             state?.searchState.selected = selected
         }
+    }
+
+    private func handleHostCommand(_ event: NSEvent) -> Bool {
+        let scopes = ShortcutContext.activeScopes(for: NSApp.keyWindow)
+        guard let action = KeyBindingStore.shared.action(for: event, scopes: scopes) else { return false }
+        let dispatcher = ShortcutActionDispatcher(
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            termy: termy
+        )
+        return dispatcher.perform(action, activeProject: activeProject) { project in
+            NotificationCenter.default.post(name: .toggleAttachedVCS, object: project.id)
+        }
+    }
+
+    private var activeProject: Project? {
+        guard let projectID = appState.activeProjectID else { return nil }
+        return projectStore.projects.first { $0.id == projectID }
     }
 }

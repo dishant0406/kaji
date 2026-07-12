@@ -82,18 +82,22 @@ struct PaneTabStrip: View {
                             NotificationCenter.default.post(name: .quickOpen, object: nil)
                         }
                         .help(shortcutTooltip("Quick Open", for: .quickOpen))
+                        .attachedShortcutHint(for: .quickOpen)
                         FileDiffIconButton(action: onCreateVCSTab)
                             .help(shortcutTooltip("Source Control", for: .openVCSTab))
+                            .attachedShortcutHint(for: .openVCSTab)
                         FileTreeIconButton {
                             NotificationCenter.default.post(name: .toggleFileTree, object: nil)
                         }
                         .help(shortcutTooltip("File Tree", for: .toggleFileTree))
+                        .attachedShortcutHint(for: .toggleFileTree)
                     }
                     if showSettingsButton {
                         IconButton(symbol: "gearshape", accessibilityLabel: "Settings") {
                             NotificationCenter.default.post(name: .toggleSettings, object: nil)
                         }
                         .help("Settings (⌘,)")
+                        .attachedShortcutHint(label: "⌘,", modifiers: KeyCombo(key: ",", command: true).modifiers)
                     }
                 }
                 .padding(.trailing, 8)
@@ -227,6 +231,7 @@ private struct TabAddButton: View {
         .kajiChangeFeedback(KajiMotion.tapFeedback, value: hovered, isEnabled: hovered)
         .kajiPointer()
         .help("New Tab (\(KeyBindingStore.shared.combo(for: .newTab).displayString))")
+        .attachedShortcutHint(for: .newTab)
         .accessibilityLabel("New Tab")
     }
 }
@@ -286,11 +291,6 @@ private struct TabCell: View {
         return tabColor ?? KajiTheme.accent
     }
 
-    private var showBadge: Bool {
-        guard let shortcut else { return false }
-        return ModifierKeyMonitor.shared.isHolding(modifiers: shortcut.modifiers)
-    }
-
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: 8) {
@@ -345,11 +345,7 @@ private struct TabCell: View {
                         .accessibilityAddTraits(.isButton)
                 }
             }
-            .overlay {
-                if showBadge, let shortcut {
-                    ShortcutBadge(label: shortcut.displayString)
-                }
-            }
+            .modifier(TabShortcutHintModifier(shortcut: shortcut))
             .overlay(alignment: .bottom) {
                 if let accentColor = bottomAccentColor {
                     Rectangle()
@@ -481,6 +477,18 @@ private struct TabCell: View {
             KajiIcon(systemName: "globe", size: 12)
         } else {
             KajiIcon(systemName: "terminal", size: 12)
+        }
+    }
+}
+
+private struct TabShortcutHintModifier: ViewModifier {
+    let shortcut: PaneTabStrip.TabShortcutSnapshot?
+
+    func body(content: Content) -> some View {
+        if let shortcut {
+            content.attachedShortcutHint(label: shortcut.displayString, modifiers: shortcut.modifiers, placement: .center, compact: false)
+        } else {
+            content
         }
     }
 }

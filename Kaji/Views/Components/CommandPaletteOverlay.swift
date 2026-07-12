@@ -24,6 +24,7 @@ struct CommandPaletteOverlay: View {
 private struct CommandPaletteRow: View {
     let command: AppCommand
     let isHighlighted: Bool
+    private var shortcut: KeyCombo? { KeyBindingStore.shared.assignedCombo(for: command.id) }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -40,7 +41,7 @@ private struct CommandPaletteRow: View {
                     .foregroundStyle(KajiTheme.fgDim)
             }
             Spacer(minLength: 12)
-            if let shortcut = command.shortcut {
+            if let shortcut {
                 Text(shortcut.displayString)
                     .kajiFont(size: 11, design: .monospaced)
                     .foregroundStyle(isHighlighted ? KajiTheme.fgMuted : KajiTheme.fgDim)

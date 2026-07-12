@@ -36,17 +36,24 @@ struct ShortcutActionDispatcher {
             return true
         }
 
+        if let index = action.paneSelectionIndex {
+            guard let projectID = appState.activeProjectID else { return false }
+            appState.focusPane(projectID: projectID, index: index)
+            return true
+        }
+
+        if let index = action.footerLauncherIndex {
+            return openFooterLauncher(index: index)
+        }
+
         switch action {
         case .newTab:
             guard let projectID = appState.activeProjectID else { return false }
             appState.createTab(projectID: projectID)
             return true
         case .closeTab:
-            guard let projectID = appState.activeProjectID,
-                  let area = appState.focusedArea(for: projectID),
-                  let tabID = area.activeTabID
-            else { return false }
-            appState.closeTab(tabID, projectID: projectID)
+            guard let projectID = appState.activeProjectID else { return false }
+            appState.closeActiveWorkspaceTab(projectID: projectID)
             return true
         case .renameTab:
             notificationCenter.post(name: .renameActiveTab, object: nil)
@@ -69,6 +76,18 @@ struct ShortcutActionDispatcher {
             else { return false }
             appState.closeArea(areaID, projectID: projectID)
             return true
+        case .focusNextPane:
+            guard let projectID = appState.activeProjectID else { return false }
+            appState.focusNextPane(projectID: projectID)
+            return true
+        case .focusPreviousPane:
+            guard let projectID = appState.activeProjectID else { return false }
+            appState.focusPreviousPane(projectID: projectID)
+            return true
+        case .focusLastPane:
+            guard let projectID = appState.activeProjectID else { return false }
+            appState.focusLastPane(projectID: projectID)
+            return true
         case .focusPaneLeft:
             guard let projectID = appState.activeProjectID else { return false }
             appState.focusPaneLeft(projectID: projectID)
@@ -85,6 +104,32 @@ struct ShortcutActionDispatcher {
             guard let projectID = appState.activeProjectID else { return false }
             appState.focusPaneDown(projectID: projectID)
             return true
+        case .increasePaneWidth:
+            return dispatchActiveProjectAction { .resizeFocusedPane(projectID: $0, command: .wider) }
+        case .decreasePaneWidth:
+            return dispatchActiveProjectAction { .resizeFocusedPane(projectID: $0, command: .narrower) }
+        case .increasePaneHeight:
+            return dispatchActiveProjectAction { .resizeFocusedPane(projectID: $0, command: .taller) }
+        case .decreasePaneHeight:
+            return dispatchActiveProjectAction { .resizeFocusedPane(projectID: $0, command: .shorter) }
+        case .balancePanes:
+            return dispatchActiveProjectAction { .balancePanes(projectID: $0) }
+        case .swapPaneLeft:
+            return dispatchActiveProjectAction { .swapPane(projectID: $0, direction: .left) }
+        case .swapPaneRight:
+            return dispatchActiveProjectAction { .swapPane(projectID: $0, direction: .right) }
+        case .swapPaneUp:
+            return dispatchActiveProjectAction { .swapPane(projectID: $0, direction: .up) }
+        case .swapPaneDown:
+            return dispatchActiveProjectAction { .swapPane(projectID: $0, direction: .down) }
+        case .movePaneLeft:
+            return dispatchActiveProjectAction { .movePaneInDirection(projectID: $0, direction: .left) }
+        case .movePaneRight:
+            return dispatchActiveProjectAction { .movePaneInDirection(projectID: $0, direction: .right) }
+        case .movePaneUp:
+            return dispatchActiveProjectAction { .movePaneInDirection(projectID: $0, direction: .up) }
+        case .movePaneDown:
+            return dispatchActiveProjectAction { .movePaneInDirection(projectID: $0, direction: .down) }
         case .nextTab:
             guard let projectID = appState.activeProjectID else { return false }
             appState.selectNextTab(projectID: projectID)
@@ -157,8 +202,57 @@ struct ShortcutActionDispatcher {
         case .toggleProblemsPanel:
             notificationCenter.post(name: .toggleProblemsPanel, object: nil)
             return true
+        case .toggleBrowserPanel:
+            notificationCenter.post(name: .toggleBrowserPanel, object: nil)
+            return true
+        case .browserBack:
+            notificationCenter.post(name: .browserBack, object: nil)
+            return true
+        case .browserForward:
+            notificationCenter.post(name: .browserForward, object: nil)
+            return true
+        case .browserReload:
+            notificationCenter.post(name: .browserReload, object: nil)
+            return true
+        case .browserFocusAddressBar:
+            notificationCenter.post(name: .browserFocusAddressBar, object: nil)
+            return true
+        case .browserNewPage:
+            notificationCenter.post(name: .browserNewPage, object: nil)
+            return true
+        case .browserClosePage:
+            notificationCenter.post(name: .browserClosePage, object: nil)
+            return true
+        case .browserNextPage:
+            notificationCenter.post(name: .browserNextPage, object: nil)
+            return true
+        case .browserPreviousPage:
+            notificationCenter.post(name: .browserPreviousPage, object: nil)
+            return true
+        case .browserReadPage:
+            notificationCenter.post(name: .browserReadPage, object: nil)
+            return true
+        case .toggleAgentInstructions:
+            notificationCenter.post(name: .toggleAgentInstructions, object: nil)
+            return true
+        case .toggleMCPControlPanel:
+            notificationCenter.post(name: .toggleMCPControlPanel, object: nil)
+            return true
+        case .closeActiveSidePanel:
+            notificationCenter.post(name: .closeActiveSidePanel, object: nil)
+            return true
+        case .toggleNotificationPanel:
+            notificationCenter.post(name: .toggleNotificationPanel, object: nil)
+            return true
+        case .toggleAgentMissionControl:
+            notificationCenter.post(name: .toggleAgentMissionControl, object: nil)
+            return true
         case .toggleFooterTerminal:
             notificationCenter.post(name: .toggleFooterTerminal, object: nil)
+            return true
+        case .openKajiAgentSplit:
+            guard let projectID = appState.activeProjectID else { return false }
+            appState.createParentAgentSplit(projectID: projectID)
             return true
         case .toggleAIUsage:
             guard AIUsageSettingsStore.isUsageEnabled() else { return false }
@@ -171,6 +265,30 @@ struct ShortcutActionDispatcher {
         case .navigateForward:
             guard appState.navigation.canGoForward else { return false }
             appState.goForward()
+            return true
+        case .vcsRefresh:
+            notificationCenter.post(name: .vcsRefresh, object: nil)
+            return true
+        case .vcsCommit:
+            notificationCenter.post(name: .vcsCommit, object: nil)
+            return true
+        case .vcsPull:
+            notificationCenter.post(name: .vcsPull, object: nil)
+            return true
+        case .vcsPush:
+            notificationCenter.post(name: .vcsPush, object: nil)
+            return true
+        case .vcsCreatePR:
+            notificationCenter.post(name: .vcsCreatePR, object: nil)
+            return true
+        case .fileTreeNewFile:
+            notificationCenter.post(name: .fileTreeNewFile, object: nil)
+            return true
+        case .fileTreeNewFolder:
+            notificationCenter.post(name: .fileTreeNewFolder, object: nil)
+            return true
+        case .fileTreeToggleChangedOnly:
+            notificationCenter.post(name: .fileTreeToggleChangedOnly, object: nil)
             return true
         case .selectTab1,
              .selectTab2,
@@ -189,8 +307,39 @@ struct ShortcutActionDispatcher {
              .selectProject6,
              .selectProject7,
              .selectProject8,
-             .selectProject9:
+             .selectProject9,
+             .focusPane1,
+             .focusPane2,
+             .focusPane3,
+             .focusPane4,
+             .focusPane5,
+             .focusPane6,
+             .focusPane7,
+             .focusPane8,
+             .focusPane9,
+             .openFooterLauncher1,
+             .openFooterLauncher2,
+             .openFooterLauncher3,
+             .openFooterLauncher4,
+             .openFooterLauncher5:
             return false
         }
+    }
+
+    private func openFooterLauncher(index: Int) -> Bool {
+        guard let projectID = appState.activeProjectID else { return false }
+        let launchers = CLILauncherSettings.shared.enabledLaunchers
+        guard launchers.indices.contains(index) else { return false }
+        let launcher = launchers[index]
+        let command = launcher.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !command.isEmpty else { return false }
+        appState.createCommandSplit(projectID: projectID, title: launcher.definition.displayName, command: command)
+        return true
+    }
+
+    private func dispatchActiveProjectAction(_ action: (UUID) -> AppState.Action) -> Bool {
+        guard let projectID = appState.activeProjectID else { return false }
+        appState.dispatch(action(projectID))
+        return true
     }
 }

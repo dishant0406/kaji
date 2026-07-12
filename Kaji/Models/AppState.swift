@@ -84,10 +84,18 @@ final class AppState {
         case splitArea(SplitAreaRequest)
         case closeArea(projectID: UUID, areaID: UUID)
         case focusArea(projectID: UUID, areaID: UUID)
+        case focusNextPane(projectID: UUID)
+        case focusPreviousPane(projectID: UUID)
+        case focusLastPane(projectID: UUID)
+        case focusPaneByIndex(projectID: UUID, index: Int)
         case focusPaneLeft(projectID: UUID)
         case focusPaneRight(projectID: UUID)
         case focusPaneUp(projectID: UUID)
         case focusPaneDown(projectID: UUID)
+        case resizeFocusedPane(projectID: UUID, command: PaneResizeCommand)
+        case balancePanes(projectID: UUID)
+        case swapPane(projectID: UUID, direction: PaneDirectionCommand)
+        case movePaneInDirection(projectID: UUID, direction: PaneDirectionCommand)
         case moveTab(projectID: UUID, request: TabMoveRequest)
         case movePane(projectID: UUID, request: PaneMoveRequest)
         case swapPanes(projectID: UUID, sourceAreaID: UUID, targetAreaID: UUID)
@@ -112,6 +120,11 @@ final class AppState {
         let tabID: UUID
     }
 
+    struct PendingAreaClose: Equatable {
+        let projectID: UUID
+        let areaID: UUID
+    }
+
     struct StartupCommandTabRequest {
         let projectID: UUID
         let areaID: UUID?
@@ -127,6 +140,8 @@ final class AppState {
     var pendingLastTabClose: PendingTabClose?
     var pendingUnsavedEditorTabClose: PendingTabClose?
     var pendingProcessTabClose: PendingTabClose?
+    var pendingUnsavedEditorAreaClose: PendingAreaClose?
+    var pendingProcessAreaClose: PendingAreaClose?
     var pendingSaveErrorMessage: String?
     let navigation = NavigationHistory()
     private var focusHistory: [WorktreeKey: [UUID]] = [:]
@@ -270,7 +285,20 @@ final class AppState {
     }
 
     func closeArea(_ areaID: UUID, projectID: UUID) {
-        dispatch(.closeArea(projectID: projectID, areaID: areaID))
+        if needsUnsavedEditorAreaConfirmation(areaID: areaID, projectID: projectID) {
+            pendingUnsavedEditorAreaClose = PendingAreaClose(projectID: projectID, areaID: areaID)
+            return
+        }
+        if needsProcessAreaConfirmation(areaID: areaID, projectID: projectID) {
+            pendingProcessAreaClose = PendingAreaClose(projectID: projectID, areaID: areaID)
+            return
+        }
+        dispatchCloseArea(areaID, projectID: projectID)
+    }
+
+    func forceCloseArea(_ areaID: UUID, projectID: UUID) {
+        clearPendingAreaCloseIfMatching(areaID: areaID, projectID: projectID)
+        dispatchCloseArea(areaID, projectID: projectID)
     }
 
     func createTab(projectID: UUID) {
@@ -500,6 +528,14 @@ final class AppState {
         closeTab(tabID, areaID: area.id, projectID: projectID)
     }
 
+    func closeActiveWorkspaceTab(projectID: UUID) {
+        guard let workspace = workspace(for: projectID),
+              let tabID = workspace.activeTabID,
+              let areaID = workspace.activeTab?.focusedAreaID ?? workspace.activeTab?.activeArea?.id
+        else { return }
+        closeTab(tabID, areaID: areaID, projectID: projectID)
+    }
+
     func closeTab(_ tabID: UUID, areaID: UUID, projectID: UUID) {
         if needsUnsavedEditorConfirmation(tabID: tabID, areaID: areaID, projectID: projectID) {
             pendingUnsavedEditorTabClose = PendingTabClose(projectID: projectID, areaID: areaID, tabID: tabID)
@@ -592,6 +628,26 @@ final class AppState {
         pendingUnsavedEditorTabClose = nil
     }
 
+    func confirmCloseUnsavedEditorArea() {
+        guard let pending = pendingUnsavedEditorAreaClose else { return }
+        pendingUnsavedEditorAreaClose = nil
+        dispatchCloseArea(pending.areaID, projectID: pending.projectID)
+    }
+
+    func cancelCloseUnsavedEditorArea() {
+        pendingUnsavedEditorAreaClose = nil
+    }
+
+    func confirmCloseRunningArea() {
+        guard let pending = pendingProcessAreaClose else { return }
+        pendingProcessAreaClose = nil
+        dispatchCloseArea(pending.areaID, projectID: pending.projectID)
+    }
+
+    func cancelCloseRunningArea() {
+        pendingProcessAreaClose = nil
+    }
+
     private func closeTabWithLastCheck(_ tabID: UUID, areaID: UUID, projectID: UUID) {
         if !ProjectLifecyclePreferences.keepOpenWhenNoTabs,
            isLastTabInProject(tabID, areaID: areaID, projectID: projectID)
@@ -624,6 +680,10 @@ final class AppState {
     private func dispatchCloseTab(_ tabID: UUID, areaID: UUID, projectID: UUID) {
         unpinTabIfNeeded(tabID, areaID: areaID, projectID: projectID)
         dispatch(.closeTab(projectID: projectID, areaID: areaID, tabID: tabID))
+    }
+
+    private func dispatchCloseArea(_ areaID: UUID, projectID: UUID) {
+        dispatch(.closeArea(projectID: projectID, areaID: areaID))
     }
 
     private func isLastTabInProject(_ tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
@@ -666,6 +726,24 @@ final class AppState {
         else { return false }
         let paneIDs = tab.root.allAreas().flatMap { area in area.tabs.compactMap { $0.content.pane?.id } }
         return paneIDs.contains { terminalViews.needsConfirmQuit(for: $0) }
+    }
+
+    private func needsUnsavedEditorAreaConfirmation(areaID: UUID, projectID: UUID) -> Bool {
+        guard let area = area(projectID: projectID, areaID: areaID) else { return false }
+        return area.tabs.contains { $0.content.editorState?.isModified == true }
+    }
+
+    private func needsProcessAreaConfirmation(areaID: UUID, projectID: UUID) -> Bool {
+        guard TabCloseConfirmationPreferences.confirmRunningProcess else { return false }
+        guard let area = area(projectID: projectID, areaID: areaID) else { return false }
+        return area.tabs.compactMap { $0.content.pane?.id }.contains { terminalViews.needsConfirmQuit(for: $0) }
+    }
+
+    private func area(projectID: UUID, areaID: UUID) -> TabArea? {
+        guard let key = activeWorktreeKey(for: projectID),
+              let root = workspaceRoots[key]
+        else { return nil }
+        return root.findArea(id: areaID)
     }
 
     func selectTabByIndex(_ index: Int, projectID: UUID) {
@@ -946,6 +1024,18 @@ final class AppState {
         {
             pendingProcessTabClose = nil
         }
+
+        if let pending = pendingUnsavedEditorAreaClose,
+           !areaExists(areaID: pending.areaID, projectID: pending.projectID)
+        {
+            pendingUnsavedEditorAreaClose = nil
+        }
+
+        if let pending = pendingProcessAreaClose,
+           !areaExists(areaID: pending.areaID, projectID: pending.projectID)
+        {
+            pendingProcessAreaClose = nil
+        }
     }
 
     private func tabExists(tabID: UUID, areaID: UUID, projectID: UUID) -> Bool {
@@ -953,6 +1043,19 @@ final class AppState {
               let tab = workspace.tabs.first(where: { $0.id == tabID })
         else { return false }
         return tab.root.findArea(id: areaID) != nil
+    }
+
+    private func areaExists(areaID: UUID, projectID: UUID) -> Bool {
+        area(projectID: projectID, areaID: areaID) != nil
+    }
+
+    private func clearPendingAreaCloseIfMatching(areaID: UUID, projectID: UUID) {
+        if pendingUnsavedEditorAreaClose == PendingAreaClose(projectID: projectID, areaID: areaID) {
+            pendingUnsavedEditorAreaClose = nil
+        }
+        if pendingProcessAreaClose == PendingAreaClose(projectID: projectID, areaID: areaID) {
+            pendingProcessAreaClose = nil
+        }
     }
 
     func activateWorkspaceTab(_ workspaceTabID: UUID, projectID: UUID) {
@@ -977,6 +1080,22 @@ final class AppState {
 
     func focusPaneLeft(projectID: UUID) {
         dispatch(.focusPaneLeft(projectID: projectID))
+    }
+
+    func focusNextPane(projectID: UUID) {
+        dispatch(.focusNextPane(projectID: projectID))
+    }
+
+    func focusPreviousPane(projectID: UUID) {
+        dispatch(.focusPreviousPane(projectID: projectID))
+    }
+
+    func focusLastPane(projectID: UUID) {
+        dispatch(.focusLastPane(projectID: projectID))
+    }
+
+    func focusPane(projectID: UUID, index: Int) {
+        dispatch(.focusPaneByIndex(projectID: projectID, index: index))
     }
 
     func focusPaneRight(projectID: UUID) {

@@ -24,6 +24,7 @@ extension KeyCombo {
         (kVK_ANSI_K, "k"), (kVK_ANSI_Semicolon, ";"), (kVK_ANSI_Backslash, "\\"),
         (kVK_ANSI_Comma, ","), (kVK_ANSI_Slash, "/"), (kVK_ANSI_N, "n"),
         (kVK_ANSI_M, "m"), (kVK_ANSI_Period, "."), (kVK_ANSI_Grave, "`"),
+        (kVK_Return, returnKey), (kVK_ANSI_KeypadEnter, returnKey),
         (kVK_Space, spaceKey), (kVK_ANSI_KeypadDecimal, "."), (kVK_ANSI_KeypadMultiply, "*"),
         (kVK_ANSI_KeypadPlus, "+"), (kVK_ANSI_KeypadDivide, "/"), (kVK_ANSI_KeypadMinus, "-"),
         (kVK_ANSI_KeypadEquals, "="), (kVK_ANSI_Keypad0, "0"), (kVK_ANSI_Keypad1, "1"),

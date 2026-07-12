@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Testing
 
 @testable import Kaji
@@ -79,6 +80,16 @@ struct KeyBindingTests {
         let combos = KeyBinding.defaults.map(\.combo)
         let unique = Set(combos)
         #expect(combos.count == unique.count)
+    }
+
+    @Test("KeyBinding.defaults uses at most three simultaneous keys")
+    func defaultsUseAtMostThreeKeys() {
+        for binding in KeyBinding.defaults {
+            let flags = binding.combo.nsModifierFlags.intersection(KeyCombo.supportedModifierMask)
+            let supported: [NSEvent.ModifierFlags] = [.command, .option, .control, .shift]
+            let modifierCount = supported.filter { flags.contains($0) }.count
+            #expect(modifierCount + 1 <= 3, "\(binding.action.rawValue) uses \(binding.combo.displayString)")
+        }
     }
 
     @Test("Agent Command Center defaults to Command-J")

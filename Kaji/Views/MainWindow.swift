@@ -54,7 +54,9 @@ struct MainWindow: View {
     private enum CloseConfirmationKind {
         case lastTab
         case unsavedEditor
+        case unsavedPane
         case runningProcess
+        case runningPane
 
         var title: String {
             switch self {
@@ -62,8 +64,12 @@ struct MainWindow: View {
                 "Close Project?"
             case .unsavedEditor:
                 "Save Changes Before Closing?"
+            case .unsavedPane:
+                "Close Pane?"
             case .runningProcess:
                 "Close Tab?"
+            case .runningPane:
+                "Close Pane?"
             }
         }
 
@@ -73,8 +79,12 @@ struct MainWindow: View {
                 "This is the last tab. Closing it will remove the project from the sidebar."
             case .unsavedEditor:
                 "This file has unsaved changes. If you don't save, your changes will be lost."
+            case .unsavedPane:
+                "This pane contains unsaved editor changes. Closing it will discard those changes."
             case .runningProcess:
                 "A process is still running in this tab. Are you sure you want to close it?"
+            case .runningPane:
+                "A process is still running in this pane. Are you sure you want to close it?"
             }
         }
     }
@@ -306,6 +316,15 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .toggleProblemsPanel)) { _ in
                     toggleProblemsPanel()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleAgentInstructions)) { _ in
+                    toggleAgentInstructionPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleMCPControlPanel)) { _ in
+                    showMCPControlPanel.toggle()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .closeActiveSidePanel)) { _ in
+                    closeActiveSidePanel()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleBrowserPanel)) { _ in
                     guard browserEnabled else { return }
                     toggleBrowserPanel()
@@ -362,6 +381,14 @@ struct MainWindow: View {
                 .onChange(of: appState.pendingProcessTabClose != nil) { _, isPresented in
                     guard isPresented else { return }
                     presentCloseConfirmation(.runningProcess)
+                }
+                .onChange(of: appState.pendingUnsavedEditorAreaClose != nil) { _, isPresented in
+                    guard isPresented else { return }
+                    presentCloseConfirmation(.unsavedPane)
+                }
+                .onChange(of: appState.pendingProcessAreaClose != nil) { _, isPresented in
+                    guard isPresented else { return }
+                    presentCloseConfirmation(.runningPane)
                 }
                 .onChange(of: appState.pendingSaveErrorMessage != nil) { _, isPresented in
                     guard isPresented, let message = appState.pendingSaveErrorMessage else { return }
@@ -564,6 +591,7 @@ struct MainWindow: View {
                 closeOnDisappear: false,
                 managesBrowserControl: false,
                 paneIsVisible: true,
+                respondsToKeyboardCommands: true,
                 onClosePane: { hideBrowserPanel() }
             )
             .frame(width: CGFloat(browserPanelWidth))
@@ -781,6 +809,7 @@ struct MainWindow: View {
                 .padding(24)
                 .transition(KajiMotion.modalTransition(reduceMotion: reduceMotion))
             }
+            .background(KajiEscapeKeyMonitor { showSettings = false })
         }
     }
 
@@ -896,8 +925,10 @@ struct MainWindow: View {
                     ) {
                         NotificationCenter.default.post(name: .quickOpen, object: nil)
                     }
+                    .attachedShortcutHint(for: .quickOpen)
                     CodingAgentProcessTopBarButton()
                     AIUsageTopBarButton()
+                        .attachedShortcutHint(for: .toggleAIUsage)
                 }
             }
             .overlay(alignment: .trailing) {
@@ -1006,19 +1037,23 @@ struct MainWindow: View {
                     openVCS(for: project)
                 }
                 .help("Source Control (\(KeyBindingStore.shared.combo(for: .openVCSTab).displayString))")
+                .attachedShortcutHint(for: .openVCSTab)
                 AgentInstructionsButton(selected: agentInstructionPanelVisible) {
                     toggleAgentInstructionPanel()
                 }
                 .help("Agent Instructions")
+                .attachedShortcutHint(for: .toggleAgentInstructions)
                 FileTreeIconButton {
                     NotificationCenter.default.post(name: .toggleFileTree, object: nil)
                 }
                 .help("File Tree (\(KeyBindingStore.shared.combo(for: .toggleFileTree).displayString))")
+                .attachedShortcutHint(for: .toggleFileTree)
             }
             IconButton(symbol: "gearshape", size: 12, accessibilityLabel: "Settings") {
                 NotificationCenter.default.post(name: .toggleSettings, object: nil)
             }
             .help("Settings (⌘,)")
+            .attachedShortcutHint(label: "⌘,", modifiers: KeyCombo(key: ",", command: true).modifiers)
         }
     }
 
@@ -1444,6 +1479,20 @@ struct MainWindow: View {
         }
     }
 
+    private func closeActiveSidePanel() {
+        withSidePanelAnimation {
+            vcsPanelVisible = false
+            fileTreePanelVisible = false
+            globalSearchPanelVisible = false
+            problemsPanelVisible = false
+            browserPanelVisible = false
+            browserPanelKey = nil
+            agentInstructionPanelVisible = false
+        }
+        guard let key = activeWorktreeKey else { return }
+        codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
+    }
+
     private var activeVCSState: VCSTabState? {
         guard let project = activeProject,
               let key = appState.activeWorktreeKey(for: project.id)
@@ -1664,15 +1713,21 @@ struct MainWindow: View {
             alert.buttons[1].keyEquivalent = "\u{1b}"
             alert.buttons[2].keyEquivalent = "d"
             alert.buttons[2].keyEquivalentModifierMask = [.command]
+        case .unsavedPane:
+            alert.addButton(withTitle: "Close")
+            alert.addButton(withTitle: "Cancel")
+            alert.buttons[0].keyEquivalent = "\r"
+            alert.buttons[1].keyEquivalent = "\u{1b}"
         case .lastTab,
-             .runningProcess:
+             .runningProcess,
+             .runningPane:
             alert.addButton(withTitle: "Close")
             alert.addButton(withTitle: "Cancel")
             alert.buttons[0].keyEquivalent = "\r"
             alert.buttons[1].keyEquivalent = "\u{1b}"
         }
 
-        if kind == .runningProcess {
+        if kind == .runningProcess || kind == .runningPane {
             alert.showsSuppressionButton = true
             alert.suppressionButton?.title = "Don't ask again"
         }
@@ -1684,6 +1739,12 @@ struct MainWindow: View {
                     appState.confirmCloseLastTab()
                 } else {
                     appState.cancelCloseLastTab()
+                }
+            case .unsavedPane:
+                if response == .alertFirstButtonReturn {
+                    appState.confirmCloseUnsavedEditorArea()
+                } else {
+                    appState.cancelCloseUnsavedEditorArea()
                 }
             case .unsavedEditor:
                 switch response {
@@ -1702,6 +1763,15 @@ struct MainWindow: View {
                     appState.confirmCloseRunningTab()
                 } else {
                     appState.cancelCloseRunningTab()
+                }
+            case .runningPane:
+                if response == .alertFirstButtonReturn {
+                    if alert.suppressionButton?.state == .on {
+                        TabCloseConfirmationPreferences.confirmRunningProcess = false
+                    }
+                    appState.confirmCloseRunningArea()
+                } else {
+                    appState.cancelCloseRunningArea()
                 }
             }
         }
@@ -1755,6 +1825,21 @@ private extension ShortcutAction {
              .toggleSidebar,
              .toggleThemePicker,
              .toggleAIUsage,
+             .toggleBrowserPanel,
+             .browserBack,
+             .browserForward,
+             .browserReload,
+             .browserFocusAddressBar,
+             .browserNewPage,
+             .browserClosePage,
+             .browserNextPage,
+             .browserPreviousPage,
+             .browserReadPage,
+             .toggleAgentInstructions,
+             .toggleMCPControlPanel,
+             .closeActiveSidePanel,
+             .toggleNotificationPanel,
+             .toggleAgentMissionControl,
              .toggleFooterTerminal,
              .navigateBack,
              .navigateForward,
@@ -1775,10 +1860,49 @@ private extension ShortcutAction {
              .splitRight,
              .splitDown,
              .closePane,
+             .focusNextPane,
+             .focusPreviousPane,
+             .focusLastPane,
+             .focusPane1,
+             .focusPane2,
+             .focusPane3,
+             .focusPane4,
+             .focusPane5,
+             .focusPane6,
+             .focusPane7,
+             .focusPane8,
+             .focusPane9,
              .focusPaneLeft,
              .focusPaneRight,
              .focusPaneUp,
              .focusPaneDown,
+             .increasePaneWidth,
+             .decreasePaneWidth,
+             .increasePaneHeight,
+             .decreasePaneHeight,
+             .balancePanes,
+             .swapPaneLeft,
+             .swapPaneRight,
+             .swapPaneUp,
+             .swapPaneDown,
+             .movePaneLeft,
+             .movePaneRight,
+             .movePaneUp,
+             .movePaneDown,
+             .openKajiAgentSplit,
+             .openFooterLauncher1,
+             .openFooterLauncher2,
+             .openFooterLauncher3,
+             .openFooterLauncher4,
+             .openFooterLauncher5,
+             .vcsRefresh,
+             .vcsCommit,
+             .vcsPull,
+             .vcsPush,
+             .vcsCreatePR,
+             .fileTreeNewFile,
+             .fileTreeNewFolder,
+             .fileTreeToggleChangedOnly,
              .nextTab,
              .previousTab,
              .selectTab1,

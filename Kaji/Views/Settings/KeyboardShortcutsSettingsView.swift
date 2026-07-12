@@ -53,6 +53,7 @@ struct KeyboardShortcutsSettingsView: View {
             ForEach(actions) { action in
                 KeyboardShortcutRow(
                     action: action,
+                    displayName: FooterLauncherShortcutResolver.displayName(for: action),
                     combo: store.combo(for: action),
                     isRecording: recordingAction == action,
                     conflictAction: conflictWarning?.action == action ? conflictWarning?.existing : nil,
@@ -76,7 +77,7 @@ struct KeyboardShortcutsSettingsView: View {
         guard !query.isEmpty else { return ShortcutReferenceCatalog.keyboardGroups }
         return ShortcutReferenceCatalog.keyboardGroups.compactMap { group in
             let actions = group.actions.filter { action in
-                action.displayName.localizedCaseInsensitiveContains(query) ||
+                (FooterLauncherShortcutResolver.displayName(for: action) ?? action.displayName).localizedCaseInsensitiveContains(query) ||
                     group.title.localizedCaseInsensitiveContains(query) ||
                     store.combo(for: action).displayString.localizedCaseInsensitiveContains(query)
             }

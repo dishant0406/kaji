@@ -14,6 +14,7 @@ struct KeyCombo: Codable, Equatable, Hashable {
     static let upArrowKey = "uparrow"
     static let downArrowKey = "downarrow"
     static let spaceKey = "space"
+    static let returnKey = "return"
 
     let key: String
     let modifiers: UInt
@@ -42,6 +43,7 @@ struct KeyCombo: Codable, Equatable, Hashable {
 
     var swiftUIKeyEquivalent: KeyEquivalent {
         switch key {
+        case "": KeyEquivalent(" ")
         case "[": KeyEquivalent("[")
         case "]": KeyEquivalent("]")
         case ",": KeyEquivalent(",")
@@ -50,6 +52,7 @@ struct KeyCombo: Codable, Equatable, Hashable {
         case Self.upArrowKey: .upArrow
         case Self.downArrowKey: .downArrow
         case Self.spaceKey: KeyEquivalent(" ")
+        case Self.returnKey: KeyEquivalent("\r")
         default: KeyEquivalent(Character(key))
         }
     }
@@ -65,6 +68,7 @@ struct KeyCombo: Codable, Equatable, Hashable {
     }
 
     var displayString: String {
+        guard !key.isEmpty else { return "Unassigned" }
         var parts = ""
         let flags = nsModifierFlags
         if flags.contains(.control) { parts += "⌃" }
@@ -77,6 +81,7 @@ struct KeyCombo: Codable, Equatable, Hashable {
         case Self.upArrowKey: "↑"
         case Self.downArrowKey: "↓"
         case Self.spaceKey: "Space"
+        case Self.returnKey: "Enter"
         default: key.uppercased()
         }
         parts += keyDisplay
@@ -121,7 +126,7 @@ struct KeyCombo: Codable, Equatable, Hashable {
 
         let lowercased = key.lowercased()
         if lowercased == leftArrowKey || lowercased == rightArrowKey || lowercased == upArrowKey || lowercased == downArrowKey
-            || lowercased == spaceKey
+            || lowercased == spaceKey || lowercased == returnKey
         {
             return lowercased
         }

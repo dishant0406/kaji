@@ -6,9 +6,11 @@ struct BrowserPane: View {
     let closeOnDisappear: Bool
     let managesBrowserControl: Bool
     let paneIsVisible: Bool
+    var respondsToKeyboardCommands = true
     let onClosePane: () -> Void
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @State private var pendingURL = ""
+    @State private var addressFocusVersion = 0
     @State var showsPageText = false
     @State var isReading = false
     private var selectedPage: BrowserPageState? { state.selectedPage }
@@ -99,12 +101,49 @@ struct BrowserPane: View {
             startSelectedPageIfVisible()
             selectedController?.applyDeviceProfile(selectedDeviceProfile)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .browserBack)) { _ in
+            guard canHandleBrowserCommand else { return }
+            selectedController?.goBack()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserForward)) { _ in
+            guard canHandleBrowserCommand else { return }
+            selectedController?.goForward()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserReload)) { _ in
+            guard canHandleBrowserCommand else { return }
+            selectedController?.reload()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserFocusAddressBar)) { _ in
+            guard canHandleBrowserCommand else { return }
+            addressFocusVersion += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserNewPage)) { _ in
+            guard canHandleBrowserCommand else { return }
+            openPage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserClosePage)) { _ in
+            guard canHandleBrowserCommand else { return }
+            closeSelectedPage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserNextPage)) { _ in
+            guard canHandleBrowserCommand else { return }
+            selectPage(offset: 1)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserPreviousPage)) { _ in
+            guard canHandleBrowserCommand else { return }
+            selectPage(offset: -1)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .browserReadPage)) { _ in
+            guard canHandleBrowserCommand else { return }
+            Task { await readPage() }
+        }
     }
 
     private var toolbar: some View {
         BrowserToolbar(
             pendingURL: $pendingURL,
             deviceProfileID: $state.selectedDeviceProfileID,
+            addressFocusVersion: addressFocusVersion,
             showsPageText: showsPageText,
             onBack: { selectedController?.goBack() },
             onForward: { selectedController?.goForward() },
@@ -112,6 +151,10 @@ struct BrowserPane: View {
             onNavigate: navigate,
             onReadPage: { Task { await readPage() } }
         )
+    }
+
+    private var canHandleBrowserCommand: Bool {
+        paneIsVisible && respondsToKeyboardCommands
     }
 
     private var pageStack: some View {
@@ -125,6 +168,33 @@ struct BrowserPane: View {
 
     private func navigate() {
         selectedController?.navigate(to: pendingURL)
+    }
+
+    private func openPage() {
+        let page = state.openPage()
+        pendingURL = page.url
+        state.controllers.controller(for: page.id).ensureStarted(url: page.url)
+        addressFocusVersion += 1
+    }
+
+    private func closeSelectedPage() {
+        let pageID = state.selectedPageID
+        guard state.pages.count > 1 else {
+            state.controllers.closeAll()
+            onClosePane()
+            return
+        }
+        state.closePage(id: pageID)
+        pendingURL = state.url
+    }
+
+    private func selectPage(offset: Int) {
+        guard !state.pages.isEmpty else { return }
+        let currentIndex = state.pages.firstIndex { $0.id == state.selectedPageID } ?? 0
+        let targetIndex = (currentIndex + offset + state.pages.count) % state.pages.count
+        let page = state.pages[targetIndex]
+        state.selectPage(id: page.id)
+        pendingURL = page.url
     }
 
     private func startSelectedPageIfVisible() {

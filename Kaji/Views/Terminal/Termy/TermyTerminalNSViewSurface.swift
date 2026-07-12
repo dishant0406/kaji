@@ -27,6 +27,7 @@ extension TermyTerminalNSView {
             onSplitDown: { [weak self] in self?.requestSplit(direction: .vertical, position: .second) },
             onClosePane: { [weak self] in self?.onProcessExit?() },
             onClosePaneIfSplit: { [weak self] in self?.requestCloseIfSplit() ?? false },
+            onHostCommand: { [weak self] event in self?.onHostCommand?(event) ?? false },
             onShowSearch: { [weak self] in self?.startSearch() },
             onDismissSearch: { [weak self] in self?.endSearch() }
         ))

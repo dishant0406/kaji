@@ -69,6 +69,8 @@ struct TerminalSearchBar: View {
             Rectangle().fill(KajiTheme.border).frame(height: 1)
         }
         .deferFocus($isFieldFocused, on: searchState.focusVersion)
+        .attachedShortcutHint(label: "Enter", modifiers: 0, placement: .topTrailing, showWhenAnyModifierHeld: true)
+        .attachedShortcutHint(label: "Esc", modifiers: 0, placement: .bottomTrailing, showWhenAnyModifierHeld: true)
         .onKeyPress(.escape) {
             onClose()
             return .handled

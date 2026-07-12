@@ -21,6 +21,7 @@ struct TerminalKeyboardInputView: NSViewRepresentable {
     var onClosePane: () -> Void
     var onClosePaneIfSplit: () -> Bool
     var onFocusNextPane: () -> Void
+    var onHostCommand: (NSEvent) -> Bool = { _ in false }
     var onShowSearch: () -> Void
     var onDismissSearch: () -> Void
     var onSelectionChanged: (TerminalSelection?) -> Void
@@ -68,6 +69,7 @@ final class KeyboardCaptureView: NSView {
     var onClosePane: () -> Void = {}
     var onClosePaneIfSplit: () -> Bool = { false }
     var onFocusNextPane: () -> Void = {}
+    var onHostCommand: (NSEvent) -> Bool = { _ in false }
     var onShowSearch: () -> Void = {}
     var onDismissSearch: () -> Void = {}
     var onSelectionChanged: (TerminalSelection?) -> Void = { _ in }
@@ -671,33 +673,19 @@ final class KeyboardCaptureView: NSView {
     }
 
     private func handleHostCommand(_ event: NSEvent) -> Bool {
-        guard event.modifierFlags.contains(.command),
-              let key = event.charactersIgnoringModifiers?.lowercased()
-        else {
+        guard let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return false
+        }
+
+        if onHostCommand(event) {
+            return true
+        }
+
+        guard event.modifierFlags.contains(.command) else {
             return false
         }
 
         switch (key, event.modifierFlags.contains(.shift)) {
-        case ("d", false):
-            onSplitRight()
-            return true
-        case ("d", true):
-            onSplitDown()
-            return true
-        case ("w", true):
-            onClosePane()
-            return true
-        case ("w", false):
-            if onClosePaneIfSplit() {
-                return true
-            }
-            return false
-        case ("]", _):
-            onFocusNextPane()
-            return true
-        case ("f", _):
-            onShowSearch()
-            return true
         case ("k", false):
             onClearBuffer()
             return true
@@ -932,6 +920,7 @@ private extension KeyboardCaptureView {
         onClosePane = configuration.onClosePane
         onClosePaneIfSplit = configuration.onClosePaneIfSplit
         onFocusNextPane = configuration.onFocusNextPane
+        onHostCommand = configuration.onHostCommand
         onShowSearch = configuration.onShowSearch
         onDismissSearch = configuration.onDismissSearch
         onSelectionChanged = configuration.onSelectionChanged

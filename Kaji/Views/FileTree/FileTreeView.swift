@@ -84,6 +84,22 @@ struct FileTreeView: View {
         } message: {
             Text(deleteAlertMessage)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .fileTreeNewFile)) { _ in
+            guard canReceiveShortcutCommand else { return }
+            commands.beginNewFile(in: state.selectedFilePath ?? state.rootPath)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .fileTreeNewFolder)) { _ in
+            guard canReceiveShortcutCommand else { return }
+            commands.beginNewFolder(in: state.selectedFilePath ?? state.rootPath)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .fileTreeToggleChangedOnly)) { _ in
+            guard canReceiveShortcutCommand else { return }
+            state.showOnlyChanges.toggle()
+        }
+    }
+
+    private var canReceiveShortcutCommand: Bool {
+        state.pendingRenamePath == nil && state.pendingNewEntry == nil && state.pendingDeletePaths.isEmpty
     }
 
     private var deleteAlertBinding: Binding<Bool> {
@@ -122,6 +138,7 @@ struct FileTreeView: View {
                 state.showOnlyChanges.toggle()
             }
             .help(state.showOnlyChanges ? "Show All Files" : "Show Only Changed Files")
+            .attachedShortcutHint(for: .fileTreeToggleChangedOnly)
         }
         .padding(.horizontal, 10)
         .frame(height: 32)

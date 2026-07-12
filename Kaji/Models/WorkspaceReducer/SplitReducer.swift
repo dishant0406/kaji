@@ -125,6 +125,24 @@ enum SplitReducer {
         FocusReducer.focusArea(sourceAreaID, key: key, state: &state)
     }
 
+    static func resizeFocusedPane(
+        _ command: PaneResizeCommand,
+        key: WorktreeKey,
+        state: inout WorkspaceState
+    ) {
+        guard let areaID = state.focusedAreaID[key],
+              let root = state.workspaceRoots[key],
+              root.resizeArea(areaID, command: command)
+        else { return }
+        state.workspaceRoots[key] = root
+    }
+
+    static func balancePanes(key: WorktreeKey, state: inout WorkspaceState) {
+        guard let root = state.workspaceRoots[key] else { return }
+        root.balancePanes()
+        state.workspaceRoots[key] = root
+    }
+
     private static func collapseEmptyArea(
         _ areaID: UUID,
         key: WorktreeKey,

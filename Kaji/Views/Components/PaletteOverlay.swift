@@ -49,6 +49,8 @@ struct PaletteOverlay<Item: Identifiable & Sendable>: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(KajiTheme.bg)
+        .attachedShortcutHint(label: "Enter", modifiers: 0, placement: .topTrailing, showWhenAnyModifierHeld: true)
+        .attachedShortcutHint(label: "Esc", modifiers: 0, placement: .bottomTrailing, showWhenAnyModifierHeld: true)
         .onChange(of: query) {
             performSearch()
         }

@@ -198,6 +198,7 @@ struct AskOverlay: View {
             IconButton(symbol: "paperclip", size: 12, accessibilityLabel: "Attach Image") {
                 attachments.append(contentsOf: AskAttachmentLoader.openPanel())
             }
+            .attachedShortcutHint(label: "⌘Tab", modifiers: KeyCombo(key: "x", command: true).modifiers)
             PaletteSearchField(
                 text: $fieldText,
                 placeholder: isCommandInputMode ? "Type a command or option" : "Ask anything or type /",
@@ -214,6 +215,9 @@ struct AskOverlay: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+        .attachedShortcutHint(label: "Enter", modifiers: 0, placement: .topTrailing, showWhenAnyModifierHeld: true)
+        .attachedShortcutHint(label: "Esc", modifiers: 0, placement: .bottomTrailing, showWhenAnyModifierHeld: true)
+        .attachedShortcutHint(label: "⇧Enter", modifiers: KeyCombo(key: "x", shift: true).modifiers, placement: .bottomLeading)
     }
 
     private var targetSummary: some View {

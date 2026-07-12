@@ -183,4 +183,48 @@ extension SplitNode {
             return branch.first.areaFrames(in: firstRect).merging(branch.second.areaFrames(in: secondRect)) { current, _ in current }
         }
     }
+
+    func resizeArea(_ areaID: UUID, command: PaneResizeCommand, step: CGFloat = 0.05) -> Bool {
+        switch self {
+        case .tabArea:
+            return false
+        case let .split(branch):
+            let firstContains = branch.first.containsArea(id: areaID)
+            let secondContains = branch.second.containsArea(id: areaID)
+
+            if firstContains, branch.first.resizeArea(areaID, command: command, step: step) {
+                return true
+            }
+            if secondContains, branch.second.resizeArea(areaID, command: command, step: step) {
+                return true
+            }
+
+            guard branch.direction == command.axis, firstContains || secondContains else { return false }
+            let delta = resizeDelta(command: command, areaIsFirst: firstContains, step: step)
+            branch.ratio = min(0.85, max(0.15, branch.ratio + delta))
+            return true
+        }
+    }
+
+    func balancePanes() {
+        switch self {
+        case .tabArea:
+            return
+        case let .split(branch):
+            branch.ratio = 0.5
+            branch.first.balancePanes()
+            branch.second.balancePanes()
+        }
+    }
+
+    private func resizeDelta(command: PaneResizeCommand, areaIsFirst: Bool, step: CGFloat) -> CGFloat {
+        switch command {
+        case .wider,
+             .taller:
+            areaIsFirst ? step : -step
+        case .narrower,
+             .shorter:
+            areaIsFirst ? -step : step
+        }
+    }
 }

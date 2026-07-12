@@ -2,6 +2,7 @@ import SwiftUI
 
 struct KeyboardShortcutRow: View {
     let action: ShortcutAction
+    var displayName: String? = nil
     let combo: KeyCombo
     let isRecording: Bool
     let conflictAction: ShortcutAction?
@@ -14,7 +15,7 @@ struct KeyboardShortcutRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(action.displayName)
+                Text(displayName ?? action.displayName)
                     .kajiFont(size: SettingsMetrics.labelFontSize)
                     .frame(maxWidth: .infinity, alignment: .leading)
 

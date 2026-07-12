@@ -33,6 +33,38 @@ enum FocusReducer {
         focusPane(key: key, direction: direction, state: &state)
     }
 
+    static func focusNextPane(projectID: UUID, state: inout WorkspaceState) {
+        focusPaneByOffset(projectID: projectID, offset: 1, state: &state)
+    }
+
+    static func focusPreviousPane(projectID: UUID, state: inout WorkspaceState) {
+        focusPaneByOffset(projectID: projectID, offset: -1, state: &state)
+    }
+
+    static func focusLastPane(projectID: UUID, state: inout WorkspaceState) {
+        guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
+              let root = state.workspaceRoots[key],
+              let previousID = popFocusHistory(key: key, validAreas: root.allAreas(), state: &state)
+        else { return }
+        focusArea(previousID, key: key, state: &state)
+    }
+
+    static func focusPane(projectID: UUID, index: Int, state: inout WorkspaceState) {
+        guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
+              let root = state.workspaceRoots[key]
+        else { return }
+        let areas = root.allAreas()
+        guard index >= 0, index < areas.count else { return }
+        focusArea(areas[index].id, key: key, state: &state)
+    }
+
+    static func targetAreaID(key: WorktreeKey, direction: Direction, state: WorkspaceState) -> UUID? {
+        guard let root = state.workspaceRoots[key],
+              let focusedID = state.focusedAreaID[key]
+        else { return nil }
+        return targetAreaID(root: root, focusedID: focusedID, direction: direction)
+    }
+
     static func popFocusHistory(key: WorktreeKey, validAreas: [TabArea], state: inout WorkspaceState) -> UUID? {
         let validIDs = Set(validAreas.map(\.id))
         while let last = state.focusHistory[key]?.popLast() {
@@ -43,13 +75,26 @@ enum FocusReducer {
         return nil
     }
 
-    private static func focusPane(key: WorktreeKey, direction: Direction, state: inout WorkspaceState) {
-        guard let root = state.workspaceRoots[key],
-              let focusedID = state.focusedAreaID[key]
+    private static func focusPaneByOffset(projectID: UUID, offset: Int, state: inout WorkspaceState) {
+        guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
+              let root = state.workspaceRoots[key]
         else { return }
+        let areas = root.allAreas()
+        guard areas.count > 1 else { return }
+        let currentID = state.focusedAreaID[key]
+        let currentIndex = currentID.flatMap { id in areas.firstIndex { $0.id == id } } ?? 0
+        let targetIndex = (currentIndex + offset + areas.count) % areas.count
+        focusArea(areas[targetIndex].id, key: key, state: &state)
+    }
 
+    private static func focusPane(key: WorktreeKey, direction: Direction, state: inout WorkspaceState) {
+        guard let targetID = targetAreaID(key: key, direction: direction, state: state) else { return }
+        focusArea(targetID, key: key, state: &state)
+    }
+
+    private static func targetAreaID(root: SplitNode, focusedID: UUID, direction: Direction) -> UUID? {
         let frames = root.areaFrames()
-        guard let focusedFrame = frames[focusedID] else { return }
+        guard let focusedFrame = frames[focusedID] else { return nil }
 
         var bestCandidate: UUID?
         var bestScore: PaneFocusScore?
@@ -64,8 +109,7 @@ enum FocusReducer {
             }
         }
 
-        guard let bestCandidate else { return }
-        focusArea(bestCandidate, key: key, state: &state)
+        return bestCandidate
     }
 
     private struct PaneFocusScore: Comparable {

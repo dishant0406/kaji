@@ -191,13 +191,7 @@ struct ProjectRow: View {
                 .environment(appState)
                 .environment(worktreeStore)
             }
-            .overlay {
-                if showShortcutBadge, let shortcutIndex,
-                   let action = ShortcutAction.projectAction(for: shortcutIndex)
-                {
-                    ShortcutBadge(label: KeyBindingStore.shared.combo(for: action).displayString)
-                }
-            }
+            .modifier(ProjectShortcutHintModifier(shortcutIndex: shortcutIndex))
             .kajiPopover(isPresented: $isRenaming, preferredEdge: .trailing) {
                 RenamePopover(
                     text: $renameText,
@@ -293,15 +287,6 @@ struct ProjectRow: View {
         return KajiTheme.border.opacity(0.55)
     }
 
-    private var showShortcutBadge: Bool {
-        guard let shortcutIndex,
-              let action = ShortcutAction.projectAction(for: shortcutIndex)
-        else { return false }
-        return ModifierKeyMonitor.shared.isHolding(
-            modifiers: KeyBindingStore.shared.combo(for: action).modifiers
-        )
-    }
-
     private func pickLogoImage() {
         let panel = NSOpenPanel()
         panel.title = "Choose a Logo Image"
@@ -381,6 +366,18 @@ struct ProjectRow: View {
 
     private func showCodeGraphAgent() {
         codeGraphAgentCoordinator.show(projectID: project.id, worktreeID: activeWorktree.id)
+    }
+}
+
+struct ProjectShortcutHintModifier: ViewModifier {
+    let shortcutIndex: Int?
+
+    func body(content: Content) -> some View {
+        if let shortcutIndex, let action = ShortcutAction.projectAction(for: shortcutIndex) {
+            content.attachedShortcutHint(for: action, placement: .center, compact: false)
+        } else {
+            content
+        }
     }
 }
 

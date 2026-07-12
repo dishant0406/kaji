@@ -618,6 +618,7 @@ struct PRPill: View {
             action: onRequestCreate
         )
         .help("Create a pull request")
+        .attachedShortcutHint(for: .vcsCreatePR)
     }
 
     private func hasPRPill(info: GitRepositoryService.PRInfo) -> some View {

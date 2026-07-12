@@ -5,7 +5,7 @@ struct ShortcutDefinition: Identifiable, Equatable {
     let displayName: String
     let category: String
     let scope: ShortcutScope
-    let defaultCombo: KeyCombo
+    let defaultCombo: KeyCombo?
 
     var id: ShortcutAction { action }
 }
@@ -70,7 +70,10 @@ enum ShortcutReferenceCatalog {
     }
 
     static var defaultBindings: [KeyBinding] {
-        definitions.map { KeyBinding(action: $0.action, combo: $0.defaultCombo) }
+        definitions.compactMap { definition in
+            guard let combo = definition.defaultCombo else { return nil }
+            return KeyBinding(action: definition.action, combo: combo)
+        }
     }
 
     static func definition(for action: ShortcutAction) -> ShortcutDefinition {
@@ -116,7 +119,7 @@ extension ShortcutDefinition: Decodable {
         displayName = try container.decode(String.self, forKey: .displayName)
         category = try container.decode(String.self, forKey: .category)
         scope = try container.decode(ShortcutScope.self, forKey: .scope)
-        defaultCombo = try container.decode(ShortcutDefaultCombo.self, forKey: .defaultCombo).keyCombo
+        defaultCombo = try container.decodeIfPresent(ShortcutDefaultCombo.self, forKey: .defaultCombo)?.keyCombo
     }
 }
 

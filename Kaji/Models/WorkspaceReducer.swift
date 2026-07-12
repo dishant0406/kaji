@@ -201,6 +201,18 @@ enum WorkspaceReducer {
         case let .focusArea(projectID, areaID):
             FocusReducer.focusArea(projectID: projectID, areaID: areaID, state: &state)
 
+        case let .focusNextPane(projectID):
+            FocusReducer.focusNextPane(projectID: projectID, state: &state)
+
+        case let .focusPreviousPane(projectID):
+            FocusReducer.focusPreviousPane(projectID: projectID, state: &state)
+
+        case let .focusLastPane(projectID):
+            FocusReducer.focusLastPane(projectID: projectID, state: &state)
+
+        case let .focusPaneByIndex(projectID, index):
+            FocusReducer.focusPane(projectID: projectID, index: index, state: &state)
+
         case let .focusPaneLeft(projectID):
             FocusReducer.focusPane(projectID: projectID, direction: .left, state: &state)
 
@@ -212,6 +224,32 @@ enum WorkspaceReducer {
 
         case let .focusPaneDown(projectID):
             FocusReducer.focusPane(projectID: projectID, direction: .down, state: &state)
+
+        case let .resizeFocusedPane(projectID, command):
+            guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state) else { break }
+            SplitReducer.resizeFocusedPane(command, key: key, state: &state)
+
+        case let .balancePanes(projectID):
+            guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state) else { break }
+            SplitReducer.balancePanes(key: key, state: &state)
+
+        case let .swapPane(projectID, direction):
+            guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
+                  let sourceAreaID = state.focusedAreaID[key],
+                  let targetAreaID = FocusReducer.targetAreaID(key: key, direction: direction.focusDirection, state: state)
+            else { break }
+            SplitReducer.swapPanes(sourceAreaID: sourceAreaID, targetAreaID: targetAreaID, key: key, state: &state)
+
+        case let .movePaneInDirection(projectID, direction):
+            guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
+                  let sourceAreaID = state.focusedAreaID[key],
+                  let targetAreaID = FocusReducer.targetAreaID(key: key, direction: direction.focusDirection, state: state)
+            else { break }
+            SplitReducer.movePane(
+                PaneMoveRequest(sourceAreaID: sourceAreaID, targetAreaID: targetAreaID, split: direction.splitPlacement),
+                key: key,
+                state: &state
+            )
 
         case let .navigate(projectID, worktreeID, areaID, tabID):
             let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 public struct TermyEmbeddedTerminalSurface: View {
@@ -10,6 +11,7 @@ public struct TermyEmbeddedTerminalSurface: View {
     private let onSplitDown: () -> Void
     private let onClosePane: () -> Void
     private let onClosePaneIfSplit: () -> Bool
+    private let onHostCommand: (NSEvent) -> Bool
     private let onShowSearch: () -> Void
     private let onDismissSearch: () -> Void
 
@@ -23,6 +25,7 @@ public struct TermyEmbeddedTerminalSurface: View {
         onSplitDown: @escaping () -> Void,
         onClosePane: @escaping () -> Void,
         onClosePaneIfSplit: @escaping () -> Bool,
+        onHostCommand: @escaping (NSEvent) -> Bool = { _ in false },
         onShowSearch: @escaping () -> Void,
         onDismissSearch: @escaping () -> Void
     ) {
@@ -35,6 +38,7 @@ public struct TermyEmbeddedTerminalSurface: View {
         self.onSplitDown = onSplitDown
         self.onClosePane = onClosePane
         self.onClosePaneIfSplit = onClosePaneIfSplit
+        self.onHostCommand = onHostCommand
         self.onShowSearch = onShowSearch
         self.onDismissSearch = onDismissSearch
     }
@@ -50,6 +54,7 @@ public struct TermyEmbeddedTerminalSurface: View {
             onSplitDown: onSplitDown,
             onClosePane: onClosePane,
             onClosePaneIfSplit: onClosePaneIfSplit,
+            onHostCommand: onHostCommand,
             onShowSearch: onShowSearch,
             onDismissSearch: onDismissSearch
         )
@@ -68,6 +73,7 @@ private struct TermyEmbeddedTerminalBody: View {
     let onSplitDown: () -> Void
     let onClosePane: () -> Void
     let onClosePaneIfSplit: () -> Bool
+    let onHostCommand: (NSEvent) -> Bool
     let onShowSearch: () -> Void
     let onDismissSearch: () -> Void
 
@@ -110,6 +116,7 @@ private struct TermyEmbeddedTerminalBody: View {
                     onClosePane: onClosePane,
                     onClosePaneIfSplit: onClosePaneIfSplit,
                     onFocusNextPane: {},
+                    onHostCommand: onHostCommand,
                     onShowSearch: onShowSearch,
                     onDismissSearch: onDismissSearch,
                     onSelectionChanged: { terminal.updateSelection($0) },

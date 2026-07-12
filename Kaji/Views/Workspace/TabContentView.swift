@@ -51,6 +51,7 @@ struct TabContentView: View {
                 closeOnDisappear: true,
                 managesBrowserControl: true,
                 paneIsVisible: visible,
+                respondsToKeyboardCommands: focused,
                 onClosePane: onClosePane
             )
         }

@@ -15,5 +15,6 @@ struct KajiModalOverlay<Content: View>: View {
                 .padding(24)
                 .transition(KajiMotion.modalTransition(reduceMotion: reduceMotion))
         }
+        .background(KajiEscapeKeyMonitor(onEscape: onDismiss))
     }
 }

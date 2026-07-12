@@ -48,6 +48,9 @@ struct EditorSearchBar: View {
         .onChange(of: state.replaceFocusVersion) { _, _ in focusedField = .replace }
         .onAppear { focusedField = state.replaceVisible ? .replace : .search }
         .animation(KajiMotion.panel, value: state.replaceVisible)
+        .attachedShortcutHint(label: "Enter", modifiers: 0, placement: .topTrailing, showWhenAnyModifierHeld: true)
+        .attachedShortcutHint(label: "Esc", modifiers: 0, placement: .bottomTrailing, showWhenAnyModifierHeld: true)
+        .attachedShortcutHint(label: "⇧Enter", modifiers: KeyCombo(key: "x", shift: true).modifiers, placement: .bottomLeading)
         .onKeyPress(.escape) {
             onClose()
             return .handled

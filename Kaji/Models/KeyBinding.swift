@@ -9,10 +9,35 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case splitRight
     case splitDown
     case closePane
+    case focusNextPane
+    case focusPreviousPane
+    case focusLastPane
+    case focusPane1
+    case focusPane2
+    case focusPane3
+    case focusPane4
+    case focusPane5
+    case focusPane6
+    case focusPane7
+    case focusPane8
+    case focusPane9
     case focusPaneLeft
     case focusPaneRight
     case focusPaneUp
     case focusPaneDown
+    case increasePaneWidth
+    case decreasePaneWidth
+    case increasePaneHeight
+    case decreasePaneHeight
+    case balancePanes
+    case swapPaneLeft
+    case swapPaneRight
+    case swapPaneUp
+    case swapPaneDown
+    case movePaneLeft
+    case movePaneRight
+    case movePaneUp
+    case movePaneDown
     case nextTab
     case previousTab
     case toggleThemePicker
@@ -55,10 +80,39 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
     case toggleFileTree
     case toggleGlobalSearch
     case toggleProblemsPanel
+    case toggleBrowserPanel
+    case browserBack
+    case browserForward
+    case browserReload
+    case browserFocusAddressBar
+    case browserNewPage
+    case browserClosePage
+    case browserNextPage
+    case browserPreviousPage
+    case browserReadPage
+    case toggleAgentInstructions
+    case toggleMCPControlPanel
+    case closeActiveSidePanel
+    case toggleNotificationPanel
+    case toggleAgentMissionControl
     case toggleFooterTerminal
+    case openKajiAgentSplit
+    case openFooterLauncher1
+    case openFooterLauncher2
+    case openFooterLauncher3
+    case openFooterLauncher4
+    case openFooterLauncher5
     case toggleAIUsage
     case navigateBack
     case navigateForward
+    case vcsRefresh
+    case vcsCommit
+    case vcsPull
+    case vcsPush
+    case vcsCreatePR
+    case fileTreeNewFile
+    case fileTreeNewFolder
+    case fileTreeToggleChangedOnly
 
     static var allCases: [Self] { ShortcutReferenceCatalog.actions }
 
@@ -116,6 +170,32 @@ enum ShortcutAction: String, Codable, CaseIterable, Identifiable {
         case .selectProject7: 6
         case .selectProject8: 7
         case .selectProject9: 8
+        default: nil
+        }
+    }
+
+    var paneSelectionIndex: Int? {
+        switch self {
+        case .focusPane1: 0
+        case .focusPane2: 1
+        case .focusPane3: 2
+        case .focusPane4: 3
+        case .focusPane5: 4
+        case .focusPane6: 5
+        case .focusPane7: 6
+        case .focusPane8: 7
+        case .focusPane9: 8
+        default: nil
+        }
+    }
+
+    var footerLauncherIndex: Int? {
+        switch self {
+        case .openFooterLauncher1: 0
+        case .openFooterLauncher2: 1
+        case .openFooterLauncher3: 2
+        case .openFooterLauncher4: 3
+        case .openFooterLauncher5: 4
         default: nil
         }
     }

@@ -24,5 +24,6 @@ struct KajiCommandModalShell<Content: View>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityAddTraits(.isModal)
         }
+        .background(KajiEscapeKeyMonitor(onEscape: onDismiss))
     }
 }

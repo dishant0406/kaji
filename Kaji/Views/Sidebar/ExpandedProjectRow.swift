@@ -181,13 +181,10 @@ struct ExpandedProjectRow: View {
                     )
                 }
 
-                if showShortcutBadge, let shortcutIndex,
-                   let action = ShortcutAction.projectAction(for: shortcutIndex)
-                {
-                    ShortcutBadge(label: KeyBindingStore.shared.combo(for: action).displayString)
-                }
+                EmptyView()
             }
         }
+        .modifier(ProjectShortcutHintModifier(shortcutIndex: shortcutIndex))
         .overlay {
             SecondaryClickView {
                 guard !isAnyDragging else { return }
@@ -393,15 +390,6 @@ struct ExpandedProjectRow: View {
         if hasOpenTerminal { return KajiTheme.accent.opacity(0.28) }
         if hovered { return KajiTheme.border.opacity(0.65) }
         return .clear
-    }
-
-    private var showShortcutBadge: Bool {
-        guard let shortcutIndex,
-              let action = ShortcutAction.projectAction(for: shortcutIndex)
-        else { return false }
-        return ModifierKeyMonitor.shared.isHolding(
-            modifiers: KeyBindingStore.shared.combo(for: action).modifiers
-        )
     }
 
     private func pickLogoImage() {

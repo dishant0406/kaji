@@ -61,6 +61,7 @@ struct BrowserTabStrip: View {
 
             BrowserTabAddButton(action: openPage)
                 .frame(width: Self.addButtonWidth, height: 34)
+                .attachedShortcutHint(for: .browserNewPage)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)

@@ -27,6 +27,9 @@ struct SidebarFooter: View {
         .onReceive(NotificationCenter.default.publisher(for: .toggleNotificationPanel)) { _ in
             showNotifications.toggle()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .toggleAgentMissionControl)) { _ in
+            showAgents.toggle()
+        }
     }
 
     private var collapsedFooter: some View {
@@ -77,6 +80,7 @@ struct SidebarFooter: View {
     private var agentsButton: some View {
         AgentMissionControlButton(items: agentItems, expanded: expanded) { showAgents.toggle() }
             .help("Agents")
+            .attachedShortcutHint(for: .toggleAgentMissionControl)
             .kajiPopover(isPresented: $showAgents, preferredEdge: .top) {
                 AgentMissionControlPanel(onDismiss: { showAgents = false })
             }
@@ -85,6 +89,7 @@ struct SidebarFooter: View {
     private var notificationsButton: some View {
         IconButton(symbol: notificationBellIcon, accessibilityLabel: "Notifications") { showNotifications.toggle() }
             .help("Notifications")
+            .attachedShortcutHint(for: .toggleNotificationPanel)
             .kajiPopover(isPresented: $showNotifications, preferredEdge: .top) {
                 NotificationPanel(onDismiss: { showNotifications = false })
             }
@@ -93,6 +98,7 @@ struct SidebarFooter: View {
     private var themeButton: some View {
         IconButton(symbol: "paintbrush", accessibilityLabel: "Theme Picker") { showThemePicker.toggle() }
             .help("Theme Picker (\(KeyBindingStore.shared.combo(for: .toggleThemePicker).displayString))")
+            .attachedShortcutHint(for: .toggleThemePicker)
             .kajiPopover(isPresented: $showThemePicker, preferredEdge: .top) {
                 ThemePicker(
                     onRequestCreate: {
@@ -107,6 +113,7 @@ struct SidebarFooter: View {
     private var sidebarToggleButton: some View {
         SidebarToggleButton(expanded: expanded, accessibilityLabel: sidebarToggleLabel) { postToggleSidebar() }
             .help("\(sidebarToggleLabel) (\(KeyBindingStore.shared.combo(for: .toggleSidebar).displayString))")
+            .attachedShortcutHint(for: .toggleSidebar)
     }
 
     private var sidebarToggleLabel: String {

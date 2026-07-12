@@ -12,6 +12,7 @@ final class TermyTerminalNSView: NSView {
     var onFocus: (() -> Void)?
     var onProcessExit: (() -> Void)?
     var onSplitRequest: ((SplitDirection, SplitPosition) -> Void)?
+    var onHostCommand: ((NSEvent) -> Bool)?
     var onSearchStart: ((String?) -> Void)?
     var onSearchEnd: (() -> Void)?
     var onSearchTotal: ((Int?) -> Void)?
@@ -115,6 +116,7 @@ final class TermyTerminalNSView: NSView {
         onFocus = nil
         onProcessExit = nil
         onSplitRequest = nil
+        onHostCommand = nil
         destroySurface()
         removeFromSuperview()
     }
