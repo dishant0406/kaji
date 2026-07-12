@@ -65,7 +65,7 @@ final class ModifierKeyMonitor {
         let flags = NSEvent.ModifierFlags(rawValue: modifiers).intersection(KeyCombo.supportedModifierMask)
         let active = activeModifiers.intersection(KeyCombo.supportedModifierMask)
         guard !flags.isEmpty, !active.isEmpty else { return false }
-        return !flags.intersection(active).isEmpty
+        return !flags.isDisjoint(with: active)
     }
 
     func matchesHeldModifiers(_ combo: KeyCombo) -> Bool {

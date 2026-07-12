@@ -134,10 +134,11 @@ enum AskCommandDispatcher {
 
     private static func launchCommand(
         for provider: AskProvider,
+        launcherSettings: CLILauncherSettings,
         resolveCommand: (String) -> String
     ) -> String {
         if let launcherID = provider.launcherID {
-            let saved = CLILauncherSettings.shared.command(for: launcherID)
+            let saved = launcherSettings.command(for: launcherID)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if !saved.isEmpty {
                 return resolveCommand(saved)
@@ -150,11 +151,12 @@ enum AskCommandDispatcher {
         for provider: AskProvider,
         prompt: String,
         model: String? = nil,
-        resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) }
+        resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) },
+        launcherSettings: CLILauncherSettings = .shared
     ) -> String {
         if provider == .terminal { return prompt }
         guard let agent = CodingAgentRegistry.shared.agent(id: provider.rawValue) else { return "" }
-        let base = launchCommand(for: provider, resolveCommand: resolveCommand)
+        let base = launchCommand(for: provider, launcherSettings: launcherSettings, resolveCommand: resolveCommand)
         guard !base.isEmpty else { return "" }
         return agent.startupCommand(baseCommand: base, prompt: prompt, model: model)
     }
@@ -163,20 +165,28 @@ enum AskCommandDispatcher {
         for provider: AskProvider,
         history: AskHistoryOption,
         prompt: String,
-        resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) }
+        resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) },
+        launcherSettings: CLILauncherSettings = .shared
     ) -> String {
-        resumeCommand(for: provider, sessionID: history.sessionID, prompt: prompt, resolveCommand: resolveCommand)
+        resumeCommand(
+            for: provider,
+            sessionID: history.sessionID,
+            prompt: prompt,
+            resolveCommand: resolveCommand,
+            launcherSettings: launcherSettings
+        )
     }
 
     static func resumeCommand(
         for provider: AskProvider,
         sessionID: String,
         prompt: String,
-        resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) }
+        resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) },
+        launcherSettings: CLILauncherSettings = .shared
     ) -> String {
         if provider == .terminal { return prompt.trimmingCharacters(in: .whitespacesAndNewlines) }
         guard let agent = CodingAgentRegistry.shared.agent(id: provider.rawValue) else { return "" }
-        let base = launchCommand(for: provider, resolveCommand: resolveCommand)
+        let base = launchCommand(for: provider, launcherSettings: launcherSettings, resolveCommand: resolveCommand)
         guard !base.isEmpty else { return "" }
         return agent.resumeCommand(baseCommand: base, sessionID: sessionID, prompt: prompt)
     }

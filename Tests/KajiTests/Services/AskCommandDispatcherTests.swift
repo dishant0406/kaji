@@ -7,14 +7,31 @@ struct AskCommandDispatcherTests {
     @Test
     @MainActor
     func startupCommandUsesProviderNativePromptShape() {
+        let launcherSettings = cleanLauncherSettings()
         let codex = AskCommandDispatcher.startupCommand(
             for: .codex,
             prompt: "whats this repo about",
-            resolveCommand: { $0 }
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
         )
-        let claude = AskCommandDispatcher.startupCommand(for: .claude, prompt: "hello", resolveCommand: { $0 })
-        let opencode = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "hello world", resolveCommand: { $0 })
-        let empty = AskCommandDispatcher.startupCommand(for: .opencode, prompt: "", resolveCommand: { $0 })
+        let claude = AskCommandDispatcher.startupCommand(
+            for: .claude,
+            prompt: "hello",
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
+        )
+        let opencode = AskCommandDispatcher.startupCommand(
+            for: .opencode,
+            prompt: "hello world",
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
+        )
+        let empty = AskCommandDispatcher.startupCommand(
+            for: .opencode,
+            prompt: "",
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
+        )
 
         #expect(commandExecutableName(codex) == "codex")
         #expect(codex.hasSuffix("'whats this repo about'"))
@@ -29,6 +46,7 @@ struct AskCommandDispatcherTests {
     @Test
     @MainActor
     func resumeCommandUsesProviderNativeShape() {
+        let launcherSettings = cleanLauncherSettings()
         let history = AskHistoryOption(
             provider: .codex,
             sessionID: "session one",
@@ -42,19 +60,22 @@ struct AskCommandDispatcherTests {
             for: .codex,
             history: history,
             prompt: "continue",
-            resolveCommand: { $0 }
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
         )
         let claude = AskCommandDispatcher.resumeCommand(
             for: .claude,
             history: history,
             prompt: "continue",
-            resolveCommand: { $0 }
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
         )
         let opencode = AskCommandDispatcher.resumeCommand(
             for: .opencode,
             history: history,
             prompt: "continue",
-            resolveCommand: { $0 }
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
         )
 
         #expect(codex.contains("resume 'session one' -- continue"))
@@ -65,11 +86,13 @@ struct AskCommandDispatcherTests {
     @Test
     @MainActor
     func codexResumeCommandSeparatesPromptFromSessionArguments() {
+        let launcherSettings = cleanLauncherSettings()
         let command = AskCommandDispatcher.resumeCommand(
             for: .codex,
             sessionID: "session-one",
             prompt: "--help",
-            resolveCommand: { $0 }
+            resolveCommand: { $0 },
+            launcherSettings: launcherSettings
         )
 
         #expect(command.contains("resume session-one -- --help"))
@@ -78,10 +101,12 @@ struct AskCommandDispatcherTests {
     @Test
     @MainActor
     func startupCommandUsesResolvedLauncherCommand() {
+        let launcherSettings = cleanLauncherSettings()
         let command = AskCommandDispatcher.startupCommand(
             for: .codex,
             prompt: "hello",
-            resolveCommand: { raw in raw.hasPrefix("codex") ? raw.replacingOccurrences(of: "codex", with: "/opt/kaji-test/bin/codex", options: .anchored) : raw }
+            resolveCommand: { raw in raw.hasPrefix("codex") ? raw.replacingOccurrences(of: "codex", with: "/opt/kaji-test/bin/codex", options: .anchored) : raw },
+            launcherSettings: launcherSettings
         )
 
         #expect(command.hasPrefix("/opt/kaji-test/bin/codex "))
@@ -138,5 +163,13 @@ struct AskCommandDispatcherTests {
     private func commandExecutableName(_ command: String) -> String? {
         guard let token = command.split(whereSeparator: \.isWhitespace).first else { return nil }
         return URL(fileURLWithPath: String(token).trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))).lastPathComponent
+    }
+
+    @MainActor
+    private func cleanLauncherSettings() -> CLILauncherSettings {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            .appendingPathComponent("cli-launchers.json")
+        return CLILauncherSettings(fileURL: url, syncProviderState: false)
     }
 }

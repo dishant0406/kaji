@@ -2,7 +2,7 @@ import SwiftUI
 
 struct KeyboardShortcutRow: View {
     let action: ShortcutAction
-    var displayName: String? = nil
+    var displayName: String?
     let combo: KeyCombo
     let isRecording: Bool
     let conflictAction: ShortcutAction?

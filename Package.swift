@@ -65,10 +65,12 @@ let package = Package(
             exclude: [
                 "Info.plist",
                 "Kaji.entitlements",
+                "Resources/FileIcons",
                 "Resources/MonacoEditor",
                 "Resources/Rift",
             ],
             resources: [
+                .copy("Resources/FileIcons"),
                 .copy("Resources/MonacoEditor"),
                 .copy("Resources/Rift"),
                 .process("Resources"),

@@ -368,19 +368,8 @@ private struct FileTreeRow: View {
     }
 
     private var icon: some View {
-        KajiIcon(systemName: iconSymbol, size: 11)
-            .foregroundStyle(iconColor)
+        FileTypeIconView(entry: entry, isExpanded: state.isExpanded(entry), size: 14)
             .frame(width: 14)
-    }
-
-    private var iconSymbol: String {
-        guard entry.isDirectory else { return "doc" }
-        return state.isExpanded(entry) ? "folder.fill" : "folder"
-    }
-
-    private var iconColor: Color {
-        if entry.isDirectory { return KajiTheme.fgMuted }
-        return statusColor ?? KajiTheme.fgMuted
     }
 
     private var textColor: Color {
@@ -455,8 +444,7 @@ private struct FileTreeNewEntryRow: View {
     var body: some View {
         HStack(spacing: 4) {
             Color.clear.frame(width: CGFloat(depth) * 12)
-            KajiIcon(systemName: kind == .folder ? "folder" : "doc", size: 11)
-                .foregroundStyle(KajiTheme.fgMuted)
+            FileTypeIconView(kind: fileIconKind, size: 14)
                 .frame(width: 14)
             FileTreeRenameField(
                 initialName: "",
@@ -467,6 +455,12 @@ private struct FileTreeNewEntryRow: View {
         }
         .padding(.horizontal, 6)
         .frame(height: 22)
+    }
+
+    private var fileIconKind: FileTypeIconView.Kind {
+        kind == .folder
+            ? .folder(name: "", relativePath: nil, isExpanded: false, isRoot: false)
+            : .file(name: "", relativePath: nil)
     }
 }
 
