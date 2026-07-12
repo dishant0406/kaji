@@ -1,4 +1,5 @@
 import AppKit
+import Kaset
 import SwiftUI
 
 struct MainWindow: View {
@@ -41,6 +42,12 @@ struct MainWindow: View {
         static let maxRetainedSessions = 3
     }
 
+    private enum KasetMusicLayout {
+        static let minWidth: CGFloat = 420
+        static let defaultWidth: CGFloat = 560
+        static let maxWidth: CGFloat = 980
+    }
+
     private enum SidePanelIdentity: Hashable {
         case codeGraphAgent(UUID)
         case vcs
@@ -49,6 +56,7 @@ struct MainWindow: View {
         case fileTree(WorktreeKey)
         case agentInstructions(UUID)
         case browser(WorktreeKey)
+        case kasetMusic
     }
 
     private enum CloseConfirmationKind {
@@ -109,6 +117,10 @@ struct MainWindow: View {
     @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
     @AppStorage("kaji.browserPanelWidth") private var browserPanelWidth: Double = .init(BrowserLayout.defaultWidth)
     @State private var browserSessions: [WorktreeKey: BrowserSession] = [:]
+    @State private var kasetMusicController = KasetEmbeddedController(configuration: .sidePanel)
+    @State private var kasetMusicPanelVisible = false
+    @AppStorage(KasetMusicPreferences.enabledKey) private var kasetMusicEnabled = false
+    @AppStorage("kaji.kasetMusicPanelWidth") private var kasetMusicPanelWidth: Double = .init(KasetMusicLayout.defaultWidth)
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
     @State private var codeGraphAgentCoordinator = KajiCodeGraphAgentCoordinator.shared
@@ -158,6 +170,7 @@ struct MainWindow: View {
                 .overlay { createThemeOverlay }
                 .overlay { projectLogoCropperOverlay }
                 .overlay { globalModalOverlay }
+                .overlay(alignment: .bottomTrailing) { kasetPlaybackHost }
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showSettings)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showMCPControlPanel)
                 .animation(KajiMotion.preferred(KajiMotion.modal, reduceMotion: reduceMotion), value: showCreateThemeModal)
@@ -336,6 +349,20 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .closeBrowserPanel)) { _ in
                     hideBrowserPanel()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleKasetMusicPanel)) { _ in
+                    guard kasetMusicEnabled else { return }
+                    toggleKasetMusicPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .openKasetMusicPanel)) { _ in
+                    guard kasetMusicEnabled else { return }
+                    showKasetMusicPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .closeKasetMusicPanel)) { _ in
+                    hideKasetMusicPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .shutdownKasetMusic)) { _ in
+                    kasetMusicController.shutdown()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .toggleFooterTerminal)) { _ in
                     guard footerTerminalEnabled else { return }
                     toggleFooterTerminal()
@@ -405,6 +432,11 @@ struct MainWindow: View {
                         closeBrowserFeature()
                     }
                 }
+                .onChange(of: kasetMusicEnabled) { _, enabled in
+                    if !enabled {
+                        hideKasetMusicPanel()
+                    }
+                }
                 .onAppear {
                     SpeechInputController.shared.updateEditorProvider {
                         activeEditorState
@@ -429,6 +461,7 @@ struct MainWindow: View {
         if agentInstructionPanelVisible, let project = activeProject { return .agentInstructions(project.id) }
         if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let key = activeWorktreeKey,
            activeBrowserState != nil { return .browser(key) }
+        if kasetMusicEnabled, kasetMusicPanelVisible { return .kasetMusic }
         return nil
     }
 
@@ -551,6 +584,8 @@ struct MainWindow: View {
             }
         } else if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let state = activeBrowserState, let key = activeWorktreeKey {
             browserSidePanel(state: state, sessionID: key.worktreeID.uuidString)
+        } else if kasetMusicEnabled, kasetMusicPanelVisible {
+            kasetMusicSidePanel()
         }
     }
 
@@ -597,6 +632,31 @@ struct MainWindow: View {
             )
             .frame(width: CGFloat(browserPanelWidth))
             .clipped()
+        }
+    }
+
+    private func kasetMusicSidePanel() -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                let next = kasetMusicPanelWidth - Double(delta)
+                kasetMusicPanelWidth = max(
+                    Double(KasetMusicLayout.minWidth),
+                    min(Double(KasetMusicLayout.maxWidth), next)
+                )
+            }
+            KasetMusicPanel(controller: kasetMusicController, onClose: { hideKasetMusicPanel() })
+                .frame(width: CGFloat(kasetMusicPanelWidth))
+                .clipped()
+        }
+    }
+
+    @ViewBuilder
+    private var kasetPlaybackHost: some View {
+        if kasetMusicEnabled, !kasetMusicPanelVisible, kasetMusicController.shouldMountPlaybackHost {
+            KasetEmbeddedPlaybackHost(controller: kasetMusicController)
+                .frame(width: 1, height: 1)
+                .opacity(0)
+                .allowsHitTesting(false)
         }
     }
 
@@ -1068,6 +1128,7 @@ struct MainWindow: View {
                 worktreeKey: activeWorktreeKey,
                 worktreePath: activeWorktreePath(for: project),
                 expanded: isVisible,
+                kasetMusicController: kasetMusicController,
                 onToggle: footerTerminalToggleAction,
                 onOpenMCPControlPanel: { showMCPControlPanel = true },
                 onProcessExit: { footerTerminalProcessExited(projectID: project.id) }
@@ -1292,6 +1353,12 @@ struct MainWindow: View {
         }
     }
 
+    private func hideKasetMusicPanel() {
+        withSidePanelAnimation {
+            kasetMusicPanelVisible = false
+        }
+    }
+
     private func closeBrowserSession(for key: WorktreeKey) {
         browserSessions.removeValue(forKey: key)?.close()
         if browserPanelKey == key {
@@ -1324,6 +1391,7 @@ struct MainWindow: View {
                 vcsPanelVisible = false
                 fileTreePanelVisible = false
                 agentInstructionPanelVisible = false
+                kasetMusicPanelVisible = false
             }
         }
     }
@@ -1347,7 +1415,46 @@ struct MainWindow: View {
             vcsPanelVisible = false
             fileTreePanelVisible = false
             agentInstructionPanelVisible = false
+            kasetMusicPanelVisible = false
         }
+    }
+
+    private func toggleKasetMusicPanel() {
+        let isShowing = !kasetMusicPanelVisible
+        if isShowing {
+            hideCodeGraphAgentPanelIfNeeded()
+        }
+        withSidePanelAnimation {
+            kasetMusicPanelVisible = isShowing
+            if isShowing {
+                vcsPanelVisible = false
+                fileTreePanelVisible = false
+                globalSearchPanelVisible = false
+                problemsPanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+                agentInstructionPanelVisible = false
+            }
+        }
+    }
+
+    private func showKasetMusicPanel() {
+        hideCodeGraphAgentPanelIfNeeded()
+        withSidePanelAnimation {
+            kasetMusicPanelVisible = true
+            vcsPanelVisible = false
+            fileTreePanelVisible = false
+            globalSearchPanelVisible = false
+            problemsPanelVisible = false
+            browserPanelVisible = false
+            browserPanelKey = nil
+            agentInstructionPanelVisible = false
+        }
+    }
+
+    private func hideCodeGraphAgentPanelIfNeeded() {
+        guard let key = activeWorktreeKey else { return }
+        codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
     }
 
     private var activeFileTreeState: FileTreeState? {
@@ -1408,6 +1515,7 @@ struct MainWindow: View {
                 browserPanelVisible = false
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
+                kasetMusicPanelVisible = false
             }
         }
     }
@@ -1430,6 +1538,7 @@ struct MainWindow: View {
                 browserPanelVisible = false
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
+                kasetMusicPanelVisible = false
             }
         }
     }
@@ -1451,6 +1560,7 @@ struct MainWindow: View {
                 browserPanelVisible = false
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
+                kasetMusicPanelVisible = false
             }
         }
     }
@@ -1476,6 +1586,7 @@ struct MainWindow: View {
                 fileTreePanelVisible = false
                 browserPanelVisible = false
                 browserPanelKey = nil
+                kasetMusicPanelVisible = false
             }
         }
     }
@@ -1489,6 +1600,7 @@ struct MainWindow: View {
             browserPanelVisible = false
             browserPanelKey = nil
             agentInstructionPanelVisible = false
+            kasetMusicPanelVisible = false
         }
         guard let key = activeWorktreeKey else { return }
         codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
@@ -1570,6 +1682,7 @@ struct MainWindow: View {
                 browserPanelVisible = false
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
+                kasetMusicPanelVisible = false
             }
         }
     }

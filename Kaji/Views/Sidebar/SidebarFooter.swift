@@ -11,6 +11,8 @@ struct SidebarFooter: View {
     @State private var runStore = AgentRunStore.shared
     @State private var notificationStore = NotificationStore.shared
     @State private var updateService = UpdateService.shared
+    @AppStorage(KasetMusicPreferences.enabledKey) private var kasetMusicEnabled = false
+    @AppStorage(KasetMusicPreferences.showFooterIconKey) private var kasetMusicShowsFooterIcon = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,6 +39,7 @@ struct SidebarFooter: View {
             updateButton
             agentsButton
             notificationsButton
+            kasetMusicButton
             themeButton
             sidebarToggleButton
         }
@@ -56,6 +59,7 @@ struct SidebarFooter: View {
             updateButton
             agentsButton
             notificationsButton
+            kasetMusicButton
             themeButton
         }
         .padding(.horizontal, 10)
@@ -93,6 +97,16 @@ struct SidebarFooter: View {
             .kajiPopover(isPresented: $showNotifications, preferredEdge: .top) {
                 NotificationPanel(onDismiss: { showNotifications = false })
             }
+    }
+
+    @ViewBuilder
+    private var kasetMusicButton: some View {
+        if kasetMusicEnabled, kasetMusicShowsFooterIcon {
+            IconButton(symbol: "music.note", accessibilityLabel: "Kaset") {
+                NotificationCenter.default.post(name: .toggleKasetMusicPanel, object: nil)
+            }
+            .help("Kaset")
+        }
     }
 
     private var themeButton: some View {

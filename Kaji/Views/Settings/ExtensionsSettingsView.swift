@@ -10,10 +10,22 @@ struct ExtensionsSettingsView: View {
     @State private var browserMCPMessage: String?
     @State private var codeGraphMCPMessage: String?
     @AppStorage(BrowserExtensionPreferences.enabledKey) private var browserEnabled = false
+    @AppStorage(KasetMusicPreferences.enabledKey) private var kasetMusicEnabled = false
+    @AppStorage(KasetMusicPreferences.showFooterIconKey) private var kasetMusicShowsFooterIcon = true
 
     var body: some View {
         ScrollView {
             SettingsContainer {
+                SettingsSection(
+                    "Kaset",
+                    footer: "Embeds the Kaset package for YouTube Music and YouTube playback without copying Kaset source into Kaji."
+                ) {
+                    KasetMusicSettingsRow(
+                        isEnabled: $kasetMusicEnabled,
+                        showsFooterIcon: $kasetMusicShowsFooterIcon
+                    )
+                }
+
                 SettingsSection(
                     "Browser",
                     footer: "Enable the native browser side panel. Install the MCP explicitly for agents that should use browser tools."
@@ -67,6 +79,13 @@ struct ExtensionsSettingsView: View {
             if !enabled {
                 KajiBrowserControlBroker.shared.stop()
                 KajiBrowserSessionEnvironmentStore.remove()
+            }
+        }
+        .onChange(of: kasetMusicEnabled) { _, enabled in
+            KasetMusicPreferences.isEnabled = enabled
+            if !enabled {
+                NotificationCenter.default.post(name: .closeKasetMusicPanel, object: nil)
+                NotificationCenter.default.post(name: .shutdownKasetMusic, object: nil)
             }
         }
     }

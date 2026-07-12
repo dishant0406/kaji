@@ -17,7 +17,7 @@ let termyLinkerSettings: [LinkerSetting] = [
 let package = Package(
     name: "Kaji",
     platforms: [
-        .macOS(.v15),
+        .macOS("15.4"),
     ],
     dependencies: [
         .package(url: "https://github.com/EmergeTools/Pow", from: "1.0.5"),
@@ -25,6 +25,7 @@ let package = Package(
         .package(url: "https://github.com/siteline/swiftui-introspect", from: "26.0.0"),
         .package(url: "https://github.com/dishant0406/reorderable", exact: "1.3.2-kaji.3"),
         .package(url: "https://github.com/FluidInference/FluidAudio", exact: "0.15.4"),
+        .package(url: "https://github.com/dishant0406/kaset.git", exact: "0.12.0-kaji.7"),
         .package(path: "Vendor/Bonsplit"),
     ],
     targets: [
@@ -60,6 +61,7 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "SwiftUIIntrospect", package: "swiftui-introspect"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
+                .product(name: "KasetEmbedded", package: "kaset"),
             ],
             path: "Kaji",
             exclude: [

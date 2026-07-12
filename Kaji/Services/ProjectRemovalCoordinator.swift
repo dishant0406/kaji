@@ -20,7 +20,12 @@ enum ProjectRemovalCoordinator {
             hasUnsavedEditors: appState.hasUnsavedEditorTabs(projectID: project.id),
             hasRunningTerminals: appState.hasRunningTerminalProcesses(projectID: project.id),
             hasRunningAgents: AIActivityStore.shared.hasActiveAgent(projectID: project.id),
-            hasCodeGraphSessions: worktrees.contains { KajiCodeGraphAgentCoordinator.shared.hasSession(projectID: project.id, worktreeID: $0.id) },
+            hasCodeGraphSessions: worktrees.contains { worktree in
+                KajiCodeGraphAgentCoordinator.shared.hasSession(
+                    projectID: project.id,
+                    worktreeID: worktree.id
+                )
+            },
             worktreeCount: worktrees.count
         )
     }

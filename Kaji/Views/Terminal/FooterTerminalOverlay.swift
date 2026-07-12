@@ -1,3 +1,4 @@
+import Kaset
 import SwiftUI
 
 struct FooterTerminalOverlay: View {
@@ -6,6 +7,7 @@ struct FooterTerminalOverlay: View {
     let worktreeKey: WorktreeKey?
     let worktreePath: String?
     let expanded: Bool
+    let kasetMusicController: KasetEmbeddedController?
     let onToggle: (() -> Void)?
     let onOpenMCPControlPanel: (() -> Void)?
     let onProcessExit: () -> Void
@@ -25,6 +27,7 @@ struct FooterTerminalOverlay: View {
                 projectID: projectID,
                 worktreeKey: worktreeKey,
                 worktreePath: worktreePath,
+                kasetMusicController: kasetMusicController,
                 terminalExpanded: expanded,
                 onToggleTerminal: onToggle,
                 onOpenMCPControlPanel: onOpenMCPControlPanel
