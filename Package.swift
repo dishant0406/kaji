@@ -40,6 +40,10 @@ let package = Package(
             path: "Vendor/TermySwiftEmbed/Sources/TermySwiftEmbed"
         ),
         .target(
+            name: "FFFWorkerProtocol",
+            path: "FFFWorkerProtocol"
+        ),
+        .target(
             name: "FFFKit",
             path: "FFFKit",
             publicHeadersPath: "include"
@@ -48,10 +52,31 @@ let package = Package(
             name: "SwiftyDiff",
             path: "Vendor/SwiftyDiff/Sources/SwiftyDiff"
         ),
+        .target(
+            name: "KajiPowerHelperProtocol",
+            path: "KajiPowerHelperProtocol"
+        ),
+        .executableTarget(
+            name: "KajiPowerHelper",
+            dependencies: ["KajiPowerHelperProtocol"],
+            path: "KajiPowerHelper",
+            exclude: [
+                "KajiPowerHelper.entitlements",
+                "com.kaji.app.power-helper.plist",
+            ],
+            linkerSettings: [.linkedFramework("Security")]
+        ),
+        .target(
+            name: "ClosedLidCore",
+            path: "ClosedLidCore",
+            linkerSettings: [.linkedFramework("IOKit")]
+        ),
         .executableTarget(
             name: "Kaji",
             dependencies: [
-                "FFFKit",
+                "FFFWorkerProtocol",
+                "ClosedLidCore",
+                "KajiPowerHelperProtocol",
                 "TermyKit",
                 "TermySwiftEmbed",
                 "SwiftyDiff",
@@ -88,19 +113,39 @@ let package = Package(
                 .linkedFramework("Metal"),
                 .linkedFramework("MetalKit"),
                 .linkedFramework("QuartzCore"),
+                .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("WebKit"),
+                .linkedFramework("ServiceManagement"),
                 .linkedLibrary("c++"),
             ]
+        ),
+        .executableTarget(
+            name: "KajiFFFWorker",
+            dependencies: ["FFFKit", "FFFWorkerProtocol"],
+            path: "KajiFFFWorker",
+            exclude: ["KajiFFFWorker.entitlements"]
+        ),
+        .executableTarget(
+            name: "KajiClosedLidGuard",
+            dependencies: ["ClosedLidCore"],
+            path: "KajiClosedLidGuard"
         ),
         .executableTarget(
             name: "KajiHookClient",
             path: "KajiHookClient"
         ),
         .testTarget(
+            name: "KajiPowerHelperTests",
+            dependencies: ["KajiPowerHelper", "KajiPowerHelperProtocol"],
+            path: "Tests/KajiPowerHelperTests",
+            linkerSettings: [.linkedFramework("Security")]
+        ),
+        .testTarget(
             name: "KajiTests",
             dependencies: [
                 "Kaji",
-                "FFFKit",
+                "ClosedLidCore",
+                "FFFWorkerProtocol",
                 "TermySwiftEmbed",
             ],
             path: "Tests/KajiTests",
@@ -115,6 +160,7 @@ let package = Package(
                 .linkedFramework("Metal"),
                 .linkedFramework("MetalKit"),
                 .linkedFramework("QuartzCore"),
+                .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("WebKit"),
                 .linkedLibrary("c++"),
             ]

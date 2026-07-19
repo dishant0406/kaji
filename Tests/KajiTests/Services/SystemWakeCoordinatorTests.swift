@@ -43,6 +43,36 @@ struct SystemWakeCoordinatorTests {
     }
 
     @Test
+    func wakeNotificationReconcilesSleepPrevention() async throws {
+        let suiteName = "SystemWakeCoordinatorTests.Power.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        SleepPreventionPreferences.setEnabled(true, defaults: defaults)
+        let center = NotificationCenter()
+        let manager = RecordingSystemSleepAssertionManager(reconcileStatuses: [.active, .failed])
+        let controller = SleepPreventionController(
+            defaults: defaults,
+            assertionManager: manager,
+            notificationCenter: NotificationCenter()
+        )
+        let coordinator = SystemWakeCoordinator(
+            notificationCenter: center,
+            onWillSleep: {},
+            onDidWake: { controller.reconcile() }
+        )
+
+        coordinator.start()
+        center.post(name: NSWorkspace.didWakeNotification, object: NSWorkspace.shared)
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(manager.reconcileCount == 2)
+        #expect(controller.systemSleepAssertionStatus == .failed)
+    }
+
+    @Test
     func defaultSleepWakeHandlersPreserveRunHistory() async throws {
         let store = AIActivityStore.shared
         store.reset()

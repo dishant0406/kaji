@@ -3,7 +3,7 @@ import SwiftUI
 struct ResourceMonitorPanel: View {
     let projects: [ResourceMonitorProjectSnapshot]
     let isRefreshing: Bool
-    let onRefresh: () -> Void
+    let onRefresh: () async -> Void
     let onDismiss: () -> Void
 
     @Environment(AppState.self) private var appState
@@ -40,9 +40,6 @@ struct ResourceMonitorPanel: View {
         .padding(.vertical, 10)
         .frame(width: 360)
         .background(KajiTheme.tertiaryBackground, in: RoundedRectangle(cornerRadius: KajiShape.panelRadius))
-        .task {
-            service.start(appState: appState, projectStore: projectStore)
-        }
     }
 
     private var header: some View {
@@ -55,11 +52,16 @@ struct ResourceMonitorPanel: View {
 
             Spacer(minLength: 8)
 
-            Text("5s")
-                .kajiFont(size: 10, design: .monospaced)
-                .foregroundStyle(KajiTheme.fgDim)
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                Text(refreshStatus)
+                    .kajiFont(size: 10, design: .monospaced)
+                    .foregroundStyle(refreshStatusColor)
+                    .lineLimit(1)
+            }
 
-            Button(action: onRefresh) {
+            Button {
+                Task { await onRefresh() }
+            } label: {
                 Group {
                     if isRefreshing {
                         KajiSpinner(size: 12, lineWidth: 1.5)
@@ -86,13 +88,39 @@ struct ResourceMonitorPanel: View {
         }
     }
 
+    private var refreshStatus: String {
+        switch service.refreshHealth {
+        case .waiting:
+            return service.isRefreshing ? "refreshing" : "waiting"
+        case .healthy:
+            guard let age = service.snapshotAge else { return "current" }
+            return age < 2 ? "current" : "\(Int(age))s ago"
+        case .stale:
+            guard let age = service.snapshotAge else { return "stale" }
+            return "stale \(Int(age))s"
+        case let .failed(message):
+            return "failed: \(message)"
+        }
+    }
+
+    private var refreshStatusColor: Color {
+        switch service.refreshHealth {
+        case .failed:
+            KajiTheme.diffRemoveFg
+        case .stale:
+            KajiTheme.diffHunkFg
+        default:
+            KajiTheme.fgDim
+        }
+    }
+
     private func closeTerminal(_ terminal: ResourceMonitorTerminalSnapshot) {
         appState.closeMonitoredTerminal(
             terminal.tabID,
             areaID: terminal.areaID,
             projectID: terminal.projectID
         )
-        service.refresh(appState: appState, projectStore: projectStore)
+        Task { await service.refresh(appState: appState, projectStore: projectStore) }
     }
 }
 

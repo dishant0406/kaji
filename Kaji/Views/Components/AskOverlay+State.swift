@@ -44,8 +44,11 @@ extension AskOverlay {
             worktreeName: selectedWorktreeName,
             sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
             systemSleepAssertionStatus: SleepPreventionController.shared.systemSleepAssertionStatus,
-            batteryLidCloseSleepIsEnabled: SleepPreventionController.shared.isBatteryLidCloseEnabled,
-            batteryLidCloseSleepStatus: SleepPreventionController.shared.batteryLidCloseSleepStatus
+            closedLidStatus: ClosedLidSessionController.shared.status,
+            standardCompatibility: ClosedLidSessionController.shared.standardCompatibility,
+            standardModeAvailable: ClosedLidSessionController.shared.selectorCapability?.isAvailable == true,
+            powerProtectReady: ClosedLidPowerProtectPresentation.resolve(PowerProtectManager.shared.state).isReadyToStart,
+            powerProtectStatus: ClosedLidPowerProtectPresentation.resolve(PowerProtectManager.shared.state).status
         ))
     }
 

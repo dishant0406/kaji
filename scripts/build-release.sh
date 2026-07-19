@@ -109,15 +109,24 @@ if ! $SKIP_NATIVE_DEPS; then
 fi
 swift build -c release --triple "$TRIPLE"
 swift build -c release --triple "$TRIPLE" --target KajiHookClient
+swift build -c release --triple "$TRIPLE" --product KajiFFFWorker
+swift build -c release --triple "$TRIPLE" --product KajiPowerHelper
+swift build -c release --triple "$TRIPLE" --product KajiClosedLidGuard
 SPM_BUILD_DIR=$(swift build -c release --triple "$TRIPLE" --show-bin-path)
 echo "==> Creating app bundle"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$SPM_BUILD_DIR/Kaji" "$APP_BUNDLE/Contents/MacOS/Kaji"
 cp "$SPM_BUILD_DIR/KajiHookClient" "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
+cp "$SPM_BUILD_DIR/KajiFFFWorker" "$APP_BUNDLE/Contents/MacOS/KajiFFFWorker"
+cp "$SPM_BUILD_DIR/KajiPowerHelper" "$APP_BUNDLE/Contents/MacOS/KajiPowerHelper"
+cp "$SPM_BUILD_DIR/KajiClosedLidGuard" "$APP_BUNDLE/Contents/MacOS/KajiClosedLidGuard"
 echo "==> Stripping local and debug symbols"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/Kaji"
 strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiFFFWorker"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiPowerHelper"
+strip -Sx "$APP_BUNDLE/Contents/MacOS/KajiClosedLidGuard"
 RESOURCE_BUNDLE_NAME="Kaji_Kaji.bundle"
 RESOURCE_BUNDLE_SOURCE="$SPM_BUILD_DIR/$RESOURCE_BUNDLE_NAME"
 if [[ ! -d "$RESOURCE_BUNDLE_SOURCE" ]]; then
@@ -128,6 +137,8 @@ cp -R "$RESOURCE_BUNDLE_SOURCE" "$APP_BUNDLE/Contents/Resources/$RESOURCE_BUNDLE
 "$SCRIPT_DIR/stage-kaji-agent-native-addon.sh" --arch "$ARCH" --destination "$APP_BUNDLE/Contents/Resources/native"
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 cp "$PROJECT_ROOT/Kaji/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+mkdir -p "$APP_BUNDLE/Contents/Library/LaunchDaemons"
+cp "$PROJECT_ROOT/KajiPowerHelper/com.kaji.app.power-helper.plist" "$APP_BUNDLE/Contents/Library/LaunchDaemons/com.kaji.app.power-helper.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_BUNDLE/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_BUNDLE/Contents/Info.plist"
 echo "==> Generating app icon"
@@ -162,8 +173,14 @@ for addon in "$APP_BUNDLE"/Contents/Resources/native/*.node; do
     [[ -f "$addon" ]] || continue
     sign_code "$addon"
 done
+echo "==> Signing KajiPowerHelper"
+/usr/bin/codesign --force --options runtime --entitlements "$PROJECT_ROOT/KajiPowerHelper/KajiPowerHelper.entitlements" --sign "$SIGNING_IDENTITY" "$APP_BUNDLE/Contents/MacOS/KajiPowerHelper"
+echo "==> Signing KajiClosedLidGuard"
+sign_code "$APP_BUNDLE/Contents/MacOS/KajiClosedLidGuard"
 echo "==> Signing KajiHookClient"
 sign_code "$APP_BUNDLE/Contents/MacOS/KajiHookClient"
+echo "==> Signing KajiFFFWorker"
+/usr/bin/codesign --force --options runtime --entitlements "$PROJECT_ROOT/KajiFFFWorker/KajiFFFWorker.entitlements" --sign "$SIGNING_IDENTITY" "$APP_BUNDLE/Contents/MacOS/KajiFFFWorker"
 echo "==> Signing libtermy"
 sign_code "$APP_BUNDLE/Contents/Frameworks/libtermy_ffi.dylib"
 echo "==> Signing app bundle"

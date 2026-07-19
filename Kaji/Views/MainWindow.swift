@@ -48,6 +48,12 @@ struct MainWindow: View {
         static let maxWidth: CGFloat = 980
     }
 
+    private enum MeetingNotesLayout {
+        static let minWidth: CGFloat = 360
+        static let defaultWidth: CGFloat = 440
+        static let maxWidth: CGFloat = 700
+    }
+
     private enum SidePanelIdentity: Hashable {
         case codeGraphAgent(UUID)
         case vcs
@@ -57,6 +63,7 @@ struct MainWindow: View {
         case agentInstructions(UUID)
         case browser(WorktreeKey)
         case kasetMusic
+        case meetingNotes
     }
 
     private enum CloseConfirmationKind {
@@ -121,6 +128,8 @@ struct MainWindow: View {
     @State private var kasetMusicPanelVisible = false
     @AppStorage(KasetMusicPreferences.enabledKey) private var kasetMusicEnabled = false
     @AppStorage("kaji.kasetMusicPanelWidth") private var kasetMusicPanelWidth: Double = .init(KasetMusicLayout.defaultWidth)
+    @State private var meetingNotesPanelVisible = false
+    @AppStorage("kaji.meetingNotesPanelWidth") private var meetingNotesPanelWidth: Double = .init(MeetingNotesLayout.defaultWidth)
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
     @State private var codeGraphAgentCoordinator = KajiCodeGraphAgentCoordinator.shared
@@ -134,6 +143,7 @@ struct MainWindow: View {
     @State private var showWorktreeSwitcher = false
     @State private var showGoToLine = false
     @State private var showSettings = false
+    @State private var settingsInitialPane = SettingsPane.general
     @State private var showMCPControlPanel = false
     @State private var showCreateThemeModal = false
     @State private var createWorktreeProjectID: UUID?
@@ -277,6 +287,7 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    if !showSettings { settingsInitialPane = .general }
                     showSettings.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openParentAgentSettings)) { _ in
@@ -284,6 +295,7 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    settingsInitialPane = .agents
                     showSettings = true
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openSpeechToTextSettings)) { _ in
@@ -291,6 +303,15 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
+                    settingsInitialPane = .speechToText
+                    showSettings = true
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .openMeetingNotesSettings)) { _ in
+                    showQuickOpen = false
+                    showAsk = false
+                    showAgentCommandCenter = false
+                    showWorktreeSwitcher = false
+                    settingsInitialPane = .meetingNotes
                     showSettings = true
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .requestCreateWorktreeModal)) { notification in
@@ -352,6 +373,9 @@ struct MainWindow: View {
                 .onReceive(NotificationCenter.default.publisher(for: .toggleKasetMusicPanel)) { _ in
                     guard kasetMusicEnabled else { return }
                     toggleKasetMusicPanel()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .toggleMeetingNotesPanel)) { _ in
+                    toggleMeetingNotesPanel()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openKasetMusicPanel)) { _ in
                     guard kasetMusicEnabled else { return }
@@ -462,6 +486,7 @@ struct MainWindow: View {
         if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let key = activeWorktreeKey,
            activeBrowserState != nil { return .browser(key) }
         if kasetMusicEnabled, kasetMusicPanelVisible { return .kasetMusic }
+        if meetingNotesPanelVisible { return .meetingNotes }
         return nil
     }
 
@@ -586,6 +611,23 @@ struct MainWindow: View {
             browserSidePanel(state: state, sessionID: key.worktreeID.uuidString)
         } else if kasetMusicEnabled, kasetMusicPanelVisible {
             kasetMusicSidePanel()
+        } else if meetingNotesPanelVisible {
+            meetingNotesSidePanel()
+        }
+    }
+
+    private func meetingNotesSidePanel() -> some View {
+        HStack(spacing: 0) {
+            sidePanelResizeHandle { delta in
+                meetingNotesPanelWidth = max(
+                    Double(MeetingNotesLayout.minWidth),
+                    min(Double(MeetingNotesLayout.maxWidth), meetingNotesPanelWidth - Double(delta))
+                )
+            }
+            MeetingNotesPanel {
+                withSidePanelAnimation { meetingNotesPanelVisible = false }
+            }
+            .frame(width: meetingNotesPanelWidth)
         }
     }
 
@@ -864,9 +906,10 @@ struct MainWindow: View {
                         showSettings = false
                     }
 
-                SettingsView {
+                SettingsView(initialSelection: settingsInitialPane) {
                     showSettings = false
                 }
+                .id(settingsInitialPane)
                 .padding(24)
                 .transition(KajiMotion.modalTransition(reduceMotion: reduceMotion))
             }
@@ -1392,6 +1435,7 @@ struct MainWindow: View {
                 fileTreePanelVisible = false
                 agentInstructionPanelVisible = false
                 kasetMusicPanelVisible = false
+                meetingNotesPanelVisible = false
             }
         }
     }
@@ -1416,6 +1460,7 @@ struct MainWindow: View {
             fileTreePanelVisible = false
             agentInstructionPanelVisible = false
             kasetMusicPanelVisible = false
+            meetingNotesPanelVisible = false
         }
     }
 
@@ -1434,6 +1479,7 @@ struct MainWindow: View {
                 browserPanelVisible = false
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
+                meetingNotesPanelVisible = false
             }
         }
     }
@@ -1449,6 +1495,27 @@ struct MainWindow: View {
             browserPanelVisible = false
             browserPanelKey = nil
             agentInstructionPanelVisible = false
+            meetingNotesPanelVisible = false
+        }
+    }
+
+    private func toggleMeetingNotesPanel() {
+        let isShowing = !meetingNotesPanelVisible
+        if isShowing {
+            hideCodeGraphAgentPanelIfNeeded()
+        }
+        withSidePanelAnimation {
+            meetingNotesPanelVisible = isShowing
+            if isShowing {
+                vcsPanelVisible = false
+                fileTreePanelVisible = false
+                globalSearchPanelVisible = false
+                problemsPanelVisible = false
+                browserPanelVisible = false
+                browserPanelKey = nil
+                agentInstructionPanelVisible = false
+                kasetMusicPanelVisible = false
+            }
         }
     }
 
@@ -1516,6 +1583,7 @@ struct MainWindow: View {
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
                 kasetMusicPanelVisible = false
+                meetingNotesPanelVisible = false
             }
         }
     }
@@ -1539,6 +1607,7 @@ struct MainWindow: View {
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
                 kasetMusicPanelVisible = false
+                meetingNotesPanelVisible = false
             }
         }
     }
@@ -1561,6 +1630,7 @@ struct MainWindow: View {
                 browserPanelKey = nil
                 agentInstructionPanelVisible = false
                 kasetMusicPanelVisible = false
+                meetingNotesPanelVisible = false
             }
         }
     }
@@ -1587,6 +1657,7 @@ struct MainWindow: View {
                 browserPanelVisible = false
                 browserPanelKey = nil
                 kasetMusicPanelVisible = false
+                meetingNotesPanelVisible = false
             }
         }
     }
@@ -1601,6 +1672,7 @@ struct MainWindow: View {
             browserPanelKey = nil
             agentInstructionPanelVisible = false
             kasetMusicPanelVisible = false
+            meetingNotesPanelVisible = false
         }
         guard let key = activeWorktreeKey else { return }
         codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)

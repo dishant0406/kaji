@@ -136,6 +136,84 @@ struct ResourceMonitorTests {
     }
 
     @Test
+    func aggregatorDeduplicatesOverlappingProcessTrees() {
+        let project = Project(name: "shared", path: "/tmp/shared")
+        let identity = ResourceMonitorProcessIdentity(
+            pid: 700,
+            startIdentity: .init(seconds: 100, microseconds: 20)
+        )
+        let usage = ResourceMonitorProcessUsage(identity: identity, cpuPercent: 40, memoryBytes: 256)
+        let readings = ["one", "two"].map { title in
+            ResourceMonitorTerminalReading(
+                descriptor: .init(
+                    paneID: UUID(),
+                    tabID: UUID(),
+                    areaID: UUID(),
+                    projectID: project.id,
+                    projectName: project.name,
+                    title: title
+                ),
+                processGroupID: 700,
+                pid: 700,
+                processName: "worker",
+                ttyName: nil,
+                cpuPercent: 40,
+                memoryBytes: 256,
+                threadCount: 4,
+                processUsages: [usage]
+            )
+        }
+
+        let snapshot = ResourceMonitorAggregator.buildProjects(from: readings, orderedProjects: [project])[0]
+
+        #expect(snapshot.terminals.count == 2)
+        #expect(snapshot.cpuPercent == 40)
+        #expect(snapshot.memoryBytes == 256)
+    }
+
+    @Test
+    func pidReuseProducesDistinctCPUBaselineKeys() {
+        let paneID = UUID()
+        let original = ResourceMonitorService.BaselineKey(
+            paneID: paneID,
+            pid: 900,
+            startIdentity: .init(seconds: 10, microseconds: 1)
+        )
+        let reused = ResourceMonitorService.BaselineKey(
+            paneID: paneID,
+            pid: 900,
+            startIdentity: .init(seconds: 20, microseconds: 1)
+        )
+
+        #expect(original != reused)
+        #expect(Set([original, reused]).count == 2)
+    }
+
+    @Test
+    func oldAndFailedRefreshesAreReportedHonestly() {
+        let now = Date(timeIntervalSince1970: 100)
+
+        #expect(ResourceMonitorService.resolveRefreshHealth(
+            lastRefreshDate: nil,
+            lastRefreshError: nil,
+            now: now,
+            staleAfter: 10
+        ) == .waiting)
+        #expect(ResourceMonitorService.resolveRefreshHealth(
+            lastRefreshDate: now.addingTimeInterval(-11),
+            lastRefreshError: nil,
+            now: now,
+            staleAfter: 10
+        ) == .stale)
+        #expect(ResourceMonitorService.resolveRefreshHealth(
+            lastRefreshDate: now,
+            lastRefreshError: "Permission denied",
+            now: now,
+            staleAfter: 10
+        ) == .failed("Permission denied"))
+    }
+
+    @Test
     func closeMonitoredTerminalRemovesInnerAreaTabAndPaneView() {
         let project = Project(name: "muxy", path: "/tmp/muxy")
         let worktreeID = UUID()

@@ -5,5 +5,6 @@ protocol SystemSleepAssertionManaging {
     var status: SystemSleepAssertionStatus { get }
 
     func begin() -> SystemSleepAssertionStatus
-    func end()
+    func reconcile() -> SystemSleepAssertionStatus
+    func end() -> SystemSleepAssertionStatus
 }

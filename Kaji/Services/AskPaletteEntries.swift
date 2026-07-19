@@ -157,11 +157,8 @@ enum AskPaletteEntries {
                 isEnabled: context.sleepPreventionIsEnabled,
                 systemSleepAssertionStatus: context.systemSleepAssertionStatus
             )
-            let batteryLidCloseEntry = batteryLidCloseSleepEntry(
-                isEnabled: context.batteryLidCloseSleepIsEnabled,
-                status: context.batteryLidCloseSleepStatus
-            )
-            return commands + [sleepEntry, batteryLidCloseEntry]
+            let closedLidEntries = closedLidEntries(context)
+            return commands + [sleepEntry] + closedLidEntries
         }
 
         return [submitEntry(context: context, parsed: parsed)]
@@ -203,11 +200,7 @@ enum AskPaletteEntries {
             )
             return [entry]
         case .lid:
-            let entry = batteryLidCloseSleepEntry(
-                isEnabled: context.batteryLidCloseSleepIsEnabled,
-                status: context.batteryLidCloseSleepStatus
-            )
-            return [entry]
+            return closedLidEntries(context)
         }
     }
 
@@ -527,7 +520,7 @@ enum AskPaletteEntries {
         case .sleep:
             context.sleepPreventionIsEnabled ? "On" : "Off"
         case .lid:
-            context.batteryLidCloseSleepIsEnabled ? "On" : "Off"
+            "Unsupported"
         }
     }
 
@@ -546,18 +539,64 @@ enum AskPaletteEntries {
         )
     }
 
-    private static func batteryLidCloseSleepEntry(
-        isEnabled: Bool,
-        status: SystemSleepAssertionStatus = .inactive
-    ) -> AskPaletteEntry {
+    private static func closedLidEntries(_ context: AskPaletteContext) -> [AskPaletteEntry] {
+        switch context.closedLidStatus {
+        case .activeStandard,
+             .activePowerProtect,
+             .arming,
+             .restoring:
+            return [
+                .init(
+                    action: .stopClosedLid,
+                    title: context.closedLidStatus == .restoring ? "Force Normal Sleep Restore" : "Restore Normal Sleep",
+                    detail: ClosedLidStatusPresentation.resolve(context.closedLidStatus).detail,
+                    annotation: ClosedLidStatusPresentation.resolve(context.closedLidStatus).annotation
+                ),
+            ]
+        case .failed:
+            return [
+                .init(
+                    action: .stopClosedLid,
+                    title: "Force Normal Sleep Restore",
+                    detail: ClosedLidStatusPresentation.resolve(context.closedLidStatus).detail,
+                    annotation: "Needs attention"
+                ),
+                closedLidProbeEntry(context),
+            ]
+        case .unavailable:
+            return [closedLidProbeEntry(context)]
+        case .off,
+             .safetyStopped:
+            var entries = [closedLidProbeEntry(context)]
+            if context.standardModeAvailable {
+                let experimental = context.standardCompatibility != .verified
+                entries.append(.init(
+                    action: .startClosedLidStandard,
+                    title: experimental ? "Start Standard · Experimental" : "Start Standard",
+                    detail: experimental
+                        ? "Private selector 12; run the guided physical test in Settings before relying on it."
+                        : "Verified for this Mac and OS build, with fail-safe restoration active.",
+                    annotation: experimental ? "Experimental" : "Verified"
+                ))
+            }
+            if context.powerProtectReady {
+                entries.append(.init(
+                    action: .startClosedLidPowerProtect,
+                    title: "Start Power Protect",
+                    detail: "Disables all automatic system sleep globally. Never use in a bag or under heavy load.",
+                    annotation: "Helper ready"
+                ))
+            }
+            return entries
+        }
+    }
+
+    private static func closedLidProbeEntry(_ context: AskPaletteContext) -> AskPaletteEntry {
         .init(
-            action: .toggleBatteryLidCloseSleepPrevention,
-            title: SleepPreventionDisplayText.batteryLidCloseTitle(isEnabled: isEnabled),
-            detail: SleepPreventionDisplayText.batteryLidCloseDetail(
-                isEnabled: isEnabled,
-                status: status
-            ),
-            annotation: isEnabled ? "On" : "Off"
+            action: .probeClosedLid,
+            title: "Refresh Closed-lid Status",
+            detail: "Probe Standard mode and refresh Power Protect: \(context.powerProtectStatus).",
+            annotation: ClosedLidStatusPresentation.resolve(context.closedLidStatus).annotation
         )
     }
 

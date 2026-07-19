@@ -48,8 +48,35 @@ APP_BUNDLE="$(cd "$APP_BUNDLE" && pwd -P)"
 
 EXECUTABLE="$APP_BUNDLE/Contents/MacOS/Kaji"
 INFO_PLIST="$APP_BUNDLE/Contents/Info.plist"
+FFF_WORKER="$APP_BUNDLE/Contents/MacOS/KajiFFFWorker"
+POWER_HELPER="$APP_BUNDLE/Contents/MacOS/KajiPowerHelper"
+POWER_HELPER_PLIST="$APP_BUNDLE/Contents/Library/LaunchDaemons/com.kaji.app.power-helper.plist"
+CLOSED_LID_GUARD="$APP_BUNDLE/Contents/MacOS/KajiClosedLidGuard"
 
 [[ -x "$EXECUTABLE" ]] || fail "Kaji executable missing"
+[[ -x "$FFF_WORKER" ]] || fail "KajiFFFWorker executable missing"
+codesign --verify "$FFF_WORKER" >/dev/null 2>&1 || fail "KajiFFFWorker is not signed"
+codesign -d --entitlements :- "$FFF_WORKER" 2>/dev/null | grep -q "com.apple.security.cs.disable-library-validation" || fail "KajiFFFWorker cannot load the isolated FFF library"
+[[ -x "$POWER_HELPER" ]] || fail "KajiPowerHelper executable missing"
+[[ -f "$POWER_HELPER_PLIST" ]] || fail "KajiPowerHelper LaunchDaemon plist missing"
+plutil -lint "$POWER_HELPER_PLIST" >/dev/null || fail "KajiPowerHelper LaunchDaemon plist is invalid"
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :Label' "$POWER_HELPER_PLIST")" == "com.kaji.app.power-helper" ]] || fail "KajiPowerHelper label is invalid"
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :BundleProgram' "$POWER_HELPER_PLIST")" == "Contents/MacOS/KajiPowerHelper" ]] || fail "KajiPowerHelper BundleProgram is invalid"
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :MachServices:com.kaji.app.power-helper' "$POWER_HELPER_PLIST")" == "true" ]] || fail "KajiPowerHelper Mach service is invalid"
+codesign --verify --strict "$POWER_HELPER" >/dev/null 2>&1 || fail "KajiPowerHelper is not signed"
+[[ -x "$CLOSED_LID_GUARD" ]] || fail "KajiClosedLidGuard executable missing"
+codesign --verify --strict "$CLOSED_LID_GUARD" >/dev/null 2>&1 || fail "KajiClosedLidGuard is not signed"
+APP_TEAM_IDENTIFIER="$(codesign -dv "$EXECUTABLE" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+HELPER_TEAM_IDENTIFIER="$(codesign -dv "$POWER_HELPER" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+if [[ -n "$APP_TEAM_IDENTIFIER" && "$APP_TEAM_IDENTIFIER" != "not set" ]]; then
+    [[ "$HELPER_TEAM_IDENTIFIER" == "$APP_TEAM_IDENTIFIER" ]] || fail "KajiPowerHelper signing team does not match Kaji"
+fi
+if codesign -d --entitlements :- "$POWER_HELPER" 2>&1 | grep -q '<key>'; then
+    fail "KajiPowerHelper must not carry privileged entitlements"
+fi
+if otool -L "$EXECUTABLE" | grep -q "fff"; then
+    fail "Kaji executable must not link FFF"
+fi
 plutil -lint "$INFO_PLIST" >/dev/null
 
 ROOT_RESOURCE_BUNDLE="$APP_BUNDLE/Kaji_Kaji.bundle"

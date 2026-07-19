@@ -59,6 +59,20 @@ struct KajiApp: App {
                     NotificationStore.shared.appState = appState
                     NotificationStore.shared.worktreeStore = worktreeStore
                     NotificationStore.shared.markAllAsRead()
+                    ResourceMonitorService.shared.start(appState: appState, projectStore: projectStore)
+                    MeetingNotesCoordinator.shared.configure(
+                        appState: appState,
+                        projectStore: projectStore,
+                        worktreeStore: worktreeStore
+                    )
+                    Task { await MeetingNotesCoordinator.shared.prepare() }
+                    Task {
+                        await ProjectRemovalService.shared.recoverPendingRemovals(
+                            appState: appState,
+                            projectStore: projectStore,
+                            worktreeStore: worktreeStore
+                        )
+                    }
                     appDelegate.onTerminate = { [appState] in
                         appState.saveWorkspaces()
                     }
@@ -69,7 +83,7 @@ struct KajiApp: App {
                         Task { @MainActor in
                             for id in projectIDs {
                                 guard let project = projectStore.projects.first(where: { $0.id == id }) else { continue }
-                                await ProjectRemovalCoordinator.remove(
+                                _ = await ProjectRemovalService.shared.finalizeAlreadyEmptied(
                                     project: project,
                                     appState: appState,
                                     projectStore: projectStore,
@@ -118,6 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CodexSessionMonitor.shared.start()
         SystemWakeCoordinator.shared.start()
         _ = SleepPreventionController.shared
+        Task { await ClosedLidSessionController.shared.probeCapability() }
         _ = CLILauncherSettings.shared
         let gatewayStore = AIGatewaySettingsStore.shared
         if gatewayStore.settings.isEnabled, gatewayStore.settings.autoStart {
@@ -133,8 +148,113 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard MeetingNotesCoordinator.shared.requiresTerminationDrain else { return resolveEditorTermination() }
         let unsaved = hasUnsavedEditorTabs?() ?? []
-        guard !unsaved.isEmpty else { return .terminateNow }
+        if !unsaved.isEmpty { return resolveCombinedTermination(unsaved: unsaved) }
+        guard confirmsMeetingTermination() else { return .terminateCancel }
+        Task { @MainActor in await finishMeetingTermination() }
+        return .terminateLater
+    }
+
+    @MainActor
+    private func resolveCombinedTermination(unsaved: [EditorTabState]) -> NSApplication.TerminateReply {
+        let alert = NSAlert()
+        alert.messageText = "Save Changes and Stop Meeting Recording?"
+        alert.informativeText = "Kaji must finish local transcription and save the meeting before quitting."
+        alert.alertStyle = .warning
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Save All and Quit")
+        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Discard Changes and Quit")
+        alert.buttons[0].keyEquivalent = "\r"
+        alert.buttons[1].keyEquivalent = "\u{1b}"
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            Task { @MainActor in
+                var failures: [String] = []
+                for state in unsaved {
+                    do {
+                        try await state.saveFileAsync()
+                    } catch {
+                        failures.append("\(state.fileName): \(error.localizedDescription)")
+                    }
+                }
+                guard failures.isEmpty else {
+                    Self.presentSaveFailureAlert(failures: failures)
+                    NSApp.reply(toApplicationShouldTerminate: false)
+                    return
+                }
+                await finishMeetingTermination()
+            }
+            return .terminateLater
+        case .alertThirdButtonReturn:
+            Task { @MainActor in await finishMeetingTermination() }
+            return .terminateLater
+        default:
+            return .terminateCancel
+        }
+    }
+
+    @MainActor
+    private func confirmsMeetingTermination() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Stop Meeting Recording Before Quitting?"
+        alert.informativeText = "Kaji will stop capture, finish the remaining local transcription, "
+            + "and save the meeting before quitting."
+        alert.alertStyle = .warning
+        alert.icon = NSApp.applicationIconImage
+        alert.addButton(withTitle: "Stop and Quit")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons[0].keyEquivalent = "\r"
+        alert.buttons[1].keyEquivalent = "\u{1b}"
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    @MainActor
+    private func finishClosedLidTermination() async -> Bool {
+        guard await ClosedLidSessionController.shared.shutdownForTermination() else {
+            let alert = NSAlert()
+            alert.messageText = "Normal Sleep Could Not Be Restored"
+            alert.informativeText = "Kaji did not quit because closed-lid protection is still active. Restore normal sleep and try again."
+            alert.alertStyle = .critical
+            alert.icon = NSApp.applicationIconImage
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            return false
+        }
+        return true
+    }
+
+    @MainActor
+    private func finishMeetingTermination() async {
+        guard await MeetingNotesCoordinator.shared.shutdownForTermination() else {
+            let alert = NSAlert()
+            alert.messageText = "Meeting Could Not Be Saved"
+            alert.informativeText = "Kaji did not quit because the active meeting could not be finalized safely."
+            alert.alertStyle = .critical
+            alert.icon = NSApp.applicationIconImage
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            NSApp.reply(toApplicationShouldTerminate: false)
+            return
+        }
+        guard await finishClosedLidTermination() else {
+            NSApp.reply(toApplicationShouldTerminate: false)
+            return
+        }
+        NSApp.reply(toApplicationShouldTerminate: true)
+    }
+
+    @MainActor
+    private func resolveEditorTermination() -> NSApplication.TerminateReply {
+        let unsaved = hasUnsavedEditorTabs?() ?? []
+        guard !unsaved.isEmpty else {
+            guard ClosedLidSessionController.shared.requiresTerminationDrain else { return .terminateNow }
+            Task { @MainActor in
+                await NSApp.reply(toApplicationShouldTerminate: finishClosedLidTermination())
+            }
+            return .terminateLater
+        }
 
         let alert = NSAlert()
         alert.messageText = unsaved.count == 1
@@ -161,16 +281,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         failures.append("\(state.fileName): \(error.localizedDescription)")
                     }
                 }
-                if failures.isEmpty {
-                    NSApp.reply(toApplicationShouldTerminate: true)
+                guard failures.isEmpty else {
+                    Self.presentSaveFailureAlert(failures: failures)
+                    NSApp.reply(toApplicationShouldTerminate: false)
                     return
                 }
-                Self.presentSaveFailureAlert(failures: failures)
-                NSApp.reply(toApplicationShouldTerminate: false)
+                await NSApp.reply(toApplicationShouldTerminate: finishClosedLidTermination())
             }
             return .terminateLater
         case .alertThirdButtonReturn:
-            return .terminateNow
+            guard ClosedLidSessionController.shared.requiresTerminationDrain else { return .terminateNow }
+            Task { @MainActor in
+                await NSApp.reply(toApplicationShouldTerminate: finishClosedLidTermination())
+            }
+            return .terminateLater
         default:
             return .terminateCancel
         }
@@ -198,8 +322,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AgentRunStore.shared.flushPersistence()
         NotificationStore.shared.saveToDisk()
         SleepPreventionController.shared.stop()
+        ClosedLidSessionController.shared.restoreImmediatelyForTermination()
         SystemWakeCoordinator.shared.stop()
         SpeechInputController.shared.stop()
+        MeetingNotesSettingsStore.shared.flush()
         CodexSessionMonitor.shared.stop()
         ProviderEventReceiver.shared.stop()
         ParentAgentController.shared.stop()

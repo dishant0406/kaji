@@ -137,7 +137,7 @@ struct Sidebar: View {
         let impact = ProjectRemovalCoordinator.impact(project: project, appState: appState, worktreeStore: worktreeStore)
         presentRemoveConfirmation(project: project, impact: impact) {
             Task { @MainActor in
-                await ProjectRemovalCoordinator.remove(
+                _ = await ProjectRemovalService.shared.removeManually(
                     project: project,
                     appState: appState,
                     projectStore: projectStore,

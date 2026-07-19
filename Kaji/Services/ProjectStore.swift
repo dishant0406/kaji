@@ -19,9 +19,10 @@ final class ProjectStore {
         save()
     }
 
-    func remove(id: UUID) {
+    @discardableResult
+    func remove(id: UUID) -> Bool {
         projects.removeAll { $0.id == id }
-        save()
+        return save()
     }
 
     func rename(id: UUID, to newName: String) {
@@ -60,11 +61,14 @@ final class ProjectStore {
         save()
     }
 
-    func save() {
+    @discardableResult
+    func save() -> Bool {
         do {
             try persistence.saveProjects(projects)
+            return true
         } catch {
             logger.error("Failed to save projects: \(error)")
+            return false
         }
     }
 

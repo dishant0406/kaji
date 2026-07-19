@@ -50,13 +50,13 @@ enum SpeechModelRegistryValidator {
         guard !model.id.trimmedForSpeechRegistry.isEmpty else { throw SpeechModelRegistryError.invalidModel("id is empty") }
         guard !model.title.trimmedForSpeechRegistry.isEmpty
         else { throw SpeechModelRegistryError.invalidModel("title is empty for \(model.id)") }
-        guard URL(string: model.registryBaseURL)?.scheme?.hasPrefix("http") == true else {
-            throw SpeechModelRegistryError.invalidModel("registryBaseURL is invalid for \(model.id)")
+        guard SpeechModelRegistrySecurity.isTrustedBaseURL(model.registryBaseURL) else {
+            throw SpeechModelRegistryError.invalidModel("registryBaseURL is not trusted for \(model.id)")
         }
-        guard !model.repo.trimmedForSpeechRegistry.isEmpty
-        else { throw SpeechModelRegistryError.invalidModel("repo is empty for \(model.id)") }
-        guard !model.revision.trimmedForSpeechRegistry.isEmpty
-        else { throw SpeechModelRegistryError.invalidModel("revision is empty for \(model.id)") }
+        guard SpeechModelRegistrySecurity.isSafeRepository(model.repo)
+        else { throw SpeechModelRegistryError.invalidModel("repo is invalid for \(model.id)") }
+        guard SpeechModelRegistrySecurity.isSafeRevision(model.revision)
+        else { throw SpeechModelRegistryError.invalidModel("revision is invalid for \(model.id)") }
     }
 
     private static func validatePaths(_ model: SpeechInputModel) throws {

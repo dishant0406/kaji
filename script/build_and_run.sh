@@ -53,9 +53,15 @@ stop_existing_app
 clean_spm_resource_bundles
 swift build
 swift build --target KajiHookClient
+swift build --product KajiFFFWorker
+swift build --product KajiPowerHelper
+swift build --product KajiClosedLidGuard
 BUILD_BIN_DIR="$(swift build --show-bin-path)"
 BUILD_BINARY="$BUILD_BIN_DIR/$BUILD_PRODUCT_NAME"
 HOOK_CLIENT_BINARY="$BUILD_BIN_DIR/KajiHookClient"
+FFF_WORKER_BINARY="$BUILD_BIN_DIR/KajiFFFWorker"
+POWER_HELPER_BINARY="$BUILD_BIN_DIR/KajiPowerHelper"
+CLOSED_LID_GUARD_BINARY="$BUILD_BIN_DIR/KajiClosedLidGuard"
 RESOURCE_BUNDLE_NAME="${BUILD_PRODUCT_NAME}_${BUILD_PRODUCT_NAME}.bundle"
 RESOURCE_BUNDLE="$BUILD_BIN_DIR/$RESOURCE_BUNDLE_NAME"
 SPARKLE_FRAMEWORK="$ROOT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
@@ -68,6 +74,14 @@ cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 cp "$HOOK_CLIENT_BINARY" "$APP_MACOS/KajiHookClient"
 chmod +x "$APP_MACOS/KajiHookClient"
+cp "$FFF_WORKER_BINARY" "$APP_MACOS/KajiFFFWorker"
+chmod +x "$APP_MACOS/KajiFFFWorker"
+cp "$POWER_HELPER_BINARY" "$APP_MACOS/KajiPowerHelper"
+chmod +x "$APP_MACOS/KajiPowerHelper"
+cp "$CLOSED_LID_GUARD_BINARY" "$APP_MACOS/KajiClosedLidGuard"
+chmod +x "$APP_MACOS/KajiClosedLidGuard"
+mkdir -p "$APP_CONTENTS/Library/LaunchDaemons"
+cp "$ROOT_DIR/KajiPowerHelper/com.kaji.app.power-helper.plist" "$APP_CONTENTS/Library/LaunchDaemons/com.kaji.app.power-helper.plist"
 install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_BINARY" 2>/dev/null || true
 
 if [[ -d "$RESOURCE_BUNDLE" ]]; then
@@ -106,6 +120,8 @@ cp "$ROOT_DIR/Kaji/Info.plist" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $MIN_SYSTEM_VERSION" "$INFO_PLIST"
 /usr/libexec/PlistBuddy -c "Set :NSPrincipalClass NSApplication" "$INFO_PLIST"
 printf 'APPL????' >"$PKGINFO"
+codesign --force --sign - "$APP_MACOS/KajiPowerHelper" >/dev/null 2>&1 || true
+codesign --force --sign - "$APP_MACOS/KajiClosedLidGuard" >/dev/null 2>&1 || true
 codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
 
 open_app() {
@@ -125,6 +141,8 @@ open_app() {
 }
 
 case "$MODE" in
+  build)
+    ;;
   run)
     open_app
     ;;
@@ -150,7 +168,7 @@ case "$MODE" in
     fi
     ;;
   *)
-    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
+    echo "usage: $0 [build|run|--debug|--logs|--telemetry|--verify]" >&2
     exit 2
     ;;
 esac

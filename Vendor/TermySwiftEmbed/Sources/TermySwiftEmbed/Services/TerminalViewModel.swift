@@ -1231,6 +1231,14 @@ final class TerminalViewModel: ObservableObject {
         terminal?.childProcessID()
     }
 
+    func foregroundProcessGroupID() -> Int32? {
+        terminal?.foregroundProcessGroupID()
+    }
+
+    func ttyName() -> String? {
+        terminal?.ttyName()
+    }
+
     func visibleTextSnapshot() -> String {
         frame.visibleTextSnapshot()
     }

@@ -329,6 +329,15 @@ struct KajiAgentRPCFrame: Codable {
     }
 
     func encode(to encoder: Encoder) throws {
+        if ["generate_meeting_notes", "validate_meeting_notes_model"].contains(type), let fields = data?.objectValue {
+            var container = encoder.container(keyedBy: KajiAgentDynamicCodingKey.self)
+            try container.encodeIfPresent(id, forKey: .init("id"))
+            try container.encode(type, forKey: .init("type"))
+            for (key, value) in fields {
+                try container.encode(value, forKey: .init(key))
+            }
+            return
+        }
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(id, forKey: .id)
         try container.encode(type, forKey: .type)
@@ -392,6 +401,25 @@ struct KajiAgentRPCFrame: Codable {
         try container.encodeIfPresent(query, forKey: .query)
         try container.encodeIfPresent(limit, forKey: .limit)
         try container.encodeIfPresent(event, forKey: .event)
+    }
+}
+
+private struct KajiAgentDynamicCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init(_ stringValue: String) {
+        self.stringValue = stringValue
+        intValue = nil
+    }
+
+    init?(stringValue: String) {
+        self.init(stringValue)
+    }
+
+    init?(intValue: Int) {
+        stringValue = String(intValue)
+        self.intValue = intValue
     }
 }
 

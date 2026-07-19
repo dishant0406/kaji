@@ -51,6 +51,10 @@ final class KajiAgentProcess {
             environment["KAJI_ZLOB_BIN"] = zlob.path
         }
         environment.merge(environmentOverrides) { _, new in new }
+        environment = PowerAssertionLaunchEnvironment.applyingAppOwnership(
+            to: environment,
+            assertionIsActive: SleepPreventionController.shared.verifyAssertionOwnership()
+        )
         let signature = configurationSignature(for: environment)
         if process?.isRunning == true, configurationSignature == signature { return }
         if process?.isRunning == true { stop() }
@@ -121,6 +125,7 @@ final class KajiAgentProcess {
             environment["KAJI_AGENT_ENABLE_AUTORESEARCH"] ?? "",
             environment["KAJI_AGENT_ENABLE_MOCK"] ?? "",
             environment["KAJI_ZLOB_BIN"] ?? "",
+            environment[PowerAssertionLaunchEnvironment.ownershipKey] ?? "",
             launch?.signature ?? "",
         ].joined(separator: "\u{1f}")
     }

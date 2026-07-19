@@ -41,7 +41,10 @@ enum AskPaletteAction: Hashable {
     case deleteScript(KajiKitScript)
     case userCommandShortcut(UserCommandShortcut)
     case toggleSleepPrevention
-    case toggleBatteryLidCloseSleepPrevention
+    case probeClosedLid
+    case startClosedLidStandard
+    case startClosedLidPowerProtect
+    case stopClosedLid
     case launchProvider(AskProvider)
     case submit
 }
@@ -134,8 +137,14 @@ struct AskPaletteEntry: Identifiable, Hashable {
             "user-command-shortcut:\(shortcut.id.uuidString)"
         case .toggleSleepPrevention:
             "toggle-sleep-prevention"
-        case .toggleBatteryLidCloseSleepPrevention:
-            "toggle-battery-lid-close-sleep-prevention"
+        case .probeClosedLid:
+            "probe-closed-lid"
+        case .startClosedLidStandard:
+            "start-closed-lid-standard"
+        case .startClosedLidPowerProtect:
+            "start-closed-lid-power-protect"
+        case .stopClosedLid:
+            "stop-closed-lid"
         case let .launchProvider(provider):
             "launch:\(provider.rawValue)"
         case .submit:

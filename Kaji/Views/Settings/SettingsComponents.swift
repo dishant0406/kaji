@@ -135,6 +135,34 @@ struct SettingsDetailToggleRow: View {
     }
 }
 
+struct SettingsDetailStatusRow: View {
+    let label: String
+    let detail: String
+    let status: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .kajiFont(size: SettingsMetrics.labelFontSize, weight: .medium)
+                    .foregroundStyle(KajiTheme.fg)
+                Text(detail)
+                    .kajiFont(size: SettingsMetrics.footnoteFontSize)
+                    .foregroundStyle(KajiTheme.fgDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+
+            Text(status)
+                .kajiFont(size: SettingsMetrics.footnoteFontSize, weight: .medium)
+                .foregroundStyle(KajiTheme.fgDim)
+        }
+        .padding(.horizontal, SettingsMetrics.horizontalPadding)
+        .padding(.vertical, SettingsMetrics.rowVerticalPadding)
+    }
+}
+
 struct SettingsPickerRow<Option: CaseIterable & Identifiable & RawRepresentable>: View
     where Option.RawValue == String, Option.AllCases: RandomAccessCollection
 {
@@ -171,5 +199,84 @@ struct SettingsInputRow: View {
                 monospaced: monospaced
             )
         }
+    }
+}
+
+struct SettingsDetailPickerRow<Value: Hashable>: View {
+    let label: String
+    let detail: String
+    let options: [KajiSelectOption<Value>]
+    @Binding var selection: Value
+    var width: CGFloat = SettingsMetrics.controlWidth
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .kajiFont(size: SettingsMetrics.labelFontSize, weight: .medium)
+                    .foregroundStyle(KajiTheme.fg)
+                Text(detail)
+                    .kajiFont(size: SettingsMetrics.footnoteFontSize)
+                    .foregroundStyle(KajiTheme.fgDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            KajiSelect(options: options, selection: $selection, width: width)
+        }
+        .padding(.horizontal, SettingsMetrics.horizontalPadding)
+        .padding(.vertical, SettingsMetrics.rowVerticalPadding)
+    }
+}
+
+struct SettingsStatusActionRow<Actions: View>: View {
+    let icon: String
+    let label: String
+    let detail: String
+    let status: String
+    let statusColor: Color
+    @ViewBuilder let actions: Actions
+
+    init(
+        icon: String,
+        label: String,
+        detail: String,
+        status: String,
+        statusColor: Color = KajiTheme.fgMuted,
+        @ViewBuilder actions: () -> Actions
+    ) {
+        self.icon = icon
+        self.label = label
+        self.detail = detail
+        self.status = status
+        self.statusColor = statusColor
+        self.actions = actions()
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            KajiIcon(systemName: icon, size: 16)
+                .frame(width: 18)
+                .foregroundStyle(statusColor)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(label)
+                        .kajiFont(size: SettingsMetrics.labelFontSize, weight: .medium)
+                        .foregroundStyle(KajiTheme.fg)
+                    Text(status)
+                        .kajiFont(size: SettingsMetrics.footnoteFontSize, weight: .semibold)
+                        .foregroundStyle(statusColor)
+                }
+                Text(detail)
+                    .kajiFont(size: SettingsMetrics.footnoteFontSize)
+                    .foregroundStyle(KajiTheme.fgDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                actions
+            }
+        }
+        .padding(.horizontal, SettingsMetrics.horizontalPadding)
+        .padding(.vertical, SettingsMetrics.rowVerticalPadding + 4)
     }
 }

@@ -114,10 +114,14 @@ public final class TermyEmbeddedTerminal: ObservableObject {
     }
 
     public func foregroundProcessGroupID() -> Int32? {
-        terminal.childProcessID()
+        terminal.foregroundProcessGroupID()
     }
 
     public func childProcessID() -> Int32? {
         terminal.childProcessID()
+    }
+
+    public func ttyName() -> String? {
+        terminal.ttyName()
     }
 }

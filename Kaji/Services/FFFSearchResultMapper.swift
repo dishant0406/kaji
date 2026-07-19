@@ -1,33 +1,30 @@
-import FFFKit
+import FFFWorkerProtocol
 import Foundation
 
 enum FFFSearchResultMapper {
-    static func fileResults(from result: UnsafePointer<FffSearchResult>, projectPath: String) -> [FileSearchResult] {
-        guard let items = result.pointee.items else { return [] }
-        return (0 ..< Int(result.pointee.count)).map { index in
-            let item = items.advanced(by: index).pointee
-            let relativePath = String(cString: item.relative_path)
-            let fileName = String(cString: item.file_name)
-            let absolutePath = URL(fileURLWithPath: projectPath).appendingPathComponent(relativePath).path
-            return FileSearchResult(id: absolutePath, relativePath: relativePath, absolutePath: absolutePath, fileName: fileName)
+    static func fileResults(from results: [FFFWorkerFileResult], projectPath: String) -> [FileSearchResult] {
+        results.map { result in
+            let absolutePath = URL(fileURLWithPath: projectPath).appendingPathComponent(result.relativePath).path
+            return FileSearchResult(
+                id: absolutePath,
+                relativePath: result.relativePath,
+                absolutePath: absolutePath,
+                fileName: result.fileName
+            )
         }
     }
 
-    static func textMatches(from result: UnsafePointer<FffGrepResult>, projectPath: String) -> [ProjectTextSearchMatch] {
-        guard let items = result.pointee.items else { return [] }
-        return (0 ..< Int(result.pointee.count)).map { index in
-            let item = items.advanced(by: index).pointee
-            let relativePath = String(cString: item.relative_path)
-            let lineContent = String(cString: item.line_content)
-            let absolutePath = URL(fileURLWithPath: projectPath).appendingPathComponent(relativePath).path
-            let column = Int(item.col) + 1
+    static func textMatches(from results: [FFFWorkerTextMatch], projectPath: String) -> [ProjectTextSearchMatch] {
+        results.map { result in
+            let absolutePath = URL(fileURLWithPath: projectPath).appendingPathComponent(result.relativePath).path
+            let column = Int(result.column) + 1
             return ProjectTextSearchMatch(
-                id: "\(absolutePath):\(item.line_number):\(column)",
+                id: "\(absolutePath):\(result.lineNumber):\(column)",
                 filePath: absolutePath,
-                relativePath: relativePath,
-                line: Int(item.line_number),
+                relativePath: result.relativePath,
+                line: Int(result.lineNumber),
                 column: column,
-                preview: ProjectTextSearchService.previewText(from: lineContent, column: column)
+                preview: ProjectTextSearchService.previewText(from: result.lineContent, column: column)
             )
         }
     }

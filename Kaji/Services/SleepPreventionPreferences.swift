@@ -2,7 +2,6 @@ import Foundation
 
 enum SleepPreventionPreferences {
     static let isEnabledKey = "kaji.power.preventIdleSystemSleep"
-    static let batteryLidCloseIsEnabledKey = "kaji.power.preventBatteryLidCloseSleep"
 
     static func isEnabled(defaults: UserDefaults = .standard) -> Bool {
         defaults.bool(forKey: isEnabledKey)
@@ -10,13 +9,5 @@ enum SleepPreventionPreferences {
 
     static func setEnabled(_ enabled: Bool, defaults: UserDefaults = .standard) {
         defaults.set(enabled, forKey: isEnabledKey)
-    }
-
-    static func batteryLidCloseIsEnabled(defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: batteryLidCloseIsEnabledKey)
-    }
-
-    static func setBatteryLidCloseEnabled(_ enabled: Bool, defaults: UserDefaults = .standard) {
-        defaults.set(enabled, forKey: batteryLidCloseIsEnabledKey)
     }
 }

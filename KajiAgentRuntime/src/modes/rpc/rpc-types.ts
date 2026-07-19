@@ -14,6 +14,12 @@ import type { SessionInfo } from "../../session/session-manager";
 import type { TodoPhase } from "../../tools/todo-write";
 import type { CustomProviderAutoMatchResult, CustomProviderInput, CustomProvidersResult } from "../../config/custom-provider-config";
 import type { CustomProviderValidationResult } from "../../config/custom-provider-validation";
+import type {
+	RpcMeetingNotesErrorResult,
+	RpcMeetingNotesModelValidationResult,
+	RpcMeetingNotesRequest,
+	RpcMeetingNotesResult,
+} from "./meeting-notes";
 
 export interface RpcSlashCommandInfo {
 	name: string;
@@ -71,6 +77,8 @@ export type RpcCommand =
 	| { id?: string; type: "cycle_model" }
 	| { id?: string; type: "get_available_models" }
 	| { id?: string; type: "generate_commit_message"; provider?: string; modelId?: string; promptMessage: string; thinkingLevel?: ThinkingLevel }
+	| ({ id?: string; type: "generate_meeting_notes" } & RpcMeetingNotesRequest)
+	| { id?: string; type: "validate_meeting_notes_model"; provider: string; modelId: string }
 	| { id?: string; type: "get_custom_providers" }
 	| { id?: string; type: "save_custom_provider"; data: CustomProviderInput }
 	| { id?: string; type: "delete_custom_provider"; providerId: string }
@@ -221,6 +229,20 @@ export type RpcResponse =
 	| {
 			id?: string;
 			type: "response";
+			command: "generate_meeting_notes";
+			success: true;
+			data: RpcMeetingNotesResult;
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "validate_meeting_notes_model";
+			success: true;
+			data: RpcMeetingNotesModelValidationResult;
+	  }
+	| {
+			id?: string;
+			type: "response";
 			command: "get_custom_providers";
 			success: true;
 			data: CustomProvidersResult;
@@ -310,7 +332,23 @@ export type RpcResponse =
 	| { id?: string; type: "response"; command: "login"; success: true; data: { providerId: string; pending?: boolean } }
 
 	// Error response (any command can fail)
-	| { id?: string; type: "response"; command: string; success: false; error: string };
+	| {
+			id?: string;
+			type: "response";
+			command: "generate_meeting_notes";
+			success: false;
+			error: string;
+			data: RpcMeetingNotesErrorResult;
+	  }
+	| {
+			id?: string;
+			type: "response";
+			command: "validate_meeting_notes_model";
+			success: false;
+			error: string;
+			data: RpcMeetingNotesErrorResult & { ready: false };
+	  }
+	| { id?: string; type: "response"; command: string; success: false; error: string; data?: object };
 
 // ============================================================================
 // Extension UI Events (stdout)

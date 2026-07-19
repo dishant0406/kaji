@@ -295,8 +295,19 @@ extension AskOverlay {
         case .toggleSleepPrevention:
             SleepPreventionController.shared.toggle()
             onDismiss()
-        case .toggleBatteryLidCloseSleepPrevention:
-            SleepPreventionController.shared.toggleBatteryLidClose()
+        case .probeClosedLid:
+            Task { @MainActor in
+                await ClosedLidSessionController.shared.probeCapability()
+                await PowerProtectManager.shared.refresh()
+            }
+        case .startClosedLidStandard:
+            Task { @MainActor in await ClosedLidSessionController.shared.start(mode: .standard) }
+            onDismiss()
+        case .startClosedLidPowerProtect:
+            Task { @MainActor in await ClosedLidSessionController.shared.start(mode: .powerProtect) }
+            onDismiss()
+        case .stopClosedLid:
+            Task { @MainActor in await ClosedLidSessionController.shared.stop() }
             onDismiss()
         case .launchProvider:
             submit()
@@ -635,7 +646,12 @@ extension AskOverlay {
             projectName: selectedProject?.name ?? "No project",
             worktreeName: selectedWorktreeName,
             sleepPreventionIsEnabled: SleepPreventionController.shared.isEnabled,
-            systemSleepAssertionStatus: SleepPreventionController.shared.systemSleepAssertionStatus
+            systemSleepAssertionStatus: SleepPreventionController.shared.systemSleepAssertionStatus,
+            closedLidStatus: ClosedLidSessionController.shared.status,
+            standardCompatibility: ClosedLidSessionController.shared.standardCompatibility,
+            standardModeAvailable: ClosedLidSessionController.shared.selectorCapability?.isAvailable == true,
+            powerProtectReady: ClosedLidPowerProtectPresentation.resolve(PowerProtectManager.shared.state).isReadyToStart,
+            powerProtectStatus: ClosedLidPowerProtectPresentation.resolve(PowerProtectManager.shared.state).status
         ))
 
         guard let highlightedIndex, highlightedIndex < localEntries.count,
@@ -701,7 +717,10 @@ extension AskOverlay {
              .deleteScript,
              .userCommandShortcut,
              .toggleSleepPrevention,
-             .toggleBatteryLidCloseSleepPrevention,
+             .probeClosedLid,
+             .startClosedLidStandard,
+             .startClosedLidPowerProtect,
+             .stopClosedLid,
              .mention,
              .directory,
              .diffFile,

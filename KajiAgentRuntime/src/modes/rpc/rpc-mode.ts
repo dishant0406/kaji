@@ -18,6 +18,7 @@ import { BUILTIN_SLASH_COMMAND_DEFS } from "../../slash-commands/builtin-registr
 import { getKnownRoleIds, getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
 import { generateRpcCommitMessage } from "./commit-message";
+import { generateRpcMeetingNotes, toRpcMeetingNotesErrorResult, validateRpcMeetingNotesModel } from "./meeting-notes";
 import { buildSkillPromptMessage } from "../../extensibility/skills";
 import { expandSlashCommand } from "../../extensibility/slash-commands";
 import { HistoryStorage } from "../../session/history-storage";
@@ -211,8 +212,8 @@ export async function runRpcMode(
 		return { id, type: "response", command, success: true, data } as RpcResponse;
 	};
 
-	const error = (id: string | undefined, command: string, message: string): RpcResponse => {
-		return { id, type: "response", command, success: false, error: message };
+	const error = (id: string | undefined, command: string, message: string, data?: object): RpcResponse => {
+		return { id, type: "response", command, success: false, error: message, ...(data ? { data } : {}) };
 	};
 
 	const pendingExtensionRequests = new Map<string, PendingExtensionRequest>();
@@ -683,6 +684,26 @@ export async function runRpcMode(
 					return success(id, "generate_commit_message", await generateRpcCommitMessage(session, command));
 				} catch (err) {
 					return error(id, "generate_commit_message", err instanceof Error ? err.message : String(err));
+				}
+			}
+
+			case "generate_meeting_notes": {
+				try {
+					const { id: _id, type: _type, ...request } = command;
+					return success(id, "generate_meeting_notes", await generateRpcMeetingNotes(session, request));
+				} catch (err) {
+					const failure = toRpcMeetingNotesErrorResult(err);
+					return error(id, "generate_meeting_notes", failure.message, failure);
+				}
+			}
+
+			case "validate_meeting_notes_model": {
+				try {
+					const { id: _id, type: _type, ...request } = command;
+					return success(id, "validate_meeting_notes_model", await validateRpcMeetingNotesModel(session, request));
+				} catch (err) {
+					const failure = toRpcMeetingNotesErrorResult(err);
+					return error(id, "validate_meeting_notes_model", failure.message, { ready: false, ...failure });
 				}
 			}
 

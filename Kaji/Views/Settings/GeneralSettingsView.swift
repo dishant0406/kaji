@@ -61,26 +61,20 @@ struct GeneralSettingsView: View {
 
             SettingsSection(
                 "Power",
-                footer: "The battery lid-close override uses administrator permission and changes a system-wide pmset setting.",
-                showsDivider: false
+                footer: "Idle sleep prevention uses a separate verified macOS power assertion. It does not change lid-close behavior.",
+                showsDivider: true
             ) {
                 SettingsDetailToggleRow(
-                    label: "Prevent system sleep",
+                    label: "Prevent idle sleep",
                     detail: sleepPrevention.detail,
                     isOn: Binding(
                         get: { sleepPrevention.isEnabled },
                         set: { sleepPrevention.setEnabled($0) }
                     )
                 )
-                SettingsDetailToggleRow(
-                    label: "Prevent battery lid-close sleep",
-                    detail: sleepPrevention.batteryLidCloseDetail,
-                    isOn: Binding(
-                        get: { sleepPrevention.isBatteryLidCloseEnabled },
-                        set: { sleepPrevention.setBatteryLidCloseEnabled($0) }
-                    )
-                )
             }
+
+            ClosedLidSettingsSection()
         }
     }
 }

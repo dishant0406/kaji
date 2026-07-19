@@ -67,6 +67,44 @@ struct SpeechModelRegistryTests {
         #expect(SpeechModelRemoteFileMapper.localPath(remotePath: "320ms/encoder.mlmodelc/coremldata.bin", subPath: "320ms") == "encoder.mlmodelc/coremldata.bin")
         #expect(SpeechModelRemoteFileMapper.shouldInclude(remotePath: "320ms/encoder.mlmodelc/coremldata.bin", subPath: "320ms", requiredFiles: required))
         #expect(!SpeechModelRemoteFileMapper.shouldInclude(remotePath: "320ms/other.bin", subPath: "320ms", requiredFiles: required))
+        #expect(!SpeechModelRemoteFileMapper.shouldInclude(remotePath: "320ms/../vocab.json", subPath: "320ms", requiredFiles: required))
+        #expect(!SpeechModelRemoteFileMapper.shouldInclude(remotePath: "/320ms/vocab.json", subPath: "320ms", requiredFiles: required))
+        #expect(!SpeechModelRemoteFileMapper.shouldInclude(remotePath: "320ms//vocab.json", subPath: "320ms", requiredFiles: required))
+    }
+
+    @Test("registry rejects untrusted origins and unsafe repository paths")
+    func rejectsUntrustedRegistryInput() throws {
+        for baseURL in [
+            "http://huggingface.co",
+            "https://huggingface.co.evil.example",
+            "https://user@huggingface.co",
+            "https://huggingface.co:443",
+            "https://127.0.0.1",
+        ] {
+            let document = SpeechModelRegistryDocument(
+                schemaVersion: 2,
+                models: [customModel(id: "unsafe", registryBaseURL: baseURL)]
+            )
+            #expect(throws: SpeechModelRegistryError.self) {
+                try SpeechModelRegistryValidator.validate(document)
+            }
+        }
+
+        let unsafeRepo = SpeechModelRegistryDocument(
+            schemaVersion: 2,
+            models: [customModel(id: "unsafe", repo: "Example/../private")]
+        )
+        #expect(throws: SpeechModelRegistryError.self) {
+            try SpeechModelRegistryValidator.validate(unsafeRepo)
+        }
+    }
+
+    @Test("credentials are restricted to the trusted registry origin")
+    func restrictsCredentialOrigin() throws {
+        #expect(SpeechModelRegistrySecurity.shouldAttachToken(to: try #require(URL(string: "https://huggingface.co/api/models"))))
+        #expect(!SpeechModelRegistrySecurity.shouldAttachToken(to: try #require(URL(string: "https://huggingface.co.evil.example/api"))))
+        #expect(!SpeechModelRegistrySecurity.shouldAttachToken(to: try #require(URL(string: "http://huggingface.co/api"))))
+        #expect(!SpeechModelRegistrySecurity.shouldAttachToken(to: try #require(URL(string: "https://127.0.0.1/api"))))
     }
 
     private func bundledDocument() -> SpeechModelRegistryDocument {
@@ -77,14 +115,18 @@ struct SpeechModelRegistryTests {
         try CodableFileStore(fileURL: url, options: .prettySorted).save(document)
     }
 
-    private func customModel(id: String) -> SpeechInputModel {
+    private func customModel(
+        id: String,
+        registryBaseURL: String = "https://huggingface.co",
+        repo: String = "Example/custom-coreml"
+    ) -> SpeechInputModel {
         SpeechInputModel(
             id: id,
             title: "Custom Parakeet",
             detail: "Custom compatible model",
             engine: .fluidAudioParakeetEouStreaming,
-            registryBaseURL: "https://huggingface.co",
-            repo: "Example/custom-coreml",
+            registryBaseURL: registryBaseURL,
+            repo: repo,
             revision: "main",
             subPath: "320ms",
             cachePath: "custom/320ms",

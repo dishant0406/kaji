@@ -2,8 +2,13 @@ import SwiftUI
 
 struct SettingsView: View {
     var onClose: (() -> Void)?
-    @State private var selection = SettingsPane.general
+    @State private var selection: SettingsPane
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(initialSelection: SettingsPane = .general, onClose: (() -> Void)? = nil) {
+        _selection = State(initialValue: initialSelection)
+        self.onClose = onClose
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,6 +45,9 @@ struct SettingsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSpeechToTextSettings)) { _ in
             selection = .speechToText
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openMeetingNotesSettings)) { _ in
+            selection = .meetingNotes
         }
     }
 
@@ -108,6 +116,8 @@ struct SettingsView: View {
                 EditorSettingsView()
             case .speechToText:
                 SpeechToTextSettingsView()
+            case .meetingNotes:
+                MeetingNotesSettingsView()
             case .shortcuts:
                 KeyboardShortcutsSettingsView()
             case .notifications:

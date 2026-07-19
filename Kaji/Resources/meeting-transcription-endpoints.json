@@ -1,0 +1,165 @@
+{
+  "profiles": [
+    {
+      "discovery": { "kind": "localRegistry" },
+      "displayName": "This Mac",
+      "id": "00000000-0000-4000-8000-000000000001",
+      "providerID": "fluid-audio",
+      "regionID": "local",
+      "source": "builtIn",
+      "variant": "fluidAudioLocal"
+    },
+    {
+      "discovery": { "kind": "openAIModels", "path": "/models" },
+      "displayName": "OpenAI Global",
+      "id": "00000000-0000-4000-8000-000000000101",
+      "providerID": "openai",
+      "regionID": "global",
+      "restBaseURL": "https://api.openai.com/v1",
+      "source": "builtIn",
+      "variant": "openAICompatible",
+      "webSocketBaseURL": "wss://api.openai.com/v1"
+    },
+    {
+      "discovery": { "kind": "openAIModels", "path": "/models" },
+      "displayName": "OpenAI United States",
+      "id": "00000000-0000-4000-8000-000000000102",
+      "providerID": "openai",
+      "regionID": "us",
+      "restBaseURL": "https://us.api.openai.com/v1",
+      "source": "builtIn",
+      "variant": "openAICompatible",
+      "webSocketBaseURL": "wss://us.api.openai.com/v1"
+    },
+    {
+      "discovery": { "kind": "openAIModels", "path": "/models" },
+      "displayName": "OpenAI Europe",
+      "id": "00000000-0000-4000-8000-000000000103",
+      "providerID": "openai",
+      "regionID": "eu",
+      "restBaseURL": "https://eu.api.openai.com/v1",
+      "source": "builtIn",
+      "variant": "openAICompatible",
+      "webSocketBaseURL": "wss://eu.api.openai.com/v1"
+    },
+    {
+      "discovery": { "kind": "deepgramModels", "path": "/v1/models" },
+      "displayName": "Deepgram Global",
+      "id": "00000000-0000-4000-8000-000000000201",
+      "providerID": "deepgram",
+      "regionID": "global",
+      "restBaseURL": "https://api.deepgram.com",
+      "source": "builtIn",
+      "variant": "deepgram",
+      "webSocketBaseURL": "wss://api.deepgram.com"
+    },
+    {
+      "discovery": { "kind": "deepgramModels", "path": "/v1/models" },
+      "displayName": "Deepgram Europe",
+      "id": "00000000-0000-4000-8000-000000000202",
+      "providerID": "deepgram",
+      "regionID": "europe",
+      "restBaseURL": "https://api.eu.deepgram.com",
+      "source": "builtIn",
+      "variant": "deepgram",
+      "webSocketBaseURL": "wss://api.eu.deepgram.com"
+    },
+    {
+      "discovery": { "kind": "deepgramModels", "path": "/v1/models" },
+      "displayName": "Deepgram Australia",
+      "id": "00000000-0000-4000-8000-000000000203",
+      "providerID": "deepgram",
+      "regionID": "australia",
+      "restBaseURL": "https://api.au.deepgram.com",
+      "source": "builtIn",
+      "variant": "deepgram",
+      "webSocketBaseURL": "wss://api.au.deepgram.com"
+    },
+    {
+      "discovery": { "kind": "elevenLabsModels", "path": "/v1/models" },
+      "displayName": "ElevenLabs Global",
+      "id": "00000000-0000-4000-8000-000000000301",
+      "providerID": "elevenlabs-scribe",
+      "regionID": "global",
+      "restBaseURL": "https://api.elevenlabs.io",
+      "source": "builtIn",
+      "variant": "elevenLabsScribe",
+      "webSocketBaseURL": "wss://api.elevenlabs.io"
+    },
+    {
+      "discovery": { "kind": "elevenLabsModels", "path": "/v1/models" },
+      "displayName": "ElevenLabs United States",
+      "id": "00000000-0000-4000-8000-000000000302",
+      "providerID": "elevenlabs-scribe",
+      "regionID": "us",
+      "restBaseURL": "https://api.us.elevenlabs.io",
+      "source": "builtIn",
+      "variant": "elevenLabsScribe",
+      "webSocketBaseURL": "wss://api.us.elevenlabs.io"
+    },
+    {
+      "discovery": { "kind": "elevenLabsModels", "path": "/v1/models" },
+      "displayName": "ElevenLabs Europe",
+      "id": "00000000-0000-4000-8000-000000000303",
+      "providerID": "elevenlabs-scribe",
+      "regionID": "eu",
+      "restBaseURL": "https://api.eu.residency.elevenlabs.io",
+      "source": "builtIn",
+      "variant": "elevenLabsScribe",
+      "webSocketBaseURL": "wss://api.eu.residency.elevenlabs.io"
+    },
+    {
+      "discovery": { "kind": "elevenLabsModels", "path": "/v1/models" },
+      "displayName": "ElevenLabs India",
+      "id": "00000000-0000-4000-8000-000000000304",
+      "providerID": "elevenlabs-scribe",
+      "regionID": "in",
+      "restBaseURL": "https://api.in.residency.elevenlabs.io",
+      "source": "builtIn",
+      "variant": "elevenLabsScribe",
+      "webSocketBaseURL": "wss://api.in.residency.elevenlabs.io"
+    },
+    {
+      "discovery": { "kind": "elevenLabsModels", "path": "/v1/models" },
+      "displayName": "ElevenLabs Singapore",
+      "id": "00000000-0000-4000-8000-000000000305",
+      "providerID": "elevenlabs-scribe",
+      "regionID": "sg",
+      "restBaseURL": "https://api.sg.residency.elevenlabs.io",
+      "source": "builtIn",
+      "variant": "elevenLabsScribe",
+      "webSocketBaseURL": "wss://api.sg.residency.elevenlabs.io"
+    },
+    {
+      "discovery": { "kind": "manual" },
+      "displayName": "AssemblyAI Edge",
+      "id": "00000000-0000-4000-8000-000000000401",
+      "providerID": "assemblyai",
+      "regionID": "global",
+      "source": "builtIn",
+      "variant": "assemblyAIStreamingV3",
+      "webSocketBaseURL": "wss://streaming.assemblyai.com"
+    },
+    {
+      "discovery": { "kind": "manual" },
+      "displayName": "AssemblyAI United States",
+      "id": "00000000-0000-4000-8000-000000000402",
+      "providerID": "assemblyai",
+      "regionID": "us",
+      "source": "builtIn",
+      "variant": "assemblyAIStreamingV3",
+      "webSocketBaseURL": "wss://streaming.us.assemblyai.com"
+    },
+    {
+      "discovery": { "kind": "manual" },
+      "displayName": "AssemblyAI Europe",
+      "id": "00000000-0000-4000-8000-000000000403",
+      "providerID": "assemblyai",
+      "regionID": "eu",
+      "source": "builtIn",
+      "variant": "assemblyAIStreamingV3",
+      "webSocketBaseURL": "wss://streaming.eu.assemblyai.com"
+    }
+  ],
+  "schemaVersion": 1
+}

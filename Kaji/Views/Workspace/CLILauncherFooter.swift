@@ -52,6 +52,10 @@ struct CLILauncherFooter: View {
 
                     SpeechInputFooterControl()
 
+                    MeetingNotesFooterControl {
+                        NotificationCenter.default.post(name: .toggleMeetingNotesPanel, object: nil)
+                    }
+
                     if browserEnabled {
                         IconButton(symbol: "globe", accessibilityLabel: "Browser") {
                             NotificationCenter.default.post(name: .toggleBrowserPanel, object: projectID)

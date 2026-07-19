@@ -101,6 +101,7 @@ import {
 import { expandPromptTemplate, type PromptTemplate } from "../config/prompt-templates";
 import type { Settings, SkillsSettings } from "../config/settings";
 import { onAppendOnlyModeChanged } from "../config/settings";
+import { shouldAcquireRuntimePowerAssertion } from "./power-assertion-ownership";
 import { RawSseDebugBuffer } from "../debug/raw-sse-buffer";
 import { loadCapability } from "../discovery";
 import { normalizeDiff, normalizeToLF, ParseError, previewPatch, stripBom } from "../edit";
@@ -668,6 +669,7 @@ export class AgentSession {
 
 	#acquirePowerAssertion(): void {
 		if (process.platform !== "darwin") return;
+		if (!shouldAcquireRuntimePowerAssertion()) return;
 		if (this.#powerAssertion) return;
 		const idle = this.settings.get("power.preventIdleSleep");
 		const system = this.settings.get("power.preventSystemSleep");

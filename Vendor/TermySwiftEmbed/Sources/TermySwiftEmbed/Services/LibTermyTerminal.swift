@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import TermyKit
 
@@ -191,6 +192,14 @@ final class LibTermyTerminal {
         var pid: UInt32 = 0
         guard termy_terminal_child_pid(handle, &pid) == TERMY_FFI_OK, pid > 0 else { return nil }
         return Int32(pid)
+    }
+
+    func ttyName() -> String? {
+        childProcessID().flatMap(DarwinTerminalIdentityResolver.ttyName(pid:))
+    }
+
+    func foregroundProcessGroupID() -> Int32? {
+        DarwinTerminalIdentityResolver.foregroundProcessGroupID(ttyName: ttyName())
     }
 
     func startWakeupMonitor(onWakeup: @escaping @MainActor () -> Void) {
@@ -762,5 +771,39 @@ private func withTermyEnvVars<T>(
     }
     return try vars.withUnsafeBufferPointer { buffer in
         try body(buffer.baseAddress, buffer.count)
+    }
+}
+
+private enum DarwinTerminalIdentityResolver {
+    static func ttyName(pid: Int32) -> String? {
+        guard pid > 0 else { return nil }
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size,
+              info.pbi_flags & UInt32(PROC_FLAG_CONTROLT) != 0,
+              info.e_tdev != UInt32.max
+        else { return nil }
+        let device = dev_t(bitPattern: info.e_tdev)
+        guard let name = devname(device, S_IFCHR) else { return nil }
+        return validatedTTYPath(String(cString: name))
+    }
+
+    static func foregroundProcessGroupID(ttyName: String?) -> Int32? {
+        guard let path = validatedTTYPath(ttyName) else { return nil }
+        let descriptor = open(path, O_RDONLY | O_NOCTTY | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else { return nil }
+        defer { close(descriptor) }
+        let processGroupID = tcgetpgrp(descriptor)
+        return processGroupID > 0 ? processGroupID : nil
+    }
+
+    private static func validatedTTYPath(_ ttyName: String?) -> String? {
+        guard let ttyName else { return nil }
+        let component = ttyName.hasPrefix("/dev/") ? String(ttyName.dropFirst(5)) : ttyName
+        guard component.hasPrefix("tty"),
+              component.count <= 64,
+              component.unicodeScalars.allSatisfy({ CharacterSet.alphanumerics.contains($0) })
+        else { return nil }
+        return "/dev/\(component)"
     }
 }

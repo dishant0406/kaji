@@ -1,37 +1,97 @@
 import CryptoKit
-import FFFKit
+import FFFWorkerProtocol
 import Foundation
-import os
-
-private let fffSearchLogger = Logger(subsystem: "app.kaji", category: "FFFSearch")
 
 actor FFFSearchIndexStore {
     static let shared = FFFSearchIndexStore()
 
-    private var indexes: [String: FFFSearchIndex] = [:]
+    private let client: FFFWorkerClient
+    private let maximumIndexes: Int
+    private var projectPaths = Set<String>()
     private var accessOrder: [String] = []
-    private let maxIndexes = 4
+    private var creations: [String: Task<Void, Error>] = [:]
 
-    func index(for projectPath: String) throws -> FFFSearchIndex {
-        if let index = indexes[projectPath] {
-            touch(projectPath)
-            return index
-        }
-        let index = try FFFSearchIndex(projectPath: projectPath)
-        indexes[projectPath] = index
-        touch(projectPath)
-        enforceLimit()
-        return index
+    init(client: FFFWorkerClient = .shared, maximumIndexes: Int = 4) {
+        self.client = client
+        self.maximumIndexes = maximumIndexes
     }
 
-    func remove(projectPath: String) {
-        indexes.removeValue(forKey: projectPath)
+    func warm(projectPath: String) async throws {
+        try await ensureIndex(projectPath: projectPath)
+        do {
+            _ = try await client.send(.warm(projectPath: projectPath, timeoutMilliseconds: 10000))
+        } catch {
+            forget(projectPath)
+            throw error
+        }
+    }
+
+    func searchFiles(projectPath: String, query: String, limit: Int) async throws -> [FileSearchResult] {
+        try await ensureIndex(projectPath: projectPath)
+        do {
+            let result = try await client.send(.searchFiles(projectPath: projectPath, query: query, limit: limit))
+            guard case let .files(files) = result else { throw FFFSearchError.invalidWorkerResponse }
+            return FFFSearchResultMapper.fileResults(from: files, projectPath: projectPath)
+        } catch {
+            forget(projectPath)
+            throw error
+        }
+    }
+
+    func searchText(projectPath: String, query: String, limit: Int) async throws -> [ProjectTextSearchMatch] {
+        try await ensureIndex(projectPath: projectPath)
+        do {
+            let result = try await client.send(.searchText(projectPath: projectPath, query: query, limit: limit))
+            guard case let .textMatches(matches) = result else { throw FFFSearchError.invalidWorkerResponse }
+            return FFFSearchResultMapper.textMatches(from: matches, projectPath: projectPath)
+        } catch {
+            forget(projectPath)
+            throw error
+        }
+    }
+
+    func remove(projectPaths paths: [String]) async {
+        let uniquePaths = Set(paths.filter { !$0.isEmpty })
+        for path in uniquePaths {
+            creations[path]?.cancel()
+            creations.removeValue(forKey: path)
+            projectPaths.remove(path)
+            accessOrder.removeAll { $0 == path }
+        }
+        await client.remove(projectPaths: Array(uniquePaths))
+    }
+
+    private func forget(_ projectPath: String) {
+        projectPaths.remove(projectPath)
         accessOrder.removeAll { $0 == projectPath }
     }
 
-    func remove(projectPaths: [String]) {
-        for projectPath in Set(projectPaths) {
-            remove(projectPath: projectPath)
+    private func ensureIndex(projectPath: String) async throws {
+        guard !projectPath.isEmpty else { throw FFFSearchError.processFailed("Project path is empty") }
+        if projectPaths.contains(projectPath) {
+            touch(projectPath)
+            return
+        }
+        if let creation = creations[projectPath] {
+            try await creation.value
+            touch(projectPath)
+            return
+        }
+        let databasePath = Self.databaseURL(projectPath: projectPath).path
+        let client = client
+        let creation = Task {
+            _ = try await client.send(.create(projectPath: projectPath, databasePath: databasePath), timeout: 60)
+        }
+        creations[projectPath] = creation
+        do {
+            try await creation.value
+            creations.removeValue(forKey: projectPath)
+            projectPaths.insert(projectPath)
+            touch(projectPath)
+            await enforceLimit()
+        } catch {
+            creations.removeValue(forKey: projectPath)
+            throw error
         }
     }
 
@@ -40,136 +100,20 @@ actor FFFSearchIndexStore {
         accessOrder.append(projectPath)
     }
 
-    private func enforceLimit() {
-        while indexes.count > maxIndexes, let oldest = accessOrder.first {
+    private func enforceLimit() async {
+        while projectPaths.count > maximumIndexes, let oldest = accessOrder.first {
             accessOrder.removeFirst()
-            indexes.removeValue(forKey: oldest)
+            projectPaths.remove(oldest)
+            await client.remove(projectPaths: [oldest])
         }
     }
-}
 
-private extension String {
-    var fffStableHash: String {
-        SHA256.hash(data: Data(utf8)).map { String(format: "%02x", $0) }.joined()
-    }
-}
-
-final class FFFSearchIndex: @unchecked Sendable {
-    private let library: FFFDynamicLibrary
-    private let handle: UnsafeMutableRawPointer
-    private let projectPath: String
-    private let lock = NSLock()
-
-    init(projectPath: String) throws {
-        let library = try FFFDynamicLibrary.load()
-        let empty = ""
-        self.projectPath = projectPath
-        self.library = library
-        let dbDirectory = KajiFileStorage.appSupportDirectory()
+    private static func databaseURL(projectPath: String) -> URL {
+        let digest = SHA256.hash(data: Data(projectPath.utf8)).map { String(format: "%02x", $0) }.joined()
+        return KajiFileStorage.appSupportDirectory()
             .appendingPathComponent("Search", isDirectory: true)
             .appendingPathComponent("FFF", isDirectory: true)
             .appendingPathComponent("Databases", isDirectory: true)
-            .appendingPathComponent(projectPath.fffStableHash, isDirectory: true)
-        try FileManager.default.createDirectory(at: dbDirectory, withIntermediateDirectories: true)
-        let frecency = dbDirectory.appendingPathComponent("frecency").path
-        let history = dbDirectory.appendingPathComponent("history").path
-
-        let result = projectPath.withCString { base in
-            frecency.withCString { frecencyPath in
-                history.withCString { historyPath in
-                    empty.withCString { emptyPath in
-                        library.createInstance(
-                            base,
-                            frecencyPath,
-                            historyPath,
-                            false,
-                            true,
-                            true,
-                            true,
-                            true,
-                            emptyPath,
-                            emptyPath,
-                            0,
-                            0,
-                            0
-                        )
-                    }
-                }
-            }
-        }
-        guard let result else { throw FFFSearchError.processFailed("FFF create instance returned nil") }
-        guard result.pointee.success, let handle = result.pointee.handle else {
-            let message = errorMessage(result, fallback: "FFF create instance failed")
-            library.freeResult(result)
-            throw FFFSearchError.processFailed(message)
-        }
-        library.freeResult(result)
-        self.handle = handle
+            .appendingPathComponent(digest, isDirectory: true)
     }
-
-    deinit {
-        library.destroy(handle)
-    }
-
-    func waitForScan(timeoutMs: UInt64 = 10000) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        try waitForScanLocked(timeoutMs: timeoutMs)
-    }
-
-    func searchFiles(query: String, limit: Int) throws -> [FileSearchResult] {
-        lock.lock()
-        defer { lock.unlock() }
-        try waitForScanLocked()
-        let empty = ""
-        guard let result = query.withCString({ queryPath in
-            empty.withCString { currentFile in
-                library.search(handle, queryPath, currentFile, 0, 0, UInt32(limit), 100, 3)
-            }
-        })
-        else {
-            throw FFFSearchError.processFailed("FFF file search returned nil")
-        }
-        defer { library.freeResult(result) }
-        guard result.pointee.success, let raw = result.pointee.handle else {
-            throw FFFSearchError.processFailed(errorMessage(result, fallback: "FFF file search failed"))
-        }
-        let searchResult = raw.assumingMemoryBound(to: FffSearchResult.self)
-        defer { library.freeSearchResult(searchResult) }
-        return FFFSearchResultMapper.fileResults(from: searchResult, projectPath: projectPath)
-    }
-
-    func searchText(query: String, limit: Int) throws -> [ProjectTextSearchMatch] {
-        lock.lock()
-        defer { lock.unlock() }
-        try waitForScanLocked()
-        guard let result = query
-            .withCString({ library.liveGrep(handle, $0, 0, 10 * 1024 * 1024, 30, true, 0, UInt32(limit), 150, 0, 0, true) })
-        else {
-            throw FFFSearchError.processFailed("FFF grep returned nil")
-        }
-        defer { library.freeResult(result) }
-        guard result.pointee.success, let raw = result.pointee.handle else {
-            throw FFFSearchError.processFailed(errorMessage(result, fallback: "FFF grep failed"))
-        }
-        let grepResult = raw.assumingMemoryBound(to: FffGrepResult.self)
-        defer { library.freeGrepResult(grepResult) }
-        return FFFSearchResultMapper.textMatches(from: grepResult, projectPath: projectPath)
-    }
-
-    private func waitForScanLocked(timeoutMs: UInt64 = 10000) throws {
-        if Thread.isMainThread {
-            fffSearchLogger.fault("FFF wait/search reached the main thread")
-        }
-        guard let result = library.waitForScan(handle, timeoutMs) else { throw FFFSearchError.processFailed("FFF wait returned nil") }
-        defer { library.freeResult(result) }
-        guard result.pointee.success else {
-            throw FFFSearchError.processFailed(errorMessage(result, fallback: "FFF scan failed"))
-        }
-    }
-}
-
-private func errorMessage(_ result: UnsafeMutablePointer<FffResult>, fallback: String) -> String {
-    guard let error = result.pointee.error else { return fallback }
-    return String(cString: error)
 }

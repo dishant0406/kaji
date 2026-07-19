@@ -10,7 +10,7 @@ extension TermyTerminalNSView {
     }
 
     func ttyName() -> String? {
-        nil
+        terminal?.ttyName()
     }
 
     func visibleText() -> String? {

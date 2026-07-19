@@ -33,7 +33,7 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
         case .sleep:
             "Prevent Sleep"
         case .lid:
-            "Battery Lid Sleep"
+            "Closed-lid Sessions"
         }
     }
 
@@ -54,7 +54,7 @@ enum AskSlashCommand: String, CaseIterable, Hashable, Identifiable {
         case .sleep:
             "Toggle macOS idle sleep prevention"
         case .lid:
-            "Toggle battery lid-close sleep override"
+            "Show live status and safe closed-lid actions"
         }
     }
 

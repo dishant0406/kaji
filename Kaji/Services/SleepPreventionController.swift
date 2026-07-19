@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor @Observable
@@ -5,30 +6,30 @@ final class SleepPreventionController {
     static let shared = SleepPreventionController()
 
     private let defaults: UserDefaults
-    private let activityManager: SleepActivityManaging
-    private let systemSleepAssertionManager: SystemSleepAssertionManaging
-    private let batteryLidCloseSleepManager: BatteryLidCloseSleepManaging
-    private var activity: NSObjectProtocol?
+    private let assertionManager: SystemSleepAssertionManaging
+    private let notificationCenter: NotificationCenter
+    private var observers: [NSObjectProtocol] = []
+    private var hasStopped = false
 
     private(set) var isEnabled: Bool
-    private(set) var isBatteryLidCloseEnabled: Bool
     private(set) var systemSleepAssertionStatus: SystemSleepAssertionStatus = .inactive
-    private(set) var batteryLidCloseSleepStatus: SystemSleepAssertionStatus = .inactive
+
+    var isAssertionActive: Bool {
+        isEnabled && systemSleepAssertionStatus == .active
+    }
 
     init(
         defaults: UserDefaults = .standard,
-        activityManager: SleepActivityManaging = ProcessInfoSleepActivityManager(),
-        systemSleepAssertionManager: SystemSleepAssertionManaging = CaffeinateSystemSleepAssertionManager(),
-        batteryLidCloseSleepManager: BatteryLidCloseSleepManaging = PmsetBatteryLidCloseSleepManager()
+        assertionManager: SystemSleepAssertionManaging = IOKitSystemSleepAssertionManager(),
+        notificationCenter: NotificationCenter = .default
     ) {
         self.defaults = defaults
-        self.activityManager = activityManager
-        self.systemSleepAssertionManager = systemSleepAssertionManager
-        self.batteryLidCloseSleepManager = batteryLidCloseSleepManager
+        self.assertionManager = assertionManager
+        self.notificationCenter = notificationCenter
+        defaults.removeObject(forKey: "kaji.power.preventBatteryLidCloseSleep")
         isEnabled = SleepPreventionPreferences.isEnabled(defaults: defaults)
-        isBatteryLidCloseEnabled = SleepPreventionPreferences.batteryLidCloseIsEnabled(defaults: defaults)
-        updateActivity()
-        updateBatteryLidCloseSleep()
+        observeLifecycleChanges()
+        if isEnabled { reconcile() }
     }
 
     var title: String {
@@ -42,91 +43,56 @@ final class SleepPreventionController {
         )
     }
 
-    var batteryLidCloseTitle: String {
-        SleepPreventionDisplayText.batteryLidCloseTitle(isEnabled: isBatteryLidCloseEnabled)
-    }
-
-    var batteryLidCloseDetail: String {
-        SleepPreventionDisplayText.batteryLidCloseDetail(
-            isEnabled: isBatteryLidCloseEnabled,
-            status: batteryLidCloseSleepStatus
-        )
-    }
-
     func toggle() {
         setEnabled(!isEnabled)
     }
 
-    func toggleBatteryLidClose() {
-        setBatteryLidCloseEnabled(!isBatteryLidCloseEnabled)
-    }
-
     func setEnabled(_ enabled: Bool) {
-        guard isEnabled != enabled else { return }
-        isEnabled = enabled
-        SleepPreventionPreferences.setEnabled(enabled, defaults: defaults)
-        updateActivity()
-    }
-
-    func setBatteryLidCloseEnabled(_ enabled: Bool) {
-        guard isBatteryLidCloseEnabled != enabled else { return }
-        if enabled {
-            Task { await enableBatteryLidCloseSleep() }
+        guard isEnabled != enabled else {
+            reconcile()
             return
         }
-        releaseBatteryLidCloseSleep(preservePreference: false)
+        isEnabled = enabled
+        SleepPreventionPreferences.setEnabled(enabled, defaults: defaults)
+        systemSleepAssertionStatus = enabled ? assertionManager.begin() : assertionManager.end()
     }
 
-    private func enableBatteryLidCloseSleep() async {
-        batteryLidCloseSleepStatus = await batteryLidCloseSleepManager.begin()
-        isBatteryLidCloseEnabled = batteryLidCloseSleepStatus == .active
-        SleepPreventionPreferences.setBatteryLidCloseEnabled(isBatteryLidCloseEnabled, defaults: defaults)
+    func reconcile() {
+        systemSleepAssertionStatus = isEnabled ? assertionManager.reconcile() : assertionManager.end()
+    }
+
+    func verifyAssertionOwnership() -> Bool {
+        guard isEnabled else { return false }
+        systemSleepAssertionStatus = assertionManager.reconcile()
+        return systemSleepAssertionStatus == .active
     }
 
     func stop() {
-        releaseActivity()
-        releaseBatteryLidCloseSleep(preservePreference: true)
-    }
-
-    private func updateActivity() {
-        guard isEnabled else {
-            releaseActivity()
-            return
+        guard !hasStopped else { return }
+        hasStopped = true
+        for observer in observers {
+            notificationCenter.removeObserver(observer)
         }
-        guard activity == nil else { return }
-        activity = activityManager.begin(reason: "Kaji is running long-lived terminal and agent sessions.")
-        systemSleepAssertionStatus = systemSleepAssertionManager.begin()
+        observers.removeAll()
+        systemSleepAssertionStatus = assertionManager.end()
     }
 
-    private func releaseActivity() {
-        guard let activity else { return }
-        activityManager.end(activity)
-        systemSleepAssertionManager.end()
-        systemSleepAssertionStatus = systemSleepAssertionManager.status
-        self.activity = nil
-    }
-
-    private func updateBatteryLidCloseSleep() {
-        guard isBatteryLidCloseEnabled else { return }
-        Task { await applyBatteryLidCloseSleep() }
-    }
-
-    private func applyBatteryLidCloseSleep() async {
-        batteryLidCloseSleepStatus = await batteryLidCloseSleepManager.begin()
-        isBatteryLidCloseEnabled = batteryLidCloseSleepStatus == .active
-        SleepPreventionPreferences.setBatteryLidCloseEnabled(isBatteryLidCloseEnabled, defaults: defaults)
-    }
-
-    private func releaseBatteryLidCloseSleep(preservePreference: Bool) {
-        let shouldPreservePreference = preservePreference && isBatteryLidCloseEnabled
-        Task {
-            batteryLidCloseSleepStatus = await batteryLidCloseSleepManager.end()
-            let didRelease = batteryLidCloseSleepStatus == .inactive
-            if didRelease { isBatteryLidCloseEnabled = false }
-            SleepPreventionPreferences.setBatteryLidCloseEnabled(
-                shouldPreservePreference ? true : !didRelease,
-                defaults: defaults
-            )
-        }
+    private func observeLifecycleChanges() {
+        observers = [
+            notificationCenter.addObserver(
+                forName: NSApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.reconcile() }
+            },
+            notificationCenter.addObserver(
+                forName: .NSProcessInfoPowerStateDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.reconcile() }
+            },
+        ]
     }
 }

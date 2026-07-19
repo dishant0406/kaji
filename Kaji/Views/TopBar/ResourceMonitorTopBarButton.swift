@@ -10,7 +10,7 @@ struct ResourceMonitorTopBarButton: View {
     var body: some View {
         Button {
             showPopover.toggle()
-            service.refresh(appState: appState, projectStore: projectStore)
+            Task { await service.refresh(appState: appState, projectStore: projectStore) }
         } label: {
             HStack(spacing: 8) {
                 KajiIcon(systemName: "memorychip", size: 13)
@@ -43,19 +43,15 @@ struct ResourceMonitorTopBarButton: View {
             ResourceMonitorPanel(
                 projects: service.projects,
                 isRefreshing: service.isRefreshing,
-                onRefresh: { service.refresh(appState: appState, projectStore: projectStore) },
+                onRefresh: { await service.refresh(appState: appState, projectStore: projectStore) },
                 onDismiss: { showPopover = false }
             )
         }
-        .task {
-            service.start(appState: appState, projectStore: projectStore)
-        }
         .onChange(of: showPopover) { _, isVisible in
             if isVisible {
-                service.refresh(appState: appState, projectStore: projectStore)
+                Task { await service.refresh(appState: appState, projectStore: projectStore) }
             }
         }
-        .onDisappear { service.stop() }
     }
 
     private var hasActiveTerminals: Bool {
@@ -63,9 +59,16 @@ struct ResourceMonitorTopBarButton: View {
     }
 
     private var memoryText: String {
-        let total = service.projects.reduce(UInt64(0)) { $0 + $1.memoryBytes }
-        guard total > 0 else { return "--" }
-        return ByteCountFormatter.string(fromByteCount: Int64(total), countStyle: .memory)
+        switch service.refreshHealth {
+        case .stale:
+            return "stale"
+        case .failed:
+            return "error"
+        default:
+            let total = service.projects.reduce(UInt64(0)) { $0 + $1.memoryBytes }
+            guard total > 0 else { return "--" }
+            return ByteCountFormatter.string(fromByteCount: Int64(total), countStyle: .memory)
+        }
     }
 
     private var active: Bool {

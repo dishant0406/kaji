@@ -2,14 +2,20 @@ import Foundation
 
 final class SpeechModelFileDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     private let destination: URL
+    private let maximumBytes: Int64
     private let progress: @Sendable (Int64, Int64) -> Void
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Void, Error>?
     private var result: Result<Void, Error>?
     private var session: URLSession?
 
-    init(destination: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) {
+    init(
+        destination: URL,
+        maximumBytes: Int64 = 2 * 1024 * 1024 * 1024,
+        progress: @escaping @Sendable (Int64, Int64) -> Void
+    ) {
         self.destination = destination
+        self.maximumBytes = maximumBytes
         self.progress = progress
     }
 
@@ -31,6 +37,11 @@ final class SpeechModelFileDownloader: NSObject, URLSessionDownloadDelegate, @un
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
+        guard totalBytesWritten <= maximumBytes else {
+            setResult(.failure(SpeechModelDownloadError.downloadLimitExceeded))
+            downloadTask.cancel()
+            return
+        }
         progress(totalBytesWritten, totalBytesExpectedToWrite)
     }
 
@@ -46,6 +57,9 @@ final class SpeechModelFileDownloader: NSObject, URLSessionDownloadDelegate, @un
                     downloadTask.originalRequest?.url?.absoluteString ?? "download"
                 )
             }
+            let attributes = try FileManager.default.attributesOfItem(atPath: location.path)
+            let size = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+            guard size <= maximumBytes else { throw SpeechModelDownloadError.downloadLimitExceeded }
             if FileManager.default.fileExists(atPath: destination.path) {
                 try FileManager.default.removeItem(at: destination)
             }
@@ -54,6 +68,20 @@ final class SpeechModelFileDownloader: NSObject, URLSessionDownloadDelegate, @un
         } catch {
             setResult(.failure(error))
         }
+    }
+
+    func urlSession(
+        _: URLSession,
+        task _: URLSessionTask,
+        willPerformHTTPRedirection _: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        var redirected = request
+        if let url = request.url, !SpeechModelRegistrySecurity.shouldAttachToken(to: url) {
+            redirected.setValue(nil, forHTTPHeaderField: "Authorization")
+        }
+        completionHandler(redirected)
     }
 
     func urlSession(

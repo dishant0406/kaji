@@ -159,7 +159,10 @@ private struct AskPaletteRow: View {
             "terminal"
         case .toggleSleepPrevention:
             "moon.zzz"
-        case .toggleBatteryLidCloseSleepPrevention:
+        case .probeClosedLid,
+             .startClosedLidStandard,
+             .startClosedLidPowerProtect,
+             .stopClosedLid:
             "laptopcomputer"
         case .launchProvider:
             "play"

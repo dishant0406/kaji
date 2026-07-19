@@ -81,6 +81,7 @@ async function main(): Promise<void> {
 	registerKajiMockModel(modelRegistry);
 	const sessionDir = args.sessionDir || `${agentDir}/sessions`;
 	const sessionManager = args.noSession ? SessionManager.inMemory() : SessionManager.create(cwd, sessionDir);
+	const noTools = args.noTools === true;
 	const { session, setToolUIContext } = await createAgentSession({
 		cwd,
 		agentDir,
@@ -90,9 +91,16 @@ async function main(): Promise<void> {
 		settings,
 		hasUI: true,
 		autoApprove: args.autoApprove ?? false,
-		toolNames: args.tools,
+		toolNames: noTools ? ["__none__"] : args.tools,
+		disableExtensionDiscovery: noTools,
+		skills: noTools ? [] : undefined,
+		rules: noTools ? [] : undefined,
+		contextFiles: noTools ? [] : undefined,
+		promptTemplates: noTools ? [] : undefined,
+		slashCommands: noTools ? [] : undefined,
 		enableLsp: args.noLsp ? false : undefined,
-		enableMCP: process.env.KAJI_AGENT_ENABLE_MCP === "1",
+		enableMCP: noTools ? false : process.env.KAJI_AGENT_ENABLE_MCP === "1",
+		skipPythonPreflight: noTools,
 		thinkingLevel: args.thinking,
 	});
 	await runRpcMode(session, setToolUIContext);

@@ -59,7 +59,7 @@ struct AskPaletteEntriesTests {
         #expect(entries.map(\.title).contains("Project"))
         #expect(entries.map(\.title).contains("Provider"))
         #expect(entries.map(\.title).contains("Prevent Sleep"))
-        #expect(entries.map(\.title).contains("Battery Lid Sleep"))
+        #expect(entries.map(\.title).contains("Closed-lid Sessions"))
         #expect(entries.first(where: { $0.title == "Project" })?.annotation == "/project")
     }
 
@@ -88,7 +88,7 @@ struct AskPaletteEntriesTests {
 
     @Test
     @MainActor
-    func lidSlashCommandShowsBatteryLidCloseToggleEntry() {
+    func lidSlashCommandShowsSafeActionsForAvailableModes() {
         let entries = AskPaletteEntries.build(
             .init(
                 fieldText: "/lid",
@@ -101,12 +101,21 @@ struct AskPaletteEntriesTests {
                 historyOptions: [],
                 skillOptions: [],
                 projectName: "muxy",
-                worktreeName: "main"
+                worktreeName: "main",
+                closedLidStatus: .off,
+                standardCompatibility: .needsVerification,
+                standardModeAvailable: true,
+                powerProtectReady: true,
+                powerProtectStatus: "helper ready"
             )
         )
 
-        #expect(entries.count == 1)
-        #expect(entries.first?.action == .toggleBatteryLidCloseSleepPrevention)
+        #expect(entries.map(\.action) == [
+            .probeClosedLid,
+            .startClosedLidStandard,
+            .startClosedLidPowerProtect,
+        ])
+        #expect(entries.first(where: { $0.action == .startClosedLidStandard })?.annotation == "Experimental")
     }
 
     @Test

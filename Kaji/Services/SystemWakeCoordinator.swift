@@ -18,6 +18,7 @@ final class SystemWakeCoordinator {
         },
         onDidWake: @escaping () -> Void = {
             ResourceMonitorService.shared.restartIfRunning()
+            SleepPreventionController.shared.reconcile()
             CodexSessionMonitor.shared.restart()
             CodingAgentActivityReconciler.shared.schedulePostWakeReconciliation()
         }

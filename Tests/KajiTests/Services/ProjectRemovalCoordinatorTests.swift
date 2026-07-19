@@ -32,7 +32,12 @@ struct ProjectRemovalCoordinatorTests {
         appState.workspaceRoots[key] = workspaceTab.root
         appState.focusedAreaID[key] = area.id
 
-        await ProjectRemovalCoordinator.remove(
+        let service = ProjectRemovalService(
+            tombstones: ProjectRemovalMemoryTombstones(),
+            quiesceIndexes: { _ in },
+            cleanupDisk: { _, _ in true }
+        )
+        _ = await service.removeManually(
             project: project,
             appState: appState,
             projectStore: projectStore,
@@ -91,6 +96,182 @@ struct ProjectRemovalCoordinatorTests {
         #expect(impact.hasRunningWork)
         #expect(impact.worktreeCount == 1)
     }
+    @Test("double removal is idempotent and quiesces once")
+    func doubleRemovalIsNoOp() async {
+        let project = Project(name: "Repo", path: "/tmp/repo")
+        let persistence = ProjectRemovalProjectPersistence(projects: [project])
+        let projectStore = ProjectStore(persistence: persistence)
+        let worktreeStore = WorktreeStore(
+            persistence: ProjectRemovalWorktreePersistence(worktrees: [project.id: []]),
+            projects: [project]
+        )
+        let appState = AppState(
+            selectionStore: ProjectRemovalSelectionStore(),
+            terminalViews: ProjectRemovalTerminalViews(),
+            workspacePersistence: ProjectRemovalWorkspacePersistence()
+        )
+        let recorder = ProjectRemovalQuiesceRecorder()
+        let service = ProjectRemovalService(
+            tombstones: ProjectRemovalMemoryTombstones(),
+            quiesceIndexes: { recorder.record($0) },
+            cleanupDisk: { _, _ in true }
+        )
+
+        let first = await service.removeManually(
+            project: project,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            cleanupOnDisk: false
+        )
+        let second = await service.removeManually(
+            project: project,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            cleanupOnDisk: false
+        )
+
+        #expect(first == .removed)
+        #expect(second == .alreadyRemoved)
+        #expect(recorder.calls == [[project.path]])
+        #expect(persistence.savedProjects.count == 1)
+    }
+
+    @Test("already-emptied finalization does not dispatch removal again")
+    func alreadyEmptiedFinalizationIsNonReentrant() async {
+        let project = Project(name: "Repo", path: "/tmp/repo")
+        let projectStore = ProjectStore(persistence: ProjectRemovalProjectPersistence(projects: [project]))
+        let worktreeStore = WorktreeStore(
+            persistence: ProjectRemovalWorktreePersistence(worktrees: [project.id: []]),
+            projects: [project]
+        )
+        let appState = AppState(
+            selectionStore: ProjectRemovalSelectionStore(),
+            terminalViews: ProjectRemovalTerminalViews(),
+            workspacePersistence: ProjectRemovalWorkspacePersistence()
+        )
+        var callbackCount = 0
+        appState.onProjectsEmptied = { _ in callbackCount += 1 }
+        let service = ProjectRemovalService(
+            tombstones: ProjectRemovalMemoryTombstones(),
+            quiesceIndexes: { _ in },
+            cleanupDisk: { _, _ in true }
+        )
+
+        _ = await service.finalizeAlreadyEmptied(
+            project: project,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            cleanupOnDisk: false
+        )
+
+        #expect(callbackCount == 0)
+        #expect(projectStore.projects.isEmpty)
+    }
+
+    @Test("removal selects the first remaining project deterministically")
+    func removalSelectsReplacement() async {
+        let first = Project(name: "First", path: "/tmp/first")
+        let second = Project(name: "Second", path: "/tmp/second")
+        let firstWorktree = Worktree(name: "First", path: first.path, isPrimary: true)
+        let secondWorktree = Worktree(name: "Second", path: second.path, isPrimary: true)
+        let projectStore = ProjectStore(persistence: ProjectRemovalProjectPersistence(projects: [first, second]))
+        let worktreeStore = WorktreeStore(
+            persistence: ProjectRemovalWorktreePersistence(worktrees: [
+                first.id: [firstWorktree],
+                second.id: [secondWorktree],
+            ]),
+            projects: [first, second]
+        )
+        let appState = AppState(
+            selectionStore: ProjectRemovalSelectionStore(),
+            terminalViews: ProjectRemovalTerminalViews(),
+            workspacePersistence: ProjectRemovalWorkspacePersistence()
+        )
+        appState.activeProjectID = first.id
+        let service = ProjectRemovalService(
+            tombstones: ProjectRemovalMemoryTombstones(),
+            quiesceIndexes: { _ in },
+            cleanupDisk: { _, _ in true }
+        )
+
+        _ = await service.removeManually(
+            project: first,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore,
+            cleanupOnDisk: false
+        )
+
+        #expect(appState.activeProjectID == second.id)
+        #expect(appState.activeWorktreeID[second.id] == secondWorktree.id)
+    }
+
+    @Test("failed tombstone persistence leaves visible project state unchanged")
+    func failedTombstoneDefersRemoval() async {
+        let project = Project(name: "Repo", path: "/tmp/repo")
+        let projectStore = ProjectStore(persistence: ProjectRemovalProjectPersistence(projects: [project]))
+        let worktreeStore = WorktreeStore(
+            persistence: ProjectRemovalWorktreePersistence(worktrees: [project.id: []]),
+            projects: [project]
+        )
+        let appState = AppState(
+            selectionStore: ProjectRemovalSelectionStore(),
+            terminalViews: ProjectRemovalTerminalViews(),
+            workspacePersistence: ProjectRemovalWorkspacePersistence()
+        )
+        let service = ProjectRemovalService(
+            tombstones: ProjectRemovalMemoryTombstones(failSaves: true),
+            quiesceIndexes: { _ in },
+            cleanupDisk: { _, _ in true }
+        )
+
+        let outcome = await service.removeManually(
+            project: project,
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
+
+        #expect(outcome == .deferred)
+        #expect(projectStore.projects == [project])
+    }
+
+    @Test("persisted tombstone resumes interrupted removal")
+    func recoveryCompletesRemoval() async {
+        let project = Project(name: "Repo", path: "/tmp/repo")
+        let worktree = Worktree(name: "Repo", path: project.path, isPrimary: true)
+        let projectStore = ProjectStore(persistence: ProjectRemovalProjectPersistence(projects: [project]))
+        let worktreeStore = WorktreeStore(
+            persistence: ProjectRemovalWorktreePersistence(worktrees: [project.id: [worktree]]),
+            projects: [project]
+        )
+        let appState = AppState(
+            selectionStore: ProjectRemovalSelectionStore(),
+            terminalViews: ProjectRemovalTerminalViews(),
+            workspacePersistence: ProjectRemovalWorkspacePersistence()
+        )
+        let tombstones = ProjectRemovalMemoryTombstones(records: [
+            ProjectRemovalTombstone(project: project, worktrees: [worktree], cleanupOnDisk: false),
+        ])
+        let service = ProjectRemovalService(
+            tombstones: tombstones,
+            quiesceIndexes: { _ in },
+            cleanupDisk: { _, _ in true }
+        )
+
+        await service.recoverPendingRemovals(
+            appState: appState,
+            projectStore: projectStore,
+            worktreeStore: worktreeStore
+        )
+
+        #expect(projectStore.projects.isEmpty)
+        #expect(worktreeStore.list(for: project.id).isEmpty)
+        #expect(tombstones.records.isEmpty)
+    }
 }
 
 @Suite("Project removal cleanup helpers")
@@ -118,6 +299,42 @@ struct ProjectRemovalCleanupHelperTests {
         store.collapse(projectID: retainedID)
 
         #expect(store.projectIDs == [visibleID, retainedID])
+    }
+}
+
+private enum ProjectRemovalTestError: Error {
+    case saveFailed
+}
+
+private final class ProjectRemovalMemoryTombstones: ProjectRemovalTombstonePersisting {
+    var records: [ProjectRemovalTombstone]
+    let failSaves: Bool
+
+    init(records: [ProjectRemovalTombstone] = [], failSaves: Bool = false) {
+        self.records = records
+        self.failSaves = failSaves
+    }
+
+    func load() throws -> [ProjectRemovalTombstone] {
+        records
+    }
+
+    func save(_ tombstones: [ProjectRemovalTombstone]) throws {
+        if failSaves { throw ProjectRemovalTestError.saveFailed }
+        records = tombstones
+    }
+}
+
+private final class ProjectRemovalQuiesceRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recordedCalls: [[String]] = []
+
+    var calls: [[String]] {
+        lock.withLock { recordedCalls }
+    }
+
+    func record(_ paths: [String]) {
+        lock.withLock { recordedCalls.append(paths) }
     }
 }
 

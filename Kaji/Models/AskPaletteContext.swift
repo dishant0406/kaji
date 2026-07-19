@@ -1,3 +1,4 @@
+import ClosedLidCore
 import Foundation
 
 struct AskPaletteContext {
@@ -29,8 +30,11 @@ struct AskPaletteContext {
     let worktreeName: String
     let sleepPreventionIsEnabled: Bool
     let systemSleepAssertionStatus: SystemSleepAssertionStatus
-    let batteryLidCloseSleepIsEnabled: Bool
-    let batteryLidCloseSleepStatus: SystemSleepAssertionStatus
+    let closedLidStatus: ClosedLidSessionStatus
+    let standardCompatibility: ClosedLidStandardCompatibility
+    let standardModeAvailable: Bool
+    let powerProtectReady: Bool
+    let powerProtectStatus: String
 
     init(
         fieldText: String,
@@ -61,8 +65,11 @@ struct AskPaletteContext {
         worktreeName: String,
         sleepPreventionIsEnabled: Bool = false,
         systemSleepAssertionStatus: SystemSleepAssertionStatus = .inactive,
-        batteryLidCloseSleepIsEnabled: Bool = false,
-        batteryLidCloseSleepStatus: SystemSleepAssertionStatus = .inactive
+        closedLidStatus: ClosedLidSessionStatus = .off,
+        standardCompatibility: ClosedLidStandardCompatibility = .unavailable,
+        standardModeAvailable: Bool = false,
+        powerProtectReady: Bool = false,
+        powerProtectStatus: String = "Not configured"
     ) {
         self.fieldText = fieldText
         self.prompt = prompt
@@ -92,7 +99,10 @@ struct AskPaletteContext {
         self.worktreeName = worktreeName
         self.sleepPreventionIsEnabled = sleepPreventionIsEnabled
         self.systemSleepAssertionStatus = systemSleepAssertionStatus
-        self.batteryLidCloseSleepIsEnabled = batteryLidCloseSleepIsEnabled
-        self.batteryLidCloseSleepStatus = batteryLidCloseSleepStatus
+        self.closedLidStatus = closedLidStatus
+        self.standardCompatibility = standardCompatibility
+        self.standardModeAvailable = standardModeAvailable
+        self.powerProtectReady = powerProtectReady
+        self.powerProtectStatus = powerProtectStatus
     }
 }

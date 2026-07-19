@@ -4,25 +4,22 @@ enum FFFSearchService {
     static let maxFileResults = 30
     static let maxTextMatches = 200
 
-    private static let queue = DispatchQueue(label: "app.kaji.fff-search", qos: .userInitiated)
-
     static func warm(projectPath: String) async throws {
         try Task.checkCancellation()
-        let index = try await FFFSearchIndexStore.shared.index(for: projectPath)
+        try await FFFSearchIndexStore.shared.warm(projectPath: projectPath)
         try Task.checkCancellation()
-        try await offMain {
-            try index.waitForScan()
-        }
     }
 
     static func searchFiles(query: String, in projectPath: String, limit: Int = maxFileResults) async throws -> [FileSearchResult] {
-        let index = try await FFFSearchIndexStore.shared.index(for: projectPath)
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         try Task.checkCancellation()
-        return try await offMain {
-            try Task.checkCancellation()
-            return try index.searchFiles(query: trimmed, limit: limit)
-        }
+        let results = try await FFFSearchIndexStore.shared.searchFiles(
+            projectPath: projectPath,
+            query: trimmed,
+            limit: min(max(limit, 1), 1000)
+        )
+        try Task.checkCancellation()
+        return results
     }
 
     static func searchText(
@@ -30,28 +27,18 @@ enum FFFSearchService {
         in projectPath: String,
         limit: Int = maxTextMatches
     ) async throws -> [ProjectTextSearchFileGroup] {
-        let index = try await FFFSearchIndexStore.shared.index(for: projectPath)
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         try Task.checkCancellation()
-        return try await offMain {
-            try Task.checkCancellation()
-            return try ProjectTextSearchService.group(index.searchText(query: trimmed, limit: limit))
-        }
+        let matches = try await FFFSearchIndexStore.shared.searchText(
+            projectPath: projectPath,
+            query: trimmed,
+            limit: min(max(limit, 1), 1000)
+        )
+        try Task.checkCancellation()
+        return ProjectTextSearchService.group(matches)
     }
 
     static func removeIndexes(projectPaths: [String]) async {
         await FFFSearchIndexStore.shared.remove(projectPaths: projectPaths)
-    }
-
-    private static func offMain<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
-        try await withCheckedThrowingContinuation { continuation in
-            queue.async {
-                do {
-                    try continuation.resume(returning: work())
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
     }
 }

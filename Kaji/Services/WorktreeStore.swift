@@ -104,7 +104,8 @@ final class WorktreeStore {
         save(projectID: projectID)
     }
 
-    func removeProject(_ projectID: UUID) {
+    @discardableResult
+    func removeProject(_ projectID: UUID) -> Bool {
         if let existing = worktrees[projectID] {
             for worktree in existing where projectIDByPath[worktree.path] == projectID {
                 projectIDByPath.removeValue(forKey: worktree.path)
@@ -113,8 +114,10 @@ final class WorktreeStore {
         worktrees.removeValue(forKey: projectID)
         do {
             try persistence.removeWorktrees(projectID: projectID)
+            return true
         } catch {
             worktreeStoreLogger.error("Failed to remove worktrees file for project \(projectID): \(error)")
+            return false
         }
     }
 
