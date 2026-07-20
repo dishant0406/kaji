@@ -11,21 +11,17 @@ enum CLILauncherCommandResolver {
         guard let executable = executableToken(in: trimmed) else { return trimmed }
         guard !executable.contains("/") else { return trimmed }
         guard isResolvable(executable) else { return trimmed }
-        if executable == "kajicode" {
-            let suffix = trimmed.dropFirst(executable.count)
-            return KajiCodeRuntimeLocator.launchCommand(env: env, homeDirectory: homeDirectory, fileManager: fileManager) + suffix
-        }
         let legacyShimDirectory = legacyShimDirectory(homeDirectory: homeDirectory)
-        guard let resolved = AIProviderExecutableLocator.preferredRealPath(
-            for: executable,
-            env: env,
-            homeDirectory: homeDirectory,
-            fileManager: fileManager,
-            excluding: legacyShimDirectory
-        )
+        guard let agent = CodingAgentRegistry.shared.agent(executableName: executable),
+              let resolved = agent.resolveExecutable(
+                  env: env,
+                  homeDirectory: homeDirectory,
+                  fileManager: fileManager,
+                  excluding: legacyShimDirectory
+              )
         else { return trimmed }
         let suffix = trimmed.dropFirst(executable.count)
-        return ShellEscaper.escape(resolved) + suffix
+        return ShellEscaper.escape(resolved.path) + suffix
     }
 
     private static func executableToken(in command: String) -> String? {

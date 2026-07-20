@@ -2,16 +2,15 @@ import Foundation
 
 enum CLILauncherInstallStateResolver {
     static func isInstalled(for launcherID: String) async -> Bool {
-        if launcherID == "kajicode" {
-            return await GitProcessRunner.offMain {
-                KajiCodeRuntimeLocator.resolve() != nil
-            }
+        guard CodingAgentRegistry.shared.agent(id: launcherID) != nil else { return false }
+        return await GitProcessRunner.offMain {
+            CodingAgentRegistry.shared.agent(id: launcherID)?.resolveExecutable(
+                env: ProcessInfo.processInfo.environment,
+                homeDirectory: NSHomeDirectory(),
+                fileManager: .default,
+                excluding: nil
+            ) != nil
         }
-        guard let definition = CodingAgentRegistry.shared.definition(id: launcherID) else { return false }
-        return await isInstalled(
-            executableNames: definition.executableNames,
-            extraDirectories: definition.executableSearchDirectories
-        )
     }
 
     static func isInstalled(

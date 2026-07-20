@@ -35,6 +35,10 @@ final class CodingAgentRegistry: @unchecked Sendable {
         definitions.first { $0.matches(value) }
     }
 
+    func agent(executableName: String) -> (any CodingAgentModule)? {
+        agents.first { $0.executableNames.contains(executableName.lowercased()) }
+    }
+
     func detect(title: String, startupCommand: String?, injectedCommand: String?, processNames: [String]) -> CodingAgentDefinition? {
         let titleValue = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let titleMatch = definitions.first(where: { matchesTitle($0, titleValue: titleValue) }) {

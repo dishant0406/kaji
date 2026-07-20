@@ -37,7 +37,12 @@ enum KajiCodeInstaller {
         fileManager: FileManager = .default
     ) -> KajiCodeInstallState {
         guard let manifest = KajiCodeInstallStore.read(env: env, fileManager: fileManager) else { return .missing }
-        guard fileManager.isExecutableFile(atPath: manifest.binaryPath) else {
+        guard manifest.platform == KajiCodePlatform.current else {
+            return .needsRepair("Managed KajiCode platform does not match this Mac.")
+        }
+        guard let binaryURL = KajiCodePaths.binaryURL(for: manifest, env: env),
+              fileManager.isExecutableFile(atPath: binaryURL.path)
+        else {
             return .needsRepair("Managed KajiCode binary is missing.")
         }
         return .installed(manifest)
@@ -87,26 +92,62 @@ enum KajiCodeInstaller {
         env: [String: String],
         fileManager: FileManager
     ) async throws -> KajiCodeInstallManifest {
-        let archiveName = asset.url.lastPathComponent
-        let archiveURL = KajiCodePaths.downloadsDirectory(env: env).appendingPathComponent(archiveName)
+        let operationID = UUID().uuidString
+        let archiveURL = KajiCodePaths.downloadsDirectory(env: env)
+            .appendingPathComponent("\(entry.version)-\(operationID).tar.gz")
+        let stagingURL = KajiCodePaths.stagingDirectory(env: env)
+            .appendingPathComponent(operationID, isDirectory: true)
+        guard let installURL = KajiCodePaths.installDirectory(
+            version: entry.version,
+            platform: KajiCodePlatform.current,
+            sha256: asset.sha256,
+            env: env
+        ) else { throw KajiCodeInstallError.unsafeArchive }
+        defer {
+            try? fileManager.removeItem(at: archiveURL)
+            try? fileManager.removeItem(at: stagingURL)
+        }
         let previous = KajiCodeInstallStore.read(env: env, fileManager: fileManager)?.activeVersion
-        let downloaded = try await KajiCodeArchiveDownloader.download(asset: asset, destination: archiveURL, fileManager: fileManager)
-        let installDir = KajiCodePaths.installDirectory(version: entry.version, env: env)
-        let binary = try await KajiCodeArchiveExtractor.extract(archiveURL: downloaded, destination: installDir, fileManager: fileManager)
-        let smoke = try await KajiCodeSmokeTester.smoke(binaryURL: binary, expectedVersion: entry.version)
+        let downloaded = try await KajiCodeArchiveDownloader.download(
+            asset: asset,
+            destination: archiveURL,
+            fileManager: fileManager
+        )
+        let stagedBinary = try await KajiCodeArchiveExtractor.extract(
+            archiveURL: downloaded,
+            destination: stagingURL,
+            fileManager: fileManager
+        )
+        let smoke = try await KajiCodeSmokeTester.smoke(binaryURL: stagedBinary, expectedVersion: entry.version)
+        try activate(stagingURL: stagingURL, installURL: installURL, fileManager: fileManager)
         let manifest = KajiCodeInstallManifest(
             activeVersion: entry.version,
             previousVersion: previous == entry.version ? nil : previous,
             protocolVersion: entry.protocolVersion,
             platform: KajiCodePlatform.current,
             sourceURL: asset.url,
-            sha256: asset.sha256,
+            sha256: asset.sha256.lowercased(),
             installedAt: Date(),
-            binaryPath: binary.path,
             smokeOutput: smoke,
             channelURL: channelURL
         )
         try KajiCodeInstallStore.write(manifest, env: env, fileManager: fileManager)
         return manifest
+    }
+
+    private static func activate(stagingURL: URL, installURL: URL, fileManager: FileManager) throws {
+        if fileManager.fileExists(atPath: installURL.path) {
+            return
+        }
+        try fileManager.createDirectory(
+            at: installURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        do {
+            try fileManager.moveItem(at: stagingURL, to: installURL)
+        } catch {
+            guard fileManager.fileExists(atPath: installURL.path) else { throw error }
+        }
     }
 }

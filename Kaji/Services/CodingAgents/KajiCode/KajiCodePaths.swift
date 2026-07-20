@@ -45,20 +45,35 @@ enum KajiCodePaths {
 
     static func installDirectory(
         version: String,
-        platform: String = KajiCodePlatform.current,
+        platform: String,
+        sha256: String,
         env: [String: String] = ProcessInfo.processInfo.environment
-    ) -> URL {
-        versionsDirectory(env: env)
+    ) -> URL? {
+        guard isSafeComponent(version),
+              isSafeComponent(platform),
+              sha256.count == 64,
+              sha256.allSatisfy(\.isHexDigit)
+        else { return nil }
+        return versionsDirectory(env: env)
             .appendingPathComponent(version, isDirectory: true)
             .appendingPathComponent(platform, isDirectory: true)
+            .appendingPathComponent(sha256.lowercased(), isDirectory: true)
     }
 
-    static func bundledBinaryURL(fileManager: FileManager = .default) -> URL? {
-        let candidates = [
-            Bundle.appResources.url(forResource: "kajicode", withExtension: nil, subdirectory: "KajiCode"),
-            Bundle.appResources.resourceURL?.appendingPathComponent("KajiCode/kajicode"),
-        ].compactMap(\.self)
-        return candidates.first { fileManager.isExecutableFile(atPath: $0.path) }
+    static func binaryURL(
+        for manifest: KajiCodeInstallManifest,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> URL? {
+        installDirectory(
+            version: manifest.activeVersion,
+            platform: manifest.platform,
+            sha256: manifest.sha256,
+            env: env
+        )?.appendingPathComponent("kajicode", isDirectory: false)
+    }
+
+    private static func isSafeComponent(_ value: String) -> Bool {
+        !value.isEmpty && value != "." && value != ".." && !value.contains("/") && !value.contains("\\")
     }
 
     private static func appSupportDirectory(env: [String: String]) -> URL {

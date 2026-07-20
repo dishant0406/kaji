@@ -8,7 +8,6 @@ struct KajiCodeInstallManifest: Codable, Equatable {
     var sourceURL: URL
     var sha256: String
     var installedAt: Date
-    var binaryPath: String
     var smokeOutput: String
     var channelURL: URL
 }

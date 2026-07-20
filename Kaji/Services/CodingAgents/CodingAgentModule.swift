@@ -10,6 +10,12 @@ protocol CodingAgentModule: AIProviderIntegration {
     func startupCommand(baseCommand: String, prompt: String, model: String?) -> String
     func resumeCommand(baseCommand: String, sessionID: String, prompt: String) -> String
     func skillPrompt(skill: AskSkillOption, prompt: String) -> String
+    func resolveExecutable(
+        env: [String: String],
+        homeDirectory: String,
+        fileManager: FileManager,
+        excluding directory: URL?
+    ) -> URL?
     func historyOptions(
         projectPath: String?,
         query: String,
@@ -72,6 +78,38 @@ extension CodingAgentModule {
 
     func skillPrompt(skill: AskSkillOption, prompt: String) -> String {
         definition.commandProfile.skillInvocation.prompt(skill: skill, userPrompt: prompt)
+    }
+
+    func resolveExecutable(
+        env: [String: String],
+        homeDirectory: String,
+        fileManager: FileManager,
+        excluding directory: URL?
+    ) -> URL? {
+        for executableName in definition.executableNames {
+            let path: String?
+            if let directory {
+                path = AIProviderExecutableLocator.preferredRealPath(
+                    for: executableName,
+                    env: env,
+                    homeDirectory: homeDirectory,
+                    fileManager: fileManager,
+                    excluding: directory
+                )
+            } else {
+                path = AIProviderExecutableLocator.resolvePath(
+                    for: executableName,
+                    env: env,
+                    homeDirectory: homeDirectory,
+                    fileManager: fileManager,
+                    extraDirectories: definition.executableSearchDirectories
+                )
+            }
+            if let path {
+                return URL(fileURLWithPath: path)
+            }
+        }
+        return nil
     }
 
     func historyOptions(

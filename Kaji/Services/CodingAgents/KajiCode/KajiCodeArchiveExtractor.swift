@@ -7,10 +7,10 @@ enum KajiCodeArchiveExtractor {
         fileManager: FileManager = .default
     ) async throws -> URL {
         let entries = try await tarEntries(archiveURL: archiveURL)
-        guard entries.contains("kajicode") else { throw KajiCodeInstallError.missingBinary }
         guard entries.allSatisfy(isSafeEntry) else { throw KajiCodeInstallError.unsafeArchive }
-        if fileManager.fileExists(atPath: destination.path) {
-            try fileManager.removeItem(at: destination)
+        guard entries.map(normalizedEntry).contains("kajicode") else { throw KajiCodeInstallError.missingBinary }
+        guard !fileManager.fileExists(atPath: destination.path) else {
+            throw KajiCodeInstallError.extractFailed("Extraction destination already exists.")
         }
         try fileManager.createDirectory(at: destination, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let result = try AIGatewayProcessRunner.run(
@@ -41,5 +41,9 @@ enum KajiCodeArchiveExtractor {
             !entry.hasPrefix("/") &&
             !entry.split(separator: "/").contains("..") &&
             !entry.contains("\\")
+    }
+
+    private static func normalizedEntry(_ entry: String) -> String {
+        entry.hasPrefix("./") ? String(entry.dropFirst(2)) : entry
     }
 }

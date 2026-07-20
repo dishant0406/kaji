@@ -42,6 +42,19 @@ struct KajiCodeAgentModule: CodingAgentModule {
         KajiCodeRuntimeLocator.resolve() != nil
     }
 
+    func resolveExecutable(
+        env: [String: String],
+        homeDirectory: String,
+        fileManager: FileManager,
+        excluding _: URL?
+    ) -> URL? {
+        KajiCodeRuntimeLocator.resolve(
+            env: env,
+            homeDirectory: homeDirectory,
+            fileManager: fileManager
+        )?.binaryURL
+    }
+
     func install(hookClientPath: String) throws {
         guard let resolution = KajiCodeRuntimeLocator.resolve() else { throw KajiCodeSetupError.binaryMissing }
         _ = try install(binaryURL: resolution.binaryURL, hookClientPath: hookClientPath)
