@@ -9,7 +9,8 @@ struct CLILauncherSettingsTests {
         let tempURL = tempFileURL()
         let settings = CLILauncherSettings(fileURL: tempURL, syncProviderState: false)
 
-        #expect(settings.launchers.count == 4)
+        #expect(settings.launchers.count == 5)
+        #expect(settings.command(for: "kajicode") == "kajicode")
         #expect(settings.isEnabled(id: "codex") == false)
         #expect(settings.command(for: "codex") == "codex")
         #expect(settings.command(for: "claude") == "claude")

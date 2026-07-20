@@ -44,6 +44,10 @@ final class CLILauncherSettings {
         launchers.filter(\.isEnabled)
     }
 
+    var footerLaunchers: [CLILauncherConfiguration] {
+        enabledLaunchers.filter { $0.id != "kajicode" }
+    }
+
     func setEnabled(_ enabled: Bool, for id: String) {
         guard let index = launchers.firstIndex(where: { $0.id == id }) else { return }
         launchers[index].isEnabled = enabled

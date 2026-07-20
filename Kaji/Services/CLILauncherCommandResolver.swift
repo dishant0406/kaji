@@ -11,6 +11,10 @@ enum CLILauncherCommandResolver {
         guard let executable = executableToken(in: trimmed) else { return trimmed }
         guard !executable.contains("/") else { return trimmed }
         guard isResolvable(executable) else { return trimmed }
+        if executable == "kajicode" {
+            let suffix = trimmed.dropFirst(executable.count)
+            return KajiCodeRuntimeLocator.launchCommand(env: env, homeDirectory: homeDirectory, fileManager: fileManager) + suffix
+        }
         let legacyShimDirectory = legacyShimDirectory(homeDirectory: homeDirectory)
         guard let resolved = AIProviderExecutableLocator.preferredRealPath(
             for: executable,

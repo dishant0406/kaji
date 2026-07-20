@@ -16,7 +16,7 @@ struct CLILauncherFooter: View {
     @AppStorage(KasetMusicPreferences.enabledKey) private var kasetMusicEnabled = false
 
     private var enabledLaunchers: [CLILauncherConfiguration] {
-        settings.enabledLaunchers
+        settings.footerLaunchers
     }
 
     var body: some View {
@@ -24,10 +24,10 @@ struct CLILauncherFooter: View {
             HStack(spacing: 8) {
                 LauncherSquareButton(
                     iconName: "kaji",
-                    accessibilityLabel: "Kaji Agent",
-                    helpText: "Open Kaji Agent split"
+                    accessibilityLabel: "KajiCode",
+                    helpText: "Open KajiCode split"
                 ) {
-                    appState.createParentAgentSplit(projectID: projectID)
+                    runKajiCode()
                 }
                 .attachedShortcutHint(for: .openKajiAgentSplit)
                 ForEach(Array(enabledLaunchers.enumerated()), id: \.element.id) { index, launcher in
@@ -124,13 +124,21 @@ struct CLILauncherFooter: View {
     }
 
     private func run(_ launcher: CLILauncherConfiguration) {
-        let command = launcher.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let command = CLILauncherCommandResolver.resolve(launcher.command).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !command.isEmpty else { return }
         appState.createCommandSplit(
             projectID: projectID,
             title: launcher.definition.displayName,
             command: command
         )
+    }
+
+    private func runKajiCode() {
+        let saved = settings.command(for: "kajicode").trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = saved.isEmpty ? KajiCodeCommandBuilder.splitCommand() : CLILauncherCommandResolver.resolve(saved)
+        let command = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !command.isEmpty else { return }
+        appState.createCommandSplit(projectID: projectID, title: "KajiCode", command: command)
     }
 
     private func shortcutTooltip(_ name: String, for action: ShortcutAction) -> String {

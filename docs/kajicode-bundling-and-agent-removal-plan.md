@@ -1,7 +1,7 @@
 # KajiCode Bundling And Kaji Agent Removal Plan
 
 ## Goal
-Ship Kaji with KajiCode as the default separate CLI agent, provide one-click setup for hooks and MCP defaults, and remove the current native GUI Kaji Agent without breaking commit messages, meeting notes, code graph, notifications, or release packaging.
+Make KajiCode the default separate CLI agent in Kaji without requiring a Kaji app release for every KajiCode CLI update. Kaji should ship the integration layer, installer, updater, hooks, MCP setup, and launch surfaces. KajiCode should ship independently through its own release channel.
 
 ## Current Agent Surface
 Kaji has three related but separate agent systems today.
@@ -16,170 +16,144 @@ Kaji has three related but separate agent systems today.
    - Commit generation uses `GitCommitMessageAgent.swift` and `GitCommitMessageRuntimeClient.swift`.
    - Meeting notes use `Kaji/Services/MeetingNotes/Integration/KajiMeetingNotesAgentClient.swift`.
    - Both launch `KajiAgentRuntimeLocator` and `KajiAgentProcess`, then send JSON RPC frames such as `generate_commit_message`, `generate_meeting_notes`, and `validate_meeting_notes_model`.
-   - This means the runtime cannot be deleted until these features move to KajiCode.
+   - This runtime cannot be deleted until these clients move to KajiCode.
 
 3. Parent Agent and graph
    - Code graph uses `Kaji/Services/KajiCodeGraphAgentCoordinator.swift`.
    - It launches `ParentAgentController` and `ParentAgentProcess`, not `KajiAgentProcess`.
-   - It depends on `KajiParentAgentRuntime` for host tools such as project context, terminal opening, diff opening, verification, and subagent orchestration.
-   - Treat this as separate from GUI Kaji Agent removal unless KajiCode grows equivalent host-tool protocol support.
+   - Keep `KajiParentAgentRuntime` until KajiCode has equivalent host-tool support for project context, terminal opening, diff opening, verification, and subagent orchestration.
 
-## Release Packaging Findings
-Release scripts still hard-require Kaji Agent artifacts.
+## Release And Update Findings
+Kaji release packaging still hard-requires old Kaji Agent artifacts:
 
-- `scripts/build-release.sh` builds `KajiAgentRuntime`, parent agent, Rift, Zlob, Monaco, Termy, workers, helpers, and `KajiHookClient`.
-- It requires `Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs`, `Kaji/Resources/pi/kaji-agent.mjs`, and `Kaji/Resources/pi/oauth-login.mjs`.
-- It stages and signs the native Kaji Agent addon through `scripts/stage-kaji-agent-native-addon.sh`.
-- `scripts/smoke-release-app.sh` verifies bundled Kaji Agent runtime paths and native addon signatures.
+- `scripts/build-release.sh` requires `KajiAgentRuntime/kaji-agent-runtime.mjs`, `pi/kaji-agent.mjs`, and `pi/oauth-login.mjs`.
+- The same script stages and signs the native Kaji Agent addon through `scripts/stage-kaji-agent-native-addon.sh`.
+- `scripts/smoke-release-app.sh` verifies Kaji Agent runtime paths and native addon signatures.
 
-GUI removal is not complete until these release checks are replaced with KajiCode checks.
+Kaji already has useful managed-install patterns:
 
-## KajiCode Findings
-The fork in `/Users/dishants/projects/KajiCode` is already locally usable.
+- `AIGatewayClaudeCodeRouterInstaller` installs an external npm package into Application Support, writes an install manifest, and supports repair/uninstall.
+- `KajiCodeGraphInstaller` installs an optional extension outside the app bundle and keeps its runtime under a Kaji-owned directory.
+- Browser and graph MCP installers copy Kaji-owned binaries into `~/.kaji/bin` and write normal user MCP config without global system writes.
+- `KajiFileStorage.appSupportDirectory()` is the right root for Kaji-managed state and supports `KAJI_APP_SUPPORT_DIR` for tests.
+
+KajiCode now has independent distribution machinery:
 
 - `make build` produces `./kajicode`.
-- `./kajicode --version` returns a dev build.
-- `./kajicode serve --mcp -C /Users/dishants/projects/muxy` responds over MCP and exposes read-only tools by default.
-- `./kajicode doctor --json` can run locally, but provider health can fail when API keys or gateway credentials are missing.
+- `kajicode serve --mcp` works locally.
+- `scripts/install.sh` downloads GitHub release archives and verifies `.sha256`.
+- `scripts/postinstall.mjs` can download the matching release archive without trusting archive paths.
+- `scripts/npm/build-platform-packages.mjs` builds npm wrapper and per-platform payload packages.
+- `kajicode update --check` and `kajicode upgrade` already exist, but Kaji should add its own compatibility gate before installing updates.
 
-KajiCode also has release machinery:
+## Recommended Distribution Model
+Use a Kaji-managed, latest-compatible KajiCode install.
 
-- `Makefile` supports local and multi-platform builds.
-- `scripts/install.sh` downloads release tarballs and verifies checksums.
-- `scripts/postinstall.mjs` supports npm wrapper install, dry runs, skip download, platform overrides, repository override, and SHA256 verification.
-- `cmd/kajicode-release/main.go` exposes release build, package, smoke, and verify commands.
+Kaji should not blindly run `npm install -g` or always launch whatever `latest` means. Instead, Kaji should fetch a KajiCode update channel manifest, choose the newest version compatible with the installed Kaji integration protocol, download that version, smoke it, then activate it atomically.
 
-The KajiCode checkout is currently dirty from rebranding work, so Kaji should not pin that tree until KajiCode has its own clean release commit and artifact.
+Kaji release cadence:
 
-## Bundling Options
-### Option A: Download On First Run
-Kaji ships without KajiCode, then downloads the matching release when the user clicks install.
-Use this as a repair fallback, not the default production path. It keeps the app smaller and lets KajiCode hotfix independently, but first-run setup now depends on network, GitHub availability, proxies, checksums, and a harder version-support story.
+- Kaji release is needed when Kaji-side integration changes.
+- Kaji release is not needed for normal KajiCode CLI improvements.
+- KajiCode release is enough when the CLI preserves the Kaji integration protocol.
 
-### Option B: Build From Source During Kaji Release
-Kaji vendors KajiCode source as a submodule or checked-in dependency and builds it in `scripts/build-release.sh`.
-Use this only if source-level auditability inside the Kaji repo is required. It is reproducible, but makes Kaji release own Go setup, cross-compilation, longer release time, and submodule friction.
+## Update Channel Manifest
+Add a KajiCode-published channel file, for example `distribution/kaji-channel.json` in the KajiCode repo or a release asset served from a stable URL. Minimum entry fields: `version`, `protocolVersion`, `minKajiVersion`, optional `maxKajiVersion`, and per-platform assets with `url`, `sha256`, and `size`.
 
-### Option C: Embed Prebuilt Release Artifacts
-Kaji release consumes a pinned KajiCode release tarball, verifies checksum, and embeds the binary plus helper files into `Contents/Resources/KajiCode`.
-This is the recommended path. It gives the best user experience, works offline after app install, avoids user Bun/npm/Go dependencies, supports app-level codesign/notarization, and lets release smoke verify the actual shipped CLI. The tradeoff is that Kaji must pin KajiCode versions and checksums.
+Kaji chooses the highest entry where `schemaVersion` is supported, `protocolVersion` is in Kaji's supported range, `minKajiVersion <= current Kaji version`, `maxKajiVersion` is empty or still allows the current Kaji version, and the current platform asset exists.
 
-### Option D: npm Wrapper Install
-Kaji invokes the KajiCode npm package installer.
-Do not use this as the primary Kaji app install path. It reuses existing install logic, but requires Node/npm in a native app flow and adds lifecycle, trust, and environment issues.
+## npm Role
+npm should stay a public CLI distribution channel, not the primary Kaji app dependency. Users can still run `npm install -g @dishant0406/kajicode`, and KajiCode can keep publishing npm platform packages for terminal users. Kaji can optionally support npm registry tarballs as an update asset type in the channel manifest.
 
-### Option E: Build On User Machine
-Kaji asks the user machine to clone and build KajiCode locally.
-Keep this as a developer override only. It is useful for local fork testing, but requires Go, git, network, and correct user environment.
+Kaji should avoid requiring npm, Node, global installs, un-gated `@dishant0406/kajicode@latest`, or package lifecycle scripts. If npm tarballs are used, Kaji should download the tarball directly from registry metadata, verify integrity/checksum, extract only known files, smoke the binary, and record the manifest.
 
-## Recommended Architecture
-Use a signed, bundled KajiCode binary as the default CLI, with idempotent one-click setup.
+## Kaji Managed Install Layout
+Install KajiCode under Application Support:
 
-Add a KajiCode module under `Kaji/Services/CodingAgents/KajiCode/`:
+```text
+~/Library/Application Support/Kaji/kajicode/
+  channel-cache.json
+  install-manifest.json
+  versions/
+    0.4.1/
+      macos-arm64/
+        kajicode
+        helpers/
+```
 
-- `KajiCodeBundleLocator`: resolve developer override, bundled resource, managed install, then PATH fallback. Report active path, source, version, and health.
-- `KajiCodeInstaller`: install or repair the managed CLI, verify version/checksum, and avoid global system paths.
-- `KajiCodeHookInstaller`: install default hooks idempotently. Prefer invoking stable KajiCode hook commands; add those commands in KajiCode first if they do not exist.
-- `KajiCodeMCPInstaller`: register `kajicode serve --mcp` as a stdio MCP server, read-only by default, with explicit opt-in for unsafe tools.
-- `KajiCodeCommandBuilder`: build safe terminal launch commands for cwd, prompt, mode flags, MCP, and hooks.
-- `KajiCodeSettingsView`: replace Kaji Agent settings with install status, bundled version, active version, hook status, MCP status, provider health, and repair actions.
+`install-manifest.json` should record active version, previous version, protocol version, source URL, sha256, install time, binary path, smoke result, and hook/MCP setup state.
 
-Keep `KajiHookClient` as the notification bridge unless KajiCode replaces it with an equivalent native bridge.
+Install flow: download into staging, verify size/SHA256, extract only expected basenames and directories, set executable permissions, run `kajicode --version`, `kajicode doctor --json` in no-credential mode, run MCP initialize smoke, atomically activate the version, and keep the previous version for rollback.
+
+## Kaji Integration Services
+Add a module under `Kaji/Services/CodingAgents/KajiCode/`:
+
+- `KajiCodeChannelClient`: fetch and parse the update channel manifest.
+- `KajiCodeCompatibilityPolicy`: select latest compatible version.
+- `KajiCodeArchiveDownloader`: download with byte limits and SHA256 verification.
+- `KajiCodeArchiveExtractor`: extract only expected files.
+- `KajiCodeInstallStore`: read/write managed install manifests.
+- `KajiCodeInstaller`: install, repair, activate, rollback, uninstall.
+- `KajiCodeRuntimeLocator`: resolve dev override, managed active install, bundled fallback, then PATH fallback.
+- `KajiCodeSmokeTester`: verify version, doctor, and MCP initialize.
+- `KajiCodeHookInstaller`: install Kaji defaults through KajiCode hook commands or config files.
+- `KajiCodeMCPInstaller`: install KajiCode MCP defaults.
+- `KajiCodeCommandBuilder`: build terminal launch commands.
+- `KajiCodeSettingsView`: show active version, latest compatible version, source, hooks, MCP, update, rollback, repair, and dev override status.
+
+Resolution order: developer override such as `KAJICODE_DEV_BIN`, Kaji-managed active install, optional bundled fallback binary, then PATH fallback.
+
+## Fast Local Development
+For fast KajiCode iteration, use a dev override instead of publishing anything:
+
+```bash
+cd /Users/dishants/projects/KajiCode
+make build
+KAJICODE_DEV_BIN=/Users/dishants/projects/KajiCode/kajicode swift run Kaji
+```
+
+New KajiCode terminal splits should use the override path immediately.
 
 ## Migration Plan
-### Phase 1: Stabilize KajiCode
+### Phase 1: KajiCode Channel
+- Add the KajiCode channel manifest and publish it with each KajiCode release.
+- Include protocol, Kaji compatibility, platform asset URLs, SHA256, and sizes.
+- Keep GitHub release archives as the first asset source. Add npm tarball support later only if needed.
 
-- Finish KajiCode fork cleanup.
-- Create a clean KajiCode release commit and tag.
-- Produce darwin arm64 and x64 artifacts.
-- Verify `make build`, release package/smoke, `kajicode --version`, `kajicode doctor --json`, and `kajicode serve --mcp`.
+### Phase 2: Kaji Managed Installer
+- Implement the KajiCode channel client, compatibility policy, downloader, extractor, install store, installer, smoke tester, and runtime locator.
+- Add one-click install, update, repair, rollback, and uninstall in Settings.
+- Do not touch GUI Kaji Agent yet.
 
-### Phase 2: Bundle KajiCode In Kaji
+### Phase 3: Hooks And MCP Defaults
+- Install KajiCode hooks idempotently.
+- Prefer stable `kajicode hooks add --user --json` commands.
+- Register `kajicode serve --mcp` where needed.
+- Preserve user edits and provide uninstall.
 
-- Add a KajiCode artifact manifest with version, filenames, sizes, and checksums.
-- Stage `Contents/Resources/KajiCode/kajicode` and helper files in `scripts/build-release.sh`.
-- Codesign bundled KajiCode binaries during Kaji release signing.
-- Update `scripts/smoke-release-app.sh` to verify binary existence, execute bit, version output, no-credential doctor mode, MCP initialize, and signatures.
-
-### Phase 3: Add One-Click Setup
-
-- Build the locator, installer, hook installer, MCP installer, and settings surface.
-- Setup should select the active bundled CLI, install or repair hooks, register MCP defaults, and verify provider/config health without requiring a paid-provider request.
-- Make repair safe to run repeatedly.
-
-### Phase 4: Replace The GUI Entry Point
-
-- Change the footer Kaji button to open a terminal split running KajiCode in the active project.
-- Rename or remove the `openKajiAgentSplit` shortcut.
+### Phase 4: Replace GUI Entry Point
+- Change the footer Kaji button to open a terminal split running KajiCode.
+- Rename or remove `openKajiAgentSplit`.
 - Stop creating `.parentAgent` tabs from that button.
-- Do not delete `KajiAgentRuntime` yet because commit generation and meeting notes still use it.
 
-### Phase 5: Move Commit Messages To KajiCode
-
-- Add or confirm a stable machine command, preferably `kajicode commit-message --repo <path> --json`.
-- Support request fields for staged diff, provider, model, style, and max length.
-- Return title, body, confidence, and diagnostics as JSON.
+### Phase 5: Move Runtime Consumers
+- Add stable KajiCode machine commands for commit messages and meeting notes.
 - Replace `GitCommitMessageRuntimeClient`.
-- Move commit provider/model settings away from `KajiAgentStore`.
-- Add tests for command resolution, request encoding, timeout, unavailable CLI, and invalid JSON.
-
-### Phase 6: Move Meeting Notes To KajiCode
-
-- Add or confirm KajiCode machine commands for `generate_meeting_notes` and `validate_meeting_notes_model`.
 - Replace `KajiMeetingNotesAgentClient`.
-- Keep recording, transcription, persistence, and coordinator code intact.
-- Add tests for synthesis success, validation failure, timeout, and unavailable CLI.
+- Move provider/model settings away from `KajiAgentStore`.
 
-### Phase 7: Keep Graph Separate For Now
-
-- Keep `KajiParentAgentRuntime` while `KajiCodeGraphAgentCoordinator` depends on it.
-- Migrate graph later only if KajiCode gets equivalent host tools for project context, coding-agent selection, terminal/split opening, diff opening, verification, and subagent orchestration.
-
-### Phase 8: Remove GUI Kaji Agent Runtime And Packaging
-Only after commit generation and meeting notes are migrated:
-
-- Delete GUI Kaji Agent views, models, settings, stores, processes, and runtime locator code.
-- Delete unused `KajiAgentRuntime` build steps.
-- Remove `scripts/stage-kaji-agent-native-addon.sh` from release packaging.
-- Remove Kaji Agent runtime and native addon checks from release smoke.
+### Phase 6: Remove Old Runtime Packaging
+- Delete unused GUI Kaji Agent views, models, stores, process, and runtime locator code.
+- Remove `KajiAgentRuntime` build steps and native addon staging.
+- Replace release smoke checks with KajiCode installer/updater smoke.
 - Update `docs/architecture.md`.
-- Run full release smoke.
-
-## Hook Defaults
-Default hook setup should be conservative.
-
-- Enable activity and completion notifications through `KajiHookClient`.
-- Enable session metadata hooks for Kaji's activity store.
-- Keep shell, write, and tool hooks opt-in if they can mutate files or run commands.
-- Store installed hook state in a Kaji-owned config location.
-- Provide repair and uninstall actions.
-- Detect and preserve user customizations instead of overwriting existing hook config.
 
 ## Validation
-Doc-only planning change:
-- `git diff --check`
+Doc-only update: `git diff --check`.
 
-Kaji implementation:
-- Focused Swift tests for locator, installer, hook installer, MCP installer, and command builder.
-- `scripts/checks.sh --fix`
-- `scripts/build-release.sh`
-- `scripts/smoke-release-app.sh`
+Kaji implementation: focused Swift tests for channel parsing, compatibility selection, archive verification, install manifest writes, rollback, locator resolution, hook install, and MCP install; `scripts/checks.sh --fix`; `scripts/build-release.sh`; `scripts/smoke-release-app.sh`.
 
-KajiCode implementation:
-- `make build`
-- `make test`
-- release package and smoke commands
-- MCP stdio initialize smoke
-- JSON command smoke for commit messages and meeting notes
-
-## Main Risks
-
-- Removing `KajiAgentRuntime` too early breaks commit messages and meeting notes.
-- Release packaging currently enforces Kaji Agent runtime and native addon presence.
-- Kaji needs pinned KajiCode versions and checksums because KajiCode is a separate repository.
-- Provider health should not require a real paid-provider request during setup.
-- Executing the signed bundled binary is safer than copying binaries out of the app bundle.
-- Hook installation must be explicit, idempotent, and reversible.
+KajiCode implementation: `make build`; `make test`; release package and smoke commands; channel manifest validation; npm package smoke; MCP stdio initialize smoke.
 
 ## Decision
-Bundle signed KajiCode release artifacts inside Kaji, add one-click setup for hooks and MCP defaults, replace the visible GUI Kaji Agent entry point with a terminal-backed KajiCode split, migrate commit messages and meeting notes onto KajiCode machine commands, keep graph on Parent Agent until KajiCode has equivalent host tools, then remove the old GUI Kaji Agent runtime and release packaging requirements.
+Kaji should ship a managed KajiCode installer/updater, not a hard-pinned CLI that requires a Kaji release for every KajiCode change. KajiCode should publish independent releases plus a compatibility manifest. Kaji installs the latest compatible version into Application Support, supports a local dev override, and keeps an optional bundled fallback only for offline recovery.

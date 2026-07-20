@@ -6,6 +6,8 @@ struct CLILauncherSettingsView: View {
     var body: some View {
         ScrollView {
             SettingsContainer {
+                KajiCodeSetupView()
+
                 SettingsSection(
                     "Coding Agents",
                     footer: "Enabled agents appear in the workspace footer and are available to the parent agent. "

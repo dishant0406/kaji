@@ -51,6 +51,26 @@ struct CLILauncherCommandResolverTests {
     }
 
     @Test
+    func resolvesKajicodeDeveloperOverrideBeforePath() throws {
+        let fixture = try CommandResolverFixture()
+        defer { fixture.cleanup() }
+        try fixture.writeExecutable("kajicode", in: fixture.realBin)
+        let override = fixture.realBin.appendingPathComponent("kajicode")
+
+        let command = CLILauncherCommandResolver.resolve(
+            "kajicode --model gpt-5",
+            env: [
+                "PATH": "/usr/bin",
+                KajiCodePaths.devBinaryKey: override.path,
+            ],
+            homeDirectory: fixture.home.path,
+            fileManager: fixture.fileManager
+        )
+
+        #expect(command == "\(ShellEscaper.escape(override.path)) --model gpt-5")
+    }
+
+    @Test
     func leavesQuotedAndWrapperCommandsUnchanged() throws {
         let fixture = try CommandResolverFixture()
         defer { fixture.cleanup() }

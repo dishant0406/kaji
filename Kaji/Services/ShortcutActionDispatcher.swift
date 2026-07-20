@@ -252,7 +252,10 @@ struct ShortcutActionDispatcher {
             return true
         case .openKajiAgentSplit:
             guard let projectID = appState.activeProjectID else { return false }
-            appState.createParentAgentSplit(projectID: projectID)
+            let saved = CLILauncherSettings.shared.command(for: "kajicode").trimmingCharacters(in: .whitespacesAndNewlines)
+            let command = saved.isEmpty ? KajiCodeCommandBuilder.splitCommand() : CLILauncherCommandResolver.resolve(saved)
+            guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+            appState.createCommandSplit(projectID: projectID, title: "KajiCode", command: command)
             return true
         case .toggleAIUsage:
             guard AIUsageSettingsStore.isUsageEnabled() else { return false }
@@ -328,10 +331,10 @@ struct ShortcutActionDispatcher {
 
     private func openFooterLauncher(index: Int) -> Bool {
         guard let projectID = appState.activeProjectID else { return false }
-        let launchers = CLILauncherSettings.shared.enabledLaunchers
+        let launchers = CLILauncherSettings.shared.footerLaunchers
         guard launchers.indices.contains(index) else { return false }
         let launcher = launchers[index]
-        let command = launcher.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let command = CLILauncherCommandResolver.resolve(launcher.command).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !command.isEmpty else { return false }
         appState.createCommandSplit(projectID: projectID, title: launcher.definition.displayName, command: command)
         return true

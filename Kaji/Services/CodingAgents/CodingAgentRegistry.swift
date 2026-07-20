@@ -3,12 +3,14 @@ import Foundation
 final class CodingAgentRegistry: @unchecked Sendable {
     static let shared = CodingAgentRegistry()
 
+    private let kajicode = KajiCodeAgentModule()
     private let codex = CodexAgentModule()
     private let claude = ClaudeCodeAgentModule()
     private let openCode = OpenCodeAgentModule()
     private let pi = PiAgentModule()
 
     lazy var agents: [any CodingAgentModule] = [
+        kajicode,
         codex,
         claude,
         openCode,
