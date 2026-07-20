@@ -9,7 +9,7 @@ struct CommitMessageSettingsSection: View {
     var body: some View {
         SettingsSection(
             "Commit Messages",
-            footer: "Controls the Kaji Agent provider/model, detail, and context used while refining generated messages."
+            footer: "Controls the provider, model, detail, and context used while refining generated messages."
         ) {
             SettingsRow("Provider") {
                 if providerOptions.isEmpty {

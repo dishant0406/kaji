@@ -2,6 +2,7 @@ import Foundation
 
 struct KajiCodeAgentModule: CodingAgentModule {
     let socketTypeKey = "kajicode"
+    let mcpServerConfigProvider: MCPServerConfigProvider? = KajiCodeMCPServerConfigProvider()
 
     let definition = CodingAgentDefinition(
         id: "kajicode",
@@ -14,7 +15,7 @@ struct KajiCodeAgentModule: CodingAgentModule {
         installCommand: nil,
         configDirectories: [".kajicode"],
         dataDirectories: [".local/share/kajicode"],
-        hookStrategy: .none,
+        hookStrategy: .nativeConfig("kajicode hooks"),
         historyStrategy: .custom("KajiCode sessions"),
         modelStrategy: .staticList,
         usageStrategy: .none,
@@ -36,4 +37,26 @@ struct KajiCodeAgentModule: CodingAgentModule {
         processCommandMarkers: ["kajicode", ".kajicode", "KajiCode"],
         processKillPatterns: ["kajicode"]
     )
+
+    func isToolInstalled() -> Bool {
+        KajiCodeRuntimeLocator.resolve() != nil
+    }
+
+    func install(hookClientPath: String) throws {
+        guard let resolution = KajiCodeRuntimeLocator.resolve() else { throw KajiCodeSetupError.binaryMissing }
+        _ = try install(binaryURL: resolution.binaryURL, hookClientPath: hookClientPath)
+    }
+
+    func uninstall() throws {
+        guard let resolution = KajiCodeRuntimeLocator.resolve() else { return }
+        try uninstall(binaryURL: resolution.binaryURL)
+    }
+
+    func install(binaryURL: URL, hookClientPath: String) throws -> [KajiCodeHookInstallOutcome] {
+        try KajiCodeHookInstallService.install(binaryURL: binaryURL, hookClientPath: hookClientPath)
+    }
+
+    func uninstall(binaryURL: URL) throws {
+        _ = try KajiCodeHookInstallService.uninstall(binaryURL: binaryURL)
+    }
 }

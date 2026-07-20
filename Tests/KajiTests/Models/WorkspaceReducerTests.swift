@@ -318,8 +318,8 @@ struct WorkspaceReducerTests {
         #expect(activeTab.activeContent?.kind == .filePreview)
     }
 
-    @Test("createParentAgentTab opens Kaji as a top-level workspace tab")
-    func createParentAgentTabCreatesWorkspaceTab() throws {
+    @Test("createParentAgentTab opens KajiCode as a top-level workspace tab")
+    func createParentAgentTabCreatesKajiCodeWorkspaceTab() throws {
         let projectID = UUID()
         let worktreeID = UUID()
         var state = makeState(projectID: projectID, worktreeID: worktreeID)
@@ -335,12 +335,13 @@ struct WorkspaceReducerTests {
 
         #expect(workspace.tabs.count == 2)
         #expect(activeTab.root.allAreas().count == 1)
-        #expect(activeTab.activeContent?.kind == .parentAgent)
-        #expect(activeTab.title == "Kaji")
+        #expect(activeTab.activeContent?.kind == .terminal)
+        #expect(activeTab.title == "KajiCode")
+        #expect(activeTab.activeContent?.content.pane?.injectedCommand?.contains("kajicode") == true)
     }
 
-    @Test("createParentAgentSessionTab preserves requested agent identity")
-    func createParentAgentSessionTabPreservesAgentIdentity() throws {
+    @Test("createParentAgentSessionTab opens KajiCode command tab")
+    func createParentAgentSessionTabOpensKajiCodeCommandTab() throws {
         let projectID = UUID()
         let worktreeID = UUID()
         let agentID = UUID()
@@ -354,13 +355,9 @@ struct WorkspaceReducerTests {
 
         let workspace = try #require(state.workspaces[key])
         let activeContent = try #require(workspace.activeTab?.activeContent)
-        guard case let .parentAgent(agentState) = activeContent.content else {
-            Issue.record("Expected parent agent tab")
-            return
-        }
-
-        #expect(agentState.id == agentID)
-        #expect(agentState.initialSessionPath == "/tmp/session.jsonl")
+        let pane = try #require(activeContent.content.pane)
+        #expect(pane.title == "KajiCode")
+        #expect(pane.injectedCommand?.contains("kajicode") == true)
     }
 
     @Test("createCodeGraphTab opens a graph as a top-level workspace tab")

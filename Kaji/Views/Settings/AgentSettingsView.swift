@@ -12,8 +12,8 @@ struct AgentSettingsView: View {
     var body: some View {
         SettingsContainer {
             SettingsSection(
-                "Kaji Agent",
-                footer: "Kaji Agent uses the embedded coding-agent harness with native Kaji UI."
+                "Runtime Models",
+                footer: "Used by commit-message refinement and meeting-note synthesis."
             ) {
                 SettingsRow("Status") {
                     KajiAgentReadinessBadge(readiness: kajiAgent.readiness)

@@ -65,7 +65,7 @@ struct KajiAgentCustomProvidersSection: View {
                 Text("Add OpenAI-compatible, Anthropic, Google, Azure, or local discovery providers.")
                     .kajiFont(size: 11)
                     .foregroundStyle(KajiTheme.fgMuted)
-                Text("Models become available in the Kaji Agent model picker after save.")
+                Text("Models become available in runtime-backed features after save.")
                     .kajiFont(size: 10)
                     .foregroundStyle(KajiTheme.fgDim)
             }

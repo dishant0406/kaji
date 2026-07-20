@@ -34,28 +34,17 @@ enum TabReducer {
     static func createParentAgentTab(
         projectID: UUID,
         areaID _: UUID?,
-        agentID: UUID? = nil,
-        initialSessionPath: String? = nil,
+        agentID _: UUID? = nil,
+        initialSessionPath _: String? = nil,
         state: inout WorkspaceState
     ) {
-        guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
-              let path = WorkspaceReducerShared.activeProjectPath(projectID: projectID, state: state)
-        else { return }
-        let workspace = state.workspaces[key] ?? WorktreeWorkspace()
-        let area = TabArea(
-            projectPath: path,
-            existingTab: TerminalTab(parentAgentState: ParentAgentTabState(
-                id: agentID ?? UUID(),
-                projectID: projectID,
-                worktreeID: key.worktreeID,
-                projectPath: path,
-                initialSessionPath: initialSessionPath
-            ))
+        createCommandTab(
+            projectID: projectID,
+            areaID: nil,
+            title: "KajiCode",
+            command: KajiCodeCommandBuilder.splitCommand(),
+            state: &state
         )
-        let tab = WorkspaceTab(root: .tabArea(area), focusedAreaID: area.id)
-        workspace.appendTab(tab)
-        state.workspaces[key] = workspace
-        WorkspaceReducerShared.refreshActiveTabMirrors(for: key, state: &state)
     }
 
     static func createCommandTab(
@@ -156,36 +145,12 @@ enum TabReducer {
     }
 
     static func createParentAgentSplit(projectID: UUID, state: inout WorkspaceState) {
-        guard let key = WorkspaceReducerShared.activeKey(projectID: projectID, state: state),
-              let path = WorkspaceReducerShared.activeProjectPath(projectID: projectID, state: state)
-        else { return }
-        let agent = TerminalTab(parentAgentState: ParentAgentTabState(
+        createCommandSplit(
             projectID: projectID,
-            worktreeID: key.worktreeID,
-            projectPath: path
-        ))
-        guard let root = state.workspaceRoots[key],
-              let area = WorkspaceReducerShared.resolveArea(key: key, areaID: nil, state: state)
-        else {
-            let tabArea = TabArea(projectPath: path, existingTab: agent)
-            let tab = WorkspaceTab(root: .tabArea(tabArea), focusedAreaID: tabArea.id)
-            let workspace = state.workspaces[key] ?? WorktreeWorkspace()
-            workspace.appendTab(tab)
-            state.workspaces[key] = workspace
-            WorkspaceReducerShared.refreshActiveTabMirrors(for: key, state: &state)
-            return
-        }
-        let (newRoot, newAreaID) = root.splittingWithTab(
-            areaID: area.id,
-            direction: .horizontal,
-            position: .second,
-            tab: agent
+            title: "KajiCode",
+            command: KajiCodeCommandBuilder.splitCommand(),
+            state: &state
         )
-        state.workspaceRoots[key] = newRoot
-        guard let newAreaID else { return }
-        FocusReducer.focusArea(newAreaID, key: key, state: &state)
-        state.workspaces[key]?.activeTab?.root = newRoot
-        state.workspaces[key]?.activeTab?.focusedAreaID = newAreaID
     }
 
     static func createEditorTab(projectID: UUID, areaID _: UUID?, filePath: String, state: inout WorkspaceState) {

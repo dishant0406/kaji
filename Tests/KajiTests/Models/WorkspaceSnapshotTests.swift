@@ -192,8 +192,8 @@ struct WorkspaceSnapshotTests {
         #expect(restored[0].workspace.activeTab?.focusedAreaID == area.id)
     }
 
-    @Test("WorkspaceRestorer preserves parent agent scope")
-    func parentAgentScopeRestores() throws {
+    @Test("WorkspaceRestorer restores legacy parent agent tabs as KajiCode commands")
+    func parentAgentTabsRestoreAsKajiCodeCommands() throws {
         let project = Project(name: "Test", path: testPath)
         let worktree = Worktree(name: "main", path: testPath, isPrimary: true)
         let key = WorktreeKey(projectID: project.id, worktreeID: worktree.id)
@@ -216,15 +216,8 @@ struct WorkspaceSnapshotTests {
             worktrees: [project.id: [worktree]]
         )
         let restoredTab = try #require(restored.first?.workspace.activeTab?.activeContent)
-        guard case let .parentAgent(restoredState) = restoredTab.content else {
-            Issue.record("Expected parent agent tab")
-            return
-        }
-
-        #expect(restoredState.id == agentID)
-        #expect(restoredState.projectID == project.id)
-        #expect(restoredState.worktreeID == worktree.id)
-        #expect(restoredState.initialSessionPath == "/tmp/session.jsonl")
-        #expect(restoredState.scope != nil)
+        let pane = try #require(restoredTab.content.pane)
+        #expect(pane.title == "KajiCode")
+        #expect(pane.startupCommand?.contains("kajicode") == true)
     }
 }

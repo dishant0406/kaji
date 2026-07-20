@@ -9,7 +9,7 @@ struct KajiCodeSetupView: View {
         SettingsSection(
             "KajiCode",
             footer: "Kaji installs the latest compatible KajiCode release into Application Support "
-                + "and launches it from the workspace footer.",
+                + "and configures hooks plus MCP registrations.",
             showsDivider: true
         ) {
             HStack(alignment: .center, spacing: 10) {
@@ -44,8 +44,9 @@ struct KajiCodeSetupView: View {
     }
 
     private var primaryTitle: String {
-        if isWorking { return "Installing" }
-        if case .installed = state { return "Update" }
+        if isWorking { return "Setting up" }
+        if KajiCodeRuntimeLocator.resolve()?.source == .developerOverride { return "Setup" }
+        if case .installed = state { return "Update & Setup" }
         return "Install"
     }
 
@@ -74,9 +75,9 @@ struct KajiCodeSetupView: View {
 
     private func install() {
         isWorking = true
-        message = "Installing..."
+        message = "Setting up..."
         Task { @MainActor in
-            let result = await KajiCodeInstaller.installLatest()
+            let result = await KajiCodeSetupService.installOrUpdate()
             state = result.state
             message = result.message
             isWorking = false
@@ -84,7 +85,7 @@ struct KajiCodeSetupView: View {
     }
 
     private func uninstall() {
-        let result = KajiCodeInstaller.uninstall()
+        let result = KajiCodeSetupService.uninstall()
         state = result.state
         message = result.message
     }

@@ -18,12 +18,12 @@ struct GitCommitMessageSettingsStoreTests {
         let store = GitCommitMessageSettingsStore(defaults: defaults)
 
         #expect(store.modelSelector.isEmpty)
-        #expect(store.selectedModelLabel == "Kaji Agent commit role")
+        #expect(store.selectedModelLabel == "Recommended commit role")
         #expect(store.selectedContextLevel == .fast)
         #expect(store.customInstructions.isEmpty)
         #expect(store.snapshot().providerID.isEmpty)
         #expect(store.snapshot().modelID.isEmpty)
-        #expect(store.snapshot().modelLabel == "Kaji Agent commit role")
+        #expect(store.snapshot().modelLabel == "Recommended commit role")
     }
 
     @MainActor

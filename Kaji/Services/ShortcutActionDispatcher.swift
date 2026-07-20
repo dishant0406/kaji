@@ -252,8 +252,7 @@ struct ShortcutActionDispatcher {
             return true
         case .openKajiAgentSplit:
             guard let projectID = appState.activeProjectID else { return false }
-            let saved = CLILauncherSettings.shared.command(for: "kajicode").trimmingCharacters(in: .whitespacesAndNewlines)
-            let command = saved.isEmpty ? KajiCodeCommandBuilder.splitCommand() : CLILauncherCommandResolver.resolve(saved)
+            let command = KajiCodeLaunchCommand.split()
             guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
             appState.createCommandSplit(projectID: projectID, title: "KajiCode", command: command)
             return true

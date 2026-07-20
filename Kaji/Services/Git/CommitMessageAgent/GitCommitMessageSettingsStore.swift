@@ -47,7 +47,7 @@ final class GitCommitMessageSettingsStore {
     }
 
     var selectedModelLabel: String {
-        selectedSelector?.label ?? "Kaji Agent commit role"
+        selectedSelector?.label ?? "Recommended commit role"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -94,7 +94,7 @@ struct GitCommitMessageSettingsSnapshot: Hashable {
     let customInstructions: String
 
     var modelLabel: String {
-        GitCommitMessageModelSelector(rawValue: modelSelector)?.label ?? "Kaji Agent commit role"
+        GitCommitMessageModelSelector(rawValue: modelSelector)?.label ?? "Recommended commit role"
     }
 
     var trimmedInstructions: String {

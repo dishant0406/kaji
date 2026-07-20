@@ -195,12 +195,10 @@ final class TerminalTab: Identifiable {
         case .problems:
             content = .problems(ProblemsTabState(projectPath: snapshot.projectPath))
         case .parentAgent:
-            content = .parentAgent(ParentAgentTabState(
-                id: snapshot.parentAgentID ?? UUID(),
-                projectID: snapshot.parentAgentProjectID ?? projectID,
-                worktreeID: snapshot.parentAgentWorktreeID ?? worktreeID,
+            content = .terminal(TerminalPaneState(
                 projectPath: snapshot.projectPath,
-                initialSessionPath: snapshot.parentAgentInitialSessionPath
+                title: "KajiCode",
+                startupCommand: KajiCodeCommandBuilder.splitCommand()
             ))
         case .codeGraph:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))

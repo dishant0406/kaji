@@ -112,7 +112,7 @@
     { "action": "toggleNotificationPanel", "displayName": "Toggle Notifications", "category": "Side Panels", "scope": "mainWindow", "defaultCombo": { "key": "n", "control": true, "option": true } },
     { "action": "toggleAgentMissionControl", "displayName": "Toggle Agent Mission Control", "category": "Side Panels", "scope": "mainWindow", "defaultCombo": { "key": "j", "command": true, "option": true } },
     { "action": "toggleFooterTerminal", "displayName": "Toggle Footer Terminal", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "t", "command": true } },
-    { "action": "openKajiAgentSplit", "displayName": "Open Kaji Agent Split", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "1", "command": true, "control": true } },
+    { "action": "openKajiAgentSplit", "displayName": "Open KajiCode Split", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "1", "command": true, "control": true } },
     { "action": "openFooterLauncher1", "displayName": "Open Footer Launcher 1", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "2", "command": true, "control": true } },
     { "action": "openFooterLauncher2", "displayName": "Open Footer Launcher 2", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "3", "command": true, "control": true } },
     { "action": "openFooterLauncher3", "displayName": "Open Footer Launcher 3", "category": "Terminal", "scope": "mainWindow", "defaultCombo": { "key": "4", "command": true, "control": true } },

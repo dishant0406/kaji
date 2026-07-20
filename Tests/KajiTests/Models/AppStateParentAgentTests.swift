@@ -8,8 +8,8 @@ import Testing
 struct AppStateParentAgentTests {
     private let testPath = "/tmp/test"
 
-    @Test("openParentAgentTab focuses existing parent agent tab")
-    func openParentAgentTabFocusesExistingTab() throws {
+    @Test("openParentAgentTab opens KajiCode command tab")
+    func openParentAgentTabOpensKajiCodeCommandTab() throws {
         let projectID = UUID()
         let worktreeID = UUID()
         let key = WorktreeKey(projectID: projectID, worktreeID: worktreeID)
@@ -40,10 +40,13 @@ struct AppStateParentAgentTests {
         appState.openParentAgentTab(projectID: projectID)
 
         let updatedWorkspace = try #require(appState.workspaces[key])
-        #expect(updatedWorkspace.tabs.count == 2)
-        #expect(updatedWorkspace.activeTabID == agentTab.id)
-        #expect(appState.workspaceRoots[key]?.id == agentTab.root.id)
-        #expect(appState.focusedAreaID[key] == agentArea.id)
+        let activeTab = try #require(updatedWorkspace.activeTab)
+        let activeContent = try #require(activeTab.activeContent)
+        let pane = try #require(activeContent.content.pane)
+        #expect(updatedWorkspace.tabs.count == 3)
+        #expect(updatedWorkspace.activeTabID != agentTab.id)
+        #expect(pane.title == "KajiCode")
+        #expect(pane.injectedCommand?.contains("kajicode") == true)
     }
 
     @Test("parentAgentScope returns existing tab scope")

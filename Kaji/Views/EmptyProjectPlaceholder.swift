@@ -7,7 +7,7 @@ struct EmptyProjectPlaceholder: View {
     @State private var settings = CLILauncherSettings.shared
 
     private var enabledLaunchers: [CLILauncherConfiguration] {
-        settings.enabledLaunchers
+        settings.enabledLaunchers.filter { $0.definition.id != "kajicode" }
     }
 
     var body: some View {
@@ -37,12 +37,12 @@ struct EmptyProjectPlaceholder: View {
 
                 LauncherSquareButton(
                     iconName: "kaji",
-                    accessibilityLabel: "Kaji Agent",
-                    helpText: "Open Kaji Agent for this project",
+                    accessibilityLabel: "KajiCode",
+                    helpText: "Open KajiCode for this project",
                     iconSize: 18,
                     frameSize: 40
                 ) {
-                    appState.openParentAgentTab(projectID: project.id)
+                    runKajiCode()
                 }
             }
             Text("No tabs in \(project.name)")
@@ -63,8 +63,8 @@ struct EmptyProjectPlaceholder: View {
 
     private var descriptionText: String {
         enabledLaunchers.isEmpty
-            ? "Open a terminal or Kaji Agent to start working in this project."
-            : "Start with a terminal, Kaji Agent, or one of your enabled CLI tools."
+            ? "Open a terminal or KajiCode to start working in this project."
+            : "Start with a terminal, KajiCode, or one of your enabled CLI tools."
     }
 
     private func run(_ launcher: CLILauncherConfiguration) {
@@ -75,5 +75,11 @@ struct EmptyProjectPlaceholder: View {
             title: launcher.definition.displayName,
             command: command
         )
+    }
+
+    private func runKajiCode() {
+        let command = KajiCodeLaunchCommand.split()
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        appState.createCommandTab(projectID: project.id, title: "KajiCode", command: command)
     }
 }

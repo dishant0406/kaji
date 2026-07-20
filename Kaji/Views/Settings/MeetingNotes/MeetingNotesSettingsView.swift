@@ -165,7 +165,7 @@ struct MeetingNotesSettingsView: View {
 
     private var readinessSection: some View {
         SettingsSection("Readiness", showsDivider: false) {
-            SettingsRow("Kaji Agent runtime") {
+            SettingsRow("Notes runtime") {
                 MeetingNotesReadinessValue(
                     ready: kajiAgent.readiness.isReady,
                     title: kajiAgent.readiness.title,

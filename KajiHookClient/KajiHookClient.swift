@@ -16,6 +16,8 @@ struct KajiHookClient {
             ClaudeHookHandler.handle(event: args.first ?? "", input: stdin())
         case "codex-activity":
             CodexHookHandler.handle(args: args, input: stdin())
+        case "kajicode-hook":
+            KajiCodeHookHandler.handle(event: args.first ?? "", input: stdin())
         default:
             return
         }

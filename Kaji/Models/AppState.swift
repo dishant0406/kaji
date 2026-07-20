@@ -332,24 +332,21 @@ final class AppState {
     }
 
     func openParentAgentTab(projectID: UUID) {
-        if activateExistingParentAgentTab(projectID: projectID) != nil { return }
-        dispatch(.createParentAgentTab(projectID: projectID, areaID: nil))
+        openKajiCodeTab(projectID: projectID)
     }
 
     func openParentAgentTab(projectID: UUID, sessionPath: String) {
         openParentAgentTab(projectID: projectID, sessionPath: sessionPath, agentID: nil)
     }
 
-    func openParentAgentTab(projectID: UUID, sessionPath: String, agentID: UUID?) {
-        if let match = activateExistingParentAgentTab(projectID: projectID) {
-            postOpenKajiAgentSession(projectID: projectID, state: match.state, sessionPath: sessionPath)
-            return
-        }
-        dispatch(.createParentAgentSessionTab(projectID: projectID, sessionPath: sessionPath, agentID: agentID))
+    func openParentAgentTab(projectID: UUID, sessionPath _: String, agentID _: UUID?) {
+        openKajiCodeTab(projectID: projectID)
     }
 
     func createParentAgentSplit(projectID: UUID) {
-        dispatch(.createParentAgentSplit(projectID: projectID))
+        let command = KajiCodeLaunchCommand.split()
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        dispatch(.createCommandSplit(projectID: projectID, title: "KajiCode", command: command))
     }
 
     func openCodeGraphTab(projectID: UUID, worktreeID: UUID, worktreePath: String, graphURL: URL) {
@@ -372,6 +369,12 @@ final class AppState {
 
     func createCommandTab(projectID: UUID, title: String, command: String) {
         dispatch(.createCommandTab(projectID: projectID, areaID: nil, title: title, command: command))
+    }
+
+    private func openKajiCodeTab(projectID: UUID) {
+        let command = KajiCodeLaunchCommand.split()
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        dispatch(.createCommandTab(projectID: projectID, areaID: nil, title: "KajiCode", command: command))
     }
 
     func createStartupCommandTab(
