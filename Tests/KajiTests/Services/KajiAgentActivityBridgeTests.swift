@@ -24,7 +24,7 @@ struct KajiAgentActivityBridgeTests {
         #expect(AIActivityStore.shared.hasActiveAgent(projectID: fixture.project.id, worktreeID: fixture.worktree.id))
         let run = try #require(AgentRunStore.shared.run(providerID: AgentProviderCatalog.kajiAgentID, paneID: fixture.agentID))
         #expect(run.status == .running)
-        #expect(run.title == "Kaji Agent")
+        #expect(run.title == "Kaji Runtime")
         #expect(run.sessionID == "session-1")
     }
 
@@ -96,7 +96,7 @@ struct KajiAgentActivityBridgeTests {
             appState: fixture.appState,
             worktreeStore: fixture.worktreeStore
         )
-        #expect(event.source.rawValue == "Kaji Agent")
+        #expect(event.source.rawValue == "Kaji Runtime")
         #expect(event.kind == .attention)
     }
 

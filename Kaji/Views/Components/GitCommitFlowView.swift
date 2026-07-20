@@ -46,7 +46,7 @@ struct GitCommitFlowView: View {
             if state.isGenerating {
                 HStack(spacing: 8) {
                     KajiSpinner(size: 12)
-                    Text("Refining with Kaji Agent")
+                    Text("Refining commit message")
                         .kajiFont(size: 11)
                         .foregroundStyle(KajiTheme.fgDim)
                 }

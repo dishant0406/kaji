@@ -139,7 +139,7 @@ invalidate_swiftpm_termy_products
 echo "==> Building Rift"
 bash "$SCRIPT_DIR/build-rift.sh"
 
-echo "==> Building Kaji Agent runtime"
+echo "==> Building Kaji runtime"
 if command -v bun >/dev/null 2>&1; then
     bash "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
     bash "$SCRIPT_DIR/build-monaco-runtime.sh"

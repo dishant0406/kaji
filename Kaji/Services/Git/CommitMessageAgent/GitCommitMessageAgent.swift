@@ -10,7 +10,7 @@ enum GitCommitMessageAgentError: LocalizedError {
         case let .unavailable(message):
             message
         case .emptyResponse:
-            "Kaji Agent returned an empty commit message."
+            "The commit message runtime returned an empty commit message."
         case let .failed(message):
             message
         }
@@ -56,7 +56,7 @@ enum GitCommitMessageAgent {
     ) async throws -> GitCommitMessageAgentResult {
         guard isAvailable(settings: request.settings) else {
             throw GitCommitMessageAgentError.unavailable(
-                unavailableReason(settings: request.settings) ?? "Kaji Agent is unavailable."
+                unavailableReason(settings: request.settings) ?? "Commit message runtime is unavailable."
             )
         }
         return try await GitCommitMessageRuntimeClient.generate(request)

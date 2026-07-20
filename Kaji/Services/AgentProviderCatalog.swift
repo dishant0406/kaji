@@ -10,7 +10,7 @@ enum AgentProviderCatalog {
     static let kajiAgentID = "kaji"
 
     private static let nativeProviders = [
-        AgentProviderDescriptor(id: kajiAgentID, displayName: "Kaji Agent", iconName: "sparkles"),
+        AgentProviderDescriptor(id: kajiAgentID, displayName: "Kaji Runtime", iconName: "sparkles"),
     ]
 
     static var routeSources: [NotificationRouteSource] {

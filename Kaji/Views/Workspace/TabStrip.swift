@@ -446,7 +446,7 @@ private struct TabCell: View {
         case .filePreview: label += ", File Preview"
         case .diffViewer: label += ", Diff Viewer"
         case .problems: label += ", Problems"
-        case .parentAgent: label += ", Kaji Agent"
+        case .parentAgent: label += ", KajiCode"
         case .codeGraph: label += ", Code Graph"
         case .browser: label += ", Browser"
         }

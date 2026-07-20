@@ -57,4 +57,4 @@ rm -f "$DESTINATION"/pi_natives.darwin-*.node
 cp "$SOURCE" "$DESTINATION/$ADDON_NAME"
 chmod 755 "$DESTINATION/$ADDON_NAME"
 
-echo "Staged Kaji Agent native addon: $DESTINATION/$ADDON_NAME"
+echo "Staged Kaji runtime native addon: $DESTINATION/$ADDON_NAME"

@@ -986,22 +986,6 @@ struct MainWindow: View {
     private var globalModalOverlay: some View {
         if let route = modalCoordinator.route {
             switch route {
-            case let .subagent(agent):
-                KajiModalOverlay {
-                    modalCoordinator.dismiss()
-                } content: {
-                    KajiAgentSubagentDetailView(agent: agent) {
-                        modalCoordinator.dismiss()
-                    }
-                }
-            case let .subagents(agents):
-                KajiModalOverlay {
-                    modalCoordinator.dismiss()
-                } content: {
-                    KajiAgentSubagentListDetailView(agents: agents) {
-                        modalCoordinator.dismiss()
-                    }
-                }
             case .createPullRequest:
                 if let state = modalCoordinator.createPullRequestState {
                     CreatePRModalPresenter(state: state) {
@@ -1297,14 +1281,9 @@ struct MainWindow: View {
     }
 
     private func handleShortcutAction(_ action: ShortcutAction) -> Bool {
-        let handled = shortcutDispatcher.perform(action, activeProject: activeProject) { project in
+        shortcutDispatcher.perform(action, activeProject: activeProject) { project in
             openVCS(for: project)
         }
-        guard handled else { return false }
-        if action.exitsParentAgentHome {
-            activateWorkspace()
-        }
-        return true
     }
 
     private func performCommand(_ command: AppCommand) {
@@ -1314,9 +1293,7 @@ struct MainWindow: View {
         ) { project in
             openVCS(for: project)
         }
-        if dispatcher.perform(command), command.id.exitsParentAgentHome {
-            activateWorkspace()
-        }
+        _ = dispatcher.perform(command)
     }
 
     private var activeProjectHasSplitWorkspace: Bool {
@@ -2011,126 +1988,6 @@ private struct WindowTitleUpdater: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let window = nsView.window, window.title != title else { return }
         window.title = title
-    }
-}
-
-private extension ShortcutAction {
-    var exitsParentAgentHome: Bool {
-        switch self {
-        case .ask,
-             .commandPalette,
-             .agentCommandCenter,
-             .toggleSidebar,
-             .toggleThemePicker,
-             .toggleAIUsage,
-             .toggleBrowserPanel,
-             .browserBack,
-             .browserForward,
-             .browserReload,
-             .browserFocusAddressBar,
-             .browserNewPage,
-             .browserClosePage,
-             .browserNextPage,
-             .browserPreviousPage,
-             .browserReadPage,
-             .toggleAgentInstructions,
-             .toggleMCPControlPanel,
-             .closeActiveSidePanel,
-             .toggleNotificationPanel,
-             .toggleAgentMissionControl,
-             .toggleFooterTerminal,
-             .navigateBack,
-             .navigateForward,
-             .openProject,
-             .newProject,
-             .reloadConfig:
-            false
-        case .quickOpen,
-             .switchWorktree,
-             .openVCSTab,
-             .toggleFileTree,
-             .toggleGlobalSearch,
-             .toggleProblemsPanel,
-             .newTab,
-             .closeTab,
-             .renameTab,
-             .pinUnpinTab,
-             .splitRight,
-             .splitDown,
-             .closePane,
-             .focusNextPane,
-             .focusPreviousPane,
-             .focusLastPane,
-             .focusPane1,
-             .focusPane2,
-             .focusPane3,
-             .focusPane4,
-             .focusPane5,
-             .focusPane6,
-             .focusPane7,
-             .focusPane8,
-             .focusPane9,
-             .focusPaneLeft,
-             .focusPaneRight,
-             .focusPaneUp,
-             .focusPaneDown,
-             .increasePaneWidth,
-             .decreasePaneWidth,
-             .increasePaneHeight,
-             .decreasePaneHeight,
-             .balancePanes,
-             .swapPaneLeft,
-             .swapPaneRight,
-             .swapPaneUp,
-             .swapPaneDown,
-             .movePaneLeft,
-             .movePaneRight,
-             .movePaneUp,
-             .movePaneDown,
-             .openKajiAgentSplit,
-             .openFooterLauncher1,
-             .openFooterLauncher2,
-             .openFooterLauncher3,
-             .openFooterLauncher4,
-             .openFooterLauncher5,
-             .vcsRefresh,
-             .vcsCommit,
-             .vcsPull,
-             .vcsPush,
-             .vcsCreatePR,
-             .fileTreeNewFile,
-             .fileTreeNewFolder,
-             .fileTreeToggleChangedOnly,
-             .nextTab,
-             .previousTab,
-             .selectTab1,
-             .selectTab2,
-             .selectTab3,
-             .selectTab4,
-             .selectTab5,
-             .selectTab6,
-             .selectTab7,
-             .selectTab8,
-             .selectTab9,
-             .nextProject,
-             .previousProject,
-             .selectProject1,
-             .selectProject2,
-             .selectProject3,
-             .selectProject4,
-             .selectProject5,
-             .selectProject6,
-             .selectProject7,
-             .selectProject8,
-             .selectProject9,
-             .findInTerminal,
-             .replaceInEditor,
-             .goToSymbol,
-             .goToLine,
-             .inlineEdit,
-             .saveFile:
-            true
-        }
     }
 }
 

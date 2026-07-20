@@ -24,7 +24,7 @@ enum GitCommitMessageRuntimeClient {
         return try await withTaskCancellationHandler {
             let timeout = Task { @MainActor in
                 try await Task.sleep(for: .seconds(120))
-                box.fail(GitCommitMessageAgentError.failed("Kaji Agent timed out while generating the commit message."))
+                box.fail(GitCommitMessageAgentError.failed("Commit message runtime timed out while generating the message."))
             }
             defer { timeout.cancel() }
             return try await box.run {

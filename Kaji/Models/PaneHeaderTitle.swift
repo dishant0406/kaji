@@ -22,7 +22,7 @@ enum PaneHeaderTitle {
         case .problems:
             return "Problems"
         case .parentAgent:
-            return "Kaji"
+            return "KajiCode"
         case .codeGraph:
             return "Code Graph"
         case let .browser(state):

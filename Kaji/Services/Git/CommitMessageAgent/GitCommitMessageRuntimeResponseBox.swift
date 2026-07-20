@@ -22,7 +22,7 @@ final class GitCommitMessageRuntimeResponseBox {
     func handle(_ frame: KajiAgentRPCFrame) {
         guard !completed, frame.id == commandID, frame.type == "response" else { return }
         guard frame.success == true else {
-            fail(GitCommitMessageAgentError.failed(frame.error ?? "Kaji Agent failed."))
+            fail(GitCommitMessageAgentError.failed(frame.error ?? "Commit message runtime failed."))
             return
         }
         guard let message = frame.data?.objectValue?["message"]?.stringValue else {

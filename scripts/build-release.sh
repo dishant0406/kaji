@@ -91,7 +91,7 @@ if [[ "${KAJI_SKIP_IGNORE_CATALOG_UPDATE:-0}" != "1" ]]; then
     "$SCRIPT_DIR/update-ignore-catalog.py"
 fi
 if $SKIP_NATIVE_DEPS; then
-    [[ -f "$PROJECT_ROOT/Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs" ]] || { echo "Error: Kaji Agent runtime is missing; run scripts/build-kaji-agent-runtime.sh" >&2; exit 1; }
+    [[ -f "$PROJECT_ROOT/Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs" ]] || { echo "Error: Kaji runtime is missing; run scripts/build-kaji-agent-runtime.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/kaji-agent.mjs" ]] || { echo "Error: Parent agent runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/oauth-login.mjs" ]] || { echo "Error: Parent agent OAuth runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/Zlob/zlob" ]] || { echo "Error: Zlob runtime is missing; run scripts/build-zlob.sh" >&2; exit 1; }
@@ -168,7 +168,7 @@ if [[ -n "$SPARKLE_PUBLIC_KEY" ]]; then
     fi
 fi
 sign_sparkle
-echo "==> Signing Kaji Agent native addon"
+echo "==> Signing Kaji runtime native addon"
 for addon in "$APP_BUNDLE"/Contents/Resources/native/*.node; do
     [[ -f "$addon" ]] || continue
     sign_code "$addon"

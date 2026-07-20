@@ -242,9 +242,9 @@ struct AgentRunMissionControlSnapshotBuilderTests {
             worktrees: [project.id: [worktree]]
         ).first
 
-        #expect(item?.providerName == "Kaji Agent")
+        #expect(item?.providerName == "Kaji Runtime")
         #expect(item?.providerIconName == "sparkles")
-        #expect(item?.title == "Kaji Agent session")
+        #expect(item?.title == "Kaji Runtime session")
     }
 
     private func run(

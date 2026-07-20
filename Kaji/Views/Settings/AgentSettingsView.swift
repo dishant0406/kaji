@@ -63,7 +63,7 @@ struct AgentSettingsView: View {
 
                 if let question = kajiAgent.loginQuestion ?? kajiAgent.settingsQuestion {
                     SettingsRow("Input") {
-                        KajiAgentQuestionPrompt(question: question) { answer in
+                        AgentSettingsQuestionPrompt(question: question) { answer in
                             kajiAgent.answerQuestion(question, value: answer)
                         } onCancel: {
                             kajiAgent.cancelQuestion(question)
@@ -74,8 +74,12 @@ struct AgentSettingsView: View {
 
                 if kajiAgent.loginCode != nil || kajiAgent.loginInstructions != nil || kajiAgent.loginURL != nil {
                     SettingsRow("Device code") {
-                        KajiAgentLoginInstructionsView(store: kajiAgent)
-                            .frame(width: 320, alignment: .leading)
+                        AgentSettingsLoginInstructionsView(
+                            code: kajiAgent.loginCode,
+                            instructions: kajiAgent.loginInstructions,
+                            url: kajiAgent.loginURL
+                        )
+                        .frame(width: 320, alignment: .leading)
                     }
                 }
 

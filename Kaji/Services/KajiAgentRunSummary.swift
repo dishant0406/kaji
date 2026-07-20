@@ -8,7 +8,7 @@ enum KajiAgentRunSummary {
             guard !text.isEmpty else { continue }
             return clipped(text)
         }
-        return "Kaji Agent finished"
+        return "Kaji runtime finished"
     }
 
     static func clipped(_ text: String, limit: Int = 500) -> String {

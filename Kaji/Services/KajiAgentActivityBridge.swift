@@ -74,7 +74,7 @@ final class KajiAgentActivityBridge {
             context: context,
             paneID: scope.agentID,
             source: .aiProvider(AgentProviderCatalog.kajiAgentID),
-            title: "Kaji Agent",
+            title: "Kaji Runtime",
             body: body,
             appState: appState
         )
@@ -103,7 +103,7 @@ final class KajiAgentActivityBridge {
         guard let appState else {
             NotificationStore.shared.addDetached(
                 source: .aiProvider(AgentProviderCatalog.kajiAgentID),
-                title: "Kaji Agent failed",
+                title: "Kaji Runtime failed",
                 body: message
             )
             return
@@ -111,7 +111,7 @@ final class KajiAgentActivityBridge {
         guard let context = KajiAgentActivityContextResolver.context(scope: scope, appState: appState, worktreeStore: worktreeStore) else {
             NotificationStore.shared.addDetached(
                 source: .aiProvider(AgentProviderCatalog.kajiAgentID),
-                title: "Kaji Agent failed",
+                title: "Kaji Runtime failed",
                 body: message
             )
             return
@@ -120,7 +120,7 @@ final class KajiAgentActivityBridge {
             context: context,
             paneID: scope.agentID,
             source: .aiProvider(AgentProviderCatalog.kajiAgentID),
-            title: "Kaji Agent failed",
+            title: "Kaji Runtime failed",
             body: message,
             appState: appState
         )
@@ -165,7 +165,7 @@ final class KajiAgentActivityBridge {
             paneID: scope.agentID,
             sessionID: sessionID,
             transcriptPath: transcriptPath,
-            title: "Kaji Agent",
+            title: "Kaji Runtime",
             cwd: scope.projectPath,
             source: "kaji-agent",
             updatedAt: Date()
@@ -175,7 +175,7 @@ final class KajiAgentActivityBridge {
     }
 
     private func attentionTitle(kind: String) -> String {
-        kind == "approval" ? "Kaji Agent needs approval" : "Kaji Agent needs input"
+        kind == "approval" ? "Kaji Runtime needs approval" : "Kaji Runtime needs input"
     }
 
     private func completeDetached(scope: KajiAgentScope, body: String) {
@@ -183,7 +183,7 @@ final class KajiAgentActivityBridge {
         AgentRunStore.shared.complete(providerID: AgentProviderCatalog.kajiAgentID, paneID: scope.agentID, message: body)
         NotificationStore.shared.addDetached(
             source: .aiProvider(AgentProviderCatalog.kajiAgentID),
-            title: "Kaji Agent",
+            title: "Kaji Runtime",
             body: body
         )
     }

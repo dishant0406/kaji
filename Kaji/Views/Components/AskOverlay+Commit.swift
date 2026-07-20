@@ -86,7 +86,7 @@ extension AskOverlay {
             result.insert(AskPaletteEntry(
                 action: .gitCommitMessageMode(.generate),
                 title: GitCommitMessageMode.generate.title,
-                detail: "Show a native draft immediately and refine with Kaji Agent",
+                detail: "Show a native draft immediately and refine the message",
                 annotation: "Enter"
             ), at: 0)
         }

@@ -4,15 +4,15 @@ extension TerminalTab.Kind {
     var keepsMountedWhenInactive: Bool {
         switch self {
         case .terminal,
-             .browser,
-             .parentAgent:
+             .browser:
             true
         case .vcs,
              .editor,
              .filePreview,
              .diffViewer,
              .problems,
-             .codeGraph:
+             .codeGraph,
+             .parentAgent:
             false
         }
     }

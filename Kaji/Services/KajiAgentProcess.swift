@@ -23,7 +23,7 @@ final class KajiAgentProcess {
         do {
             try startIfNeeded()
             guard process?.isRunning == true else {
-                onError?("Kaji Agent runtime is not running.")
+                onError?("Kaji runtime is not running.")
                 return
             }
             KajiAgentEventLog.recordFrame(frame, direction: "out")
@@ -153,6 +153,6 @@ enum KajiAgentProcessError: LocalizedError {
     case launchNotResolved
 
     var errorDescription: String? {
-        "Kaji Agent runtime launch is not ready yet."
+        "Kaji runtime launch is not ready yet."
     }
 }

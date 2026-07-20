@@ -8,7 +8,7 @@ struct TerminalTabKindMountPolicyTests {
     func persistentKinds() {
         #expect(TerminalTab.Kind.terminal.keepsMountedWhenInactive)
         #expect(TerminalTab.Kind.browser.keepsMountedWhenInactive)
-        #expect(TerminalTab.Kind.parentAgent.keepsMountedWhenInactive)
+        #expect(!TerminalTab.Kind.parentAgent.keepsMountedWhenInactive)
         #expect(!TerminalTab.Kind.editor.keepsMountedWhenInactive)
         #expect(!TerminalTab.Kind.filePreview.keepsMountedWhenInactive)
         #expect(!TerminalTab.Kind.diffViewer.keepsMountedWhenInactive)

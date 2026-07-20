@@ -9,7 +9,7 @@ final class KajiAgentStore {
     private let settings = KajiAgentSettingsStore.shared
     var isReady = false
     var isRunning = false
-    var statusMessage = "Starting Kaji Agent"
+    var statusMessage = "Starting Kaji runtime"
     var readiness: KajiAgentReadiness = .checking
     var sessionID: String?
     var modelLabel = "Model not selected"
@@ -137,7 +137,7 @@ final class KajiAgentStore {
         send(KajiAgentRPCFrame(type: "abort"))
         isRunning = false
         if wasRunning {
-            activityBridge.abort(scope: scope, message: "Kaji Agent stopped")
+            activityBridge.abort(scope: scope, message: "Kaji runtime stopped")
         }
     }
 
@@ -458,7 +458,7 @@ final class KajiAgentStore {
             force: force
         ) { [weak self] in
             self?.readiness = .checking
-            self?.statusMessage = "Checking Kaji Agent runtime"
+            self?.statusMessage = "Checking Kaji runtime"
         } onResolution: { [weak self] resolution in
             self?.applyRuntimeResolution(resolution)
         }
@@ -469,7 +469,7 @@ final class KajiAgentStore {
         switch resolution {
         case let .ready(launch):
             process.launch = launch
-            statusMessage = isReady ? "Ready" : "Starting Kaji Agent"
+            statusMessage = isReady ? "Ready" : "Starting Kaji runtime"
             drainPendingSends()
         case .missingRuntime,
              .missingBun,
@@ -556,7 +556,7 @@ final class KajiAgentStore {
             let wasAborting = awaitingAbortStateReconciliation
             isRunning = false
             if wasAborting {
-                activityBridge.abort(scope: scope, message: "Kaji Agent stopped")
+                activityBridge.abort(scope: scope, message: "Kaji runtime stopped")
             } else {
                 activityBridge.complete(
                     scope: scope,

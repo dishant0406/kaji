@@ -37,7 +37,7 @@ enum KajiMeetingNotesAgentError: LocalizedError, Equatable {
         case .timedOut:
             "Meeting notes synthesis timed out."
         case .readinessTimedOut:
-            "The Kaji Agent runtime did not respond to notes model validation."
+            "The Kaji runtime did not respond to notes model validation."
         case .failed:
             "The notes provider could not complete synthesis."
         case .invalidResponse:

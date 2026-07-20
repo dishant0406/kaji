@@ -43,7 +43,7 @@ struct NotificationEventNormalizerTests {
             tabID: UUID(),
             worktreePath: "/Users/dishants/projects/muxy",
             source: .aiProvider(AgentProviderCatalog.kajiAgentID),
-            title: "Kaji Agent",
+            title: "Kaji Runtime",
             body: "Finished"
         )
 
@@ -53,9 +53,9 @@ struct NotificationEventNormalizerTests {
             worktreeStore: nil
         )
 
-        #expect(event.source.rawValue == "Kaji Agent")
+        #expect(event.source.rawValue == "Kaji Runtime")
         #expect(event.kind == .completed)
-        #expect(event.title == "Kaji Agent · muxy")
+        #expect(event.title == "Kaji Runtime · muxy")
     }
 
     @Test

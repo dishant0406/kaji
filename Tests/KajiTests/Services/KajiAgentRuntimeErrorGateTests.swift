@@ -33,7 +33,7 @@ struct KajiAgentRuntimeErrorGateTests {
         var gate = KajiAgentRuntimeErrorGate()
 
         for _ in 0 ..< 10 {
-            let visible = gate.shouldShow("Kaji Agent runtime is missing or Bun is unavailable.")
+            let visible = gate.shouldShow("Kaji runtime is missing or Bun is unavailable.")
             #expect(visible)
         }
     }

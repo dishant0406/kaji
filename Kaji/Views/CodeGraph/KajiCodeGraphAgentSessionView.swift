@@ -53,15 +53,10 @@ struct KajiCodeGraphAgentSessionView: View {
     private var content: some View {
         VStack(spacing: 12) {
             if let pendingQuestion = session.store.pendingQuestion {
-                ParentAgentQuestionPrompt(pendingQuestion: pendingQuestion) { option in
-                    session.controller.answerPendingQuestion(option.value, displayText: option.title)
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
+                questionPrompt(pendingQuestion)
             }
             if let task = session.store.activeTask {
-                ParentAgentTimelineView(task: task, showsUserMessages: false)
-                    .padding(.horizontal, 14)
+                timeline(task)
             } else {
                 Text("Waiting for graph-agent activity")
                     .kajiFont(size: 12)
@@ -70,6 +65,84 @@ struct KajiCodeGraphAgentSessionView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func questionPrompt(_ pendingQuestion: ParentAgentPendingQuestion) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(pendingQuestion.question)
+                .kajiFont(size: 12)
+                .foregroundStyle(KajiTheme.fg)
+                .textSelection(.enabled)
+            if !pendingQuestion.options.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(pendingQuestion.options) { option in
+                        Button(option.title) {
+                            session.controller.answerPendingQuestion(option.value, displayText: option.title)
+                        }
+                        .buttonStyle(KajiButtonStyle(.secondary, size: .small))
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(KajiTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 14)
+        .padding(.top, 14)
+    }
+
+    private func timeline(_ task: ParentAgentTask) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                ForEach(task.timeline.filter { $0.kind != .user }) { item in
+                    timelineItem(item)
+                }
+            }
+            .padding(14)
+        }
+    }
+
+    private func timelineItem(_ item: ParentAgentTimelineItem) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            KajiIcon(systemName: iconName(for: item.kind), size: 12)
+                .foregroundStyle(color(for: item.kind))
+                .frame(width: 16, height: 18)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .kajiFont(size: 12, weight: .semibold)
+                    .foregroundStyle(KajiTheme.fg)
+                if !item.detail.isEmpty {
+                    Text(item.detail)
+                        .kajiFont(size: 11)
+                        .foregroundStyle(KajiTheme.fgMuted)
+                        .textSelection(.enabled)
+                        .lineLimit(8)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func iconName(for kind: ParentAgentTimelineKind) -> String {
+        switch kind {
+        case .assistant,
+             .final: "sparkles"
+        case .thinking: "brain"
+        case .childRun: "terminal"
+        case .event: "circle"
+        case .tool: "wrench"
+        case .error: "exclamationmark.triangle"
+        case .user: "person"
+        }
+    }
+
+    private func color(for kind: ParentAgentTimelineKind) -> Color {
+        switch kind {
+        case .error: KajiTheme.diffRemoveFg
+        case .final: KajiTheme.accent
+        default: KajiTheme.fgDim
+        }
     }
 
     private var replyBox: some View {

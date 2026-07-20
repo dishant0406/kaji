@@ -38,8 +38,8 @@ require_native_addon() {
     esac
 
     local path="$APP_BUNDLE/Contents/Resources/native/$addon"
-    [[ -f "$path" ]] || fail "Kaji Agent native addon missing at $path"
-    codesign --verify "$path" >/dev/null 2>&1 || fail "Kaji Agent native addon is not signed: $path"
+    [[ -f "$path" ]] || fail "Kaji runtime native addon missing at $path"
+    codesign --verify "$path" >/dev/null 2>&1 || fail "Kaji runtime native addon is not signed: $path"
 }
 
 [[ -n "$APP_BUNDLE" ]] || fail "app bundle path is required"
@@ -92,9 +92,9 @@ for candidate in \
         break
     fi
 done
-[[ -n "$RUNTIME_FILE" ]] || fail "Kaji Agent runtime missing from resource bundle"
+[[ -n "$RUNTIME_FILE" ]] || fail "Kaji runtime missing from resource bundle"
 RUNTIME_SIZE=$(stat -f%z "$RUNTIME_FILE")
-[[ "$RUNTIME_SIZE" -gt 1000000 ]] || fail "Kaji Agent runtime is unexpectedly small"
+[[ "$RUNTIME_SIZE" -gt 1000000 ]] || fail "Kaji runtime is unexpectedly small"
 
 for arch in $(lipo -archs "$EXECUTABLE"); do
     require_native_addon "$arch"
