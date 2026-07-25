@@ -52,13 +52,18 @@ actor FFFSearchIndexStore {
 
     func remove(projectPaths paths: [String]) async {
         let uniquePaths = Set(paths.filter { !$0.isEmpty })
+        var activePaths: [String] = []
         for path in uniquePaths {
-            creations[path]?.cancel()
-            creations.removeValue(forKey: path)
-            projectPaths.remove(path)
+            let creation = creations.removeValue(forKey: path)
+            creation?.cancel()
+            let wasActive = projectPaths.remove(path) != nil
             accessOrder.removeAll { $0 == path }
+            if creation != nil || wasActive {
+                activePaths.append(path)
+            }
         }
-        await client.remove(projectPaths: Array(uniquePaths))
+        guard !activePaths.isEmpty else { return }
+        await client.remove(projectPaths: activePaths)
     }
 
     private func forget(_ projectPath: String) {

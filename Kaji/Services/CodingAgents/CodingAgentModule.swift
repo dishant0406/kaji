@@ -87,9 +87,8 @@ extension CodingAgentModule {
         excluding directory: URL?
     ) -> URL? {
         for executableName in definition.executableNames {
-            let path: String?
-            if let directory {
-                path = AIProviderExecutableLocator.preferredRealPath(
+            let path: String? = if let directory {
+                AIProviderExecutableLocator.preferredRealPath(
                     for: executableName,
                     env: env,
                     homeDirectory: homeDirectory,
@@ -97,7 +96,7 @@ extension CodingAgentModule {
                     excluding: directory
                 )
             } else {
-                path = AIProviderExecutableLocator.resolvePath(
+                AIProviderExecutableLocator.resolvePath(
                     for: executableName,
                     env: env,
                     homeDirectory: homeDirectory,

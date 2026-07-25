@@ -102,7 +102,8 @@ enum KajiCodeInstaller {
             platform: KajiCodePlatform.current,
             sha256: asset.sha256,
             env: env
-        ) else { throw KajiCodeInstallError.unsafeArchive }
+        )
+        else { throw KajiCodeInstallError.unsafeArchive }
         defer {
             try? fileManager.removeItem(at: archiveURL)
             try? fileManager.removeItem(at: stagingURL)

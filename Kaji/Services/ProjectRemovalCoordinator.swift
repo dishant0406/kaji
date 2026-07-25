@@ -218,12 +218,14 @@ final class ProjectRemovalService {
         CodingAgentSessionMetadataStore.shared.remove(paneIDs: metadataPaneIDs)
         NotificationStore.shared.remove(projectID: project.id)
 
+        let projectAlreadyRemoved = !projectStore.projects.contains { $0.id == project.id }
+        let worktreesAlreadyRemoved = worktreeStore.list(for: project.id).isEmpty
         let replacement = deterministicReplacement(removing: project.id, projectStore: projectStore, worktreeStore: worktreeStore)
         if source != .alreadyEmptied {
             appState.removeProject(project.id)
         }
-        let projectPersisted = projectStore.remove(id: project.id)
-        let worktreesPersisted = worktreeStore.removeProject(project.id)
+        let projectPersisted = projectAlreadyRemoved || projectStore.remove(id: project.id)
+        let worktreesPersisted = worktreesAlreadyRemoved || worktreeStore.removeProject(project.id)
         selectReplacementIfNeeded(replacement, appState: appState)
 
         let diskCleaned = if tombstone.cleanupOnDisk {
