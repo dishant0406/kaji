@@ -1,11 +1,12 @@
 import Foundation
 
 enum KajiCodeSmokeTester {
-    static func smoke(binaryURL: URL, expectedVersion: String?) async throws -> String {
+    static func smoke(binaryURL: URL, expectedVersion: String?, environment: [String: String]? = nil) async throws -> String {
         let result = try await GitProcessRunner.offMainThrowing {
             try AIGatewayProcessRunner.run(
                 executableURL: binaryURL,
                 arguments: ["--version"],
+                environment: environment,
                 timeout: 15
             )
         }

@@ -100,10 +100,15 @@ struct KajiCodeSetupView: View {
     }
 
     private func uninstall() {
-        let result = KajiCodeSetupService.uninstall()
-        state = result.state
-        message = result.message
-        runtimeResolution = nil
+        isWorking = true
+        message = "Uninstalling..."
+        Task { @MainActor in
+            let result = await KajiCodeSetupService.uninstall()
+            state = result.state
+            message = result.message
+            runtimeResolution = nil
+            isWorking = false
+        }
     }
 
     private func scheduleRuntimeRefresh() {

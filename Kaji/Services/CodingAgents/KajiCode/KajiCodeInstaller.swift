@@ -119,7 +119,14 @@ enum KajiCodeInstaller {
             destination: stagingURL,
             fileManager: fileManager
         )
-        let smoke = try await KajiCodeSmokeTester.smoke(binaryURL: stagedBinary, expectedVersion: entry.version)
+        let executionEnvironment = await GitProcessRunner.offMain {
+            ShellExecutionEnvironmentResolver.resolve(env: env, homeDirectory: env["HOME"] ?? NSHomeDirectory())
+        }
+        let smoke = try await KajiCodeSmokeTester.smoke(
+            binaryURL: stagedBinary,
+            expectedVersion: entry.version,
+            environment: executionEnvironment
+        )
         try activate(stagingURL: stagingURL, installURL: installURL, fileManager: fileManager)
         let manifest = KajiCodeInstallManifest(
             activeVersion: entry.version,

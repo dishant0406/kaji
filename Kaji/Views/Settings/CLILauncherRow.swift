@@ -8,6 +8,7 @@ struct CLILauncherRow: View {
     @Binding var command: String
     @State private var installState: CLILauncherInstallState
     @State private var installing = false
+    @State private var refreshing = false
     @State private var installMessage: String?
     @State private var refreshed = false
     @State private var refreshTask: Task<Void, Never>?
@@ -46,14 +47,21 @@ struct CLILauncherRow: View {
 
                 if installed, isEnabled, let provider {
                     Button {
-                        AIProviderRegistry.shared.forceInstall(provider)
-                        withAnimation { refreshed = true }
                         Task {
+                            refreshing = true
+                            await AIProviderRegistry.shared.forceInstall(provider)
+                            refreshing = false
+                            withAnimation { refreshed = true }
                             try? await Task.sleep(for: .seconds(2))
                             withAnimation { refreshed = false }
                         }
                     } label: {
-                        if refreshed {
+                        if refreshing {
+                            HStack(spacing: 6) {
+                                KajiSpinner(size: 10, lineWidth: 1.4)
+                                Text("Refreshing")
+                            }
+                        } else if refreshed {
                             Label {
                                 Text("Done")
                             } icon: {
@@ -64,7 +72,7 @@ struct CLILauncherRow: View {
                         }
                     }
                     .buttonStyle(KajiButtonStyle(.secondary, size: .small))
-                    .disabled(refreshed)
+                    .disabled(refreshed || refreshing)
                     .kajiChangeFeedback(KajiMotion.successFeedback, value: refreshed, isEnabled: refreshed)
                 }
 

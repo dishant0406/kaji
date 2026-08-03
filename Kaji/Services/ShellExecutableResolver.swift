@@ -69,7 +69,7 @@ enum ShellExecutableResolver {
         return executablePaths(from: text, fileManager: fileManager)
     }
 
-    private static func shellURL(env: [String: String], fileManager: FileManager) -> URL? {
+    static func shellURL(env: [String: String], fileManager: FileManager) -> URL? {
         if let value = env["SHELL"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !value.isEmpty,
            fileManager.isExecutableFile(atPath: value)
@@ -84,7 +84,7 @@ enum ShellExecutableResolver {
         return fileManager.isExecutableFile(atPath: path) ? URL(fileURLWithPath: path) : nil
     }
 
-    private static func shellEnvironment(env: [String: String], homeDirectory: String) -> [String: String] {
+    static func shellEnvironment(env: [String: String], homeDirectory: String) -> [String: String] {
         ProcessInfo.processInfo.environment.merging(env) { _, new in new }.merging(["HOME": homeDirectory]) { _, new in new }
     }
 

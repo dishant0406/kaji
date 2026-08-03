@@ -19,15 +19,24 @@ enum KajiCodeMCPInstallService {
         guard let resolution = KajiCodeRuntimeLocator.resolve(env: env, homeDirectory: homeDirectory, fileManager: fileManager) else {
             return supportedAgentIDs.map { .init(agentID: $0, installed: false, detail: "KajiCode binary not found") }
         }
-        return installAll(binaryURL: resolution.binaryURL, homeDirectory: homeDirectory, projectPath: projectPath)
+        let environment = ShellExecutionEnvironmentResolver.resolve(env: env, homeDirectory: homeDirectory, fileManager: fileManager)
+        return installAll(
+            binaryURL: resolution.binaryURL,
+            homeDirectory: homeDirectory,
+            projectPath: projectPath,
+            environment: ShellExecutionEnvironmentResolver.mcpEnvironment(from: environment)
+        )
     }
 
     static func installAll(
         binaryURL: URL,
         homeDirectory: String = NSHomeDirectory(),
-        projectPath: String? = nil
+        projectPath: String? = nil,
+        environment: [String: String] = [:]
     ) -> [KajiCodeMCPInstallOutcome] {
-        supportedAgentIDs.map { install(agentID: $0, command: binaryURL, homeDirectory: homeDirectory, projectPath: projectPath) }
+        supportedAgentIDs.map {
+            install(agentID: $0, command: binaryURL, homeDirectory: homeDirectory, projectPath: projectPath, environment: environment)
+        }
     }
 
     static func uninstallAll(homeDirectory: String = NSHomeDirectory(), projectPath: String? = nil) -> [KajiCodeMCPInstallOutcome] {
@@ -53,14 +62,15 @@ enum KajiCodeMCPInstallService {
         agentID: String,
         command: URL,
         homeDirectory: String,
-        projectPath: String?
+        projectPath: String?,
+        environment: [String: String]
     ) -> KajiCodeMCPInstallOutcome {
         guard let location = userLocations(agentID: agentID, homeDirectory: homeDirectory, projectPath: projectPath).first else {
             return .init(agentID: agentID, installed: false, detail: "No writable MCP config location")
         }
         do {
             var servers = try MCPServerConfigProviderDefault.read(location: location).filter { $0.name != serverName }
-            servers.append(server(command: command.path))
+            servers.append(server(command: command.path, environment: environment))
             try MCPServerConfigProviderDefault.write(servers, location: location)
             return .init(agentID: agentID, installed: true, detail: location.url.path)
         } catch {
@@ -87,12 +97,13 @@ enum KajiCodeMCPInstallService {
         return provider.mcpServerLocations(projectPath: projectPath, homeDirectory: homeDirectory).filter { $0.scope == .user }
     }
 
-    private static func server(command: String) -> MCPServer {
+    private static func server(command: String, environment: [String: String]) -> MCPServer {
         var server = MCPServer.empty()
         server.name = serverName
         server.transport = .stdio
         server.command = command
         server.arguments = ["serve", "--mcp"]
+        server.environment = environment
         server.enabled = true
         return server
     }

@@ -59,9 +59,12 @@ struct ShellExecutableFixture {
           IFS="$old_ifs"
         }
         if [ "$1" = "-lc" ]; then
+          if [ "${KAJI_TEST_LOGIN_ENV_FAIL:-}" = "1" ]; then
+            exit 1
+          fi
           eval "$2"
         elif [ "$1" = "-i" ] && [ "$2" = "-c" ]; then
-          PATH="${KAJI_TEST_INTERACTIVE_PATH:-$PATH}"
+          export PATH="${KAJI_TEST_INTERACTIVE_PATH:-$PATH}"
           eval "$3"
         else
           eval "$1"

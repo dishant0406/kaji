@@ -26,6 +26,7 @@ struct CLILauncherSettingsTests {
         first.setEnabled(true, for: "codex")
         first.setCommand("codex --approval-mode full-auto", for: "codex")
         first.setEnabled(true, for: "claude")
+        first.flushPendingSaves()
 
         let second = CLILauncherSettings(fileURL: tempURL, syncProviderState: false)
         #expect(second.isEnabled(id: "codex"))

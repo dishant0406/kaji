@@ -3,7 +3,7 @@ import os
 
 private let logger = Logger(subsystem: "app.kaji", category: "AIProviderRegistry")
 
-protocol AIProviderIntegration {
+protocol AIProviderIntegration: Sendable {
     var id: String { get }
     var displayName: String { get }
     var socketTypeKey: String { get }
@@ -50,48 +50,24 @@ final class AIProviderRegistry {
     private init() {}
 
     func installAll() {
-        guard let hookClientPath = KajiNotificationHooks.hookClientPath else {
-            logger.info("Hook client not found, skipping AI provider installs")
-            return
-        }
-
-        for provider in providers {
-            guard provider.isEnabled else {
-                try? provider.uninstall()
-                continue
-            }
-            guard provider.isToolInstalled() else { continue }
-            do {
-                try provider.install(hookClientPath: hookClientPath)
-                logger.info("Installed \(provider.displayName) integration")
-            } catch {
-                logger.error("Failed to install \(provider.displayName): \(error.localizedDescription)")
-            }
+        let providers = providers
+        Task.detached(priority: .utility) {
+            await AIProviderIntegrationSyncService.installAll(providers)
         }
     }
 
-    func forceInstall(_ provider: AIProviderIntegration) {
-        guard let hookClientPath = KajiNotificationHooks.hookClientPath else {
-            logger.info("Hook client not found, skipping force install")
-            return
-        }
+    func installAllNow() async {
+        await AIProviderIntegrationSyncService.installAll(providers)
+    }
 
-        do {
-            try provider.uninstall()
-            try provider.install(hookClientPath: hookClientPath)
-            logger.info("Force-installed \(provider.displayName) integration")
-        } catch {
-            logger.error("Failed to force-install \(provider.displayName): \(error.localizedDescription)")
-        }
+    func forceInstall(_ provider: AIProviderIntegration) async {
+        await AIProviderIntegrationSyncService.forceInstall(provider)
     }
 
     func uninstallAll() {
-        for provider in providers {
-            do {
-                try provider.uninstall()
-            } catch {
-                logger.error("Failed to uninstall \(provider.displayName): \(error.localizedDescription)")
-            }
+        let providers = providers
+        Task.detached(priority: .utility) {
+            await AIProviderIntegrationSyncService.uninstallAll(providers)
         }
     }
 
@@ -122,6 +98,72 @@ final class AIProviderRegistry {
         case let .aiProvider(id):
             AgentProviderCatalog.iconName(for: id)
         case .socket: "network"
+        }
+    }
+}
+
+enum AIProviderIntegrationSyncService {
+    static func installAll(_ providers: [AIProviderIntegration]) async {
+        await GitProcessRunner.offMain {
+            installAllSync(providers)
+        }
+    }
+
+    static func forceInstall(_ provider: AIProviderIntegration) async {
+        await GitProcessRunner.offMain {
+            forceInstallSync(provider)
+        }
+    }
+
+    static func uninstallAll(_ providers: [AIProviderIntegration]) async {
+        await GitProcessRunner.offMain {
+            uninstallAllSync(providers)
+        }
+    }
+
+    private static func installAllSync(_ providers: [AIProviderIntegration]) {
+        guard let hookClientPath = KajiNotificationHooks.hookClientPath else {
+            logger.info("Hook client not found, skipping AI provider installs")
+            return
+        }
+
+        for provider in providers {
+            guard provider.isEnabled else {
+                try? provider.uninstall()
+                continue
+            }
+            guard provider.isToolInstalled() else { continue }
+            do {
+                try provider.install(hookClientPath: hookClientPath)
+                logger.info("Installed \(provider.displayName) integration")
+            } catch {
+                logger.error("Failed to install \(provider.displayName): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private static func forceInstallSync(_ provider: AIProviderIntegration) {
+        guard let hookClientPath = KajiNotificationHooks.hookClientPath else {
+            logger.info("Hook client not found, skipping force install")
+            return
+        }
+
+        do {
+            try provider.uninstall()
+            try provider.install(hookClientPath: hookClientPath)
+            logger.info("Force-installed \(provider.displayName) integration")
+        } catch {
+            logger.error("Failed to force-install \(provider.displayName): \(error.localizedDescription)")
+        }
+    }
+
+    private static func uninstallAllSync(_ providers: [AIProviderIntegration]) {
+        for provider in providers {
+            do {
+                try provider.uninstall()
+            } catch {
+                logger.error("Failed to uninstall \(provider.displayName): \(error.localizedDescription)")
+            }
         }
     }
 }

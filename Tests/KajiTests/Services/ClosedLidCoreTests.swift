@@ -49,11 +49,18 @@ struct ClosedLidCoreTests {
         let secondData = try ClosedLidJSONLineCodec.encode(second)
         let split = firstData.count / 2
 
-        try pipe.fileHandleForWriting.write(contentsOf: firstData.prefix(split))
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.02) {
+        let writeCompleted = DispatchSemaphore(value: 0)
+        let writerThread = Thread {
+            defer { writeCompleted.signal() }
+            Thread.sleep(forTimeInterval: 0.02)
             var remaining = Data(firstData.suffix(from: split))
             remaining.append(secondData)
             try? pipe.fileHandleForWriting.write(contentsOf: remaining)
+        }
+        try pipe.fileHandleForWriting.write(contentsOf: firstData.prefix(split))
+        writerThread.start()
+        defer {
+            _ = writeCompleted.wait(timeout: .now() + 1)
         }
 
         let decodedFirst = try JSONDecoder().decode(

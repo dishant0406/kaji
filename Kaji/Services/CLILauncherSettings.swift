@@ -74,6 +74,10 @@ final class CLILauncherSettings {
         launchers.first(where: { $0.id == id })?.isEnabled ?? false
     }
 
+    func flushPendingSaves() {
+        CLILauncherSettingsPersistence.flush()
+    }
+
     private func load() {
         launchers = Self.catalog.map {
             .init(id: $0.id, definition: $0, isEnabled: false, command: $0.defaultCommand)
@@ -112,20 +116,12 @@ final class CLILauncherSettings {
 
     private func save() {
         guard !isBatchLoading else { return }
-        do {
-            let snapshot = Snapshot(
-                launchers: launchers.map {
-                    .init(id: $0.id, isEnabled: $0.isEnabled, command: $0.command)
-                }
-            )
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(snapshot)
-            try data.write(to: fileURL, options: .atomic)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
-        } catch {
-            cliLauncherLogger.error("Failed to save CLI launcher settings: \(error.localizedDescription)")
-        }
+        let snapshot = Snapshot(
+            launchers: launchers.map {
+                .init(id: $0.id, isEnabled: $0.isEnabled, command: $0.command)
+            }
+        )
+        CLILauncherSettingsPersistence.save(snapshot, to: fileURL)
     }
 }
 
@@ -137,4 +133,26 @@ private struct LauncherSnapshot: Codable {
     let id: String
     let isEnabled: Bool
     let command: String
+}
+
+private enum CLILauncherSettingsPersistence {
+    private static let queue = DispatchQueue(label: "app.kaji.cli-launcher-settings")
+
+    static func save(_ snapshot: Snapshot, to fileURL: URL) {
+        queue.async {
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = try encoder.encode(snapshot)
+                try data.write(to: fileURL, options: .atomic)
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
+            } catch {
+                cliLauncherLogger.error("Failed to save CLI launcher settings: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    static func flush() {
+        queue.sync {}
+    }
 }

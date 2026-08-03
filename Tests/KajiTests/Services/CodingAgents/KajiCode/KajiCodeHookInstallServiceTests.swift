@@ -52,12 +52,18 @@ private final class RecordingKajiCodeRunner: KajiCodeCLICommandRunning {
     struct Call: Equatable {
         let binaryURL: URL
         let arguments: [String]
+        let environment: [String: String]?
     }
 
     var calls = [Call]()
 
-    func run(binaryURL: URL, arguments: [String], timeout _: TimeInterval) throws -> KajiCodeCLICommandResult {
-        calls.append(Call(binaryURL: binaryURL, arguments: arguments))
+    func run(
+        binaryURL: URL,
+        arguments: [String],
+        environment: [String: String]?,
+        timeout _: TimeInterval
+    ) throws -> KajiCodeCLICommandResult {
+        calls.append(Call(binaryURL: binaryURL, arguments: arguments, environment: environment))
         return KajiCodeCLICommandResult(exitCode: 0, output: "{}")
     }
 }

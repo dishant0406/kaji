@@ -24,6 +24,25 @@ struct KajiCodeMCPInstallServiceTests {
     }
 
     @Test
+    func installsShellPathEnvironmentForKajiCodeMCP() throws {
+        let fileManager = FileManager.default
+        let home = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? fileManager.removeItem(at: home) }
+        try fileManager.createDirectory(at: home, withIntermediateDirectories: true)
+        let binary = try executable(in: home)
+
+        _ = KajiCodeMCPInstallService.installAll(
+            binaryURL: binary,
+            homeDirectory: home.path,
+            environment: ["PATH": "/shell/bin:/usr/bin"]
+        )
+
+        try assertStandardEnvironment(home.appendingPathComponent(".claude.json"), path: "/shell/bin:/usr/bin")
+        let content = try config(home.appendingPathComponent(".codex/config.toml"))
+        #expect(content.contains("PATH = \"/shell/bin:/usr/bin\""))
+    }
+
+    @Test
     func uninstallRemovesKajiCodeMCPEntries() throws {
         let fileManager = FileManager.default
         let home = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -61,6 +80,15 @@ struct KajiCodeMCPInstallServiceTests {
         let server = try #require(servers["kajicode"] as? [String: Any])
         #expect(server["command"] as? String == binary.path)
         #expect(server["args"] as? [String] == ["serve", "--mcp"])
+    }
+
+    private func assertStandardEnvironment(_ url: URL, path: String) throws {
+        let data = try Data(contentsOf: url)
+        let root = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let servers = try #require(root["mcpServers"] as? [String: Any])
+        let server = try #require(servers["kajicode"] as? [String: Any])
+        let env = try #require(server["env"] as? [String: String])
+        #expect(env == ["PATH": path])
     }
 
     private func assertOpenCodeConfig(_ url: URL, binary: URL) throws {

@@ -21,23 +21,26 @@ enum KajiCodeHookInstallService {
     static func install(
         binaryURL: URL,
         hookClientPath: String,
+        environment: [String: String]? = nil,
         runner: any KajiCodeCLICommandRunning = KajiCodeCLICommandRunner()
     ) throws -> [KajiCodeHookInstallOutcome] {
         try hooks.map { hook in
             let args = addArguments(hook: hook, hookClientPath: hookClientPath)
-            let result = try runner.run(binaryURL: binaryURL, arguments: args, timeout: 20)
+            let result = try runner.run(binaryURL: binaryURL, arguments: args, environment: environment, timeout: 20)
             return outcome(hookID: hook.id, result: result, installed: true)
         }
     }
 
     static func uninstall(
         binaryURL: URL,
+        environment: [String: String]? = nil,
         runner: any KajiCodeCLICommandRunning = KajiCodeCLICommandRunner()
     ) throws -> [KajiCodeHookInstallOutcome] {
         try hooks.map { hook in
             let result = try runner.run(
                 binaryURL: binaryURL,
                 arguments: ["hooks", "remove", hook.id, "--user", "--json"],
+                environment: environment,
                 timeout: 20
             )
             return outcome(hookID: hook.id, result: result, installed: false)

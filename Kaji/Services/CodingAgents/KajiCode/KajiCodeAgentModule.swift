@@ -64,11 +64,15 @@ struct KajiCodeAgentModule: CodingAgentModule {
         try uninstall(binaryURL: resolution.binaryURL)
     }
 
-    func install(binaryURL: URL, hookClientPath: String) throws -> [KajiCodeHookInstallOutcome] {
-        try KajiCodeHookInstallService.install(binaryURL: binaryURL, hookClientPath: hookClientPath)
+    func install(
+        binaryURL: URL,
+        hookClientPath: String,
+        environment: [String: String]? = nil
+    ) throws -> [KajiCodeHookInstallOutcome] {
+        try KajiCodeHookInstallService.install(binaryURL: binaryURL, hookClientPath: hookClientPath, environment: environment)
     }
 
-    func uninstall(binaryURL: URL) throws {
-        _ = try KajiCodeHookInstallService.uninstall(binaryURL: binaryURL)
+    func uninstall(binaryURL: URL, environment: [String: String]? = nil) throws {
+        _ = try KajiCodeHookInstallService.uninstall(binaryURL: binaryURL, environment: environment)
     }
 }
