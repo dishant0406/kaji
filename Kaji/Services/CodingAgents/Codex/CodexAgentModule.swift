@@ -10,7 +10,6 @@ struct CodexAgentModule: CodingAgentModule, AIUsageProvider {
         annotationValues: ["codex"],
         iconName: "codex",
         executableNames: ["codex"],
-        executableSearchDirectories: [],
         defaultCommand: "codex",
         installCommand: .init(executable: "/bin/zsh", arguments: ["-lc", "npm install -g @openai/codex"]),
         configDirectories: [".codex"],

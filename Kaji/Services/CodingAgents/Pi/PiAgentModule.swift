@@ -10,7 +10,6 @@ struct PiAgentModule: CodingAgentModule {
         annotationValues: ["pi", "pi-coding-agent"],
         iconName: "pi",
         executableNames: ["pi"],
-        executableSearchDirectories: [],
         defaultCommand: "pi",
         installCommand: .init(executable: "/bin/zsh", arguments: ["-lc", "npm install -g @mariozechner/pi-coding-agent"]),
         configDirectories: [".pi/agent"],

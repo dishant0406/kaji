@@ -4,13 +4,7 @@ enum CodingAgentCommandRunner {
     private static let timeout: TimeInterval = 10
 
     static func lines(executableName: String, arguments: [String]) -> [String] {
-        let extraDirectories = CodingAgentRegistry.shared.definitions.first { definition in
-            definition.executableNames.contains(executableName)
-        }?.executableSearchDirectories ?? []
-        guard let path = AIProviderExecutableLocator.resolvePath(
-            for: executableName,
-            extraDirectories: extraDirectories
-        )
+        guard let path = AIProviderExecutableLocator.resolvePath(for: executableName)
         else { return [] }
         return DispatchQueue.global(qos: .userInitiated).sync {
             let process = Process()

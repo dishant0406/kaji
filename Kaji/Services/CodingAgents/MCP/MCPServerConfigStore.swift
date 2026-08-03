@@ -130,12 +130,12 @@ final class MCPServerConfigStore {
 
     private func isCommandAvailable(_ command: String) -> Bool {
         if command.hasPrefix("/") { return fileManager.isExecutableFile(atPath: command) }
-        return AIProviderExecutableLocator.candidatePaths(
+        return AIProviderExecutableLocator.resolvePath(
             for: command,
             env: ProcessInfo.processInfo.environment,
             homeDirectory: homeDirectory,
             fileManager: fileManager
-        ).contains { fileManager.isExecutableFile(atPath: $0) }
+        ) != nil
     }
 
     private func panelDescriptors(projectPath: String?) -> [MCPAgentPanelDescriptor] {

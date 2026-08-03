@@ -2,6 +2,9 @@ import SwiftUI
 
 struct KajiCodeSetupView: View {
     @State private var state = KajiCodeInstaller.state()
+    @State private var launcherSettings = CLILauncherSettings.shared
+    @State private var runtimeResolution: KajiCodeRuntimeResolution?
+    @State private var refreshTask: Task<Void, Never>?
     @State private var isWorking = false
     @State private var message: String?
 
@@ -41,11 +44,17 @@ struct KajiCodeSetupView: View {
             .padding(.horizontal, SettingsMetrics.horizontalPadding)
             .padding(.vertical, SettingsMetrics.rowVerticalPadding + 2)
         }
+        .task {
+            await refreshRuntimeResolution()
+        }
+        .onChange(of: configuredCommand) { _, _ in
+            scheduleRuntimeRefresh()
+        }
     }
 
     private var primaryTitle: String {
         if isWorking { return "Setting up" }
-        if KajiCodeRuntimeLocator.resolve()?.source == .developerOverride { return "Setup" }
+        if runtimeResolution != nil, runtimeResolution?.source != .managed { return "Setup" }
         if case .installed = state { return "Update & Setup" }
         return "Install"
     }
@@ -54,7 +63,8 @@ struct KajiCodeSetupView: View {
         if let message { return message }
         switch state {
         case .missing:
-            if KajiCodeRuntimeLocator.resolve()?.source == .developerOverride { return "Using developer override" }
+            if runtimeResolution?.source == .developerOverride { return "Using developer override" }
+            if runtimeResolution?.source == .path { return "External CLI found" }
             return "Not installed"
         case let .installed(manifest):
             return "Installed \(manifest.activeVersion) from \(manifest.platform)"
@@ -69,17 +79,22 @@ struct KajiCodeSetupView: View {
             KajiTheme.fgMuted
         case .missing,
              .needsRepair:
-            KajiTheme.diffRemoveFg
+            runtimeResolution == nil ? KajiTheme.diffRemoveFg : KajiTheme.fgMuted
         }
+    }
+
+    private var configuredCommand: String {
+        launcherSettings.command(for: "kajicode")
     }
 
     private func install() {
         isWorking = true
         message = "Setting up..."
         Task { @MainActor in
-            let result = await KajiCodeSetupService.installOrUpdate()
+            let result = await KajiCodeSetupService.installOrUpdate(configuredCommand: configuredCommand)
             state = result.state
             message = result.message
+            await refreshRuntimeResolution()
             isWorking = false
         }
     }
@@ -88,5 +103,24 @@ struct KajiCodeSetupView: View {
         let result = KajiCodeSetupService.uninstall()
         state = result.state
         message = result.message
+        runtimeResolution = nil
+    }
+
+    private func scheduleRuntimeRefresh() {
+        refreshTask?.cancel()
+        refreshTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await refreshRuntimeResolution()
+        }
+    }
+
+    private func refreshRuntimeResolution() async {
+        let command = configuredCommand
+        let resolution = await GitProcessRunner.offMain {
+            KajiCodeRuntimeLocator.resolve(configuredCommand: command)
+        }
+        guard !Task.isCancelled else { return }
+        runtimeResolution = resolution
     }
 }

@@ -6,18 +6,28 @@ import Testing
 struct CLILauncherInstallStateResolverTests {
     @Test
     func resolvesInstallStateOffMain() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let bin = root.appendingPathComponent("bin")
-        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-
-        let executable = bin.appendingPathComponent("codex")
-        try "#!/bin/sh\nexit 0\n".write(to: executable, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
+        let fixture = try ShellExecutableFixture()
+        defer { fixture.cleanup() }
+        _ = try fixture.writeExecutable("codex")
 
         let installed = await CLILauncherInstallStateResolver.isInstalled(
             executableNames: ["codex"],
-            env: ["PATH": bin.path],
-            homeDirectory: root.path
+            env: fixture.env(),
+            homeDirectory: fixture.home.path
+        )
+
+        #expect(installed)
+    }
+
+    @Test
+    func resolvesInstallStateFromConfiguredCommand() async throws {
+        let fixture = try ShellExecutableFixture()
+        defer { fixture.cleanup() }
+        let executable = try fixture.writeExecutable("codex")
+
+        let installed = await CLILauncherInstallStateResolver.isInstalled(
+            for: "codex",
+            command: "\(executable.path) --model gpt-5"
         )
 
         #expect(installed)

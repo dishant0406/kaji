@@ -10,6 +10,7 @@ struct CLILauncherRow: View {
     @State private var installing = false
     @State private var installMessage: String?
     @State private var refreshed = false
+    @State private var refreshTask: Task<Void, Never>?
 
     init(
         launcher: CLILauncherConfiguration,
@@ -108,6 +109,9 @@ struct CLILauncherRow: View {
         .task(id: launcher.id) {
             await refreshInstallState()
         }
+        .onChange(of: command) { _, _ in
+            scheduleInstallStateRefresh()
+        }
     }
 
     private var installed: Bool {
@@ -139,10 +143,19 @@ struct CLILauncherRow: View {
             return
         }
         installState = .checking
-        let found = await CLILauncherInstallStateResolver.isInstalled(for: launcher.id)
+        let found = await CLILauncherInstallStateResolver.isInstalled(for: launcher.id, command: command)
         installState = found ? .installed : .missing
         if !found, isEnabled {
             isEnabled = false
+        }
+    }
+
+    private func scheduleInstallStateRefresh() {
+        refreshTask?.cancel()
+        refreshTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await refreshInstallState()
         }
     }
 

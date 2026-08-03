@@ -25,13 +25,12 @@ struct ExternalIDEApplicationResolver: ExternalIDEApplicationResolving {
     }
 
     func fastExecutablePath(for executableName: String) -> String? {
-        AIProviderExecutableLocator.candidatePaths(
+        AIProviderExecutableLocator.resolvePath(
             for: executableName,
             env: env,
             homeDirectory: homeDirectory,
             fileManager: .default
         )
-        .first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
     func shellExecutablePath(for executableName: String) async -> String? {

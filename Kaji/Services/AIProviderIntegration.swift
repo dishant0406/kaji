@@ -24,10 +24,7 @@ extension AIProviderIntegration {
     }
 
     func isToolInstalled() -> Bool {
-        AIProviderExecutableLocator.isInstalled(
-            executableNames: executableNames,
-            extraDirectories: (self as? any CodingAgentModule)?.definition.executableSearchDirectories ?? []
-        )
+        AIProviderExecutableLocator.isInstalled(executableNames: executableNames)
     }
 }
 

@@ -10,7 +10,6 @@ struct KajiCodeAgentModule: CodingAgentModule {
         annotationValues: ["kajicode", "kaji-code", "kaji code"],
         iconName: "kaji",
         executableNames: ["kajicode"],
-        executableSearchDirectories: [],
         defaultCommand: "kajicode",
         installCommand: nil,
         configDirectories: [".kajicode"],

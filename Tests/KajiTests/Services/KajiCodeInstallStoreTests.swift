@@ -37,14 +37,17 @@ struct KajiCodeInstallStoreTests {
     }
 
     @Test
-    func runtimeLocatorUsesOnlyDirectoriesFromPath() throws {
+    func runtimeLocatorUsesShellResolvedExecutable() throws {
         let fixture = try KajiCodeFixture()
         defer { fixture.cleanup() }
-        let pathDirectory = fixture.root.appendingPathComponent("custom-bin", isDirectory: true)
-        let executable = try fixture.writeExecutable("kajicode", in: pathDirectory)
+        let shellFixture = try ShellExecutableFixture()
+        defer { shellFixture.cleanup() }
+        let executable = try shellFixture.writeExecutable("kajicode")
 
-        let resolution = fixture.resolve(env: fixture.env.merging(["PATH": pathDirectory.path]) { _, new in new })
-        let noPathResolution = fixture.resolve(env: fixture.env)
+        let resolution = fixture.resolve(env: fixture.env.merging(shellFixture.env()) { _, new in new })
+        let noPathResolution = fixture.resolve(
+            env: fixture.env.merging(shellFixture.env(path: [shellFixture.secondBin])) { _, new in new }
+        )
 
         #expect(resolution?.binaryURL.path == executable.path)
         #expect(resolution?.source == .path)
@@ -60,7 +63,11 @@ struct KajiCodeInstallStoreTests {
         try fixture.fileManager.createSymbolicLink(at: symlink, withDestinationURL: executable)
 
         let resolution = fixture.resolve(
-            env: fixture.env.merging([KajiCodePaths.devBinaryKey: symlink.path]) { _, new in new }
+            env: fixture.env.merging([
+                "PATH": "",
+                "SHELL": "/usr/bin/false",
+                KajiCodePaths.devBinaryKey: symlink.path,
+            ]) { _, new in new }
         )
 
         #expect(resolution == nil)
@@ -72,11 +79,12 @@ struct KajiCodeInstallStoreTests {
         defer { fixture.cleanup() }
         let invalidManifest = fixture.manifest(version: "../escape")
         try KajiCodeInstallStore.write(invalidManifest, env: fixture.env, fileManager: fixture.fileManager)
-        let pathDirectory = fixture.root.appendingPathComponent("path-bin", isDirectory: true)
-        let executable = try fixture.writeExecutable("kajicode", in: pathDirectory)
+        let shellFixture = try ShellExecutableFixture()
+        defer { shellFixture.cleanup() }
+        let executable = try shellFixture.writeExecutable("kajicode")
 
         let resolution = fixture.resolve(
-            env: fixture.env.merging(["PATH": pathDirectory.path]) { _, new in new }
+            env: fixture.env.merging(shellFixture.env()) { _, new in new }
         )
 
         #expect(KajiCodePaths.binaryURL(for: invalidManifest, env: fixture.env) == nil)
@@ -100,6 +108,23 @@ struct KajiCodeInstallStoreTests {
             sha256: "not-a-digest",
             env: fixture.env
         ) == nil)
+    }
+
+    @Test
+    func runtimeLocatorUsesConfiguredExecutableCommand() throws {
+        let fixture = try KajiCodeFixture()
+        defer { fixture.cleanup() }
+        let executable = try fixture.writeExecutable("kajicode")
+
+        let resolution = KajiCodeRuntimeLocator.resolve(
+            configuredCommand: "\(executable.path) --model gpt-5",
+            env: fixture.env,
+            homeDirectory: fixture.home.path,
+            fileManager: fixture.fileManager
+        )
+
+        #expect(resolution?.binaryURL.path == executable.path)
+        #expect(resolution?.source == .path)
     }
 }
 

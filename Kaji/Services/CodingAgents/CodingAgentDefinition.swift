@@ -6,7 +6,6 @@ struct CodingAgentDefinition: Hashable, Identifiable {
     let annotationValues: [String]
     let iconName: String
     let executableNames: [String]
-    let executableSearchDirectories: [String]
     let defaultCommand: String
     let installCommand: AIProviderInstaller.InstallCommand?
     let configDirectories: [String]
@@ -35,7 +34,6 @@ struct CodingAgentDefinition: Hashable, Identifiable {
         annotationValues: [String],
         iconName: String,
         executableNames: [String],
-        executableSearchDirectories: [String],
         defaultCommand: String,
         installCommand: AIProviderInstaller.InstallCommand?,
         configDirectories: [String],
@@ -63,7 +61,6 @@ struct CodingAgentDefinition: Hashable, Identifiable {
         self.annotationValues = annotationValues
         self.iconName = iconName
         self.executableNames = executableNames
-        self.executableSearchDirectories = executableSearchDirectories
         self.defaultCommand = defaultCommand
         self.installCommand = installCommand
         self.configDirectories = configDirectories

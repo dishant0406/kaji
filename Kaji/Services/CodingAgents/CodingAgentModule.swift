@@ -100,8 +100,7 @@ extension CodingAgentModule {
                     for: executableName,
                     env: env,
                     homeDirectory: homeDirectory,
-                    fileManager: fileManager,
-                    extraDirectories: definition.executableSearchDirectories
+                    fileManager: fileManager
                 )
             }
             if let path {

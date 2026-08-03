@@ -10,7 +10,6 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
         annotationValues: ["claude", "claude-code", "claudecode"],
         iconName: "claude",
         executableNames: ["claude", "claude-code"],
-        executableSearchDirectories: [".local/bin"],
         defaultCommand: "claude",
         installCommand: .init(executable: "/bin/zsh", arguments: ["-lc", "npm install -g @anthropic-ai/claude-code"]),
         configDirectories: [".claude"],
@@ -43,13 +42,6 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
     private static let obsoleteMarkers = [kajiMarker, "muxy-notification-hook"]
     private static let credentialsKeychainService = "Claude Code-credentials"
     private static let usageEndpoint = URL(string: "https://api.anthropic.com/api/oauth/usage")
-
-    func isToolInstalled() -> Bool {
-        let home = NSHomeDirectory()
-        return ["\(home)/.local/bin/claude", "/usr/local/bin/claude", "/opt/homebrew/bin/claude"].contains {
-            FileManager.default.isExecutableFile(atPath: $0)
-        }
-    }
 
     func install(hookClientPath: String) throws {
         let commands = [

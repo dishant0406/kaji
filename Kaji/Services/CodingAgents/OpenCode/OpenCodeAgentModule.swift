@@ -10,7 +10,6 @@ struct OpenCodeAgentModule: CodingAgentModule {
         annotationValues: ["opencode"],
         iconName: "opencode",
         executableNames: ["opencode"],
-        executableSearchDirectories: [".opencode/bin"],
         defaultCommand: "opencode",
         installCommand: .init(executable: "/bin/zsh", arguments: ["-lc", "curl -fsSL https://opencode.ai/install | bash"]),
         configDirectories: [".config/opencode", ".opencode"],

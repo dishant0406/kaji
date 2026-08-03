@@ -1,10 +1,13 @@
 import Foundation
 
 enum CLILauncherInstallStateResolver {
-    static func isInstalled(for launcherID: String) async -> Bool {
+    static func isInstalled(for launcherID: String, command: String? = nil) async -> Bool {
         guard CodingAgentRegistry.shared.agent(id: launcherID) != nil else { return false }
         return await GitProcessRunner.offMain {
-            CodingAgentRegistry.shared.agent(id: launcherID)?.resolveExecutable(
+            if let command, !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return CLILauncherCommandResolver.resolvedExecutableURL(in: command) != nil
+            }
+            return CodingAgentRegistry.shared.agent(id: launcherID)?.resolveExecutable(
                 env: ProcessInfo.processInfo.environment,
                 homeDirectory: NSHomeDirectory(),
                 fileManager: .default,
