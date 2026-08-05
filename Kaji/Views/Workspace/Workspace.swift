@@ -47,8 +47,8 @@ struct TerminalArea: View {
                     onCloseTab: { areaID, tabID in
                         appState.closeTab(tabID, areaID: areaID, projectID: project.id)
                     },
-                    onForceCloseTab: { areaID, tabID in
-                        appState.forceCloseTab(tabID, areaID: areaID, projectID: project.id)
+                    onTerminalProcessExit: { areaID, tabID in
+                        appState.closeMonitoredTerminal(tabID, areaID: areaID, projectID: project.id)
                     },
                     onSplit: { areaID, dir in
                         withAnimation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion)) {

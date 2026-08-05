@@ -16,7 +16,7 @@ struct SplitContainer: View {
     let onCreateTab: (UUID) -> Void
     let onCreateVCSTab: (UUID) -> Void
     let onCloseTab: (UUID, UUID) -> Void
-    let onForceCloseTab: (UUID, UUID) -> Void
+    let onTerminalProcessExit: (UUID, UUID) -> Void
     let onSplit: (UUID, SplitDirection) -> Void
     let onCloseArea: (UUID) -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
@@ -60,7 +60,7 @@ struct SplitContainer: View {
             onCreateTab: onCreateTab,
             onCreateVCSTab: onCreateVCSTab,
             onCloseTab: onCloseTab,
-            onForceCloseTab: onForceCloseTab,
+            onTerminalProcessExit: onTerminalProcessExit,
             onSplit: onSplit,
             onCloseArea: onCloseArea,
             onDropAction: onDropAction,

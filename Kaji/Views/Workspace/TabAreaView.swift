@@ -13,7 +13,7 @@ struct TabAreaView: View {
     let onCreateTab: () -> Void
     let onCreateVCSTab: () -> Void
     let onCloseTab: (UUID) -> Void
-    let onForceCloseTab: (UUID) -> Void
+    let onTerminalProcessExit: (UUID) -> Void
     let onSplit: (SplitDirection) -> Void
     let onCloseArea: () -> Void
     let onDropAction: (TabDragCoordinator.DropResult) -> Void
@@ -79,7 +79,7 @@ struct TabAreaView: View {
                         focused: isActive && isFocused && isActiveProject,
                         visible: isActive && isActiveProject && !workspaceOccluded,
                         onFocus: onFocus,
-                        onProcessExit: { onForceCloseTab(tab.id) },
+                        onProcessExit: { onTerminalProcessExit(tab.id) },
                         onClosePane: onCloseArea,
                         onSplitRequest: { direction, position in
                             appState.dispatch(.splitArea(.init(
