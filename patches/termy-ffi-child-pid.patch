@@ -1,5 +1,142 @@
+diff --git a/crates/core/src/runtime.rs b/crates/core/src/runtime.rs
+index e34e231..da54881 100644
+--- a/crates/core/src/runtime.rs
++++ b/crates/core/src/runtime.rs
+@@ -758,6 +758,10 @@ fn search_term_buffer<T: EventListener>(
+ }
+ 
+ fn searchable_grid_line<T: EventListener>(term: &Term<T>, line: Line, cols: usize) -> String {
++    grid_line_text(term, line, cols).trim_end().to_string()
++}
++
++fn grid_line_text<T: EventListener>(term: &Term<T>, line: Line, cols: usize) -> String {
+     let grid = term.grid();
+     let mut text = String::with_capacity(cols);
+     for col in 0..cols {
+@@ -769,7 +773,62 @@ fn searchable_grid_line<T: EventListener>(term: &Term<T>, line: Line, cols: usiz
+             && !cell.c.is_control();
+         text.push(if render_text { cell.c } else { ' ' });
+     }
+-    text.trim_end().to_string()
++    text
++}
++
++fn selected_text_from_term<T: EventListener>(
++    term: &Term<T>,
++    anchor_row: usize,
++    anchor_col: usize,
++    active_row: usize,
++    active_col: usize,
++) -> Option<String> {
++    let grid = term.grid();
++    let cols = grid.columns();
++    let total_lines = grid.total_lines();
++    if cols == 0 || total_lines == 0 {
++        return None;
++    }
++
++    let ((start_row, start_col), (end_row, end_col)) =
++        if (anchor_row, anchor_col) <= (active_row, active_col) {
++            ((anchor_row, anchor_col), (active_row, active_col))
++        } else {
++            ((active_row, active_col), (anchor_row, anchor_col))
++        };
++    let max_row = total_lines.saturating_sub(1);
++    let start_row = start_row.min(max_row);
++    let end_row = end_row.min(max_row);
++    if start_row > end_row {
++        return None;
++    }
++
++    let history_size = grid.history_size();
++    let max_col = cols.saturating_sub(1);
++    let lines = (start_row..=end_row)
++        .map(|absolute_row| {
++            let line = Line(absolute_row as i32 - history_size as i32);
++            let start = if absolute_row == start_row {
++                start_col.min(max_col)
++            } else {
++                0
++            };
++            let end = if absolute_row == end_row {
++                end_col.min(max_col)
++            } else {
++                max_col
++            };
++            grid_line_text(term, line, cols)
++                .chars()
++                .skip(start)
++                .take(end.saturating_sub(start).saturating_add(1))
++                .collect::<String>()
++                .trim_end()
++                .to_string()
++        })
++        .collect::<Vec<_>>();
++    let text = lines.join("\n");
++    if text.is_empty() { None } else { Some(text) }
+ }
+ 
+ pub fn take_term_damage_snapshot<T: EventListener>(term: &mut Term<T>) -> TerminalDamageSnapshot {
+@@ -1524,6 +1583,18 @@ impl Terminal {
+         self.with_term(|term| search_term_buffer(term, query, options))
+     }
+ 
++    pub fn selected_text(
++        &self,
++        anchor_row: usize,
++        anchor_col: usize,
++        active_row: usize,
++        active_col: usize,
++    ) -> Option<String> {
++        self.with_term(|term| {
++            selected_text_from_term(term, anchor_row, anchor_col, active_row, active_col)
++        })
++    }
++
+     /// The OSC 8 hyperlink under the given viewport cell, if any, expanded to
+     /// the contiguous same-link run on that row.
+     pub fn hyperlink_at(&self, row: usize, col: usize) -> Option<crate::links::DetectedLink> {
+@@ -1782,8 +1853,8 @@ mod tests {
+         cursor_position_from_term, cursor_state_from_term, default_shell_launch,
+         drain_runtime_events, normalize_working_directory_candidate, pty_env_overrides,
+         resolve_launch_working_directory, resolve_shell_path, search_term_buffer,
+-        take_term_damage_snapshot, terminal_event_from_osc, termmode_to_terminal_mouse_mode,
+-        user_home_dir,
++        selected_text_from_term, take_term_damage_snapshot, terminal_event_from_osc,
++        termmode_to_terminal_mouse_mode, user_home_dir,
+     };
+     use crate::keyboard::{
+         Keystroke, Modifiers, TerminalKeyEventKind, TerminalKeyboardMode, keystroke_to_input,
+@@ -1852,6 +1923,27 @@ mod tests {
+         assert_eq!(matches[0].end_col, 4);
+     }
+ 
++    #[test]
++    fn selected_text_reads_scrollback_and_visible_rows() {
++        let size = TerminalSize {
++            cols: 16,
++            rows: 2,
++            cell_width: 9.0,
++            cell_height: 18.0,
++        };
++        let config = TermConfig {
++            scrolling_history: 8,
++            ..TermConfig::default()
++        };
++        let mut term: Term<VoidListener> = Term::new(config, &size, VoidListener);
++        let mut parser: ansi::Processor = ansi::Processor::new();
++        parser.advance(&mut term, b"alpha\r\nbeta\r\ngamma");
++
++        let text = selected_text_from_term(&term, 0, 1, 2, 2);
++
++        assert_eq!(text.as_deref(), Some("lpha\nbeta\ngam"));
++    }
++
+     fn cursor_state_after_bytes(
+         input: &[u8],
+         runtime_config: TerminalRuntimeConfig,
 diff --git a/crates/ffi/include/termy.h b/crates/ffi/include/termy.h
-index 5c513f0..ba383a0 100644
+index 5c513f0..84dc07f 100644
 --- a/crates/ffi/include/termy.h
 +++ b/crates/ffi/include/termy.h
 @@ -412,6 +412,10 @@ void termy_tmux_control_close(TermyFfiTmuxControl *session);
@@ -23,8 +160,22 @@ index 5c513f0..ba383a0 100644
  TermyFfiStatus termy_terminal_encode_key(
      TermyFfiTerminal *terminal,
      const TermyFfiKeystroke *keystroke,
+@@ -445,6 +452,13 @@ TermyFfiStatus termy_terminal_scroll_display(
+ TermyFfiStatus termy_terminal_scroll_to_bottom(
+     TermyFfiTerminal *terminal,
+     bool *out_changed);
++TermyFfiStatus termy_terminal_selected_text(
++    TermyFfiTerminal *terminal,
++    size_t anchor_row,
++    size_t anchor_col,
++    size_t active_row,
++    size_t active_col,
++    TermyFfiBytes *out_bytes);
+ TermyFfiStatus termy_terminal_clear_scrollback(
+     TermyFfiTerminal *terminal,
+     bool *out_changed);
 diff --git a/crates/ffi/src/lib.rs b/crates/ffi/src/lib.rs
-index 2a90b9e..1057deb 100644
+index 2a90b9e..ce736d2 100644
 --- a/crates/ffi/src/lib.rs
 +++ b/crates/ffi/src/lib.rs
 @@ -2430,6 +2430,36 @@ pub unsafe extern "C" fn termy_terminal_reload_default_config_colors(
@@ -88,3 +239,76 @@ index 2a90b9e..1057deb 100644
  #[unsafe(no_mangle)]
  pub unsafe extern "C" fn termy_terminal_encode_key(
      terminal: *mut TermyFfiTerminal,
+@@ -2725,6 +2772,33 @@ pub unsafe extern "C" fn termy_terminal_scroll_to_bottom(
+     })
+ }
+ 
++#[unsafe(no_mangle)]
++pub unsafe extern "C" fn termy_terminal_selected_text(
++    terminal: *mut TermyFfiTerminal,
++    anchor_row: usize,
++    anchor_col: usize,
++    active_row: usize,
++    active_col: usize,
++    out_bytes: *mut TermyFfiBytes,
++) -> TermyFfiStatus {
++    ffi_status_guard(|| {
++        if terminal.is_null() || out_bytes.is_null() {
++            return TermyFfiStatus::Null;
++        }
++
++        let text = unsafe {
++            (*terminal)
++                .terminal
++                .selected_text(anchor_row, anchor_col, active_row, active_col)
++                .unwrap_or_default()
++        };
++        unsafe {
++            *out_bytes = ffi_bytes_from_string(text);
++        }
++        TermyFfiStatus::Ok
++    })
++}
++
+ #[unsafe(no_mangle)]
+ pub unsafe extern "C" fn termy_terminal_clear_scrollback(
+     terminal: *mut TermyFfiTerminal,
+@@ -3776,6 +3850,38 @@ mod tests {
+         assert_eq!(unsafe { termy_terminal_free(terminal) }, TermyFfiStatus::Ok);
+     }
+ 
++    #[test]
++    fn terminal_selected_text_returns_scrollback_rows() {
++        let size = TermyFfiSize {
++            cols: 16,
++            rows: 2,
++            cell_width: 9.0,
++            cell_height: 18.0,
++        };
++        let mut terminal = ptr::null_mut();
++        assert_eq!(
++            unsafe { termy_display_terminal_new(size, &mut terminal) },
++            TermyFfiStatus::Ok
++        );
++        let bytes = b"alpha\r\nbeta\r\ngamma";
++        assert_eq!(
++            unsafe { termy_terminal_feed_output(terminal, bytes.as_ptr(), bytes.len()) },
++            TermyFfiStatus::Ok
++        );
++
++        let mut selected = TermyFfiBytes::default();
++        assert_eq!(
++            unsafe { termy_terminal_selected_text(terminal, 0, 1, 2, 2, &mut selected) },
++            TermyFfiStatus::Ok
++        );
++        let text = unsafe { str::from_utf8(slice::from_raw_parts(selected.ptr, selected.len)) }
++            .expect("selected text utf8");
++
++        assert_eq!(text, "lpha\nbeta\ngam");
++        assert_eq!(unsafe { termy_buffer_free(selected) }, TermyFfiStatus::Ok);
++        assert_eq!(unsafe { termy_terminal_free(terminal) }, TermyFfiStatus::Ok);
++    }
++
+     #[test]
+     fn terminal_wakeup_wait_is_coalesced_and_notifiable() {
+         let size = TermyFfiSize {

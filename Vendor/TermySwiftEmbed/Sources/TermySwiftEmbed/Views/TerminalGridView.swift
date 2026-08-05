@@ -362,7 +362,12 @@ final class TerminalGridNSView: NSView {
     }
 
     private func drawSelection(in dirtyRect: NSRect, dirtyBounds: DirtyGridBounds) {
-        guard let ranges = selection?.rowRanges(cols: terminalFrame.cols, rows: terminalFrame.rows) else {
+        guard let ranges = selection?.rowRanges(
+            cols: terminalFrame.cols,
+            rows: terminalFrame.rows,
+            visibleTop: terminalFrame.visibleTopRow
+        )
+        else {
             return
         }
         NSColor.controlAccentColor.withAlphaComponent(0.35).setFill()

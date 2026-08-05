@@ -21,7 +21,7 @@ EXPECTED_STAMP="repo=${TERMY_REPO}
 ref=${TERMY_REF}
 profile=${TERMY_PROFILE}
 artifact=libtermy_ffi.dylib
-kaji_ffi_extensions=termy_terminal_child_pid,termy_terminal_reload_config_colors"
+kaji_ffi_extensions=termy_terminal_child_pid,termy_terminal_reload_config_colors,termy_terminal_selected_text"
 
 if [[ "$TERMY_PROFILE" != "release" ]]; then
     TERMY_BUILD_FLAG="--profile=$TERMY_PROFILE"
@@ -77,6 +77,7 @@ if [[ "${TERMY_FORCE_REBUILD:-0}" != "1" ]] \
     && [[ "$(cat "$STAMP_FILE")" == "$EXPECTED_STAMP" ]] \
     && nm -gU "$DYLIB_PATH" | grep -q "_termy_terminal_child_pid" \
     && nm -gU "$DYLIB_PATH" | grep -q "_termy_terminal_reload_config_colors" \
+    && nm -gU "$DYLIB_PATH" | grep -q "_termy_terminal_selected_text" \
     && [[ -d "$RUNTIME_RESOURCES_DIR/shell" ]]; then
     echo "==> TermyKit already matches $TERMY_REPO@$TERMY_REF"
     echo "==> Building Rift"

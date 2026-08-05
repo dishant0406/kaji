@@ -99,6 +99,8 @@ private struct TermyEmbeddedTerminalBody: View {
                 TerminalKeyboardInputView(
                     cols: terminal.frameMetadata.cols,
                     rows: terminal.frameMetadata.rows,
+                    displayOffset: terminal.frameMetadata.displayOffset,
+                    historySize: terminal.frameMetadata.historySize,
                     renderConfig: terminal.renderConfig,
                     isInputEnabled: isInputEnabled,
                     isSearchVisible: isSearchVisible,

@@ -320,6 +320,28 @@ final class LibTermyTerminal {
         }
     }
 
+    func selectedText(for selection: TerminalSelection) throws -> String? {
+        let handle = try terminalHandle()
+        var outBytes = TermyFfiBytes()
+        try TermyFfiBridge.requireOK(
+            "termy_terminal_selected_text",
+            termy_terminal_selected_text(
+                handle,
+                max(0, selection.anchor.row),
+                max(0, selection.anchor.col),
+                max(0, selection.active.row),
+                max(0, selection.active.col),
+                &outBytes
+            )
+        )
+        defer {
+            if outBytes.ptr != nil {
+                _ = termy_buffer_free(outBytes)
+            }
+        }
+        return TermyFfiBridge.string(from: outBytes)
+    }
+
     func reloadConfiguration(from source: TermyConfigurationSource) throws -> TerminalRenderConfig {
         let nextConfig = try Self.loadConfig(source)
         do {

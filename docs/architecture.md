@@ -113,6 +113,6 @@ The source repo may also contain `.kaji/worktree.json` files inside user project
 
 ## Termy Integration
 
-`scripts/setup.sh` builds `libtermy_ffi.dylib` from pinned upstream `lassejlv/termy`, applies Kaji's child-PID FFI patch, installs `TermyKit/termy.h`, syncs Termy shell assets into `Kaji/Resources/termy/shell`, and installs the patched bundled Rift CLI under `Kaji/Resources/Rift`.
+`scripts/setup.sh` builds `libtermy_ffi.dylib` from pinned upstream `lassejlv/termy`, applies Kaji's FFI patch for child PID, config color reload, and scrollback selection text, installs `TermyKit/termy.h`, syncs Termy shell assets into `Kaji/Resources/termy/shell`, and installs the patched bundled Rift CLI under `Kaji/Resources/Rift`.
 
 The app only talks to libtermy through the C ABI exposed by `TermyKit/termy.h`. Swift terminal code lives under `Kaji/Services/Termy/` and `Kaji/Views/Terminal/Termy/` so libtermy concerns stay isolated from workspace and coding-agent logic.

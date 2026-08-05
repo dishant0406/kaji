@@ -4,6 +4,8 @@ import SwiftUI
 struct TerminalKeyboardInputView: NSViewRepresentable {
     var cols: Int
     var rows: Int
+    var displayOffset: Int
+    var historySize: Int
     var renderConfig: TerminalRenderConfig
     var isInputEnabled: Bool
     var isSearchVisible: Bool
@@ -52,6 +54,8 @@ struct TerminalKeyboardInputView: NSViewRepresentable {
 final class KeyboardCaptureView: NSView {
     var cols = 0
     var rows = 0
+    var displayOffset = 0
+    var historySize = 0
     var renderConfig = TerminalRenderConfig.default
     var isInputEnabled = true
     var isSearchVisible = false
@@ -82,11 +86,12 @@ final class KeyboardCaptureView: NSView {
     var onPaste: (String) -> Void = { _ in }
     var onMarkedTextChanged: (String) -> Void = { _ in }
 
-    private var selectionAnchor: TerminalGridPosition?
+    private var selectionAnchor: TerminalBufferPosition?
     private var didDragSelection = false
     private var preciseScrollRemainder: CGFloat = 0
     private var preciseHorizontalScrollRemainder: CGFloat = 0
     private var activeMouseButton: TerminalMouseButton?
+    private let selectionAutoScroller = TerminalSelectionAutoScroller()
 
     // IME composition state. `markedText` holds the in-progress composition;
     // the two flags let `insertText` tell an IME commit apart from a plain key.
@@ -161,6 +166,10 @@ final class KeyboardCaptureView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if window == nil {
+            selectionAutoScroller.stop()
+            return
+        }
         focus(trigger: .windowAttachment)
     }
 
@@ -196,6 +205,7 @@ final class KeyboardCaptureView: NSView {
         {
             activeMouseButton = nil
             selectionAnchor = nil
+            selectionAutoScroller.stop()
             showTerminalContextMenu(for: event)
             return
         }
@@ -211,6 +221,7 @@ final class KeyboardCaptureView: NSView {
         if sendMouse(kind: .press, button: button, event: event) {
             activeMouseButton = button
             selectionAnchor = nil
+            selectionAutoScroller.stop()
             onSelectionChanged(nil)
             return
         }
@@ -224,17 +235,19 @@ final class KeyboardCaptureView: NSView {
         switch event.clickCount {
         case 2:
             selectionAnchor = nil
+            selectionAutoScroller.stop()
             onSelectWord(gridPosition(for: event))
             return
         case let count where count >= 3:
             selectionAnchor = nil
+            selectionAutoScroller.stop()
             onSelectLine(gridPosition(for: event))
             return
         default:
             break
         }
 
-        selectionAnchor = gridPosition(for: event)
+        selectionAnchor = bufferPosition(for: event)
         onSelectionChanged(nil)
     }
 
@@ -250,6 +263,7 @@ final class KeyboardCaptureView: NSView {
         if event.modifierFlags.contains(.control) {
             activeMouseButton = nil
             selectionAnchor = nil
+            selectionAutoScroller.stop()
             showTerminalContextMenu(for: event)
             return
         }
@@ -257,12 +271,14 @@ final class KeyboardCaptureView: NSView {
         if sendMouse(kind: .press, button: .right, event: event) {
             activeMouseButton = .right
             selectionAnchor = nil
+            selectionAutoScroller.stop()
             onSelectionChanged(nil)
             return
         }
 
         activeMouseButton = nil
         selectionAnchor = nil
+        selectionAutoScroller.stop()
         showTerminalContextMenu(for: event)
     }
 
@@ -288,14 +304,7 @@ final class KeyboardCaptureView: NSView {
         {
             return
         }
-        guard let anchor = selectionAnchor else {
-            return
-        }
-        guard let selection = Self.dragSelection(anchor: anchor, active: gridPosition(for: event)) else {
-            return
-        }
-        didDragSelection = true
-        onSelectionChanged(selection)
+        updateDragSelection(for: event)
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -318,6 +327,7 @@ final class KeyboardCaptureView: NSView {
         if activeMouseButton != nil {
             _ = sendMouse(kind: .release, button: button, event: event)
             activeMouseButton = nil
+            selectionAutoScroller.stop()
             return
         }
         guard let anchor = selectionAnchor else {
@@ -327,6 +337,7 @@ final class KeyboardCaptureView: NSView {
         defer {
             selectionAnchor = nil
             didDragSelection = false
+            selectionAutoScroller.stop()
         }
 
         guard didDragSelection else {
@@ -334,7 +345,7 @@ final class KeyboardCaptureView: NSView {
             return
         }
 
-        onSelectionChanged(Self.dragSelection(anchor: anchor, active: gridPosition(for: event)))
+        onSelectionChanged(Self.dragSelection(anchor: anchor, active: bufferPosition(for: event)))
     }
 
     override func mouseMoved(with event: NSEvent) {
@@ -778,6 +789,10 @@ final class KeyboardCaptureView: NSView {
 
     private func gridPosition(for event: NSEvent) -> TerminalGridPosition {
         let point = convert(event.locationInWindow, from: nil)
+        return gridPosition(forPoint: point)
+    }
+
+    private func gridPosition(forPoint point: CGPoint) -> TerminalGridPosition {
         let maxCol = max(0, cols - 1)
         let maxRow = max(0, rows - 1)
         let col = max(0, min(Int((point.x - renderConfig.paddingX) / renderConfig.cellWidth), maxCol))
@@ -787,9 +802,51 @@ final class KeyboardCaptureView: NSView {
         return TerminalGridPosition(col: col, row: row)
     }
 
+    private func bufferPosition(for event: NSEvent) -> TerminalBufferPosition {
+        bufferPosition(forPoint: convert(event.locationInWindow, from: nil))
+    }
+
+    private func bufferPosition(forPoint point: CGPoint) -> TerminalBufferPosition {
+        let position = gridPosition(forPoint: point)
+        return TerminalBufferPosition(
+            col: position.col,
+            row: max(0, historySize - displayOffset) + position.row
+        )
+    }
+
+    private func updateDragSelection(for event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        updateDragSelection(point: point)
+        selectionAutoScroller.update(
+            point: point,
+            metrics: TerminalSelectionAutoScrollMetrics(
+                boundsHeight: bounds.height,
+                paddingY: renderConfig.paddingY,
+                cellHeight: renderConfig.cellHeight,
+                displayOffset: displayOffset,
+                historySize: historySize
+            )
+        ) { [weak self] delta, point in
+            guard let self else { return }
+            self.onScrollLines(delta)
+            self.displayOffset = max(0, min(self.historySize, self.displayOffset + delta))
+            self.updateDragSelection(point: point)
+        }
+    }
+
+    private func updateDragSelection(point: CGPoint) {
+        guard let anchor = selectionAnchor,
+              let selection = Self.dragSelection(anchor: anchor, active: bufferPosition(forPoint: point))
+        else {
+            return
+        }
+        didDragSelection = true
+        onSelectionChanged(selection)
+    }
+
     nonisolated static func dragSelection(
-        anchor: TerminalGridPosition,
-        active: TerminalGridPosition
+        anchor: TerminalBufferPosition,
+        active: TerminalBufferPosition
     ) -> TerminalSelection? {
         guard anchor != active else {
             return nil
@@ -903,9 +960,14 @@ private extension KeyboardCaptureView {
     func apply(configuration: TerminalKeyboardInputView) {
         cols = configuration.cols
         rows = configuration.rows
+        displayOffset = configuration.displayOffset
+        historySize = configuration.historySize
         renderConfig = configuration.renderConfig
         isInputEnabled = configuration.isInputEnabled
         isSearchVisible = configuration.isSearchVisible
+        if !isInputEnabled {
+            selectionAutoScroller.stop()
+        }
         canCopy = configuration.canCopy
         onFocus = configuration.onFocus
         onBytes = configuration.onBytes

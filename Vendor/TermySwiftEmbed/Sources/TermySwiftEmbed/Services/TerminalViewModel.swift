@@ -140,7 +140,7 @@ final class TerminalViewModel: ObservableObject {
             frame = previewFrame
             hasVisibleContent = frameStore.hasVisibleContent
             frameMetadata = TerminalFrameMetadata(frame: previewFrame)
-            canCopySelection = previewFrame.hasSelectedText(for: selection)
+            canCopySelection = canCopy(selection, in: previewFrame)
             renderPlanCache.update(
                 frame: previewFrame,
                 renderConfig: renderConfig,
@@ -593,9 +593,9 @@ final class TerminalViewModel: ObservableObject {
 
     func updateSelection(_ selection: TerminalSelection?) {
         self.selection = selection
-        canCopySelection = frame.hasSelectedText(for: selection)
+        canCopySelection = canCopy(selection, in: frame)
         guard renderConfig.copyOnSelect,
-              let text = frame.selectedText(for: selection),
+              let text = selectedText(for: selection),
               !text.isEmpty
         else {
             lastAutoCopiedSelectionText = nil
@@ -628,8 +628,11 @@ final class TerminalViewModel: ObservableObject {
             return
         }
         updateSelection(TerminalSelection(
-            anchor: TerminalGridPosition(col: 0, row: 0),
-            active: TerminalGridPosition(col: frame.cols - 1, row: frame.rows - 1)
+            anchor: TerminalBufferPosition(col: 0, row: 0),
+            active: TerminalBufferPosition(
+                col: frame.cols - 1,
+                row: max(0, frame.historySize + frame.rows - 1)
+            )
         ))
     }
 
@@ -686,12 +689,29 @@ final class TerminalViewModel: ObservableObject {
     }
 
     func copySelection() -> Bool {
-        guard let text = frame.selectedText(for: selection), !text.isEmpty else {
+        guard let text = selectedText(for: selection), !text.isEmpty else {
             return false
         }
 
         copy(text)
         return true
+    }
+
+    private func selectedText(for selection: TerminalSelection?) -> String? {
+        guard let selection else {
+            return nil
+        }
+        if let text = try? terminal?.selectedText(for: selection), !text.isEmpty {
+            return text
+        }
+        return frame.selectedText(for: selection)
+    }
+
+    private func canCopy(_ selection: TerminalSelection?, in frame: TerminalFrame) -> Bool {
+        guard let selection, !selection.isEmpty else {
+            return false
+        }
+        return frame.hasSelectedText(for: selection) || selection.normalized.start.row < selection.normalized.end.row
     }
 
     func search(
@@ -926,7 +946,7 @@ final class TerminalViewModel: ObservableObject {
         frame = frameStore.frame
         hasVisibleContent = frameStore.hasVisibleContent
         frameMetadata = TerminalFrameMetadata(frame: frame)
-        canCopySelection = frame.hasSelectedText(for: selection)
+        canCopySelection = canCopy(selection, in: frame)
     }
 
     private func shouldForceStartupRefresh() -> Bool {

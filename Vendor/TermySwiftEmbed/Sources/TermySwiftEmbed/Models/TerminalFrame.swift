@@ -259,34 +259,44 @@ struct TerminalGridPosition: Equatable {
     var row: Int
 }
 
-struct TerminalSelection: Equatable {
-    var anchor: TerminalGridPosition
-    var active: TerminalGridPosition
+struct TerminalBufferPosition: Equatable {
+    var col: Int
+    var row: Int
+}
 
-    var normalized: (start: TerminalGridPosition, end: TerminalGridPosition) {
+struct TerminalSelection: Equatable {
+    var anchor: TerminalBufferPosition
+    var active: TerminalBufferPosition
+
+    var normalized: (start: TerminalBufferPosition, end: TerminalBufferPosition) {
         if (anchor.row, anchor.col) <= (active.row, active.col) {
             return (anchor, active)
         }
         return (active, anchor)
     }
 
-    func rowRanges(cols: Int, rows: Int) -> [TerminalSelectionRowRange] {
+    var isEmpty: Bool {
+        anchor == active
+    }
+
+    func rowRanges(cols: Int, rows: Int, visibleTop: Int) -> [TerminalSelectionRowRange] {
         guard cols > 0, rows > 0 else {
             return []
         }
 
         let range = normalized
-        let startRow = max(0, min(range.start.row, rows - 1))
-        let endRow = max(0, min(range.end.row, rows - 1))
-        guard startRow <= endRow else {
+        let visibleBottom = visibleTop + rows - 1
+        let startRow = max(visibleTop, min(range.start.row, visibleBottom))
+        let endRow = max(visibleTop, min(range.end.row, visibleBottom))
+        guard startRow <= endRow, range.end.row >= visibleTop, range.start.row <= visibleBottom else {
             return []
         }
 
         return (startRow ... endRow).map { row in
-            let startCol = row == startRow ? range.start.col : 0
-            let endCol = row == endRow ? range.end.col : cols - 1
+            let startCol = row == range.start.row ? range.start.col : 0
+            let endCol = row == range.end.row ? range.end.col : cols - 1
             return TerminalSelectionRowRange(
-                row: row,
+                row: row - visibleTop,
                 startCol: max(0, min(startCol, cols - 1)),
                 endCol: max(0, min(endCol, cols - 1))
             )
@@ -385,6 +395,10 @@ struct TerminalFrameMetadata: Equatable {
     var displayOffset: Int
     var historySize: Int
 
+    var visibleTopRow: Int {
+        max(0, historySize - displayOffset)
+    }
+
     static let empty = TerminalFrameMetadata(
         cols: 0,
         rows: 0,
@@ -437,6 +451,10 @@ struct TerminalFrame: Equatable {
     var cursor: TerminalCursor?
     var displayOffset: Int
     var historySize: Int
+
+    var visibleTopRow: Int {
+        max(0, historySize - displayOffset)
+    }
 
     init(
         cols: Int,
@@ -549,7 +567,7 @@ struct TerminalFrame: Equatable {
             return nil
         }
 
-        let lines = selection.rowRanges(cols: cols, rows: rows).map { range in
+        let lines = selection.rowRanges(cols: cols, rows: rows, visibleTop: visibleTopRow).map { range in
             let characters = (range.startCol ... range.endCol).map { col -> Character in
                 guard let cell = cell(row: range.row, col: col), cell.renderText else {
                     return " "
@@ -573,7 +591,7 @@ struct TerminalFrame: Equatable {
         guard let selection else {
             return false
         }
-        let ranges = selection.rowRanges(cols: cols, rows: rows)
+        let ranges = selection.rowRanges(cols: cols, rows: rows, visibleTop: visibleTopRow)
         guard let range = ranges.first else {
             return false
         }
@@ -650,8 +668,8 @@ struct TerminalFrame: Equatable {
         }
 
         return TerminalSelection(
-            anchor: TerminalGridPosition(col: startCol, row: position.row),
-            active: TerminalGridPosition(col: endCol, row: position.row)
+            anchor: bufferPosition(row: position.row, col: startCol),
+            active: bufferPosition(row: position.row, col: endCol)
         )
     }
 
@@ -662,8 +680,15 @@ struct TerminalFrame: Equatable {
             return nil
         }
         return TerminalSelection(
-            anchor: TerminalGridPosition(col: 0, row: position.row),
-            active: TerminalGridPosition(col: cols - 1, row: position.row)
+            anchor: bufferPosition(row: position.row, col: 0),
+            active: bufferPosition(row: position.row, col: cols - 1)
+        )
+    }
+
+    func bufferPosition(row: Int, col: Int) -> TerminalBufferPosition {
+        TerminalBufferPosition(
+            col: max(0, min(col, max(0, cols - 1))),
+            row: visibleTopRow + max(0, min(row, max(0, rows - 1)))
         )
     }
 
