@@ -2,76 +2,67 @@
 import Foundation
 
 @MainActor
-final class SpeechAudioCapture: NSObject, AVAudioRecorderDelegate {
-    private var recorder: AVAudioRecorder?
-    private var recordingURL: URL?
+final class SpeechAudioCapture: NSObject, SpeechCapturing {
+    private var engine: AVAudioEngine?
+    private var inputNode: AVAudioInputNode?
     private var isCapturing = false
+    private var chunkAccumulator: SpeechAudioChunkAccumulator
+
+    override init() {
+        chunkAccumulator = SpeechAudioChunkAccumulator()
+        super.init()
+    }
 
     func start(session: SpeechCaptureSession) throws {
         guard !isCapturing else { return }
         guard Self.hasMicrophoneAccess else { throw SpeechInputError.microphonePermissionDenied }
-        let url = Self.recordingURL(for: session)
-        let next = try AVAudioRecorder(url: url, settings: Self.recorderSettings)
-        next.delegate = self
-        next.isMeteringEnabled = false
-        guard next.prepareToRecord(), next.record() else {
+        let accumulator = SpeechAudioChunkAccumulator()
+        chunkAccumulator = accumulator
+        let engine = AVAudioEngine()
+        let input = engine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in
+            accumulator.append(buffer)
+        }
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0)
             throw SpeechInputError.audioInputUnavailable
         }
-        recorder = next
-        recordingURL = url
+        self.engine = engine
+        self.inputNode = input
         isCapturing = true
     }
 
-    func stop(session _: SpeechCaptureSession?, reason _: SpeechCaptureStopReason) -> [SpeechAudioChunk] {
-        guard isCapturing else { return [] }
-        isCapturing = false
-        let current = recorder
-        let url = recordingURL
-        recorder = nil
-        recordingURL = nil
-        current?.stop()
-        let result = loadRecording(url: url)
-        try? url.map { try FileManager.default.removeItem(at: $0) }
-        return result.chunks
+    func snapshotChunk() -> SpeechAudioChunk? {
+        guard isCapturing else { return nil }
+        return chunkAccumulator.snapshotChunk()
     }
 
-    nonisolated func audioRecorderEncodeErrorDidOccur(_: AVAudioRecorder, error: Error?) {
-        guard let error else { return }
-        DebugFileLog.logError("SpeechInput", error, context: "capture recorder encode failed")
+    func finish(session _: SpeechCaptureSession?, reason _: SpeechCaptureStopReason) -> SpeechAudioChunk? {
+        stopEngine()
+        let chunk = chunkAccumulator.finishChunk()
+        chunkAccumulator = SpeechAudioChunkAccumulator()
+        return chunk
     }
 
-    private func loadRecording(url: URL?) -> SpeechAudioCaptureResult {
-        guard let url else { return .empty }
-        do {
-            let file = try AVAudioFile(forReading: url)
-            let frames = AVAudioFrameCount(file.length)
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: frames) else {
-                return .empty
-            }
-            try file.read(into: buffer)
-            guard let chunk = SpeechAudioChunk.make(from: buffer) else { return .empty }
-            return SpeechAudioCaptureResult(chunks: [chunk], droppedCount: 0, frameCount: chunk.frameCount)
-        } catch {
-            DebugFileLog.logError("SpeechInput", error, context: "capture recording read failed")
-            return .empty
+    func stop(session: SpeechCaptureSession?, reason: SpeechCaptureStopReason) -> [SpeechAudioChunk] {
+        let chunk = finish(session: session, reason: reason)
+        guard let chunk, chunk.frameCount > 0 else { return [] }
+        return [chunk]
+    }
+
+    private func stopEngine() {
+        let input = inputNode
+        if let engine, let input, engine.isRunning {
+            input.removeTap(onBus: 0)
+            engine.stop()
         }
-    }
-
-    private static var recorderSettings: [String: Any] {
-        [
-            AVFormatIDKey: Int(kAudioFormatLinearPCM),
-            AVSampleRateKey: 16000,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 32,
-            AVLinearPCMIsFloatKey: true,
-            AVLinearPCMIsNonInterleaved: false,
-        ]
-    }
-
-    private static func recordingURL(for session: SpeechCaptureSession) -> URL {
-        FileManager.default.temporaryDirectory
-            .appendingPathComponent("KajiSpeech-\(session.logID)-\(UUID().uuidString)")
-            .appendingPathExtension("caf")
+        engine = nil
+        inputNode = nil
+        isCapturing = false
     }
 
     static var hasMicrophoneAccess: Bool {
@@ -80,5 +71,32 @@ final class SpeechAudioCapture: NSObject, AVAudioRecorderDelegate {
 
     static func requestMicrophoneAccess() async -> Bool {
         await AVCaptureDevice.requestAccess(for: .audio)
+    }
+}
+
+final class SpeechAudioChunkAccumulator: @unchecked Sendable {
+    private let samplesLock = NSLock()
+    private var samples: [Float] = []
+    private var sampleRate: Double = 0
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        guard let chunk = SpeechAudioChunk.make(from: buffer) else { return }
+        samplesLock.lock()
+        if samples.isEmpty { sampleRate = chunk.sampleRate }
+        samples.append(contentsOf: chunk.samples)
+        samplesLock.unlock()
+    }
+
+    func snapshotChunk() -> SpeechAudioChunk? {
+        samplesLock.lock()
+        defer { samplesLock.unlock() }
+        guard !samples.isEmpty else { return nil }
+        let chunk = SpeechAudioChunk(samples: samples, sampleRate: sampleRate)
+        samples = []
+        return chunk
+    }
+
+    func finishChunk() -> SpeechAudioChunk? {
+        snapshotChunk()
     }
 }

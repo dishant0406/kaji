@@ -3,7 +3,7 @@ import Foundation
 import WebKit
 
 @MainActor
-final class SpeechInsertionRouter {
+final class SpeechInsertionRouter: SpeechInserting {
     private let editorProvider: () -> EditorTabState?
 
     init(editorProvider: @escaping () -> EditorTabState?) {

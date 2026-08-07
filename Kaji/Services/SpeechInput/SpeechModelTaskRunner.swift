@@ -6,11 +6,11 @@ final class SpeechModelTaskRunner {
     typealias CacheHandler = @MainActor @Sendable () -> Void
     typealias ErrorHandler = @MainActor @Sendable (Error) -> Void
 
-    private let transcriber: SpeechTranscriber
+    private let transcriber: any SpeechTranscribing
     private let settingsStore: SpeechInputSettingsStore
     private var task: Task<Void, Never>?
 
-    init(transcriber: SpeechTranscriber, settingsStore: SpeechInputSettingsStore) {
+    init(transcriber: any SpeechTranscribing, settingsStore: SpeechInputSettingsStore) {
         self.transcriber = transcriber
         self.settingsStore = settingsStore
     }

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 extension SpeechInputController {
@@ -20,6 +21,9 @@ extension SpeechInputController {
             activeSession = session
             try capture.start(session: session)
             status = .listening
+            accumulatedLocalText = ""
+            transcriptQueue.start()
+            startChunkLoop(for: session)
             startReleaseSafety(for: session, combo: settingsStore.settings.holdHotkey)
         } catch {
             activeSession = nil
@@ -29,64 +33,74 @@ extension SpeechInputController {
 
     func finishCapture(reason: SpeechCaptureStopReason) {
         let session = activeSession
-        let shouldTranscribe = status == .listening
-        guard session != nil || shouldTranscribe else {
+        let wasListening = status == .listening
+        guard session != nil || wasListening else {
             return
         }
         activeSession = nil
         releasePoller.stop()
-        watchdog.stop(session: session)
-        let chunks = capture.stop(session: session, reason: reason)
-        guard shouldTranscribe else {
+        chunkLoopTask?.cancel()
+        chunkLoopTask = nil
+        let model = selectedModel
+        let settings = settingsStore.settings
+        let finalChunk = capture.finish(session: session, reason: reason)
+        if let finalChunk, !finalChunk.samples.isEmpty {
+            transcriptQueue.enqueue(SpeechInputPendingChunk(chunk: finalChunk, settings: settings, model: model))
+        }
+        if !wasListening, transcriptQueue.isDrained {
             status = .idle
             return
         }
         status = .transcribing
-        startTranscription(chunks: chunks, settings: settingsStore.settings, model: selectedModel)
+        transcriptQueue.finish {
+            self.completeCaptureFlush()
+        }
     }
 
     func cancelCapture(reason: SpeechCaptureStopReason) {
         let session = activeSession
         activeSession = nil
         releasePoller.stop()
-        watchdog.stop(session: session)
-        _ = capture.stop(session: session, reason: reason)
+        chunkLoopTask?.cancel()
+        chunkLoopTask = nil
+        transcriptQueue.cancel()
+        _ = capture.finish(session: session, reason: reason)
         if case .listening = status { status = .idle }
+        accumulatedLocalText = ""
     }
 
-    func startTranscription(chunks: [SpeechAudioChunk], settings: SpeechInputSettings, model: SpeechInputModel) {
-        let transcriber = transcriber
-        transcribeTask = Task(priority: .userInitiated) { [weak self] in
-            do {
-                let transcript = try await transcriber.transcribe(chunks: chunks, model: model)
-                let text = SpeechInsertionPolicy(insertTrailingSpace: settings.insertTrailingSpace).preparedText(transcript)
-                try await MainActor.run { try self?.completeTranscript(transcript: transcript, text: text) }
-                if !settings.keepModelWarm { await transcriber.unload() }
-            } catch {
-                await transcriber.unload()
-                await MainActor.run { self?.handle(error) }
+    private func startChunkLoop(for session: SpeechCaptureSession) {
+        let model = selectedModel
+        let settings = settingsStore.settings
+        chunkLoopTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: SpeechInputTiming.chunkIntervalNanoseconds)
+                guard let self, !Task.isCancelled, activeSession == session else { return }
+                if let chunk = self.capture.snapshotChunk(), !chunk.samples.isEmpty {
+                    self.transcriptQueue.enqueue(SpeechInputPendingChunk(chunk: chunk, settings: settings, model: model))
+                }
             }
-            await MainActor.run { self?.transcribeTask = nil }
         }
     }
 
-    func completeTranscript(transcript: String, text: String) throws {
-        try insertionRouter.insert(text)
-        lastTranscript = transcript
+    private func completeCaptureFlush() {
+        copyAccumulatedToClipboard()
+        accumulatedLocalText = ""
         status = .idle
+    }
+
+    private func copyAccumulatedToClipboard() {
+        let accumulated = accumulatedLocalText + transcriptQueue.takeAccumulatedText()
+        guard !accumulated.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(accumulated, forType: .string)
     }
 
     func startReleaseSafety(for session: SpeechCaptureSession, combo: KeyCombo) {
         releasePoller.start(combo: combo) { [weak self] reason in
             guard let self, activeSession == session else { return }
             finishCapture(reason: reason)
-        }
-        watchdog.start(session: session) { [weak self] timedOutSession in
-            Task { @MainActor [weak self] in
-                guard let self, activeSession == timedOutSession else { return }
-                ToastState.shared.show("Speech recording stopped after 60 seconds")
-                finishCapture(reason: .recordingTimedOut)
-            }
         }
     }
 }

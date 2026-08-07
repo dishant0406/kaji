@@ -5,34 +5,51 @@ import Foundation
 final class SpeechInputController {
     static let shared = SpeechInputController()
     var status: SpeechInputStatus = .idle
-    var lastTranscript = ""
     var cacheRefreshToken = 0
     var permissionRefreshToken = 0
     @ObservationIgnored let settingsStore: SpeechInputSettingsStore
     @ObservationIgnored let modelRegistry: SpeechModelRegistryStore
-    @ObservationIgnored let capture = SpeechAudioCapture()
-    @ObservationIgnored let transcriber: SpeechTranscriber
+    @ObservationIgnored var capture: any SpeechCapturing
+    @ObservationIgnored var transcriber: any SpeechTranscribing
     @ObservationIgnored let hotkeyMonitor = SpeechHotkeyMonitor()
     @ObservationIgnored let lifecycleMonitor = SpeechCaptureLifecycleMonitor()
     @ObservationIgnored let modelTaskRunner: SpeechModelTaskRunner
     @ObservationIgnored let releasePoller = SpeechHotkeyReleasePoller()
-    @ObservationIgnored let watchdog = SpeechCaptureWatchdog()
     @ObservationIgnored let cacheStateProvider: (SpeechInputModel) -> SpeechModelCacheState
-    @ObservationIgnored var insertionRouter = SpeechInsertionRouter { nil }
-    @ObservationIgnored var transcribeTask: Task<Void, Never>?
+    @ObservationIgnored var insertionRouter: any SpeechInserting = SpeechInsertionRouter { nil }
     @ObservationIgnored var activeSession: SpeechCaptureSession?
+    @ObservationIgnored var chunkLoopTask: Task<Void, Never>?
+    @ObservationIgnored let transcriptQueue: SpeechTranscriptQueue
+    @ObservationIgnored var accumulatedLocalText = ""
 
     init(
         settingsStore: SpeechInputSettingsStore = .shared,
         modelRegistry: SpeechModelRegistryStore = .shared,
         cacheStateProvider: @escaping (SpeechInputModel) -> SpeechModelCacheState = { $0.cacheState }
     ) {
+        let capturer = SpeechAudioCapture()
         let transcriber = SpeechTranscriber()
+        self.capture = capturer
         self.transcriber = transcriber
         self.settingsStore = settingsStore
         self.modelRegistry = modelRegistry
         self.cacheStateProvider = cacheStateProvider
+        transcriptQueue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: SpeechInsertionRouter { nil })
         modelTaskRunner = SpeechModelTaskRunner(transcriber: transcriber, settingsStore: settingsStore)
+    }
+
+    convenience init(
+        capture: any SpeechCapturing,
+        transcriber: any SpeechTranscribing,
+        inserter: any SpeechInserting,
+        settingsStore: SpeechInputSettingsStore,
+        modelRegistry: SpeechModelRegistryStore,
+        cacheStateProvider: @escaping (SpeechInputModel) -> SpeechModelCacheState
+    ) {
+        self.init(settingsStore: settingsStore, modelRegistry: modelRegistry, cacheStateProvider: cacheStateProvider)
+        self.capture = capture
+        self.transcriber = transcriber
+        transcriptQueue.replace(transcriber: transcriber, insertionRouter: inserter)
     }
 
     func start() {
@@ -52,14 +69,12 @@ final class SpeechInputController {
         hotkeyMonitor.stop()
         lifecycleMonitor.stop()
         releasePoller.stop()
-        watchdog.stop(session: activeSession)
-        transcribeTask?.cancel()
         modelTaskRunner.cancel()
         cancelCapture(reason: .controllerStopped)
     }
 
     func updateEditorProvider(_ provider: @escaping () -> EditorTabState?) {
-        insertionRouter = SpeechInsertionRouter(editorProvider: provider)
+        transcriptQueue.replace(insertionRouter: SpeechInsertionRouter(editorProvider: provider))
     }
 
     func setEnabled(_ enabled: Bool) {

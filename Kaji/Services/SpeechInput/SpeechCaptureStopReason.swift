@@ -5,6 +5,5 @@ enum SpeechCaptureStopReason: String, Equatable {
     case shortcutLost
     case appResignedActive
     case windowResignedKey
-    case recordingTimedOut
     case controllerStopped
 }

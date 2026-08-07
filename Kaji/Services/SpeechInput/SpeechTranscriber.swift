@@ -1,6 +1,6 @@
 import Foundation
 
-actor SpeechTranscriber {
+actor SpeechTranscriber: SpeechTranscribing {
     typealias ProgressHandler = @Sendable (SpeechDownloadProgress) -> Void
 
     private let downloader: HuggingFaceModelDownloader
