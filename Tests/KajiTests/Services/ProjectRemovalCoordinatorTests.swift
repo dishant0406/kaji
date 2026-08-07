@@ -309,6 +309,7 @@ private enum ProjectRemovalTestError: Error {
 private final class ProjectRemovalMemoryTombstones: ProjectRemovalTombstonePersisting {
     var records: [ProjectRemovalTombstone]
     let failSaves: Bool
+    var quarantined = false
 
     init(records: [ProjectRemovalTombstone] = [], failSaves: Bool = false) {
         self.records = records
@@ -322,6 +323,11 @@ private final class ProjectRemovalMemoryTombstones: ProjectRemovalTombstonePersi
     func save(_ tombstones: [ProjectRemovalTombstone]) throws {
         if failSaves { throw ProjectRemovalTestError.saveFailed }
         records = tombstones
+    }
+
+    func quarantine() throws {
+        quarantined = true
+        records.removeAll()
     }
 }
 

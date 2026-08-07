@@ -16,13 +16,29 @@ final class ProjectStore {
 
     func add(_ project: Project) {
         projects.append(project)
+        _ = reindexSortOrder()
         save()
+    }
+
+    func nextSortOrder() -> Int {
+        (projects.map(\.sortOrder).max() ?? -1) + 1
     }
 
     @discardableResult
     func remove(id: UUID) -> Bool {
         projects.removeAll { $0.id == id }
+        _ = reindexSortOrder()
         return save()
+    }
+
+    private func reindexSortOrder() -> Bool {
+        projects.sort { $0.sortOrder < $1.sortOrder }
+        var changed = false
+        for index in projects.indices where projects[index].sortOrder != index {
+            projects[index].sortOrder = index
+            changed = true
+        }
+        return changed
     }
 
     func rename(id: UUID, to newName: String) {
@@ -75,7 +91,9 @@ final class ProjectStore {
     private func load() {
         do {
             projects = try persistence.loadProjects()
-            projects.sort { $0.sortOrder < $1.sortOrder }
+            if reindexSortOrder() {
+                _ = save()
+            }
         } catch {
             logger.error("Failed to load projects: \(error)")
         }

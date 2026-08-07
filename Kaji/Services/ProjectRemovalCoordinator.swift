@@ -35,6 +35,27 @@ struct ProjectRemovalTombstone: Codable, Equatable, Identifiable {
     let project: Project
     let worktrees: [Worktree]
     let cleanupOnDisk: Bool
+    var retryCount: Int
+
+    init(
+        project: Project,
+        worktrees: [Worktree],
+        cleanupOnDisk: Bool,
+        retryCount: Int = 0
+    ) {
+        self.project = project
+        self.worktrees = worktrees
+        self.cleanupOnDisk = cleanupOnDisk
+        self.retryCount = retryCount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        project = try container.decode(Project.self, forKey: .project)
+        worktrees = try container.decode([Worktree].self, forKey: .worktrees)
+        cleanupOnDisk = try container.decode(Bool.self, forKey: .cleanupOnDisk)
+        retryCount = try container.decodeIfPresent(Int.self, forKey: .retryCount) ?? 0
+    }
 
     var id: UUID { project.id }
 }
@@ -42,6 +63,7 @@ struct ProjectRemovalTombstone: Codable, Equatable, Identifiable {
 protocol ProjectRemovalTombstonePersisting {
     func load() throws -> [ProjectRemovalTombstone]
     func save(_ tombstones: [ProjectRemovalTombstone]) throws
+    func quarantine() throws
 }
 
 struct FileProjectRemovalTombstonePersistence: ProjectRemovalTombstonePersisting {
@@ -62,6 +84,21 @@ struct FileProjectRemovalTombstonePersistence: ProjectRemovalTombstonePersisting
             try store.save(tombstones.sorted { $0.project.id.uuidString < $1.project.id.uuidString })
         }
     }
+
+    func quarantine() throws {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: store.fileURL.path, isDirectory: &isDirectory) else { return }
+        let stamp = Self.stampFormatter.string(from: Date())
+        let destination = URL(fileURLWithPath: store.fileURL.path + ".stale-\(stamp)")
+        try FileManager.default.moveItem(at: store.fileURL, to: destination)
+    }
+
+    private static let stampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 }
 
 @MainActor
@@ -73,6 +110,7 @@ final class ProjectRemovalService {
     }
 
     static let shared = ProjectRemovalService()
+    static let maxRetryCount = 3
 
     private enum Source: Equatable {
         case manual
@@ -234,8 +272,8 @@ final class ProjectRemovalService {
             true
         }
         guard projectPersisted, worktreesPersisted, diskCleaned else {
-            projectRemovalLogger.error("Project removal will retry after an incomplete persistence or disk cleanup for \(project.id)")
-            return .removed
+            await persistFailure(tombstone, source: source)
+            return .deferred
         }
         do {
             var records = try tombstones.load()
@@ -245,6 +283,30 @@ final class ProjectRemovalService {
             projectRemovalLogger.error("Failed to clear project removal recovery state: \(error.localizedDescription)")
         }
         return .removed
+    }
+
+    private func persistFailure(_ tombstone: ProjectRemovalTombstone, source: Source) async {
+        do {
+            var records = try tombstones.load()
+            records.removeAll { $0.id == tombstone.project.id }
+            var updated = tombstone
+            if source == .recovery {
+                updated.retryCount = tombstone.retryCount + 1
+            }
+            records.append(updated)
+            try tombstones.save(records)
+        } catch {
+            projectRemovalLogger.error("Failed to update project removal recovery state: \(error.localizedDescription)")
+            return
+        }
+        guard source == .recovery,
+              tombstone.retryCount + 1 >= ProjectRemovalService.maxRetryCount
+        else { return }
+        do {
+            try tombstones.quarantine()
+        } catch {
+            projectRemovalLogger.error("Failed to quarantine project removal recovery state: \(error.localizedDescription)")
+        }
     }
 
     private func deterministicReplacement(

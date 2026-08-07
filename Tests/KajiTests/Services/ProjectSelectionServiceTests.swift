@@ -96,6 +96,40 @@ struct ProjectSelectionServiceTests {
         #expect(fixture.projectStore.projects.first?.path == projectURL.path)
     }
 
+    @Test("assigns unique sort orders across removals")
+    func assignsUniqueSortOrdersAcrossRemovals() throws {
+        let fixture = try ProjectSelectionFixture()
+        defer { fixture.cleanup() }
+        let firstURL = try fixture.makeDirectory("First")
+        let secondURL = try fixture.makeDirectory("Second")
+        _ = try ProjectSelectionService.selectOrAddProject(
+            path: firstURL.path,
+            appState: fixture.appState,
+            projectStore: fixture.projectStore,
+            worktreeStore: fixture.worktreeStore
+        )
+        _ = try ProjectSelectionService.selectOrAddProject(
+            path: secondURL.path,
+            appState: fixture.appState,
+            projectStore: fixture.projectStore,
+            worktreeStore: fixture.worktreeStore
+        )
+        let removed = try #require(fixture.projectStore.projects.last)
+        fixture.projectStore.remove(id: removed.id)
+
+        let thirdURL = try fixture.makeDirectory("Third")
+        _ = try ProjectSelectionService.selectOrAddProject(
+            path: thirdURL.path,
+            appState: fixture.appState,
+            projectStore: fixture.projectStore,
+            worktreeStore: fixture.worktreeStore
+        )
+
+        let orders = try #require(fixture.projectStore.projects as [Project]?).map(\.sortOrder)
+        #expect(orders.sorted() == orders)
+        #expect(Set(orders).count == orders.count)
+    }
+
     @Test("rejects missing directories")
     func rejectsMissingDirectories() throws {
         let fixture = try ProjectSelectionFixture()

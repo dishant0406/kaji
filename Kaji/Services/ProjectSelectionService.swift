@@ -38,7 +38,7 @@ enum ProjectSelectionService {
         let project = Project(
             name: URL(fileURLWithPath: path).lastPathComponent,
             path: path,
-            sortOrder: projectStore.projects.count
+            sortOrder: projectStore.nextSortOrder()
         )
         projectStore.add(project)
         worktreeStore.ensurePrimary(for: project)

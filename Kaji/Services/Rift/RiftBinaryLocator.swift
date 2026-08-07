@@ -12,7 +12,7 @@ enum RiftBinaryLocator {
             return URL(fileURLWithPath: override)
         }
 
-        if let bundled = Bundle.module.url(forResource: "rift", withExtension: nil, subdirectory: "Rift"),
+        if let bundled = Bundle.appResources.url(forResource: "rift", withExtension: nil, subdirectory: "Rift"),
            FileManager.default.isExecutableFile(atPath: bundled.path)
         {
             return bundled
