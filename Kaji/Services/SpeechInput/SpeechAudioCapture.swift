@@ -21,9 +21,12 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
-        input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in
-            accumulator.append(buffer)
-        }
+        input.installTap(
+            onBus: 0,
+            bufferSize: 4096,
+            format: format,
+            block: Self.tapHandler(for: accumulator)
+        )
         engine.prepare()
         do {
             try engine.start()
@@ -65,6 +68,14 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
         isCapturing = false
     }
 
+    nonisolated static func tapHandler(
+        for accumulator: SpeechAudioChunkAccumulator
+    ) -> @Sendable @convention(block) (AVAudioPCMBuffer, AVAudioTime) -> Void {
+        { buffer, _ in
+            accumulator.append(buffer)
+        }
+    }
+
     static var hasMicrophoneAccess: Bool {
         SpeechMicrophonePermissionState.current == .allowed
     }
@@ -92,7 +103,8 @@ final class SpeechAudioChunkAccumulator: @unchecked Sendable {
         defer { samplesLock.unlock() }
         guard !samples.isEmpty else { return nil }
         let chunk = SpeechAudioChunk(samples: samples, sampleRate: sampleRate)
-        samples = []
+        samples.removeAll(keepingCapacity: true)
+        sampleRate = 0
         return chunk
     }
 
