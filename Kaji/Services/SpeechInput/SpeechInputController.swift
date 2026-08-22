@@ -15,6 +15,7 @@ final class SpeechInputController {
     @ObservationIgnored let lifecycleMonitor = SpeechCaptureLifecycleMonitor()
     @ObservationIgnored let modelTaskRunner: SpeechModelTaskRunner
     @ObservationIgnored let releasePoller = SpeechHotkeyReleasePoller()
+    @ObservationIgnored let watchdog = SpeechCaptureWatchdog()
     @ObservationIgnored let cacheStateProvider: (SpeechInputModel) -> SpeechModelCacheState
     @ObservationIgnored var insertionRouter: any SpeechInserting = SpeechInsertionRouter { nil }
     @ObservationIgnored var activeSession: SpeechCaptureSession?
@@ -69,6 +70,7 @@ final class SpeechInputController {
         hotkeyMonitor.stop()
         lifecycleMonitor.stop()
         releasePoller.stop()
+        watchdog.stop()
         modelTaskRunner.cancel()
         cancelCapture(reason: .controllerStopped)
     }

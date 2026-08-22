@@ -39,28 +39,33 @@ extension SpeechInputController {
         }
         activeSession = nil
         releasePoller.stop()
+        watchdog.stop(session: session)
         chunkLoopTask?.cancel()
         chunkLoopTask = nil
+        if wasListening {
+            status = .transcribing
+        }
+        enqueueFinalChunk(reason: reason)
+        transcriptQueue.finish { [weak self] in
+            self?.completeCaptureFlush()
+        }
+    }
+
+    private func enqueueFinalChunk(reason: SpeechCaptureStopReason) {
         let model = selectedModel
         let settings = settingsStore.settings
-        let finalChunk = capture.finish(session: session, reason: reason)
-        if let finalChunk, !finalChunk.samples.isEmpty {
-            transcriptQueue.enqueue(SpeechInputPendingChunk(chunk: finalChunk, settings: settings, model: model))
-        }
-        if !wasListening, transcriptQueue.isDrained {
-            status = .idle
-            return
-        }
-        status = .transcribing
-        transcriptQueue.finish {
-            self.completeCaptureFlush()
-        }
+        guard let finalChunk = capture.finish(
+            session: activeSession,
+            reason: reason
+        ), !finalChunk.samples.isEmpty else { return }
+        transcriptQueue.enqueue(SpeechInputPendingChunk(chunk: finalChunk, settings: settings, model: model))
     }
 
     func cancelCapture(reason: SpeechCaptureStopReason) {
         let session = activeSession
         activeSession = nil
         releasePoller.stop()
+        watchdog.stop(session: session)
         chunkLoopTask?.cancel()
         chunkLoopTask = nil
         transcriptQueue.cancel()
@@ -97,10 +102,17 @@ extension SpeechInputController {
         pasteboard.setString(accumulated, forType: .string)
     }
 
-    func startReleaseSafety(for session: SpeechCaptureSession, combo: KeyCombo) {
+    private func startReleaseSafety(for session: SpeechCaptureSession, combo: KeyCombo) {
         releasePoller.start(combo: combo) { [weak self] reason in
             guard let self, activeSession == session else { return }
             finishCapture(reason: reason)
+        }
+        watchdog.start(session: session) { [weak self] timedOutSession in
+            Task { @MainActor [weak self] in
+                guard let self, activeSession == timedOutSession else { return }
+                ToastState.shared.show("Speech recording stopped after 60 seconds")
+                finishCapture(reason: .recordingTimedOut)
+            }
         }
     }
 }

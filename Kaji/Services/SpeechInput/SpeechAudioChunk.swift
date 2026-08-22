@@ -5,7 +5,16 @@ struct SpeechAudioChunk {
     let samples: [Float]
     let sampleRate: Double
 
+    init(samples: [Float], sampleRate: Double) {
+        self.samples = samples
+        self.sampleRate = sampleRate
+    }
+
     var frameCount: Int { samples.count }
+    var durationSeconds: Double {
+        guard sampleRate > 0 else { return 0 }
+        return Double(samples.count) / sampleRate
+    }
 
     static func make(from buffer: AVAudioPCMBuffer) -> SpeechAudioChunk? {
         let frames = Int(buffer.frameLength)
@@ -26,15 +35,30 @@ struct SpeechAudioChunk {
         return nil
     }
 
-    func makeBuffer() -> AVAudioPCMBuffer? {
+    func makeBuffer(format: AVAudioFormat? = nil) -> AVAudioPCMBuffer? {
         guard !samples.isEmpty else { return nil }
-        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: 1, interleaved: false),
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)),
+        let resolvedFormat = format ?? AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sampleRate,
+            channels: 1,
+            interleaved: false
+        )
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: resolvedFormat!, frameCapacity: AVAudioFrameCount(samples.count)),
               let channel = buffer.floatChannelData?[0]
         else { return nil }
         buffer.frameLength = AVAudioFrameCount(samples.count)
         channel.update(from: samples, count: samples.count)
         return buffer
+    }
+
+    func appending(_ other: SpeechAudioChunk) -> SpeechAudioChunk {
+        SpeechAudioChunk(samples: samples + other.samples, sampleRate: sampleRate)
+    }
+
+    func suffixSamples(seconds: Double) -> SpeechAudioChunk {
+        let rate = max(1, Int(sampleRate))
+        let count = min(samples.count, max(0, Int((seconds * Double(rate)).rounded())))
+        return SpeechAudioChunk(samples: Array(samples.suffix(count)), sampleRate: sampleRate)
     }
 
     private static func mixFloat(

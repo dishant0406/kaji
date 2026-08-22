@@ -3,7 +3,7 @@ import Foundation
 actor SpeechTranscriber: SpeechTranscribing {
     typealias ProgressHandler = @Sendable (SpeechDownloadProgress) -> Void
 
-    private let downloader: HuggingFaceModelDownloader
+    nonisolated let downloader: HuggingFaceModelDownloader
     private let eouRuntime = SpeechEouTranscriptionRuntime()
     private let tdtRuntime = SpeechParakeetTdtTranscriptionRuntime()
 
@@ -28,10 +28,10 @@ actor SpeechTranscriber: SpeechTranscribing {
     func transcribe(chunks: [SpeechAudioChunk], model: SpeechInputModel) async throws -> String {
         guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
         guard !chunks.isEmpty else { throw SpeechInputError.emptyAudio }
-        let transcript = try await transcript(chunks: chunks, model: model)
+        let result = try await transcript(chunks: chunks, model: model)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !transcript.isEmpty else { throw SpeechInputError.emptyTranscript }
-        return transcript
+        guard !result.isEmpty else { throw SpeechInputError.emptyTranscript }
+        return result
     }
 
     func download(model: SpeechInputModel, progress: ProgressHandler? = nil) async throws {
@@ -41,6 +41,32 @@ actor SpeechTranscriber: SpeechTranscribing {
     func unload() async {
         await eouRuntime.unload()
         await tdtRuntime.unload()
+    }
+
+    func beginSession(model: SpeechInputModel) async throws {
+        guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
+        try await eouRuntime.beginSession(model: model)
+    }
+
+    func append(chunks: [SpeechAudioChunk], model: SpeechInputModel) async throws -> String? {
+        guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
+        guard !chunks.isEmpty else { return nil }
+        try await eouRuntime.append(chunks: chunks)
+        let partial = try await eouRuntime.partialTranscript()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return partial.isEmpty ? nil : partial
+    }
+
+    func finishSession(model: SpeechInputModel) async throws -> String {
+        guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
+        let transcript = try await eouRuntime.finish()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !transcript.isEmpty else { throw SpeechInputError.emptyTranscript }
+        return transcript
+    }
+
+    func cancelSession() async {
+        await eouRuntime.unload()
     }
 
     private func transcript(chunks: [SpeechAudioChunk], model: SpeechInputModel) async throws -> String {

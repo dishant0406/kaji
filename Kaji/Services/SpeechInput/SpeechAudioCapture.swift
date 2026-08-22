@@ -6,10 +6,10 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
     private var engine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
     private var isCapturing = false
-    private var chunkAccumulator: SpeechAudioChunkAccumulator
+    private var chunkAccumulator = SpeechAudioChunkAccumulator()
+    private let resampler = SpeechAudioResampler()
 
     override init() {
-        chunkAccumulator = SpeechAudioChunkAccumulator()
         super.init()
     }
 
@@ -17,13 +17,12 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
         guard !isCapturing else { return }
         guard Self.hasMicrophoneAccess else { throw SpeechInputError.microphonePermissionDenied }
         let accumulator = SpeechAudioChunkAccumulator()
-        chunkAccumulator = accumulator
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         input.installTap(
             onBus: 0,
-            bufferSize: 4096,
+            bufferSize: 4_096,
             format: format,
             block: Self.tapHandler(for: accumulator)
         )
@@ -36,25 +35,31 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
         }
         self.engine = engine
         self.inputNode = input
+        chunkAccumulator = accumulator
         isCapturing = true
     }
 
     func snapshotChunk() -> SpeechAudioChunk? {
         guard isCapturing else { return nil }
-        return chunkAccumulator.snapshotChunk()
+        guard let chunk = normalized(chunkAccumulator.snapshotChunk()) else { return nil }
+        let overlap = overlapTail
+        overlapTail = chunk.suffixSamples(seconds: SpeechInputTiming.chunkOverlapSeconds)
+        return chunk.appending(overlap ?? chunk.suffixSamples(seconds: 0))
     }
 
     func finish(session _: SpeechCaptureSession?, reason _: SpeechCaptureStopReason) -> SpeechAudioChunk? {
         stopEngine()
-        let chunk = chunkAccumulator.finishChunk()
+        let chunk = normalized(chunkAccumulator.finishChunk())
         chunkAccumulator = SpeechAudioChunkAccumulator()
+        overlapTail = nil
         return chunk
     }
 
-    func stop(session: SpeechCaptureSession?, reason: SpeechCaptureStopReason) -> [SpeechAudioChunk] {
-        let chunk = finish(session: session, reason: reason)
-        guard let chunk, chunk.frameCount > 0 else { return [] }
-        return [chunk]
+    private var overlapTail: SpeechAudioChunk?
+
+    private func normalized(_ chunk: SpeechAudioChunk?) -> SpeechAudioChunk? {
+        guard let chunk, !chunk.samples.isEmpty else { return nil }
+        return resampler.convertTo16kMono(chunk)
     }
 
     private func stopEngine() {
