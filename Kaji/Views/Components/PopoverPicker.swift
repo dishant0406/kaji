@@ -30,6 +30,7 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
     let emptyActionTitle: ((String) -> String?)?
     let emptyActionDetail: String?
     let footerActions: [PopoverFooterAction]
+    let width: CGFloat
     let height: CGFloat
     let onEmptyAction: ((String) -> Void)?
     let onSelect: (Item) -> Void
@@ -43,6 +44,7 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
         emptyActionTitle: ((String) -> String?)? = nil,
         emptyActionDetail: String? = nil,
         footerActions: [PopoverFooterAction] = [],
+        width: CGFloat = 300,
         height: CGFloat = 420,
         onEmptyAction: ((String) -> Void)? = nil,
         onSelect: @escaping (Item) -> Void,
@@ -55,6 +57,7 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
         self.emptyActionTitle = emptyActionTitle
         self.emptyActionDetail = emptyActionDetail
         self.footerActions = footerActions
+        self.width = width
         self.height = height
         self.onEmptyAction = onEmptyAction
         self.onSelect = onSelect
@@ -88,7 +91,7 @@ struct PopoverPicker<Item: Identifiable, RowContent: View>: View {
                 }
             }
         }
-        .frame(width: 300, height: height)
+        .frame(width: width, height: height)
         .background(
             TranslucentSurface(
                 base: KajiTheme.tertiaryBackground,

@@ -87,6 +87,7 @@ struct TopBarBranchPicker: View {
                 emptyLabel: state.isLoading ? "Loading..." : "No branches found",
                 emptyActionTitle: createBranchTitle(for:),
                 emptyActionDetail: "Create and switch to this branch",
+                width: 280,
                 height: popoverHeight,
                 onEmptyAction: { branch in
                     showPopover = false
