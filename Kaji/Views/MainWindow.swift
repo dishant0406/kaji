@@ -161,7 +161,6 @@ struct MainWindow: View {
     private var configuredMainLayout: AnyView {
         let overlayed = AnyView(
             mainLayout
-                .kajiGlassEffectScope(spacing: 8)
                 .environment(\.overlayActive, overlayActive)
                 .overlay(alignment: toastAlignment) { toastOverlay }
                 .overlay { commandPaletteOverlay }
@@ -523,12 +522,7 @@ struct MainWindow: View {
                         HStack(spacing: 0) {
                             ZStack {
                                 KajiTheme.bg
-                                if #available(macOS 26.0, *) {
-                                    workspaceContent
-                                        .backgroundExtensionEffect()
-                                } else {
-                                    workspaceContent
-                                }
+                                workspaceContent
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
 

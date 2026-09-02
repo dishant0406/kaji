@@ -171,7 +171,6 @@ struct KajiPopoverSurface<Content: View>: View {
 
     var body: some View {
         content()
-            .kajiGlassEffectScope(spacing: 6)
             .background(
                 TranslucentSurface(
                     base: KajiTheme.tertiaryBackground,

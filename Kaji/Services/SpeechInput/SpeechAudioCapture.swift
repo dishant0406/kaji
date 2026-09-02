@@ -22,7 +22,7 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
         let format = input.outputFormat(forBus: 0)
         input.installTap(
             onBus: 0,
-            bufferSize: 4_096,
+            bufferSize: 4096,
             format: format,
             block: Self.tapHandler(for: accumulator)
         )

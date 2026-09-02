@@ -5,11 +5,6 @@ struct SpeechAudioChunk {
     let samples: [Float]
     let sampleRate: Double
 
-    init(samples: [Float], sampleRate: Double) {
-        self.samples = samples
-        self.sampleRate = sampleRate
-    }
-
     var frameCount: Int { samples.count }
     var durationSeconds: Double {
         guard sampleRate > 0 else { return 0 }
@@ -37,13 +32,20 @@ struct SpeechAudioChunk {
 
     func makeBuffer(format: AVAudioFormat? = nil) -> AVAudioPCMBuffer? {
         guard !samples.isEmpty else { return nil }
-        let resolvedFormat = format ?? AVAudioFormat(
+        let resolvedFormat: AVAudioFormat
+        if let format {
+            resolvedFormat = format
+        } else if let defaultFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: sampleRate,
             channels: 1,
             interleaved: false
-        )
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: resolvedFormat!, frameCapacity: AVAudioFrameCount(samples.count)),
+        ) {
+            resolvedFormat = defaultFormat
+        } else {
+            return nil
+        }
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: resolvedFormat, frameCapacity: AVAudioFrameCount(samples.count)),
               let channel = buffer.floatChannelData?[0]
         else { return nil }
         buffer.frameLength = AVAudioFrameCount(samples.count)

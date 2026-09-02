@@ -57,7 +57,8 @@ extension SpeechInputController {
         guard let finalChunk = capture.finish(
             session: activeSession,
             reason: reason
-        ), !finalChunk.samples.isEmpty else { return }
+        ), !finalChunk.samples.isEmpty
+        else { return }
         transcriptQueue.enqueue(SpeechInputPendingChunk(chunk: finalChunk, settings: settings, model: model))
     }
 

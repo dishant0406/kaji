@@ -24,7 +24,6 @@ struct SettingsView: View {
                 content
             }
         }
-        .kajiGlassEffectScope(spacing: 8)
         .frame(width: 860, height: 560)
         .background(
             TranslucentSurface(

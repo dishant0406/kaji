@@ -16,13 +16,7 @@ enum EffectiveAppearanceMode: Equatable {
     case glass
 
     var usesTransparentWindow: Bool {
-        switch self {
-        case .solid:
-            false
-        case .translucent,
-             .glass:
-            true
-        }
+        self == .translucent
     }
 
     var usesSoftSurfaces: Bool {

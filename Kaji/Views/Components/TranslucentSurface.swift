@@ -15,10 +15,16 @@ struct TranslucentSurface: View {
         Group {
             if effectiveMode == .glass {
                 if #available(macOS 26.0, *) {
-                    base.opacity(adjustedGlassSurfaceTint)
-                        .glassEffect(.regular, in: .rect(cornerRadius: glassCornerRadius))
+                    ZStack {
+                        base
+                        KajiTheme.bg.opacity(0.4)
+                    }
+                    .glassEffect(.regular, in: .rect(cornerRadius: glassCornerRadius))
                 } else {
-                    base.opacity(adjustedGlassSurfaceTint)
+                    ZStack {
+                        base
+                        KajiTheme.bg.opacity(0.5)
+                    }
                 }
             } else if effectiveMode == .translucent {
                 ZStack {
@@ -64,10 +70,5 @@ struct TranslucentSurface: View {
             baseGradientOpacity: gradientOpacity,
             amount: appearanceContext.transparencyAmount
         )
-    }
-
-    private var adjustedGlassSurfaceTint: Double {
-        if glassCornerRadius == 0 { return 0.04 }
-        return max(0.06, adjustedTintOpacity * 0.12)
     }
 }

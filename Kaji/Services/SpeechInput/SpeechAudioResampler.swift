@@ -2,7 +2,7 @@ import AVFoundation
 import Foundation
 
 enum SpeechAudioSampleRate {
-    static let targetHz: Double = 16_000
+    static let targetHz: Double = 16000
 }
 
 final class SpeechAudioResampler: @unchecked Sendable {
@@ -36,7 +36,7 @@ final class SpeechAudioResampler: @unchecked Sendable {
         var iterations = 0
         while iterations < 16 {
             iterations += 1
-            guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: 16_384) else {
+            guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: 16384) else {
                 return nil
             }
             let status = converter.convert(to: outputBuffer, error: &conversionError) { _, inputStatus in
