@@ -45,12 +45,18 @@ actor SpeechTranscriber: SpeechTranscribing {
 
     func beginSession(model: SpeechInputModel) async throws {
         guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
-        try await eouRuntime.beginSession(model: model)
+        switch model.displayMode {
+        case .liveStreaming:
+            try await eouRuntime.beginSession(model: model)
+        case .releaseTranscription:
+            try await tdtRuntime.prepare(model: model)
+        }
     }
 
     func append(chunks: [SpeechAudioChunk], model: SpeechInputModel) async throws -> String? {
         guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
         guard !chunks.isEmpty else { return nil }
+        guard model.displayMode == .liveStreaming else { return nil }
         try await eouRuntime.append(chunks: chunks)
         let partial = try await eouRuntime.partialTranscript()
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -59,6 +65,7 @@ actor SpeechTranscriber: SpeechTranscribing {
 
     func finishSession(model: SpeechInputModel) async throws -> String {
         guard model.cacheState.isReady else { throw SpeechInputError.modelUnavailable }
+        guard model.displayMode == .liveStreaming else { throw SpeechInputError.emptyTranscript }
         let transcript = try await eouRuntime.finish()
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !transcript.isEmpty else { throw SpeechInputError.emptyTranscript }

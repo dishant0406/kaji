@@ -62,7 +62,9 @@ final class SpeechModelRegistryStore {
             guard let document = try store.load() else { return (bundled.models, nil) }
             try SpeechModelRegistryValidator.validate(document)
             let migrated = SpeechModelRegistryMigration.migrated(user: document, bundled: bundled)
-            if migrated != document { try store.save(migrated) }
+            if migrated != document {
+                try store.save(migrated)
+            }
             return (migrated.models, nil)
         } catch {
             DebugFileLog.logError("SpeechInput", error, context: "model registry load failed")

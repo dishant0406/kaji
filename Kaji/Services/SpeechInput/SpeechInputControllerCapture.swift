@@ -22,6 +22,7 @@ extension SpeechInputController {
             try capture.start(session: session)
             status = .listening
             accumulatedLocalText = ""
+            transcriptQueue.setKeepModelWarm(settingsStore.settings.keepModelWarm)
             transcriptQueue.start()
             startChunkLoop(for: session)
             startReleaseSafety(for: session, combo: settingsStore.settings.holdHotkey)
@@ -71,7 +72,9 @@ extension SpeechInputController {
         chunkLoopTask = nil
         transcriptQueue.cancel()
         _ = capture.finish(session: session, reason: reason)
-        if case .listening = status { status = .idle }
+        if case .listening = status {
+            status = .idle
+        }
         accumulatedLocalText = ""
     }
 

@@ -54,7 +54,9 @@ final class SpeechModelTaskRunner {
             ToastState.shared.show("Speech model downloaded")
         case .prepare:
             try await transcriber.prepare(model: model, progress: progressHandler(kind, onStatus))
-            if !settingsStore.settings.keepModelWarm { await transcriber.unload() }
+            if !settingsStore.settings.keepModelWarm {
+                await transcriber.unload()
+            }
             ToastState.shared.show("Speech model ready")
         }
     }

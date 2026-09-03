@@ -28,7 +28,9 @@ actor SpeechParakeetTdtTranscriptionRuntime {
 
     private func manager(for model: SpeechInputModel) async throws -> AsrManager {
         guard model.engine == .fluidAudioParakeetTdt else { throw SpeechInputError.modelUnavailable }
-        if let manager, loadedModelID == model.id { return manager }
+        if let manager, loadedModelID == model.id {
+            return manager
+        }
         await manager?.cleanup()
         let runtime = try runtime(model)
         let models = try await AsrModels.load(

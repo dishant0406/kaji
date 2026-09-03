@@ -69,7 +69,9 @@ struct SpeechAudioChunk {
         channels: Int,
         interleaved: Bool
     ) -> [Float] {
-        if channels == 1 { return Array(UnsafeBufferPointer(start: data[0], count: frames)) }
+        if channels == 1 {
+            return Array(UnsafeBufferPointer(start: data[0], count: frames))
+        }
         return (0 ..< frames).map { frame in
             let sum = (0 ..< channels).reduce(Float(0)) { partial, channel in
                 partial + (interleaved ? data[0][frame * channels + channel] : data[channel][frame])

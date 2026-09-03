@@ -33,7 +33,9 @@ enum SpeechModelCacheState: Equatable {
         fileExists: (URL) -> Bool
     ) -> SpeechModelCacheState {
         let existing = requiredFiles.filter { fileExists(baseURL.appendingPathComponent($0)) }
-        if existing.count == requiredFiles.count { return .ready }
+        if existing.count == requiredFiles.count {
+            return .ready
+        }
         guard fileExists(baseURL) || !existing.isEmpty else { return .missing }
         return .partial
     }

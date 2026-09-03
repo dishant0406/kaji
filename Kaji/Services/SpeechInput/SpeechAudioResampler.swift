@@ -51,7 +51,9 @@ final class SpeechAudioResampler: @unchecked Sendable {
             if let channelData = outputBuffer.floatChannelData, outputBuffer.frameLength > 0 {
                 collected.append(contentsOf: UnsafeBufferPointer(start: channelData[0], count: Int(outputBuffer.frameLength)))
             }
-            if status == .endOfStream || status == .error { break }
+            if status == .endOfStream || status == .error {
+                break
+            }
         }
         guard conversionError == nil, !collected.isEmpty else { return nil }
         return collected
@@ -64,7 +66,9 @@ final class SpeechAudioResampler: @unchecked Sendable {
     private func converter(for sampleRate: Double) -> AVAudioConverter? {
         lock.lock()
         defer { lock.unlock() }
-        if let cached = converters[sampleRate] { return cached }
+        if let cached = converters[sampleRate] {
+            return cached
+        }
         guard let inputFormat = makeFormat(sampleRate: sampleRate),
               let outputFormat = makeFormat(sampleRate: SpeechAudioSampleRate.targetHz)
         else { return nil }

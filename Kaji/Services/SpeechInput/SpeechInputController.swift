@@ -92,7 +92,9 @@ final class SpeechInputController {
         let model = modelRegistry.model(for: id)
         settingsStore.update { settings in
             settings.selectedModelID = model.id
-            if !cacheStateProvider(model).isReady { settings.isEnabled = false }
+            if !cacheStateProvider(model).isReady {
+                settings.isEnabled = false
+            }
         }
         cacheRefreshToken += 1
     }
@@ -102,7 +104,9 @@ final class SpeechInputController {
         let model = selectedModel
         settingsStore.update { settings in
             settings.selectedModelID = model.id
-            if !cacheStateProvider(model).isReady { settings.isEnabled = false }
+            if !cacheStateProvider(model).isReady {
+                settings.isEnabled = false
+            }
         }
         cacheRefreshToken += 1
     }

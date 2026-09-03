@@ -41,21 +41,15 @@ final class SpeechAudioCapture: NSObject, SpeechCapturing {
 
     func snapshotChunk() -> SpeechAudioChunk? {
         guard isCapturing else { return nil }
-        guard let chunk = normalized(chunkAccumulator.snapshotChunk()) else { return nil }
-        let overlap = overlapTail
-        overlapTail = chunk.suffixSamples(seconds: SpeechInputTiming.chunkOverlapSeconds)
-        return chunk.appending(overlap ?? chunk.suffixSamples(seconds: 0))
+        return normalized(chunkAccumulator.snapshotChunk())
     }
 
     func finish(session _: SpeechCaptureSession?, reason _: SpeechCaptureStopReason) -> SpeechAudioChunk? {
         stopEngine()
         let chunk = normalized(chunkAccumulator.finishChunk())
         chunkAccumulator = SpeechAudioChunkAccumulator()
-        overlapTail = nil
         return chunk
     }
-
-    private var overlapTail: SpeechAudioChunk?
 
     private func normalized(_ chunk: SpeechAudioChunk?) -> SpeechAudioChunk? {
         guard let chunk, !chunk.samples.isEmpty else { return nil }
@@ -98,7 +92,9 @@ final class SpeechAudioChunkAccumulator: @unchecked Sendable {
     func append(_ buffer: AVAudioPCMBuffer) {
         guard let chunk = SpeechAudioChunk.make(from: buffer) else { return }
         samplesLock.lock()
-        if samples.isEmpty { sampleRate = chunk.sampleRate }
+        if samples.isEmpty {
+            sampleRate = chunk.sampleRate
+        }
         samples.append(contentsOf: chunk.samples)
         samplesLock.unlock()
     }

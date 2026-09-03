@@ -75,6 +75,13 @@ private actor FakeTranscriber: SpeechTranscribing {
 }
 
 @MainActor
+private final class DrainLatch {
+    private(set) var fired = false
+
+    func fire() { fired = true }
+}
+
+@MainActor
 private final class FakeInserter: SpeechInserting {
     var inserted: [String] = []
     var error: Error?
@@ -106,12 +113,37 @@ private func pending(_ samples: [Float], trailingSpace: Bool) -> SpeechInputPend
         )
     }
 
-    private func waitForDrain(_ queue: SpeechTranscriptQueue, timeout: TimeInterval = 3) async {
+    private func releasePending(_ samples: [Float], trailingSpace: Bool = false) -> SpeechInputPendingChunk {
+        SpeechInputPendingChunk(
+            chunk: SpeechAudioChunk(samples: samples, sampleRate: 16_000),
+            settings: settings(trailingSpace: trailingSpace),
+            model: releaseModel
+        )
+    }
+
+    private var releaseModel: SpeechInputModel {
+        SpeechInputModel(
+            id: "release-test",
+            title: "Release Test",
+            detail: "Release transcription test model",
+            engine: .fluidAudioParakeetTdt,
+            registryBaseURL: "https://huggingface.co",
+            repo: "test/repo",
+            revision: "main",
+            cachePath: "release-test",
+            estimatedDownloadSize: "1 MiB",
+            recommended: false,
+            requiredFiles: ["model.mlmodelc"],
+            mode: .releaseTranscription
+        )
+    }
+
+    private func waitForDrain(_ latch: DrainLatch, timeout: TimeInterval = 3) async {
         let deadline = Date().addingTimeInterval(timeout)
-        while !queue.isDrained, Date() < deadline {
+        while !latch.fired, Date() < deadline {
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
-        #expect(queue.isDrained)
+        #expect(latch.fired)
     }
 
 @Test("live chunks are inserted in FIFO order")
@@ -126,8 +158,9 @@ private func pending(_ samples: [Float], trailingSpace: Bool) -> SpeechInputPend
         queue.start()
         queue.enqueue(pending([0.1], trailingSpace: true))
         queue.enqueue(pending([0.2], trailingSpace: true))
-        queue.finish {}
-        await waitForDrain(queue)
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
 #expect(inserter.inserted == ["hello ", "world ", "end "])
         #expect(await transcriber.sessionBeginCount == 1)
     }
@@ -140,13 +173,14 @@ private func pending(_ samples: [Float], trailingSpace: Bool) -> SpeechInputPend
             finalResult: "",
             appendDelayNanoseconds: 40_000_000
         )
-let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: inserter)
+        let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: inserter)
         queue.start()
         queue.enqueue(pending([0.1], trailingSpace: true))
         queue.enqueue(pending([0.2], trailingSpace: true))
         queue.enqueue(pending([0.3], trailingSpace: true))
-        queue.finish {}
-        await waitForDrain(queue)
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
         #expect(inserter.inserted == ["first ", "second ", "third "])
         let order = await transcriber.appendOrder
         #expect(order == ["0.1", "0.2", "0.3"])
@@ -160,8 +194,9 @@ let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: ins
         let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: inserter)
         queue.start()
         queue.enqueue(pending([0.1], trailingSpace: true))
-        queue.finish {}
-        await waitForDrain(queue)
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
         #expect(inserter.inserted.isEmpty)
         #expect(queue.accumulatedText == "hello world ")
     }
@@ -173,8 +208,9 @@ let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: ins
         let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: inserter)
 queue.start()
         queue.enqueue(pending([0.1], trailingSpace: false))
-        queue.finish {}
-        await waitForDrain(queue)
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
         #expect(inserter.inserted.isEmpty)
         #expect(queue.accumulatedText.isEmpty)
         #expect(queue.isDrained)
@@ -190,8 +226,9 @@ queue.start()
         #expect(queue.isDrained == false)
 
         var fired = false
-        queue.finish { fired = true }
-        await waitForDrain(queue)
+        let latch = DrainLatch()
+        queue.finish { fired = true; latch.fire() }
+        await waitForDrain(latch)
         #expect(fired)
         #expect(queue.takeAccumulatedText().isEmpty)
     }
@@ -229,12 +266,45 @@ queue.start()
         queue.enqueue(pending([0.1], trailingSpace: true))
         queue.enqueue(pending([0.2], trailingSpace: true))
         queue.enqueue(pending([0.3], trailingSpace: true))
-        queue.finish {}
-        await waitForDrain(queue)
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
         let beginCount = await transcriber.sessionBeginCount
         let finishCount = await transcriber.sessionFinishCount
         #expect(beginCount == 1)
         #expect(finishCount == 1)
 #expect(inserter.inserted == ["a ", "b ", "c ", "d "])
+    }
+
+    @Test("release mode transcribes per chunk without any session lifecycle")
+    func releaseModeSkipsSessions() async {
+        let inserter = FakeInserter()
+        let transcriber = FakeTranscriber(batchResults: ["hello ", "world"])
+        let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: inserter)
+        queue.start()
+        queue.enqueue(releasePending([0.1]))
+        queue.enqueue(releasePending([0.2]))
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
+        let beginCount = await transcriber.sessionBeginCount
+        let finishCount = await transcriber.sessionFinishCount
+        #expect(beginCount == 0)
+        #expect(finishCount == 0)
+        #expect(inserter.inserted == ["hello", "world"])
+    }
+
+    @Test("release mode session failure still delivers batch transcripts")
+    func releaseModeIgnoresSessionFailure() async {
+        let inserter = FakeInserter()
+        let transcriber = FakeTranscriber(batchResults: ["recovered"], failSessionStart: true)
+        let queue = SpeechTranscriptQueue(transcriber: transcriber, insertionRouter: inserter)
+        queue.start()
+        queue.enqueue(releasePending([0.1]))
+        let latch = DrainLatch()
+        queue.finish { latch.fire() }
+        await waitForDrain(latch)
+        #expect(inserter.inserted == ["recovered"])
+        #expect(queue.isDrained)
     }
 }

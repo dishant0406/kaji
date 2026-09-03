@@ -108,9 +108,9 @@ final class SpeechTranscriptQueue {
             outstandingCount -= 1
         }
         do {
-            try await ensureSession(model: pending.model)
             switch pending.model.displayMode {
             case .liveStreaming:
+                try await ensureSession(model: pending.model)
                 if let transcript = try await transcriber.append(chunks: [pending.chunk], model: pending.model) {
                     deliver(transcript, settings: pending.settings)
                 }
@@ -135,7 +135,9 @@ final class SpeechTranscriptQueue {
     private func flushFinalTranscriptAndFire() {
         Task { @MainActor in
             await self.flushFinalTranscript()
-            if self.isCancelled { return }
+            if self.isCancelled {
+                return
+            }
             let callback = self.onDrainedCallback ?? {}
             self.onDrainedCallback = nil
             callback()
@@ -143,8 +145,8 @@ final class SpeechTranscriptQueue {
     }
 
     private func flushFinalTranscript() async {
-        guard isSessionActive, let model = lastModel else {
-            endSession(unloading: true)
+        guard isSessionActive, let model = lastModel, model.displayMode == .liveStreaming else {
+            endSession(unloading: !keepModelWarm)
             return
         }
         isSessionActive = false
@@ -154,7 +156,7 @@ final class SpeechTranscriptQueue {
         } catch {
             handleFailure(error)
         }
-        endSession(unloading: true)
+        endSession(unloading: !keepModelWarm)
     }
 
     private func ensureSession(model: SpeechInputModel) async throws {
@@ -166,12 +168,17 @@ final class SpeechTranscriptQueue {
     private func endSession(unloading: Bool) {
         guard isSessionActive || unloading else { return }
         isSessionActive = false
+        guard unloading else { return }
         let transcriber = transcriber
         Task(priority: .userInitiated) {
-            if unloading {
-                await transcriber.unload()
-            }
+            await transcriber.unload()
         }
+    }
+
+    private var keepModelWarm = false
+
+    func setKeepModelWarm(_ warm: Bool) {
+        keepModelWarm = warm
     }
 
     private func deliver(_ transcript: String, settings: SpeechInputSettings?) {
@@ -182,7 +189,9 @@ final class SpeechTranscriptQueue {
         do {
             try insertionRouter.insert(text)
         } catch {
-            if !text.isEmpty { accumulatedText += text }
+            if !text.isEmpty {
+                accumulatedText += text
+            }
         }
     }
 

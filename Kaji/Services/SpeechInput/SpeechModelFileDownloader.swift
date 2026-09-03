@@ -89,13 +89,17 @@ final class SpeechModelFileDownloader: NSObject, URLSessionDownloadDelegate, @un
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
-        if let error { setResult(.failure(error)) }
+        if let error {
+            setResult(.failure(error))
+        }
         complete()
     }
 
     private func setResult(_ next: Result<Void, Error>) {
         lock.lock()
-        if result == nil { result = next }
+        if result == nil {
+            result = next
+        }
         lock.unlock()
     }
 

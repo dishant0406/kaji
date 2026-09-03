@@ -80,7 +80,9 @@ private extension NSResponder {
     func nearestResponder<T>(of type: T.Type) -> T? {
         var current: NSResponder? = self
         while let responder = current {
-            if let match = responder as? T { return match }
+            if let match = responder as? T {
+                return match
+            }
             current = responder.nextResponder
         }
         return nil
