@@ -18,6 +18,7 @@ struct Sidebar: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isReordering = false
+    @State private var reorderGeneration = 0
     @State private var expanded = UserDefaults.standard.bool(forKey: "kaji.sidebarExpanded")
 
     var body: some View {
@@ -36,6 +37,7 @@ struct Sidebar: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sidebar")
         .animation(KajiMotion.preferred(KajiMotion.panel, reduceMotion: reduceMotion), value: expanded)
+        .dragResetGuard(isDragging: $isReordering, generation: $reorderGeneration)
         .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
             toggleExpanded()
         }
@@ -77,6 +79,7 @@ struct Sidebar: View {
                         projectRow(project, isDragged: isDragged)
                     }
                 )
+                .id(reorderGeneration)
                 addButton
             }
             .padding(.horizontal, expanded ? 10 : 8)
