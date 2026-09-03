@@ -6,7 +6,9 @@ enum KajiAgentTodoWriteUpdate: Hashable {
 
     static func live(result: KajiAgentToolResult?, toolName: String?, isError: Bool) -> KajiAgentTodoWriteUpdate {
         guard toolName == "todo_write" else { return .notTodo }
-        if isError { return .failed(liveFailureDetail(from: result)) }
+        if isError {
+            return .failed(liveFailureDetail(from: result))
+        }
         return phases(from: result?.details)
     }
 

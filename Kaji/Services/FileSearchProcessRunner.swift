@@ -38,7 +38,9 @@ enum FileSearchProcessRunner {
 
             handle.readabilityHandler = { [context] stream in
                 let data = stream.availableData
-                if data.isEmpty { return }
+                if data.isEmpty {
+                    return
+                }
                 guard let chunk = String(data: data, encoding: .utf8) else { return }
                 if context.parser.append(chunk: chunk), context.process?.isRunning == true {
                     context.process?.terminate()

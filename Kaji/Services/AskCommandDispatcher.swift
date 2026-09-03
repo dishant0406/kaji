@@ -154,7 +154,9 @@ enum AskCommandDispatcher {
         resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) },
         launcherSettings: CLILauncherSettings = .shared
     ) -> String {
-        if provider == .terminal { return prompt }
+        if provider == .terminal {
+            return prompt
+        }
         guard let agent = CodingAgentRegistry.shared.agent(id: provider.rawValue) else { return "" }
         let base = launchCommand(for: provider, launcherSettings: launcherSettings, resolveCommand: resolveCommand)
         guard !base.isEmpty else { return "" }
@@ -184,7 +186,9 @@ enum AskCommandDispatcher {
         resolveCommand: (String) -> String = { CLILauncherCommandResolver.resolve($0) },
         launcherSettings: CLILauncherSettings = .shared
     ) -> String {
-        if provider == .terminal { return prompt.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if provider == .terminal {
+            return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         guard let agent = CodingAgentRegistry.shared.agent(id: provider.rawValue) else { return "" }
         let base = launchCommand(for: provider, launcherSettings: launcherSettings, resolveCommand: resolveCommand)
         guard !base.isEmpty else { return "" }

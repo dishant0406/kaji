@@ -189,7 +189,9 @@ enum GitProcessRunner {
 
             collected.append(chunk)
             currentLineCount += chunk.reduce(into: 0) { count, byte in
-                if byte == 0x0A { count += 1 }
+                if byte == 0x0A {
+                    count += 1
+                }
             }
 
             if currentLineCount >= lineLimit {

@@ -36,7 +36,7 @@ struct AgentRunPersistenceTests {
         )
         let run = makeRun(files: [
             changedFile("Kaji/App.swift"),
-            changedFile("KajiAgentRuntime/node_modules/pkg/index.js")
+            changedFile("SomeFeature/node_modules/pkg/index.js")
         ])
         try JSONEncoder().encode([run]).write(to: legacyURL)
 

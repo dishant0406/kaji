@@ -530,7 +530,9 @@ final class EditorTabState: Identifiable {
                             guard let text = String(bytes: prefix, encoding: .utf8) else { continue }
                             pendingUTF8 = Data(combined.suffix(trim))
                             if isFinal {
-                                if pendingUTF8.isEmpty { return text }
+                                if pendingUTF8.isEmpty {
+                                    return text
+                                }
                                 guard let tail = String(bytes: pendingUTF8, encoding: .utf8) else {
                                     throw CocoaError(.fileReadUnknownStringEncoding)
                                 }
@@ -570,9 +572,13 @@ final class EditorTabState: Identifiable {
                     while true {
                         try Task.checkCancellation()
                         let data = try handle.read(upToCount: streamChunkSize) ?? Data()
-                        if data.isEmpty { break }
+                        if data.isEmpty {
+                            break
+                        }
                         let text = try decodeChunk(data, isFinal: false)
-                        if text.isEmpty { continue }
+                        if text.isEmpty {
+                            continue
+                        }
                         batch += text
                         batchBytes += data.count
                         if batchBytes >= yieldChunkSize {

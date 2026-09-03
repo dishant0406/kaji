@@ -298,7 +298,9 @@ struct ClosedLidSettingsSection: View {
         case .standard:
             return controller.selectorCapability?.isAvailable == true
         case .powerProtect:
-            if case .ready(sleepDisabled: false) = helper.state { return true }
+            if case .ready(sleepDisabled: false) = helper.state {
+                return true
+            }
             return false
         }
     }
@@ -332,7 +334,9 @@ struct ClosedLidSettingsSection: View {
 
     private func durationText(_ value: Double) -> String {
         let minutes = Int(value.rounded())
-        if minutes < 60 { return "\(minutes)m" }
+        if minutes < 60 {
+            return "\(minutes)m"
+        }
         let hours = minutes / 60
         let remainder = minutes % 60
         return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"

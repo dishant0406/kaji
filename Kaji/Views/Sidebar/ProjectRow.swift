@@ -16,9 +16,6 @@ struct ProjectRow: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var activityStore = AIActivityStore.shared
     @State private var notificationStore = NotificationStore.shared
-    @State private var codeGraphStore = KajiCodeGraphStore.shared
-    @State private var codeGraphRuntime = KajiCodeGraphRuntime.shared
-    @State private var codeGraphAgentCoordinator = KajiCodeGraphAgentCoordinator.shared
 
     @State private var hovered = false
     @State private var isRenaming = false
@@ -58,18 +55,6 @@ struct ProjectRow: View {
         activityStore.hasActiveAgent(projectID: project.id)
     }
 
-    private var hasCodeGraph: Bool {
-        codeGraphRuntime.hasGraph(projectID: project.id, worktreeID: activeWorktree.id)
-    }
-
-    private var isCodeGraphRunning: Bool {
-        codeGraphRuntime.isRunning(projectID: project.id, worktreeID: activeWorktree.id)
-    }
-
-    private var hasCodeGraphAgentSession: Bool {
-        codeGraphAgentCoordinator.hasSession(projectID: project.id, worktreeID: activeWorktree.id)
-    }
-
     var body: some View {
         projectIcon
             .help(project.name)
@@ -84,7 +69,9 @@ struct ProjectRow: View {
                 hovered = hovering
             }
             .onChange(of: isAnyDragging) { _, dragging in
-                if dragging { hovered = false }
+                if dragging {
+                    hovered = false
+                }
             }
             .animation(KajiMotion.fast, value: isActive)
             .animation(KajiMotion.hover, value: hovered)
@@ -111,11 +98,6 @@ struct ProjectRow: View {
                     isGitRepo: isGitRepo,
                     canSwitchWorktree: worktrees.count > 1,
                     isRefreshingWorktrees: isRefreshingWorktrees,
-                    isCodeGraphInstalled: codeGraphStore.isInstalled,
-                    isCodeGraphEnabled: codeGraphStore.state.isEnabled,
-                    hasCodeGraph: hasCodeGraph,
-                    isCodeGraphRunning: isCodeGraphRunning,
-                    hasCodeGraphAgentSession: hasCodeGraphAgentSession,
                     onSetLogo: {
                         showProjectMenu = false
                         pickLogoImage()
@@ -147,30 +129,6 @@ struct ProjectRow: View {
                     onSwitchWorktree: {
                         showProjectMenu = false
                         showWorktreePopover = true
-                    },
-                    onInstallCodeGraph: {
-                        showProjectMenu = false
-                        Task { @MainActor in await KajiCodeGraphInstaller().install(store: codeGraphStore) }
-                    },
-                    onEnableCodeGraph: {
-                        showProjectMenu = false
-                        codeGraphStore.setEnabled(true)
-                    },
-                    onBuildCodeGraph: {
-                        showProjectMenu = false
-                        buildCodeGraph(mode: "build")
-                    },
-                    onUpdateCodeGraph: {
-                        showProjectMenu = false
-                        buildCodeGraph(mode: "update")
-                    },
-                    onViewCodeGraph: {
-                        showProjectMenu = false
-                        viewCodeGraph()
-                    },
-                    onShowCodeGraphAgent: {
-                        showProjectMenu = false
-                        showCodeGraphAgent()
                     },
                     onRemoveProject: {
                         showProjectMenu = false
@@ -264,12 +222,18 @@ struct ProjectRow: View {
     }
 
     private func iconBackground(hasLogo: Bool) -> AnyShapeStyle {
-        if hasLogo { return AnyShapeStyle(Color.clear) }
+        if hasLogo {
+            return AnyShapeStyle(Color.clear)
+        }
         if let tint = ProjectIconColor.color(for: project.iconColor) {
             return AnyShapeStyle(hovered ? tint.opacity(0.92) : tint.opacity(isActive ? 0.88 : 0.76))
         }
-        if isActive { return AnyShapeStyle(KajiTheme.surface) }
-        if hovered { return AnyShapeStyle(KajiTheme.surface) }
+        if isActive {
+            return AnyShapeStyle(KajiTheme.surface)
+        }
+        if hovered {
+            return AnyShapeStyle(KajiTheme.surface)
+        }
         return AnyShapeStyle(KajiTheme.bg)
     }
 
@@ -281,9 +245,15 @@ struct ProjectRow: View {
     }
 
     private var iconBorderColor: Color {
-        if isActive { return KajiTheme.accent.opacity(0.7) }
-        if hasOpenTerminal { return KajiTheme.accent.opacity(0.32) }
-        if hovered { return KajiTheme.border }
+        if isActive {
+            return KajiTheme.accent.opacity(0.7)
+        }
+        if hasOpenTerminal {
+            return KajiTheme.accent.opacity(0.32)
+        }
+        if hovered {
+            return KajiTheme.border
+        }
         return KajiTheme.border.opacity(0.55)
     }
 
@@ -341,31 +311,6 @@ struct ProjectRow: View {
             worktreeStore: worktreeStore,
             isRefreshing: $isRefreshingWorktrees
         )
-    }
-
-    private func buildCodeGraph(mode: String) {
-        let worktree = activeWorktree
-        Task { @MainActor in
-            await codeGraphRuntime.build(KajiCodeGraphRunRequest(
-                projectID: project.id,
-                worktreeID: worktree.id,
-                projectPath: worktree.path,
-                mode: mode
-            ), appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        }
-    }
-
-    private func viewCodeGraph() {
-        appState.openCodeGraphTab(
-            projectID: project.id,
-            worktreeID: activeWorktree.id,
-            worktreePath: activeWorktree.path,
-            graphURL: codeGraphRuntime.kajiGraphURL(projectID: project.id, worktreeID: activeWorktree.id)
-        )
-    }
-
-    private func showCodeGraphAgent() {
-        codeGraphAgentCoordinator.show(projectID: project.id, worktreeID: activeWorktree.id)
     }
 }
 

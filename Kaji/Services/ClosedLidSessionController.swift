@@ -87,8 +87,12 @@ final class ClosedLidSessionController {
 
     func start(mode: ClosedLidMode) async {
         guard status != .arming, status != .restoring else { return }
-        if activeMode != nil { await stop() }
-        if mode == .standard, selectorCapability?.isAvailable != true { await probeCapability() }
+        if activeMode != nil {
+            await stop()
+        }
+        if mode == .standard, selectorCapability?.isAvailable != true {
+            await probeCapability()
+        }
         status = .arming
         switch mode {
         case .standard:
@@ -212,13 +216,17 @@ final class ClosedLidSessionController {
         guard requiresTerminationDrain else { return true }
         await stop()
         return status == .off || {
-            if case .safetyStopped = status { return true }
+            if case .safetyStopped = status {
+                return true
+            }
             return false
         }()
     }
 
     func restoreImmediatelyForTermination() {
-        if activeMode == .standard { _ = standardSession.directRestore() }
+        if activeMode == .standard {
+            _ = standardSession.directRestore()
+        }
         if activeMode == .powerProtect {
             Task { [powerProtect] in try? await powerProtect.restore() }
         }

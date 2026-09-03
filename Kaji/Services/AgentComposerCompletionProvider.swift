@@ -79,7 +79,9 @@ enum AgentComposerCompletionProvider {
             }, inlineHint: command.inlineHint)
         }
 
-        if parts.count > 1 { return AgentComposerCompletionState() }
+        if parts.count > 1 {
+            return AgentComposerCompletionState()
+        }
 
         let commandSuggestions = slashCommands.compactMap { command -> (AgentComposerSuggestion, Int)? in
             guard let score = slashScore(commandQuery, name: command.name, detail: command.detail, source: command.source)
@@ -145,7 +147,9 @@ enum AgentComposerCompletionProvider {
 
     private static func activeToken(in text: String, prefix: Character) -> ActiveToken? {
         guard let index = text.lastIndex(of: prefix) else { return nil }
-        if index > text.startIndex, !text[text.index(before: index)].isWhitespace { return nil }
+        if index > text.startIndex, !text[text.index(before: index)].isWhitespace {
+            return nil
+        }
         let suffix = text[index...]
         guard !suffix.contains(where: { $0.isWhitespace && prefix != "/" }) else { return nil }
         return ActiveToken(range: index ..< text.endIndex, value: String(suffix))
@@ -168,24 +172,42 @@ enum AgentComposerCompletionProvider {
         guard !query.isEmpty else { return nativePanelCommands.contains(name) ? 1200 : 1000 }
         let name = name.lowercased()
         let detail = detail.lowercased()
-        if name == query { return 2000 }
-        if name.hasPrefix(query) { return 1800 - name.count }
-        if name.split(whereSeparator: { "-_/:".contains($0) }).contains(where: { $0.hasPrefix(query) }) { return 1600 - name.count }
-        if name.contains(query) { return 1300 - name.count }
-        if fuzzy(query, in: name) { return 1000 - name.count }
-        if detail.contains(query) { return 500 - detail.distance(
-            from: detail.startIndex,
-            to: detail.range(of: query)?.lowerBound ?? detail.startIndex
-        ) }
-        if source.contains(query) { return 250 }
+        if name == query {
+            return 2000
+        }
+        if name.hasPrefix(query) {
+            return 1800 - name.count
+        }
+        if name.split(whereSeparator: { "-_/:".contains($0) }).contains(where: { $0.hasPrefix(query) }) {
+            return 1600 - name.count
+        }
+        if name.contains(query) {
+            return 1300 - name.count
+        }
+        if fuzzy(query, in: name) {
+            return 1000 - name.count
+        }
+        if detail.contains(query) {
+            return 500 - detail.distance(
+                from: detail.startIndex,
+                to: detail.range(of: query)?.lowerBound ?? detail.startIndex
+            )
+        }
+        if source.contains(query) {
+            return 250
+        }
         return nil
     }
 
     private static func fuzzy(_ query: String, in target: String) -> Bool {
         let query = query.lowercased()
         let target = target.lowercased()
-        if query.isEmpty { return true }
-        if target.contains(query) { return true }
+        if query.isEmpty {
+            return true
+        }
+        if target.contains(query) {
+            return true
+        }
         var index = query.startIndex
         for character in target where index < query.endIndex && character == query[index] {
             index = query.index(after: index)

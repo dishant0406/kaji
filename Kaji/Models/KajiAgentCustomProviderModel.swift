@@ -51,9 +51,15 @@ struct KajiAgentCustomProviderModel: Identifiable, Hashable {
             "reasoning": .bool(reasoning),
             "input": .array(inputValues.map(KajiAgentJSONValue.string)),
         ]
-        if !name.trimmed.isEmpty { object["name"] = .string(name.trimmed) }
-        if let value = Int(contextWindow.trimmed) { object["contextWindow"] = .number(Double(value)) }
-        if let value = Int(maxTokens.trimmed) { object["maxTokens"] = .number(Double(value)) }
+        if !name.trimmed.isEmpty {
+            object["name"] = .string(name.trimmed)
+        }
+        if let value = Int(contextWindow.trimmed) {
+            object["contextWindow"] = .number(Double(value))
+        }
+        if let value = Int(maxTokens.trimmed) {
+            object["maxTokens"] = .number(Double(value))
+        }
         return .object(object)
     }
 
@@ -66,14 +72,20 @@ struct KajiAgentCustomProviderModel: Identifiable, Hashable {
 
     private var inputValues: [String] {
         var values: [String] = []
-        if supportsText { values.append("text") }
-        if supportsImage { values.append("image") }
+        if supportsText {
+            values.append("text")
+        }
+        if supportsImage {
+            values.append("image")
+        }
         return values.isEmpty ? ["text"] : values
     }
 
     private func positiveIntegerIfPresent(_ value: String) -> Bool {
         let trimmed = value.trimmed
-        if trimmed.isEmpty { return true }
+        if trimmed.isEmpty {
+            return true
+        }
         return (Int(trimmed) ?? 0) > 0
     }
 }

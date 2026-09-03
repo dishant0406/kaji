@@ -50,8 +50,12 @@ enum HookJSONExtractor {
     private static func textContent(from value: Any?) -> String? {
         if let items = value as? [[String: Any]] {
             let text = items.compactMap { item -> String? in
-                if let text = item["text"] as? String { return text }
-                if let text = item["content"] as? String { return text }
+                if let text = item["text"] as? String {
+                    return text
+                }
+                if let text = item["content"] as? String {
+                    return text
+                }
                 return nil
             }.joined(separator: " ")
             return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : text

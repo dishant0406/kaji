@@ -11,7 +11,9 @@ enum KasetMusicPreferences {
 
     static var showsFooterIcon: Bool {
         get {
-            if UserDefaults.standard.object(forKey: showFooterIconKey) == nil { return true }
+            if UserDefaults.standard.object(forKey: showFooterIconKey) == nil {
+                return true
+            }
             return UserDefaults.standard.bool(forKey: showFooterIconKey)
         }
         set { UserDefaults.standard.set(newValue, forKey: showFooterIconKey) }

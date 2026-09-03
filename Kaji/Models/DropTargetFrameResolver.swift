@@ -51,10 +51,18 @@ enum DropTargetFrameResolver {
         let relY = (point.y - rect.minY) / rect.height
         let edgeThreshold: CGFloat = 0.3
 
-        if relX < edgeThreshold { return .left }
-        if relX > 1 - edgeThreshold { return .right }
-        if relY < edgeThreshold { return .top }
-        if relY > 1 - edgeThreshold { return .bottom }
+        if relX < edgeThreshold {
+            return .left
+        }
+        if relX > 1 - edgeThreshold {
+            return .right
+        }
+        if relY < edgeThreshold {
+            return .top
+        }
+        if relY > 1 - edgeThreshold {
+            return .bottom
+        }
         return .center
     }
 

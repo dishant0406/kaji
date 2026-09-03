@@ -138,7 +138,9 @@ struct KajiAgentCustomProviderEditor: View {
             ForEach($draft.models) { $model in
                 KajiAgentCustomProviderModelEditor(model: $model) {
                     draft.models.removeAll { $0.id == model.id }
-                    if draft.models.isEmpty { draft.models.append(KajiAgentCustomProviderModel()) }
+                    if draft.models.isEmpty {
+                        draft.models.append(KajiAgentCustomProviderModel())
+                    }
                 }
             }
         }
@@ -164,7 +166,9 @@ struct KajiAgentCustomProviderEditor: View {
     }
 
     private var autoMatchHelpText: String {
-        if !matchedAccountText.isEmpty { return matchedAccountText }
+        if !matchedAccountText.isEmpty {
+            return matchedAccountText
+        }
         return "Uses Azure CLI login to list response-capable deployments."
     }
 

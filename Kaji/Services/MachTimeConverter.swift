@@ -9,7 +9,9 @@ enum MachTimeConverter {
     }()
 
     static func toNanoseconds(_ value: UInt64) -> UInt64 {
-        if timebase.denom == 0 { return value }
+        if timebase.denom == 0 {
+            return value
+        }
         return value * UInt64(timebase.numer) / UInt64(timebase.denom)
     }
 }

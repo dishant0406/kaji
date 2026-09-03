@@ -29,7 +29,9 @@ final class SleepPreventionController {
         defaults.removeObject(forKey: "kaji.power.preventBatteryLidCloseSleep")
         isEnabled = SleepPreventionPreferences.isEnabled(defaults: defaults)
         observeLifecycleChanges()
-        if isEnabled { reconcile() }
+        if isEnabled {
+            reconcile()
+        }
     }
 
     var title: String {

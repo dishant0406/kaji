@@ -57,9 +57,15 @@ enum FactoryUsageParser {
             else {
                 return nil
             }
-            if allowance >= 200_000_000 { return "Max" }
-            if allowance >= 20_000_000 { return "Pro" }
-            if allowance > 0 { return "Basic" }
+            if allowance >= 200_000_000 {
+                return "Max"
+            }
+            if allowance >= 20_000_000 {
+                return "Pro"
+            }
+            if allowance > 0 {
+                return "Basic"
+            }
             return nil
         }()
 

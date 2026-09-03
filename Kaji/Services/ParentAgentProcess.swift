@@ -40,7 +40,9 @@ final class ParentAgentProcess {
         var environment = ParentAgentSettingsStore.shared.launchEnvironment()
         environment.merge(environmentOverrides) { _, new in new }
         let signature = Self.configurationSignature(for: environment)
-        if process?.isRunning == true, configurationSignature == signature { return }
+        if process?.isRunning == true, configurationSignature == signature {
+            return
+        }
         if process?.isRunning == true {
             stop()
         }
@@ -88,7 +90,9 @@ final class ParentAgentProcess {
     }
 
     private func cleanupProcess(id: UUID? = nil) {
-        if let id, processID != id { return }
+        if let id, processID != id {
+            return
+        }
         outputPipe?.fileHandleForReading.readabilityHandler = nil
         errorPipe?.fileHandleForReading.readabilityHandler = nil
         process?.terminationHandler = nil

@@ -68,8 +68,12 @@ struct MeetingRecordingDisclosure: Equatable {
         regionID = settings.sttRegionID
         retention = settings.sttRetention
         var sources: [MeetingSourceKind] = []
-        if settings.includeSystemAudio { sources.append(.systemAudio) }
-        if settings.includeMicrophone { sources.append(.microphone) }
+        if settings.includeSystemAudio {
+            sources.append(.systemAudio)
+        }
+        if settings.includeMicrophone {
+            sources.append(.microphone)
+        }
         sourceKinds = sources
         diarizationEnabled = settings.sttDiarizationEnabled
         localFallbackEnabled = settings.localFallbackEnabled

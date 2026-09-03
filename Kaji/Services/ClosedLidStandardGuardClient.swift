@@ -60,7 +60,9 @@ final class ClosedLidStandardGuardClient: ClosedLidStandardSessionManaging, @unc
                     lastError = error
                     self.invalidateProcess()
                     _ = self.selectorDriver.setEnabled(false)
-                    if attempt == 0 { continue }
+                    if attempt == 0 {
+                        continue
+                    }
                 }
             }
             throw lastError
@@ -127,7 +129,9 @@ final class ClosedLidStandardGuardClient: ClosedLidStandardSessionManaging, @unc
     }
 
     private func ensureProcess() throws {
-        if let process, process.isRunning { return }
+        if let process, process.isRunning {
+            return
+        }
         invalidateProcess(terminate: false)
         guard restartCount < 3 else { throw ClosedLidStandardGuardError.unavailable }
         restartCount += 1
@@ -151,7 +155,9 @@ final class ClosedLidStandardGuardClient: ClosedLidStandardSessionManaging, @unc
                 self.reader = nil
                 self.process = nil
                 _ = self.selectorDriver.setEnabled(false)
-                if !wasExpected { self.onUnexpectedExit?() }
+                if !wasExpected {
+                    self.onUnexpectedExit?()
+                }
             }
         }
         self.process = process
@@ -168,7 +174,9 @@ final class ClosedLidStandardGuardClient: ClosedLidStandardSessionManaging, @unc
 
     private func invalidateProcess(terminate: Bool = true) {
         expectedExit = true
-        if terminate, let process, process.isRunning { process.terminate() }
+        if terminate, let process, process.isRunning {
+            process.terminate()
+        }
         try? input?.close()
         try? output?.close()
         process = nil

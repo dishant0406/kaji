@@ -97,8 +97,12 @@ enum MCPAgentLoadState: Equatable {
     case failed(String)
 
     var isLoading: Bool {
-        if case .loading = self { return true }
-        if case .enriching = self { return true }
+        if case .loading = self {
+            return true
+        }
+        if case .enriching = self {
+            return true
+        }
         return false
     }
 }

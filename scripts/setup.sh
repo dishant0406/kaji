@@ -140,12 +140,11 @@ invalidate_swiftpm_termy_products
 echo "==> Building Rift"
 bash "$SCRIPT_DIR/build-rift.sh"
 
-echo "==> Building Kaji runtime"
+echo "==> Building Monaco runtime"
 if command -v bun >/dev/null 2>&1; then
-    bash "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
     bash "$SCRIPT_DIR/build-monaco-runtime.sh"
 else
-    echo "    Bun not found; skipping JavaScript runtime builds (install: curl -fsSL https://bun.sh/install | bash)"
+    echo "    Bun not found; skipping Monaco build (install: curl -fsSL https://bun.sh/install | bash)"
 fi
 
 echo "==> Done"

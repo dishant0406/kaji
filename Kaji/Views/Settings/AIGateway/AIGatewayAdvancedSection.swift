@@ -23,6 +23,8 @@ struct AIGatewayAdvancedSection<Content: View>: View {
             .buttonStyle(.plain)
             .kajiPointer()
         }
-        if isExpanded { content }
+        if isExpanded {
+            content
+        }
     }
 }

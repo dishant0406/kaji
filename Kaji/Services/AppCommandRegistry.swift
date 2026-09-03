@@ -26,10 +26,18 @@ enum AppCommandRegistry {
     private static func score(_ command: AppCommand, query: String) -> Int? {
         let title = command.title.lowercased()
         let category = command.category.lowercased()
-        if title == query { return 1000 }
-        if title.hasPrefix(query) { return 800 - title.count }
-        if title.contains(query) { return 600 - title.count }
-        if category.contains(query) { return 300 - title.count }
+        if title == query {
+            return 1000
+        }
+        if title.hasPrefix(query) {
+            return 800 - title.count
+        }
+        if title.contains(query) {
+            return 600 - title.count
+        }
+        if category.contains(query) {
+            return 300 - title.count
+        }
         return fuzzyScore(title, query: query)
     }
 

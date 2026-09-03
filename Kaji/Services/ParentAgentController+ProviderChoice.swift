@@ -87,7 +87,9 @@ extension ParentAgentController {
             return choices(for: assignment, providers: providers, project: project)
         }
         let assignmentOptions = assignmentChoiceOptions(project: project, task: task, taskID: taskID)
-        if !assignmentOptions.isEmpty { return assignmentOptions }
+        if !assignmentOptions.isEmpty {
+            return assignmentOptions
+        }
         return providers
     }
 

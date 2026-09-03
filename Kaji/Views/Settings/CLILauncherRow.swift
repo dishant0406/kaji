@@ -127,7 +127,9 @@ struct CLILauncherRow: View {
     }
 
     private var statusText: String {
-        if let installMessage { return installMessage }
+        if let installMessage {
+            return installMessage
+        }
         switch installState {
         case .checking:
             return "Checking CLI..."

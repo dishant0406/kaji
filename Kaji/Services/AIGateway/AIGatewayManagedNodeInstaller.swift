@@ -3,13 +3,17 @@ import Foundation
 
 enum AIGatewayManagedNodeInstaller {
     static func install(fileManager: FileManager = .default) throws -> AIGatewayNodeRuntime {
-        if let runtime = AIGatewayNodeRuntimeResolver.resolve(fileManager: fileManager) { return runtime }
+        if let runtime = AIGatewayNodeRuntimeResolver.resolve(fileManager: fileManager) {
+            return runtime
+        }
         let archive = try downloadArchive(fileManager: fileManager)
         try verifyArchive(archive)
         let runtimeDirectory = managedRuntimeDirectory()
         let staging = AIGatewayClaudeCodeRouterPaths.toolsDirectory()
             .appendingPathComponent("node-staging-\(UUID().uuidString)", isDirectory: true)
-        if fileManager.fileExists(atPath: runtimeDirectory.path) { try fileManager.removeItem(at: runtimeDirectory) }
+        if fileManager.fileExists(atPath: runtimeDirectory.path) {
+            try fileManager.removeItem(at: runtimeDirectory)
+        }
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let result = try AIGatewayProcessRunner.run(
             executableURL: URL(fileURLWithPath: "/usr/bin/tar"),
@@ -39,7 +43,9 @@ enum AIGatewayManagedNodeInstaller {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let source = try archiveURL()
         let destination = directory.appendingPathComponent(source.lastPathComponent)
-        if fileManager.fileExists(atPath: destination.path) { return destination }
+        if fileManager.fileExists(atPath: destination.path) {
+            return destination
+        }
         let data = try Data(contentsOf: source)
         try data.write(to: destination, options: .atomic)
         try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)

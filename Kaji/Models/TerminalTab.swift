@@ -11,7 +11,6 @@ final class TerminalTab: Identifiable {
         case diffViewer
         case problems
         case parentAgent
-        case codeGraph
         case browser
     }
 
@@ -23,7 +22,6 @@ final class TerminalTab: Identifiable {
         case diffViewer(DiffViewerTabState)
         case problems(ProblemsTabState)
         case parentAgent(ParentAgentTabState)
-        case codeGraph(KajiCodeGraphTabState)
         case browser(BrowserPaneState)
 
         var kind: Kind {
@@ -35,7 +33,6 @@ final class TerminalTab: Identifiable {
             case .diffViewer: .diffViewer
             case .problems: .problems
             case .parentAgent: .parentAgent
-            case .codeGraph: .codeGraph
             case .browser: .browser
             }
         }
@@ -65,11 +62,6 @@ final class TerminalTab: Identifiable {
             return state
         }
 
-        var codeGraphState: KajiCodeGraphTabState? {
-            guard case let .codeGraph(state) = self else { return nil }
-            return state
-        }
-
         var browserState: BrowserPaneState? {
             guard case let .browser(state) = self else { return nil }
             return state
@@ -89,7 +81,6 @@ final class TerminalTab: Identifiable {
             case let .diffViewer(state): state.projectPath
             case let .problems(state): state.projectPath
             case let .parentAgent(state): state.projectPath
-            case let .codeGraph(state): state.projectPath
             case let .browser(state): state.projectPath
             }
         }
@@ -122,8 +113,6 @@ final class TerminalTab: Identifiable {
             return "Problems"
         case .parentAgent:
             return "KajiCode"
-        case .codeGraph:
-            return "Code Graph"
         case let .browser(state):
             return state.title
         }
@@ -155,10 +144,6 @@ final class TerminalTab: Identifiable {
 
     init(parentAgentState: ParentAgentTabState) {
         content = .parentAgent(parentAgentState)
-    }
-
-    init(codeGraphState: KajiCodeGraphTabState) {
-        content = .codeGraph(codeGraphState)
     }
 
     init(browserState: BrowserPaneState) {
@@ -200,8 +185,6 @@ final class TerminalTab: Identifiable {
                 title: "KajiCode",
                 startupCommand: KajiCodeCommandBuilder.splitCommand()
             ))
-        case .codeGraph:
-            content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         case .browser:
             content = .terminal(TerminalPaneState(projectPath: snapshot.projectPath, title: snapshot.paneTitle))
         }

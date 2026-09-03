@@ -245,7 +245,9 @@ private actor FluidAudioMeetingTrackTranscriptionSession: MeetingTrackTranscript
 
     func finish() async throws {
         guard state == .started else {
-            if state == .finished || state == .cancelled { return }
+            if state == .finished || state == .cancelled {
+                return
+            }
             throw FluidAudioMeetingTranscriptionError.invalidState
         }
         emitSession(.draining)

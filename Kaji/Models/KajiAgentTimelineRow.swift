@@ -23,7 +23,9 @@ extension KajiAgentTimelineRow {
 
 extension KajiAgentTimelineRow {
     var isSpacer: Bool {
-        if case .latestTurnSpacer = kind { return true }
+        if case .latestTurnSpacer = kind {
+            return true
+        }
         return false
     }
 }

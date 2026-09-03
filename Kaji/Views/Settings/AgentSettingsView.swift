@@ -229,7 +229,9 @@ struct AgentSettingsView: View {
     }
 
     private func selectDefaultProject() {
-        if projectStore.projects.contains(where: { $0.id.uuidString == selectedProjectID }) { return }
+        if projectStore.projects.contains(where: { $0.id.uuidString == selectedProjectID }) {
+            return
+        }
         selectedProjectID = appState.activeProjectID?.uuidString ?? projectStore.projects.first?.id.uuidString ?? ""
     }
 

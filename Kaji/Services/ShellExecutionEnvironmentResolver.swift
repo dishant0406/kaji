@@ -11,7 +11,9 @@ enum ShellExecutionEnvironmentResolver {
         }
         let base = ShellExecutableResolver.shellEnvironment(env: env, homeDirectory: homeDirectory)
         let login = run(shell: shell, arguments: ["-lc", "env -0"], environment: base, timeout: .seconds(5))
-        if !login.isEmpty { return base.merging(login) { _, new in new } }
+        if !login.isEmpty {
+            return base.merging(login) { _, new in new }
+        }
         let interactive = run(shell: shell, arguments: ["-i", "-c", "env -0"], environment: base, timeout: .seconds(8))
         return interactive.isEmpty ? base : base.merging(interactive) { _, new in new }
     }

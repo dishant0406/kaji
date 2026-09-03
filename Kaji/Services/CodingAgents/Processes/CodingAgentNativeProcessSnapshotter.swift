@@ -79,8 +79,12 @@ enum CodingAgentNativeProcessSnapshotter {
         if proc_name(pid, &buffer, UInt32(buffer.count)) > 0,
            let command = string(from: buffer),
            !command.isEmpty
-        { return command }
-        if let path { return URL(fileURLWithPath: path).lastPathComponent }
+        {
+            return command
+        }
+        if let path {
+            return URL(fileURLWithPath: path).lastPathComponent
+        }
         return "Process \(pid)"
     }
 

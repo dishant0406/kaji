@@ -89,7 +89,11 @@ struct VCSTabView: View {
             "Error",
             isPresented: Binding(
                 get: { state.statusIsError && state.statusMessage != nil },
-                set: { if !$0 { state.statusMessage = nil } }
+                set: {
+                    if !$0 {
+                        state.statusMessage = nil
+                    }
+                }
             )
         ) {
             Button("OK", role: .cancel) { state.statusMessage = nil }
@@ -861,8 +865,12 @@ struct PRPopover: View {
     }
 
     private var mergeDisabled: Bool {
-        if state.isMergingPullRequest { return true }
-        if info.mergeable == false { return true }
+        if state.isMergingPullRequest {
+            return true
+        }
+        if info.mergeable == false {
+            return true
+        }
         switch info.mergeStateStatus {
         case .dirty,
              .blocked,
@@ -876,7 +884,9 @@ struct PRPopover: View {
     }
 
     private var mergeHelp: String {
-        if info.mergeable == false { return "This PR has conflicts and cannot be merged." }
+        if info.mergeable == false {
+            return "This PR has conflicts and cannot be merged."
+        }
         switch info.mergeStateStatus {
         case .dirty: return "This PR has conflicts and cannot be merged."
         case .behind: return "This branch is out of date with the base branch. Update it before merging."
@@ -913,8 +923,12 @@ struct PRPopover: View {
         case .unstable:
             return ("Yes (checks failing)", KajiTheme.diffAddFg)
         case .unknown:
-            if info.mergeable == true { return ("Yes", KajiTheme.diffAddFg) }
-            if info.mergeable == false { return ("Conflicts", KajiTheme.diffRemoveFg) }
+            if info.mergeable == true {
+                return ("Yes", KajiTheme.diffAddFg)
+            }
+            if info.mergeable == false {
+                return ("Conflicts", KajiTheme.diffRemoveFg)
+            }
             return nil
         }
     }
@@ -1015,7 +1029,9 @@ private struct SectionSplitLayout: View {
 
     private var sections: [SectionKind] {
         var result: [SectionKind] = []
-        if hasStaged { result.append(.staged) }
+        if hasStaged {
+            result.append(.staged)
+        }
         result.append(.changes)
         result.append(.history)
         return result
@@ -1151,7 +1167,11 @@ private struct SectionSplitLayout: View {
                             }
                     )
                     .onHover { on in
-                        if on { NSCursor.resizeUpDown.push() } else { NSCursor.pop() }
+                        if on {
+                            NSCursor.resizeUpDown.push()
+                        } else {
+                            NSCursor.pop()
+                        }
                     }
             }
     }

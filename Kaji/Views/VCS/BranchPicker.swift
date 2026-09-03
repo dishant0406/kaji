@@ -121,9 +121,15 @@ private struct BranchRow: View {
     }
 
     private var rowBackground: AnyShapeStyle {
-        if isActive { return AnyShapeStyle(KajiTheme.accentSoft) }
-        if isHighlighted { return AnyShapeStyle(KajiTheme.surface) }
-        if hovered { return AnyShapeStyle(KajiTheme.hover) }
+        if isActive {
+            return AnyShapeStyle(KajiTheme.accentSoft)
+        }
+        if isHighlighted {
+            return AnyShapeStyle(KajiTheme.surface)
+        }
+        if hovered {
+            return AnyShapeStyle(KajiTheme.hover)
+        }
         return AnyShapeStyle(Color.clear)
     }
 }

@@ -181,7 +181,9 @@ final class MeetingNotesCoordinator {
             projectStore: projectStore,
             worktreeStore: worktreeStore
         )
-        if status == .unconfigured { status = .idle }
+        if status == .unconfigured {
+            status = .idle
+        }
     }
 
     func makeRecordingConsent() -> MeetingRecordingConsent {
@@ -315,7 +317,9 @@ final class MeetingNotesCoordinator {
             status = .unconfigured
             return
         }
-        if !isPrepared { await prepare() }
+        if !isPrepared {
+            await prepare()
+        }
         guard isPrepared else { return }
         let generation = UUID()
         startupGeneration = generation
@@ -395,7 +399,9 @@ final class MeetingNotesCoordinator {
         do {
             guard try await store.deleteSession(id: sessionID, includingPinned: includingPinned) else { return }
             documents.removeValue(forKey: sessionID)
-            if selectedDocument?.session.id == sessionID { selectedDocument = nil }
+            if selectedDocument?.session.id == sessionID {
+                selectedDocument = nil
+            }
             refreshSessions()
         } catch {
             appendIssue(.persistence, message: "The meeting could not be deleted.")
@@ -652,7 +658,9 @@ final class MeetingNotesCoordinator {
         }
         await drainRuntime()
         lifecycleGeneration = nil
-        if status == .stopping { status = .idle }
+        if status == .stopping {
+            status = .idle
+        }
     }
 
     private func handlePipelineEvent(_ event: MeetingAudioPipelineEvent, generation: UUID) async {
@@ -991,7 +999,9 @@ final class MeetingNotesCoordinator {
         publishDocument(document, asActive: activeDocument?.session.id == sessionID)
         try? await store.save(document)
         let previousStatus = status
-        if previousStatus != .stopping { status = .synthesizing }
+        if previousStatus != .stopping {
+            status = .synthesizing
+        }
         let operation = Task { @MainActor in
             try await synthesizer.synthesizeNotes(for: request)
         }
@@ -1235,7 +1245,9 @@ final class MeetingNotesCoordinator {
 
     private func publishDocument(_ document: MeetingSessionDocument, asActive: Bool) {
         documents[document.session.id] = document
-        if asActive { activeDocument = document }
+        if asActive {
+            activeDocument = document
+        }
         if selectedDocument == nil || selectedDocument?.session.id == document.session.id {
             selectedDocument = document
         }
@@ -1294,7 +1306,9 @@ final class MeetingNotesCoordinator {
     private func finishCancelledStart(generation: UUID) {
         guard lifecycleGeneration == generation, activeDocument == nil else { return }
         lifecycleGeneration = nil
-        if status != .stopping { status = .idle }
+        if status != .stopping {
+            status = .idle
+        }
     }
 
     private func appendIssue(_ kind: MeetingNotesCoordinatorIssue.Kind, message: String) {
@@ -1304,7 +1318,9 @@ final class MeetingNotesCoordinator {
             occurredAtMilliseconds: clock.nowMilliseconds(),
             message: message
         ))
-        if issues.count > 100 { issues.removeFirst(issues.count - 100) }
+        if issues.count > 100 {
+            issues.removeFirst(issues.count - 100)
+        }
     }
 
     private func normalizedTitle(_ title: String) -> String {

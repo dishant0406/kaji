@@ -11,7 +11,6 @@ extension TerminalTab.Kind {
              .filePreview,
              .diffViewer,
              .problems,
-             .codeGraph,
              .parentAgent:
             false
         }

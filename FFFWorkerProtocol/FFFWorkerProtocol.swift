@@ -128,9 +128,13 @@ public struct FFFJSONLineReader {
             }
             var descriptor = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN | POLLHUP | POLLERR), revents: 0)
             let pollResult = Darwin.poll(&descriptor, 1, waitMilliseconds)
-            if pollResult == 0 { throw FFFWorkerProtocolError.timedOut }
+            if pollResult == 0 {
+                throw FFFWorkerProtocolError.timedOut
+            }
             if pollResult < 0 {
-                if errno == EINTR { continue }
+                if errno == EINTR {
+                    continue
+                }
                 throw FFFWorkerProtocolError.ioFailure(errno)
             }
             guard descriptor.revents & Int16(POLLERR | POLLNVAL) == 0 else {
@@ -139,9 +143,13 @@ public struct FFFJSONLineReader {
             let capacity = min(4096, maximumBytes + 1 - buffer.count)
             var bytes = [UInt8](repeating: 0, count: capacity)
             let count = Darwin.read(handle.fileDescriptor, &bytes, capacity)
-            if count == 0 { throw FFFWorkerProtocolError.endOfFile }
+            if count == 0 {
+                throw FFFWorkerProtocolError.endOfFile
+            }
             if count < 0 {
-                if errno == EINTR || errno == EAGAIN { continue }
+                if errno == EINTR || errno == EAGAIN {
+                    continue
+                }
                 throw FFFWorkerProtocolError.ioFailure(errno)
             }
             buffer.append(contentsOf: bytes.prefix(count))

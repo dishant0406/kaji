@@ -161,12 +161,16 @@ struct CreatePRModal: View {
     }
 
     private var selectedGitHubAccount: GitHubAccount? {
-        if context.githubAccounts.count == 1 { return context.githubAccounts.first }
+        if context.githubAccounts.count == 1 {
+            return context.githubAccounts.first
+        }
         return context.githubAccounts.first { $0.id == selectedGitHubAccountID }
     }
 
     private func applyDefaults() {
-        if currentBranchSnapshot == nil { currentBranchSnapshot = context.currentBranch }
+        if currentBranchSnapshot == nil {
+            currentBranchSnapshot = context.currentBranch
+        }
         if baseBranch.isEmpty {
             baseBranch = context.defaultBranch ?? context.availableBaseBranches.first(where: { $0 != resolvedCurrentBranch }) ?? context
                 .availableBaseBranches.first ?? ""

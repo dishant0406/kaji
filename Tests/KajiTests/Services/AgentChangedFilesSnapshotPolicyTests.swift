@@ -9,7 +9,7 @@ struct AgentChangedFilesSnapshotPolicyTests {
         let policy = AgentChangedFilesSnapshotPolicy(maxStoredFiles: 10)
         let files = [
             changedFile("Kaji/App.swift"),
-            changedFile("KajiAgentRuntime/node_modules/pkg/index.js"),
+            changedFile("SomeFeature/node_modules/pkg/index.js"),
             changedFile(".build/debug/Kaji"),
             changedFile("Sources/Feature.swift"),
         ]

@@ -125,7 +125,9 @@ actor OpenAIBatchTranscriptionSession: MeetingTrackTranscriptionSession {
 
     func finish() async throws {
         guard state == .started else {
-            if state == .finished || state == .cancelled { return }
+            if state == .finished || state == .cancelled {
+                return
+            }
             throw OpenAIMeetingTranscriptionError.invalidState
         }
         if route.diarizationEnabled, !submittedAudio {
@@ -216,7 +218,9 @@ actor OpenAIBatchTranscriptionSession: MeetingTrackTranscriptionSession {
     }
 
     private func wavData(_ packet: MeetingNormalizedAudioPacket) throws -> Data {
-        if packet.encoding == .wav { return packet.bytes }
+        if packet.encoding == .wav {
+            return packet.bytes
+        }
         guard packet.channelCount <= 2,
               packet.sampleRateHertz <= Int(UInt32.max),
               packet.bytes.count <= Self.maximumAudioPayloadBytes - 44,
@@ -305,7 +309,9 @@ actor OpenAIBatchTranscriptionSession: MeetingTrackTranscriptionSession {
         var emittedFinal = false
         var emittedSegmentCount = 0
         for event in events {
-            if event.data == "[DONE]" { continue }
+            if event.data == "[DONE]" {
+                continue
+            }
             let update = try OpenAISSEPayloadParser.parse(Data(event.data.utf8))
             switch update {
             case let .delta(delta):
@@ -340,7 +346,9 @@ actor OpenAIBatchTranscriptionSession: MeetingTrackTranscriptionSession {
                 emittedSegmentCount += 1
                 emittedFinal = true
             case let .done(doneText):
-                if emittedSegmentCount > 0 { continue }
+                if emittedSegmentCount > 0 {
+                    continue
+                }
                 let finalText = doneText ?? text
                 let segment = OpenAIBatchSegment(text: finalText, startSeconds: nil, endSeconds: nil, speaker: nil, words: [])
                 let utterance = try makeUtterance(segment: segment, index: 0, revision: revision, packet: packet)

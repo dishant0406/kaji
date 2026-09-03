@@ -11,7 +11,9 @@ enum EditorInactiveResourcePolicy {
         backingStore: TextBackingStore?
     ) -> Bool {
         guard !isModified else { return false }
-        if isLoading || isIncrementalLoading { return true }
+        if isLoading || isIncrementalLoading {
+            return true
+        }
         guard let backingStore else { return false }
         return backingStore.utf16LengthExceeds(retainedCleanDocumentUTF16Limit)
     }

@@ -127,8 +127,12 @@ enum KajiCLICommandInstaller {
 
     private static func linkState(command: URL, link: URL, fileManager: FileManager) -> KajiCLICommandInstallState {
         guard fileManager.fileExists(atPath: link.path) else { return .missing }
-        if linkPointsToCommand(link: link, command: command, fileManager: fileManager) { return .installed }
-        if managedScriptExists(at: link, fileManager: fileManager) { return .installed }
+        if linkPointsToCommand(link: link, command: command, fileManager: fileManager) {
+            return .installed
+        }
+        if managedScriptExists(at: link, fileManager: fileManager) {
+            return .installed
+        }
         return .needsRepair("/usr/local/bin/kaji already exists and is not managed by Kaji.")
     }
 

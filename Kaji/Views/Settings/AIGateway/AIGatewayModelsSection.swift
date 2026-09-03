@@ -83,7 +83,9 @@ private struct AIGatewayModelRow: View {
                 }
                 .frame(width: 92, alignment: .topLeading)
             }
-            if !isLast { Divider() }
+            if !isLast {
+                Divider()
+            }
         }
         .padding(.horizontal, SettingsMetrics.horizontalPadding)
         .padding(.vertical, SettingsMetrics.rowVerticalPadding + 4)

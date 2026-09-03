@@ -28,12 +28,6 @@ struct MainWindow: View {
         static let widthRatio: CGFloat = 0.5
     }
 
-    private enum CodeGraphAgentLayout {
-        static let minWidth: CGFloat = 360
-        static let defaultWidth: CGFloat = 460
-        static let maxWidth: CGFloat = 760
-    }
-
     private enum BrowserLayout {
         static let minWidth: CGFloat = 420
         static let defaultWidth: CGFloat = 560
@@ -55,7 +49,6 @@ struct MainWindow: View {
     }
 
     private enum SidePanelIdentity: Hashable {
-        case codeGraphAgent(UUID)
         case vcs
         case problems
         case globalSearch(UUID)
@@ -117,7 +110,6 @@ struct MainWindow: View {
     @State private var globalSearchPanelVisible = false
     @State private var problemsPanelVisible = false
     @AppStorage("kaji.fileTreeWidth") private var fileTreePanelWidth: Double = .init(FileTreeLayout.defaultWidth)
-    @AppStorage("kaji.codeGraphAgentPanelWidth") private var codeGraphAgentPanelWidth: Double = .init(CodeGraphAgentLayout.defaultWidth)
     @State private var fileTreeStates: [WorktreeKey: FileTreeState] = [:]
     @State private var browserPanelVisible = false
     @State private var browserPanelKey: WorktreeKey?
@@ -132,7 +124,6 @@ struct MainWindow: View {
     @AppStorage("kaji.meetingNotesPanelWidth") private var meetingNotesPanelWidth: Double = .init(MeetingNotesLayout.defaultWidth)
     @State private var agentInstructionPanelVisible = false
     @State private var agentInstructionState = AgentInstructionPanelState()
-    @State private var codeGraphAgentCoordinator = KajiCodeGraphAgentCoordinator.shared
     @State private var cliLauncherSettings = CLILauncherSettings.shared
     @State private var footerTerminalStore = FooterTerminalStateStore()
     @State private var footerTerminalCleanupTasks: [UUID: Task<Void, Never>] = [:]
@@ -286,7 +277,9 @@ struct MainWindow: View {
                     showAsk = false
                     showAgentCommandCenter = false
                     showWorktreeSwitcher = false
-                    if !showSettings { settingsInitialPane = .general }
+                    if !showSettings {
+                        settingsInitialPane = .general
+                    }
                     showSettings.toggle()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openParentAgentSettings)) { _ in
@@ -476,16 +469,32 @@ struct MainWindow: View {
     }
 
     private var activeSidePanelIdentity: SidePanelIdentity? {
-        if let session = activeCodeGraphAgentSession { return .codeGraphAgent(session.id) }
-        if vcsPanelVisible, activeVCSState != nil { return .vcs }
-        if problemsPanelVisible { return .problems }
-        if globalSearchPanelVisible, let project = activeProject { return .globalSearch(project.id) }
-        if fileTreePanelVisible, let key = activeWorktreeKey, activeFileTreeState != nil { return .fileTree(key) }
-        if agentInstructionPanelVisible, let project = activeProject { return .agentInstructions(project.id) }
+        if vcsPanelVisible, activeVCSState != nil {
+            return .vcs
+        }
+        if problemsPanelVisible {
+            return .problems
+        }
+        if globalSearchPanelVisible, let project = activeProject {
+            return .globalSearch(project.id)
+        }
+        if fileTreePanelVisible, let key = activeWorktreeKey, activeFileTreeState != nil {
+            return .fileTree(key)
+        }
+        if agentInstructionPanelVisible, let project = activeProject {
+            return .agentInstructions(project.id)
+        }
         if browserEnabled, isBrowserPanelVisibleForActiveWorktree, let key = activeWorktreeKey,
-           activeBrowserState != nil { return .browser(key) }
-        if kasetMusicEnabled, kasetMusicPanelVisible { return .kasetMusic }
-        if meetingNotesPanelVisible { return .meetingNotes }
+           activeBrowserState != nil
+        {
+            return .browser(key)
+        }
+        if kasetMusicEnabled, kasetMusicPanelVisible {
+            return .kasetMusic
+        }
+        if meetingNotesPanelVisible {
+            return .meetingNotes
+        }
         return nil
     }
 
@@ -571,9 +580,7 @@ struct MainWindow: View {
 
     @ViewBuilder
     private func activeSidePanel(contentWidth: CGFloat) -> some View {
-        if let session = activeCodeGraphAgentSession {
-            codeGraphAgentSidePanel(session: session)
-        } else if vcsPanelVisible, let state = activeVCSState {
+        if vcsPanelVisible, let state = activeVCSState {
             HStack(spacing: 0) {
                 sidePanelResizeHandle { delta in
                     vcsPanelWidth = max(
@@ -622,29 +629,6 @@ struct MainWindow: View {
                 withSidePanelAnimation { meetingNotesPanelVisible = false }
             }
             .frame(width: meetingNotesPanelWidth)
-        }
-    }
-
-    private func codeGraphAgentSidePanel(session: KajiCodeGraphAgentSession) -> some View {
-        HStack(spacing: 0) {
-            sidePanelResizeHandle { delta in
-                let next = codeGraphAgentPanelWidth - Double(delta)
-                codeGraphAgentPanelWidth = max(
-                    Double(CodeGraphAgentLayout.minWidth),
-                    min(Double(CodeGraphAgentLayout.maxWidth), next)
-                )
-            }
-            KajiCodeGraphAgentPanel(
-                session: session,
-                onHide: {
-                    guard let key = activeWorktreeKey else { return }
-                    codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
-                },
-                onClose: {
-                    codeGraphAgentCoordinator.close(session)
-                }
-            )
-            .frame(width: CGFloat(codeGraphAgentPanelWidth))
         }
     }
 
@@ -1217,12 +1201,6 @@ struct MainWindow: View {
         return projectStore.projects.first { $0.id == pid }
     }
 
-    private var activeCodeGraphAgentSession: KajiCodeGraphAgentSession? {
-        guard let key = activeWorktreeKey else { return nil }
-        guard codeGraphAgentCoordinator.isVisible(projectID: key.projectID, worktreeID: key.worktreeID) else { return nil }
-        return codeGraphAgentCoordinator.session(projectID: key.projectID, worktreeID: key.worktreeID)
-    }
-
     private var activeQuickOpenProjectPath: String? {
         guard let project = activeProject else { return nil }
         return activeWorktreePath(for: project)
@@ -1294,7 +1272,9 @@ struct MainWindow: View {
         guard let project = activeProject,
               let root = appState.workspaceRoot(for: project.id)
         else { return false }
-        if case .split = root { return true }
+        if case .split = root {
+            return true
+        }
         return false
     }
 
@@ -1437,9 +1417,6 @@ struct MainWindow: View {
 
     private func toggleKasetMusicPanel() {
         let isShowing = !kasetMusicPanelVisible
-        if isShowing {
-            hideCodeGraphAgentPanelIfNeeded()
-        }
         withSidePanelAnimation {
             kasetMusicPanelVisible = isShowing
             if isShowing {
@@ -1456,7 +1433,6 @@ struct MainWindow: View {
     }
 
     private func showKasetMusicPanel() {
-        hideCodeGraphAgentPanelIfNeeded()
         withSidePanelAnimation {
             kasetMusicPanelVisible = true
             vcsPanelVisible = false
@@ -1472,9 +1448,6 @@ struct MainWindow: View {
 
     private func toggleMeetingNotesPanel() {
         let isShowing = !meetingNotesPanelVisible
-        if isShowing {
-            hideCodeGraphAgentPanelIfNeeded()
-        }
         withSidePanelAnimation {
             meetingNotesPanelVisible = isShowing
             if isShowing {
@@ -1490,11 +1463,6 @@ struct MainWindow: View {
         }
     }
 
-    private func hideCodeGraphAgentPanelIfNeeded() {
-        guard let key = activeWorktreeKey else { return }
-        codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
-    }
-
     private var activeFileTreeState: FileTreeState? {
         guard let project = activeProject,
               let key = appState.activeWorktreeKey(for: project.id)
@@ -1505,7 +1473,9 @@ struct MainWindow: View {
     private func ensureFileTreeState(for project: Project) {
         guard let key = appState.activeWorktreeKey(for: project.id) else { return }
         let path = activeWorktreePath(for: project)
-        if let existing = fileTreeStates[key], existing.rootPath == path { return }
+        if let existing = fileTreeStates[key], existing.rootPath == path {
+            return
+        }
         fileTreeStates[key] = FileTreeState(rootPath: path)
     }
 
@@ -1645,8 +1615,6 @@ struct MainWindow: View {
             kasetMusicPanelVisible = false
             meetingNotesPanelVisible = false
         }
-        guard let key = activeWorktreeKey else { return }
-        codeGraphAgentCoordinator.hide(projectID: key.projectID, worktreeID: key.worktreeID)
     }
 
     private var activeVCSState: VCSTabState? {

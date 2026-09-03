@@ -130,7 +130,11 @@ struct PortMonitorPanel: View {
     private var pendingKillPresented: Binding<Bool> {
         Binding(
             get: { pendingKill != nil },
-            set: { if !$0 { pendingKill = nil } }
+            set: {
+                if !$0 {
+                    pendingKill = nil
+                }
+            }
         )
     }
 }

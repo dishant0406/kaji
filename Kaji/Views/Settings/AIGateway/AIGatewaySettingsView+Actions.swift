@@ -24,7 +24,9 @@ extension AIGatewaySettingsView {
 
     func setEnabled(_ enabled: Bool) {
         store.setEnabled(enabled)
-        if !enabled { runtime.stop() }
+        if !enabled {
+            runtime.stop()
+        }
     }
 
     func setAutoStart(_ enabled: Bool) {

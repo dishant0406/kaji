@@ -147,9 +147,15 @@ struct SplitDiffView: View {
         var currentIndex = -1
         var rowsForHunk: [DiffDisplayRow] = []
         for row in rows {
-            if row.kind == .hunk { currentIndex += 1 }
-            if currentIndex == hunkIndex { rowsForHunk.append(row) }
-            if currentIndex > hunkIndex { break }
+            if row.kind == .hunk {
+                currentIndex += 1
+            }
+            if currentIndex == hunkIndex {
+                rowsForHunk.append(row)
+            }
+            if currentIndex > hunkIndex {
+                break
+            }
         }
         return rowsForHunk.isEmpty ? nil : rowsForHunk
     }

@@ -38,40 +38,39 @@ struct AIGatewaySettingsView: View {
         .onAppear(perform: refresh)
     }
 
+    @ViewBuilder
     private var advancedSections: some View {
-        Group {
-            AIGatewayRuntimeSection(
-                settings: store.settings,
-                status: runtime.status,
-                installState: installState,
-                message: message,
-                isWorking: isWorking,
-                onInstall: install,
-                onUninstall: uninstall,
-                onEnabled: setEnabled,
-                onAutoStart: setAutoStart,
-                onBind: setBind,
-                onPort: setPort,
-                onStart: start,
-                onStop: stop,
-                onRestart: restart,
-                onRotateToken: rotateToken
-            )
-            AIGatewayProvidersSection(
-                providers: store.settings.providers,
-                keyStatus: { store.providerKeyStatus(providerID: $0) },
-                onUpdate: updateProvider,
-                onSaveKey: saveProviderKey
-            )
-            AIGatewayModelsSection(models: store.settings.models, onUpdate: updateModel, onDelete: deleteModel, onAdd: addModel)
-            AIGatewayAgentInstructionsSection(
-                settings: store.settings,
-                tokenProvider: { store.ensureToken() },
-                onApplyClaude: applyClaude,
-                onApplyCodex: applyCodex
-            )
-            AIGatewayLogsSection(logs: runtime.recentLogs)
-        }
+        AIGatewayRuntimeSection(
+            settings: store.settings,
+            status: runtime.status,
+            installState: installState,
+            message: message,
+            isWorking: isWorking,
+            onInstall: install,
+            onUninstall: uninstall,
+            onEnabled: setEnabled,
+            onAutoStart: setAutoStart,
+            onBind: setBind,
+            onPort: setPort,
+            onStart: start,
+            onStop: stop,
+            onRestart: restart,
+            onRotateToken: rotateToken
+        )
+        AIGatewayProvidersSection(
+            providers: store.settings.providers,
+            keyStatus: { store.providerKeyStatus(providerID: $0) },
+            onUpdate: updateProvider,
+            onSaveKey: saveProviderKey
+        )
+        AIGatewayModelsSection(models: store.settings.models, onUpdate: updateModel, onDelete: deleteModel, onAdd: addModel)
+        AIGatewayAgentInstructionsSection(
+            settings: store.settings,
+            tokenProvider: { store.ensureToken() },
+            onApplyClaude: applyClaude,
+            onApplyCodex: applyCodex
+        )
+        AIGatewayLogsSection(logs: runtime.recentLogs)
     }
 
     private var selectedProviderKeySaved: Bool {
@@ -121,7 +120,9 @@ struct AIGatewaySettingsView: View {
     private func ensureInstalled() async -> Bool {
         let result = await Task.detached { AIGatewayClaudeCodeRouterInstaller.ensureCurrent() }.value
         installState = result.state
-        if case .installed = result.state { return true }
+        if case .installed = result.state {
+            return true
+        }
         message = result.message
         return false
     }
@@ -135,8 +136,12 @@ struct AIGatewaySettingsView: View {
     }
 
     private func applySelectedAgentConfigs() {
-        if draft.useClaude { applyClaude() }
-        if draft.useCodex { applyCodex() }
+        if draft.useClaude {
+            applyClaude()
+        }
+        if draft.useCodex {
+            applyCodex()
+        }
     }
 
     private func applyClaudeFromDraft() {

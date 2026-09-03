@@ -45,7 +45,9 @@ enum ParentAgentSubagentPolicy {
     static func expectsMutation(_ prompt: String) -> Bool {
         let value = prompt.lowercased()
         let noEditMarkers = ["do not edit", "don't edit", "read only", "read-only", "review only"]
-        if noEditMarkers.contains(where: value.contains) { return false }
+        if noEditMarkers.contains(where: value.contains) {
+            return false
+        }
         let mutationMarkers = [
             "fix",
             "implement",

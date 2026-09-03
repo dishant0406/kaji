@@ -197,7 +197,9 @@ final class KeychainSTTCredentialProfileStore: STTCredentialProfileStoring, @unc
         try lock.withLock {
             try generic { try metadata.list() }
                 .sorted { left, right in
-                    if left.updatedAt != right.updatedAt { return left.updatedAt > right.updatedAt }
+                    if left.updatedAt != right.updatedAt {
+                        return left.updatedAt > right.updatedAt
+                    }
                     return left.id.uuidString < right.id.uuidString
                 }
         }
@@ -222,7 +224,9 @@ final class SecurityGenericPasswordStore: STTGenericPasswordStoring, @unchecked 
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         ]
         let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus == errSecSuccess { return }
+        if updateStatus == errSecSuccess {
+            return
+        }
         guard updateStatus == errSecItemNotFound else {
             throw STTCredentialStoreError.operationFailed
         }
@@ -238,7 +242,9 @@ final class SecurityGenericPasswordStore: STTGenericPasswordStoring, @unchecked 
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        if status == errSecItemNotFound { return nil }
+        if status == errSecItemNotFound {
+            return nil
+        }
         guard status == errSecSuccess, let data = item as? Data else {
             throw STTCredentialStoreError.operationFailed
         }

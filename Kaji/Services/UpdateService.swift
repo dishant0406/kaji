@@ -39,14 +39,20 @@ final class UpdateService {
             latestReleasePageURL = release.htmlURL
             if Self.isVersion(release.version, newerThan: currentVersion()) {
                 availableUpdateVersion = release.version
-                if showResult { showAvailableUpdate(release) }
+                if showResult {
+                    showAvailableUpdate(release)
+                }
             } else {
                 availableUpdateVersion = nil
-                if showResult { showNoUpdate(release) }
+                if showResult {
+                    showNoUpdate(release)
+                }
             }
         } catch {
             logger.warning("GitHub release check failed: \(error.localizedDescription)")
-            if showResult { showUpdateError(error) }
+            if showResult {
+                showUpdateError(error)
+            }
         }
     }
 
@@ -80,7 +86,9 @@ final class UpdateService {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(Self.upgradeCommand, forType: .string)
         case .alertSecondButtonReturn:
-            if let url = release.htmlURL { NSWorkspace.shared.open(url) }
+            if let url = release.htmlURL {
+                NSWorkspace.shared.open(url)
+            }
         default:
             break
         }

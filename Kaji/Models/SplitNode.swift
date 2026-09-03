@@ -71,7 +71,9 @@ extension SplitNode {
                 position: position
             )
             branch.first = newFirst
-            if id1 != nil { return (.split(branch), id1) }
+            if id1 != nil {
+                return (.split(branch), id1)
+            }
             let (newSecond, id2) = branch.second.splitting(
                 areaID: areaID,
                 direction: direction,
@@ -102,7 +104,9 @@ extension SplitNode {
                 areaID: areaID, direction: direction, position: position, tab: tab
             )
             branch.first = newFirst
-            if id1 != nil { return (.split(branch), id1) }
+            if id1 != nil {
+                return (.split(branch), id1)
+            }
             let (newSecond, id2) = branch.second.splittingWithTab(
                 areaID: areaID, direction: direction, position: position, tab: tab
             )

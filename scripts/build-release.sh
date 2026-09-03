@@ -91,7 +91,6 @@ if [[ "${KAJI_SKIP_IGNORE_CATALOG_UPDATE:-0}" != "1" ]]; then
     "$SCRIPT_DIR/update-ignore-catalog.py"
 fi
 if $SKIP_NATIVE_DEPS; then
-    [[ -f "$PROJECT_ROOT/Kaji/Resources/KajiAgentRuntime/kaji-agent-runtime.mjs" ]] || { echo "Error: Kaji runtime is missing; run scripts/build-kaji-agent-runtime.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/kaji-agent.mjs" ]] || { echo "Error: Parent agent runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/pi/oauth-login.mjs" ]] || { echo "Error: Parent agent OAuth runtime is missing; run scripts/build-parent-agent.sh" >&2; exit 1; }
     [[ -f "$PROJECT_ROOT/Kaji/Resources/Zlob/zlob" ]] || { echo "Error: Zlob runtime is missing; run scripts/build-zlob.sh" >&2; exit 1; }
@@ -102,7 +101,6 @@ fi
 rm -rf "$PROJECT_ROOT/.build/$TRIPLE/release/Kaji_Kaji.bundle"
 if ! $SKIP_NATIVE_DEPS; then
     "$SCRIPT_DIR/build-parent-agent.sh"
-    "$SCRIPT_DIR/build-kaji-agent-runtime.sh"
     "$SCRIPT_DIR/build-rift.sh"
     "$SCRIPT_DIR/build-zlob.sh"
     "$SCRIPT_DIR/build-monaco-runtime.sh"
@@ -134,7 +132,6 @@ if [[ ! -d "$RESOURCE_BUNDLE_SOURCE" ]]; then
     exit 1
 fi
 cp -R "$RESOURCE_BUNDLE_SOURCE" "$APP_BUNDLE/Contents/Resources/$RESOURCE_BUNDLE_NAME"
-"$SCRIPT_DIR/stage-kaji-agent-native-addon.sh" --arch "$ARCH" --destination "$APP_BUNDLE/Contents/Resources/native"
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 cp "$PROJECT_ROOT/Kaji/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 mkdir -p "$APP_BUNDLE/Contents/Library/LaunchDaemons"

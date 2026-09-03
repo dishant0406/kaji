@@ -70,7 +70,9 @@ struct AskProvider: Hashable, Identifiable {
 
     static func resolveAnnotation(_ value: String) -> Self? {
         let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if ["terminal", "term", "shell"].contains(normalized) { return .terminal }
+        if ["terminal", "term", "shell"].contains(normalized) {
+            return .terminal
+        }
         return CodingAgentRegistry.shared.resolve(value).map(AskProvider.init(definition:))
     }
 }

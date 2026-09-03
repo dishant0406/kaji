@@ -12,7 +12,9 @@ struct EditorSearchBar: View {
 
     private var displayText: String {
         guard !state.searchNeedle.isEmpty else { return "" }
-        if state.searchUseRegex, state.searchInvalidRegex { return "Invalid regex" }
+        if state.searchUseRegex, state.searchInvalidRegex {
+            return "Invalid regex"
+        }
         guard state.searchMatchCount > 0 else { return "No results" }
         return "\(state.searchCurrentIndex) of \(state.searchMatchCount)"
     }

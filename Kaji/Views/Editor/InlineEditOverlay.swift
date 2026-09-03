@@ -184,8 +184,12 @@ struct InlineEditOverlay: View {
     }
 
     private var defaultProvider: AskProvider {
-        if let saved = availableProviders.first(where: { $0.rawValue == settings.providerID }) { return saved }
-        if availableProviders.contains(.opencode) { return .opencode }
+        if let saved = availableProviders.first(where: { $0.rawValue == settings.providerID }) {
+            return saved
+        }
+        if availableProviders.contains(.opencode) {
+            return .opencode
+        }
         return availableProviders.first ?? .opencode
     }
 
@@ -195,7 +199,9 @@ struct InlineEditOverlay: View {
 
     private func defaultModel(for provider: AskProvider) -> String? {
         let options = ParentAgentCodingProviderCatalog.modelOptions(for: provider, projectPath: worktree?.path ?? project?.path)
-        if let saved = settings.modelID(for: provider.rawValue), options.contains(saved) { return saved }
+        if let saved = settings.modelID(for: provider.rawValue), options.contains(saved) {
+            return saved
+        }
         return CodingAgentRegistry.shared.agent(id: provider.rawValue)?.defaultModel(projectPath: worktree?.path ?? project?.path)
     }
 
@@ -204,7 +210,9 @@ struct InlineEditOverlay: View {
     }
 
     private var statusText: String {
-        if let generatedBy { return "Generated with \(generatedBy). You can edit before applying." }
+        if let generatedBy {
+            return "Generated with \(generatedBy). You can edit before applying."
+        }
         return "Generate a proposal directly, or open the same prompt in Ask."
     }
 }

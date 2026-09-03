@@ -70,7 +70,9 @@ enum GitCommitInventoryBuilder {
             )
         }
         .sorted { lhs, rhs in
-            if lhs.fileCount != rhs.fileCount { return lhs.fileCount > rhs.fileCount }
+            if lhs.fileCount != rhs.fileCount {
+                return lhs.fileCount > rhs.fileCount
+            }
             return lhs.path < rhs.path
         }
     }

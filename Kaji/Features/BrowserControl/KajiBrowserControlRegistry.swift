@@ -15,8 +15,12 @@ final class KajiBrowserControlRegistry {
     }
 
     func handle(_ command: KajiBrowserControlCommand) async -> String {
-        if command.action == "open_panel" { return panelResult(command, notification: .openBrowserPanel) }
-        if command.action == "close_panel" { return panelResult(command, notification: .closeBrowserPanel) }
+        if command.action == "open_panel" {
+            return panelResult(command, notification: .openBrowserPanel)
+        }
+        if command.action == "close_panel" {
+            return panelResult(command, notification: .closeBrowserPanel)
+        }
         guard let target = sessions[command.sessionID] else {
             return KajiBrowserControlJSON.body(["connected": false, "error": "browser_panel_not_open", "sessionId": command.sessionID])
         }

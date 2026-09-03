@@ -18,11 +18,15 @@ private final class MeetingAudioPipelineDrainRace: Sendable {
     func wait() async -> MeetingAudioPipelineDrainResult {
         await withCheckedContinuation { continuation in
             let result = state.withLock { state -> MeetingAudioPipelineDrainResult? in
-                if let result = state.result { return result }
+                if let result = state.result {
+                    return result
+                }
                 state.continuation = continuation
                 return nil
             }
-            if let result { continuation.resume(returning: result) }
+            if let result {
+                continuation.resume(returning: result)
+            }
         }
     }
 
@@ -262,12 +266,16 @@ actor MeetingAudioProcessingPipeline {
     }
 
     private func chunker(for source: MeetingAudioSourceIdentity) throws -> MeetingAudioChunker {
-        if let chunker = chunkers[source] { return chunker }
+        if let chunker = chunkers[source] {
+            return chunker
+        }
         return try MeetingAudioChunker(source: source, configuration: configuration)
     }
 
     private func realtimePacketizer(for source: MeetingAudioSourceIdentity) throws -> MeetingRealtimeAudioPacketizer {
-        if let packetizer = realtimePacketizers[source] { return packetizer }
+        if let packetizer = realtimePacketizers[source] {
+            return packetizer
+        }
         return try MeetingRealtimeAudioPacketizer(source: source)
     }
 

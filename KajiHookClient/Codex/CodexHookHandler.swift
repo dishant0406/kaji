@@ -6,7 +6,9 @@ enum CodexHookHandler {
         let provider = args[0]
         let parsed = parse(args: args, input: input)
         guard !provider.isEmpty, ["start", "stop", "attention", "observe"].contains(parsed.action) else { return }
-        if shouldIgnoreNestedCodex(provider: provider, input: input) { return }
+        if shouldIgnoreNestedCodex(provider: provider, input: input) {
+            return
+        }
         HookEventEmitter.emitSession(provider: provider, input: input, source: parsed.eventName)
         if parsed.action == "attention" {
             emitAttention(provider: provider, input: input)

@@ -59,7 +59,11 @@ struct AIGatewayRuntimeSection: View {
                 }
             }
             .onChange(of: bindText) { _, value in onBind(value) }
-            .onChange(of: portText) { _, value in if let port = Int(value) { onPort(port) } }
+            .onChange(of: portText) {
+                _, value in if let port = Int(value) {
+                    onPort(port)
+                }
+            }
 
             HStack(spacing: 8) {
                 Spacer(minLength: 0)
@@ -101,35 +105,53 @@ struct AIGatewayRuntimeSection: View {
     }
 
     private var installed: Bool {
-        if case .missing = installState { return false }
+        if case .missing = installState {
+            return false
+        }
         return true
     }
 
     private var usable: Bool {
-        if case .installed = installState { return true }
+        if case .installed = installState {
+            return true
+        }
         return false
     }
 
     private var running: Bool {
-        if case .running = status { return true }
+        if case .running = status {
+            return true
+        }
         return false
     }
 
     private var primaryTitle: String {
-        if isWorking { return "Working" }
-        if case .needsRepair = installState { return "Update" }
+        if isWorking {
+            return "Working"
+        }
+        if case .needsRepair = installState {
+            return "Update"
+        }
         return installed ? "Repair" : "Install"
     }
 
     private var statusText: String {
-        if case let .needsRepair(reason) = installState { return reason }
-        if !installed { return "Install Claude Code Router for local routing." }
+        if case let .needsRepair(reason) = installState {
+            return reason
+        }
+        if !installed {
+            return "Install Claude Code Router for local routing."
+        }
         return status.label
     }
 
     private var statusColor: Color {
-        if case .failed = status { return KajiTheme.diffRemoveFg }
-        if case .needsRepair = installState { return KajiTheme.diffRemoveFg }
+        if case .failed = status {
+            return KajiTheme.diffRemoveFg
+        }
+        if case .needsRepair = installState {
+            return KajiTheme.diffRemoveFg
+        }
         return usable ? KajiTheme.fgMuted : KajiTheme.fgDim
     }
 

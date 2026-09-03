@@ -106,9 +106,13 @@ public struct ClosedLidJSONLineReader {
             }
             var pollDescriptor = pollfd(fd: descriptor, events: Int16(POLLIN | POLLHUP | POLLERR), revents: 0)
             let pollResult = Darwin.poll(&pollDescriptor, 1, timeoutMilliseconds)
-            if pollResult == 0 { throw ClosedLidGuardProtocolError.timedOut }
+            if pollResult == 0 {
+                throw ClosedLidGuardProtocolError.timedOut
+            }
             if pollResult < 0 {
-                if errno == EINTR { continue }
+                if errno == EINTR {
+                    continue
+                }
                 throw ClosedLidGuardProtocolError.ioFailure(errno)
             }
             guard pollDescriptor.revents & Int16(POLLERR | POLLNVAL) == 0 else {
@@ -117,9 +121,13 @@ public struct ClosedLidJSONLineReader {
             let capacity = min(1024, maximumBytes + 1 - buffer.count)
             var bytes = [UInt8](repeating: 0, count: capacity)
             let count = Darwin.read(descriptor, &bytes, capacity)
-            if count == 0 { throw ClosedLidGuardProtocolError.endOfFile }
+            if count == 0 {
+                throw ClosedLidGuardProtocolError.endOfFile
+            }
             if count < 0 {
-                if errno == EINTR || errno == EAGAIN { continue }
+                if errno == EINTR || errno == EAGAIN {
+                    continue
+                }
                 throw ClosedLidGuardProtocolError.ioFailure(errno)
             }
             buffer.append(contentsOf: bytes.prefix(count))

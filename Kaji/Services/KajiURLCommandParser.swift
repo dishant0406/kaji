@@ -28,7 +28,9 @@ enum KajiURLCommandParser {
             .replacingOccurrences(of: "-", with: "+")
             .replacingOccurrences(of: "_", with: "/")
         let remainder = base64.count % 4
-        if remainder == 1 { return nil }
+        if remainder == 1 {
+            return nil
+        }
         if remainder > 0 {
             base64 += String(repeating: "=", count: 4 - remainder)
         }

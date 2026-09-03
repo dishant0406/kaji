@@ -6,7 +6,9 @@ enum ParentAgentAssignmentMatcher {
         guard !taskTokens.isEmpty else { return false }
         let assignmentTokens = tokens([assignment.title, assignment.prompt].joined(separator: " "))
         guard !assignmentTokens.isEmpty else { return false }
-        if taskTokens.isSubset(of: assignmentTokens) || assignmentTokens.isSubset(of: taskTokens) { return true }
+        if taskTokens.isSubset(of: assignmentTokens) || assignmentTokens.isSubset(of: taskTokens) {
+            return true
+        }
         let overlap = taskTokens.intersection(assignmentTokens)
         let threshold = min(2, min(taskTokens.count, assignmentTokens.count))
         return overlap.count >= threshold

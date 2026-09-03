@@ -24,7 +24,9 @@ enum MarkdownPreviewLinkResolver {
     ) -> MarkdownPreviewLinkAction {
         let href = request.href.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !href.isEmpty else { return .ignored }
-        if href.hasPrefix("#") { return .anchor(String(href.dropFirst())) }
+        if href.hasPrefix("#") {
+            return .anchor(String(href.dropFirst()))
+        }
         guard let url = resolvedURL(for: request, documentURL: documentURL) else { return .ignored }
         guard let scheme = url.scheme?.lowercased() else { return .unsupported(url) }
         if scheme == "file" {

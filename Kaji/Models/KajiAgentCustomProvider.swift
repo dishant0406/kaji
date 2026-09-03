@@ -92,13 +92,23 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
             "auth": .string(auth.rawValue),
             "disableStrictTools": .bool(disableStrictTools),
         ]
-        if api != .providerDefault { object["api"] = .string(api.rawValue) }
-        if auth == .apiKey, !apiKey.trimmed.isEmpty { object["apiKey"] = .string(apiKey.trimmed) }
-        if discovery != .none { object["discovery"] = discoveryJSON }
+        if api != .providerDefault {
+            object["api"] = .string(api.rawValue)
+        }
+        if auth == .apiKey, !apiKey.trimmed.isEmpty {
+            object["apiKey"] = .string(apiKey.trimmed)
+        }
+        if discovery != .none {
+            object["discovery"] = discoveryJSON
+        }
         let headers = Self.headers(from: headersText)
-        if !headers.isEmpty { object["headers"] = .object(headers.mapValues(KajiAgentJSONValue.string)) }
+        if !headers.isEmpty {
+            object["headers"] = .object(headers.mapValues(KajiAgentJSONValue.string))
+        }
         let validModels = models.filter { !$0.modelID.trimmed.isEmpty }
-        if !validModels.isEmpty { object["models"] = .array(validModels.map(\.json)) }
+        if !validModels.isEmpty {
+            object["models"] = .array(validModels.map(\.json))
+        }
         return .object(object)
     }
 
@@ -107,7 +117,9 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
         let hasConfiguredModels = models.contains { !$0.modelID.trimmed.isEmpty }
         let hasProviderOverride = !baseUrl.trimmed.isEmpty || !Self.headers(from: headersText).isEmpty || disableStrictTools
         let providerID = id.trimmed
-        if providerID.isEmpty { errors.append("Provider ID is required.") }
+        if providerID.isEmpty {
+            errors.append("Provider ID is required.")
+        }
         if !providerID.isEmpty, providerID.first?.isLetter != true, providerID.first?.isNumber != true {
             errors.append("Provider ID must start with a letter or number.")
         }
@@ -154,9 +166,15 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
 
     private var discoveryJSON: KajiAgentJSONValue {
         var object: [String: KajiAgentJSONValue] = ["type": .string(discovery.rawValue)]
-        if !azureResourceGroup.trimmed.isEmpty { object["resourceGroup"] = .string(azureResourceGroup.trimmed) }
-        if !azureAccountName.trimmed.isEmpty { object["accountName"] = .string(azureAccountName.trimmed) }
-        if !azureSubscription.trimmed.isEmpty { object["subscription"] = .string(azureSubscription.trimmed) }
+        if !azureResourceGroup.trimmed.isEmpty {
+            object["resourceGroup"] = .string(azureResourceGroup.trimmed)
+        }
+        if !azureAccountName.trimmed.isEmpty {
+            object["accountName"] = .string(azureAccountName.trimmed)
+        }
+        if !azureSubscription.trimmed.isEmpty {
+            object["subscription"] = .string(azureSubscription.trimmed)
+        }
         return .object(object)
     }
 
@@ -175,7 +193,9 @@ struct KajiAgentCustomProvider: Identifiable, Hashable {
             guard parts.count == 2 else { continue }
             let key = String(parts[0]).trimmed
             let value = String(parts[1]).trimmed
-            if !key.isEmpty, !value.isEmpty { headers[key] = value }
+            if !key.isEmpty, !value.isEmpty {
+                headers[key] = value
+            }
         }
         return headers
     }

@@ -54,7 +54,9 @@ enum KajiAgentWorkspaceStateSnapshot {
     static func relativePath(_ path: String, root: String) -> String? {
         let full = (path as NSString).standardizingPath
         let base = (root as NSString).standardizingPath
-        if full == base { return "" }
+        if full == base {
+            return ""
+        }
         guard full.hasPrefix(base + "/") else { return nil }
         return String(full.dropFirst(base.count + 1))
     }

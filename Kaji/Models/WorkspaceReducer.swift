@@ -122,12 +122,6 @@ enum WorkspaceReducer {
         case let .createParentAgentSplit(projectID):
             TabReducer.createParentAgentSplit(projectID: projectID, state: &state)
 
-        case let .createCodeGraphTab(request):
-            TabReducer.createCodeGraphTab(
-                request,
-                state: &state
-            )
-
         case let .createBrowserSplit(projectID):
             TabReducer.createBrowserSplit(projectID: projectID, state: &state)
 

@@ -44,12 +44,6 @@ struct CLILauncherFooter: View {
                 Spacer(minLength: 0)
 
                 HStack(spacing: 4) {
-                    KajiCodeGraphFooterControl(
-                        projectID: projectID,
-                        worktreeKey: worktreeKey,
-                        worktreePath: worktreePath
-                    )
-
                     SpeechInputFooterControl()
 
                     MeetingNotesFooterControl {

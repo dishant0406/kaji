@@ -25,8 +25,12 @@ struct MarkdownSyncMap: Equatable {
 
     func previewScrollTop(forEditorScrollY editorY: CGFloat) -> CGFloat {
         guard !isEmpty else { return 0 }
-        if editorY <= 0 { return 0 }
-        if editorY >= editorMaxScrollY { return previewMaxScrollY }
+        if editorY <= 0 {
+            return 0
+        }
+        if editorY >= editorMaxScrollY {
+            return previewMaxScrollY
+        }
         let fraction = sourceFraction(editorY, isEditor: true)
         let editorCenter = editorY + editorViewportHeight / 2
         let previewCenter = lerp(editorCenter, fromEditor: true)
@@ -38,8 +42,12 @@ struct MarkdownSyncMap: Equatable {
 
     func editorScrollY(forPreviewScrollTop previewY: CGFloat) -> CGFloat {
         guard !isEmpty else { return 0 }
-        if previewY <= 0 { return 0 }
-        if previewY >= previewMaxScrollY { return editorMaxScrollY }
+        if previewY <= 0 {
+            return 0
+        }
+        if previewY >= previewMaxScrollY {
+            return editorMaxScrollY
+        }
         let fraction = sourceFraction(previewY, isEditor: false)
         let previewCenter = previewY + previewViewportHeight / 2
         let editorCenter = lerp(previewCenter, fromEditor: false)

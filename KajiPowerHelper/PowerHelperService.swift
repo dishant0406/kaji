@@ -192,7 +192,9 @@ final class PowerHelperService: NSObject, KajiPowerHelperXPCProtocol, @unchecked
     }
 
     private func commandError(_ result: PMSetResult) -> String {
-        if result.timedOut { return "pmset timed out" }
+        if result.timedOut {
+            return "pmset timed out"
+        }
         let message = result.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
         return message.isEmpty ? "pmset failed with status \(result.exitCode)" : String(message.prefix(512))
     }

@@ -31,7 +31,9 @@ enum DebugFileLog {
     }
 
     private static func startIfNeeded() {
-        if storage.isOpen { return }
+        if storage.isOpen {
+            return
+        }
         start()
     }
 
@@ -46,7 +48,9 @@ enum DebugFileLog {
     }
 
     private static func shouldLog(_ category: String) -> Bool {
-        if ProcessInfo.processInfo.environment["KAJI_EDITOR_DEBUG_LOGS"] == "1" { return true }
+        if ProcessInfo.processInfo.environment["KAJI_EDITOR_DEBUG_LOGS"] == "1" {
+            return true
+        }
         return ![
             "EditorDraw",
             "EditorViewport",

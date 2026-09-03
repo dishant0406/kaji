@@ -65,7 +65,9 @@ struct STTServerSentEventDecoder {
         var events: [STTServerSentEvent] = []
         while let newlineIndex = buffer.firstIndex(of: 0x0A) {
             var line = buffer[..<newlineIndex]
-            if line.last == 0x0D { line = line.dropLast() }
+            if line.last == 0x0D {
+                line = line.dropLast()
+            }
             guard line.count <= limits.maximumLineBytes else {
                 reset()
                 throw STTSSEDecoderError.lineTooLong
@@ -94,10 +96,14 @@ struct STTServerSentEventDecoder {
                 reset()
                 throw STTSSEDecoderError.lineTooLong
             }
-            if let event = try process(buffer) { events.append(event) }
+            if let event = try process(buffer) {
+                events.append(event)
+            }
             buffer.removeAll(keepingCapacity: false)
         }
-        if let event = dispatch() { events.append(event) }
+        if let event = dispatch() {
+            events.append(event)
+        }
         guard events.count <= limits.maximumEventsPerBatch else {
             reset()
             throw STTSSEDecoderError.tooManyEvents
@@ -110,12 +116,18 @@ struct STTServerSentEventDecoder {
             reset()
             throw STTSSEDecoderError.invalidEncoding
         }
-        if line.isEmpty { return dispatch() }
-        if line.hasPrefix(":") { return nil }
+        if line.isEmpty {
+            return dispatch()
+        }
+        if line.hasPrefix(":") {
+            return nil
+        }
         let parts = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
         let field = String(parts[0])
         var value = parts.count == 2 ? String(parts[1]) : ""
-        if value.hasPrefix(" ") { value.removeFirst() }
+        if value.hasPrefix(" ") {
+            value.removeFirst()
+        }
         switch field {
         case "event":
             guard value.utf8.count <= limits.maximumLineBytes, !value.contains("\0") else {

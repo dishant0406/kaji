@@ -7,7 +7,9 @@ enum ParentAgentAssignmentCompletionEvaluator {
         finalSummary: String?,
         changedFiles: [ParentAgentChangedFileContext]
     ) -> ParentAgentAssignmentStatus {
-        if assignmentStatus == .stopped { return .stopped }
+        if assignmentStatus == .stopped {
+            return .stopped
+        }
         switch runStatus {
         case .running:
             return .running
@@ -26,7 +28,9 @@ enum ParentAgentAssignmentCompletionEvaluator {
     }
 
     private static func hasMeaningfulResult(finalSummary: String?, changedFiles: [ParentAgentChangedFileContext]) -> Bool {
-        if finalSummary?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false { return true }
+        if finalSummary?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return true
+        }
         return !changedFiles.isEmpty
     }
 }

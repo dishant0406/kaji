@@ -53,18 +53,30 @@ struct KajiCodeSetupView: View {
     }
 
     private var primaryTitle: String {
-        if isWorking { return "Setting up" }
-        if runtimeResolution != nil, runtimeResolution?.source != .managed { return "Setup" }
-        if case .installed = state { return "Update & Setup" }
+        if isWorking {
+            return "Setting up"
+        }
+        if runtimeResolution != nil, runtimeResolution?.source != .managed {
+            return "Setup"
+        }
+        if case .installed = state {
+            return "Update & Setup"
+        }
         return "Install"
     }
 
     private var statusText: String {
-        if let message { return message }
+        if let message {
+            return message
+        }
         switch state {
         case .missing:
-            if runtimeResolution?.source == .developerOverride { return "Using developer override" }
-            if runtimeResolution?.source == .path { return "External CLI found" }
+            if runtimeResolution?.source == .developerOverride {
+                return "Using developer override"
+            }
+            if runtimeResolution?.source == .path {
+                return "External CLI found"
+            }
             return "Not installed"
         case let .installed(manifest):
             return "Installed \(manifest.activeVersion) from \(manifest.platform)"

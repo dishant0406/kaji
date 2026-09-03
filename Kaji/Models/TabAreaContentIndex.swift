@@ -53,8 +53,7 @@ struct TabAreaContentIndex {
             browserTabID = tab.id
         case .vcs,
              .problems,
-             .parentAgent,
-             .codeGraph:
+             .parentAgent:
             return
         }
     }
@@ -77,8 +76,7 @@ struct TabAreaContentIndex {
             }
         case .vcs,
              .problems,
-             .parentAgent,
-             .codeGraph:
+             .parentAgent:
             return
         }
     }

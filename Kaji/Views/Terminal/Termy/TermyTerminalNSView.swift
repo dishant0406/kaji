@@ -67,7 +67,9 @@ final class TermyTerminalNSView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil { createSurface() }
+        if window != nil {
+            createSurface()
+        }
     }
 
     override func setFrameSize(_ newSize: NSSize) {

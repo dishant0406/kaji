@@ -89,7 +89,9 @@ actor MeetingTranscriptionRuntimeRouter {
             guard range.endFrame > throughFrame else { return }
             ranges.append(max(throughFrame, range.startFrame) ..< range.endFrame)
             ranges.sort { left, right in
-                if left.lowerBound == right.lowerBound { return left.upperBound < right.upperBound }
+                if left.lowerBound == right.lowerBound {
+                    return left.upperBound < right.upperBound
+                }
                 return left.lowerBound < right.lowerBound
             }
             var merged: [Range<Int64>] = []
@@ -493,7 +495,9 @@ actor MeetingTranscriptionRuntimeRouter {
                     }
                     for await livePacket in packets {
                         try Task.checkCancellation()
-                        if replayEndFrame > 0, livePacket.sampleRange.endFrame <= replayEndFrame { continue }
+                        if replayEndFrame > 0, livePacket.sampleRange.endFrame <= replayEndFrame {
+                            continue
+                        }
                         let submitted = try await self.packet(livePacket, epoch: epoch, useFallback: useFallback)
                         do {
                             try await session.submit(submitted)

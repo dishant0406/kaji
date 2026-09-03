@@ -155,10 +155,16 @@ struct GlobalSearchPanel: View {
     }
 
     private var statusText: String {
-        if isReplacing { return "Replacing..." }
-        if isSearching { return "Searching..." }
+        if isReplacing {
+            return "Replacing..."
+        }
+        if isSearching {
+            return "Searching..."
+        }
         let count = groups.reduce(0) { $0 + $1.matches.count }
-        if count.signum() == 0 { return "Search results appear grouped by file" }
+        if count.signum() == 0 {
+            return "Search results appear grouped by file"
+        }
         return "\(count) result\(count == 1 ? "" : "s") in \(groups.count) file\(groups.count == 1 ? "" : "s")"
     }
 
@@ -221,23 +227,22 @@ struct GlobalSearchPanel: View {
         }
     }
 
+    @ViewBuilder
     private var replaceConfirmationOverlay: some View {
-        Group {
-            if let replacePreview {
-                ZStack {
-                    Color.black.opacity(0.16)
-                        .ignoresSafeArea()
-                        .onTapGesture { self.replacePreview = nil }
-                    GlobalSearchReplaceConfirmation(
-                        preview: replacePreview,
-                        onCancel: { self.replacePreview = nil },
-                        onConfirm: {
-                            self.replacePreview = nil
-                            replaceAll()
-                        }
-                    )
-                    .padding(20)
-                }
+        if let replacePreview {
+            ZStack {
+                Color.black.opacity(0.16)
+                    .ignoresSafeArea()
+                    .onTapGesture { self.replacePreview = nil }
+                GlobalSearchReplaceConfirmation(
+                    preview: replacePreview,
+                    onCancel: { self.replacePreview = nil },
+                    onConfirm: {
+                        self.replacePreview = nil
+                        replaceAll()
+                    }
+                )
+                .padding(20)
             }
         }
     }

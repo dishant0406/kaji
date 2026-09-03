@@ -68,7 +68,9 @@ struct PiAgentModule: CodingAgentModule {
             let existingData = try? Data(contentsOf: URL(fileURLWithPath: path))
             guard !fileManager.fileExists(atPath: path) || existingData != sourceData else { continue }
             try fileManager.createDirectory(atPath: (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
-            if fileManager.fileExists(atPath: path) { try fileManager.removeItem(atPath: path) }
+            if fileManager.fileExists(atPath: path) {
+                try fileManager.removeItem(atPath: path)
+            }
             try fileManager.copyItem(atPath: source, toPath: path)
         }
     }
@@ -82,7 +84,9 @@ struct PiAgentModule: CodingAgentModule {
             named: "pi-kaji-extension",
             extension: "ts",
             subdirectory: "CodingAgents/Pi"
-        ) { return bundled }
+        ) {
+            return bundled
+        }
         let candidate = ((hookClientPath as NSString).deletingLastPathComponent as NSString).appendingPathComponent("pi-kaji-extension.ts")
         return FileManager.default.fileExists(atPath: candidate) ? candidate : nil
     }

@@ -80,7 +80,9 @@ private final class MeetingTranscriptionProviderEventChannelStorage: @unchecked 
                 queue.append(event)
                 return
             }
-            if coalesce(event) { return }
+            if coalesce(event) {
+                return
+            }
             if evictOldestRevision() {
                 queue.append(event)
                 return

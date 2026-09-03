@@ -27,7 +27,9 @@ struct KajiAgentFloatingTaskState: Equatable {
 
     var badgeCount: Int {
         let activeCount = openTodoCount + runningSubagentCount
-        if activeCount > 0 { return activeCount }
+        if activeCount > 0 {
+            return activeCount
+        }
         return totalTodoCount + totalSubagentCount
     }
 
@@ -57,8 +59,12 @@ struct KajiAgentFloatingTaskState: Equatable {
     }
 
     var icon: String {
-        if failedSubagentCount > 0 { return "exclamationmark.triangle" }
-        if isWorking { return "arrow.right.circle.fill" }
+        if failedSubagentCount > 0 {
+            return "exclamationmark.triangle"
+        }
+        if isWorking {
+            return "arrow.right.circle.fill"
+        }
         return "checklist"
     }
 

@@ -47,7 +47,9 @@ enum SpeechInputFooterVisualState: Equatable {
     }
 
     var errorMessage: String? {
-        if case let .failed(message) = self { return message }
+        if case let .failed(message) = self {
+            return message
+        }
         return nil
     }
 

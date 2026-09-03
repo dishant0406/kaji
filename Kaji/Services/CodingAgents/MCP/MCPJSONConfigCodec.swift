@@ -157,13 +157,19 @@ extension MCPJSONConfigCodec {
     }
 
     private static func transport(type: String?, url: String) -> MCPServerTransport {
-        if let type = type?.lowercased(), ["http", "sse", "streamable-http", "remote"].contains(type) { return .remote }
+        if let type = type?.lowercased(), ["http", "sse", "streamable-http", "remote"].contains(type) {
+            return .remote
+        }
         return url.isEmpty ? .stdio : .remote
     }
 
     private static func authSummary(_ value: [String: Any]) -> String? {
-        if value["bearer_token_env_var"] != nil { return "Bearer token" }
-        if value["headers"] != nil { return "Headers" }
+        if value["bearer_token_env_var"] != nil {
+            return "Bearer token"
+        }
+        if value["headers"] != nil {
+            return "Headers"
+        }
         return nil
     }
 }

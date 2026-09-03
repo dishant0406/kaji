@@ -56,19 +56,37 @@ enum FilePreviewClassifier {
     static func previewKind(for filePath: String) -> FilePreviewKind? {
         let url = URL(fileURLWithPath: filePath)
         let ext = url.pathExtension.lowercased()
-        if textExtensions.contains(ext) { return nil }
-        if webPreviewExtensions.contains(ext) { return .web }
-        if documentExtensions.contains(ext) { return .document }
-        if archiveExtensions.contains(ext) { return .archive }
-        if modelExtensions.contains(ext) { return .model3D }
+        if textExtensions.contains(ext) {
+            return nil
+        }
+        if webPreviewExtensions.contains(ext) {
+            return .web
+        }
+        if documentExtensions.contains(ext) {
+            return .document
+        }
+        if archiveExtensions.contains(ext) {
+            return .archive
+        }
+        if modelExtensions.contains(ext) {
+            return .model3D
+        }
         guard let type = UTType(filenameExtension: ext) else { return nil }
-        if isText(type) { return nil }
-        if type.conforms(to: .pdf) { return .pdf }
-        if type.conforms(to: .image) { return .image }
+        if isText(type) {
+            return nil
+        }
+        if type.conforms(to: .pdf) {
+            return .pdf
+        }
+        if type.conforms(to: .image) {
+            return .image
+        }
         if type.conforms(to: .movie) || type.conforms(to: .audio) || type.conforms(to: .audiovisualContent) {
             return .audioVideo
         }
-        if type.conforms(to: .archive) { return .archive }
+        if type.conforms(to: .archive) {
+            return .archive
+        }
         return .quickLook
     }
 

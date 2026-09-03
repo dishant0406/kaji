@@ -42,8 +42,6 @@ struct TabContentView: View {
             )
         case .parentAgent:
             EmptyView()
-        case let .codeGraph(state):
-            KajiCodeGraphPane(state: state)
         case let .browser(state):
             BrowserPane(
                 state: state,

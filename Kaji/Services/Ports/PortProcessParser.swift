@@ -47,8 +47,12 @@ enum PortProcessParser {
         return snapshots
             .filter { seen.insert($0.id).inserted }
             .sorted { lhs, rhs in
-                if lhs.port != rhs.port { return lhs.port < rhs.port }
-                if lhs.processName != rhs.processName { return lhs.processName < rhs.processName }
+                if lhs.port != rhs.port {
+                    return lhs.port < rhs.port
+                }
+                if lhs.processName != rhs.processName {
+                    return lhs.processName < rhs.processName
+                }
                 return lhs.pid < rhs.pid
             }
     }

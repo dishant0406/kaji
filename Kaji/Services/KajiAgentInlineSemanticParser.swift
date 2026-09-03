@@ -111,9 +111,15 @@ enum KajiAgentInlineSemanticParser {
         let words = text.splitKeepingSeparators()
         return words.map { word in
             let trimmed = word.trimmingCharacters(in: .punctuationCharacters)
-            if isFilePath(trimmed) { return .filePath(word) }
-            if isCommand(trimmed) { return .command(word) }
-            if isSymbol(trimmed) { return .symbol(word) }
+            if isFilePath(trimmed) {
+                return .filePath(word)
+            }
+            if isCommand(trimmed) {
+                return .command(word)
+            }
+            if isSymbol(trimmed) {
+                return .symbol(word)
+            }
             return .text(word)
         }
     }
@@ -157,7 +163,9 @@ private extension String {
                 current = ""
             }
         }
-        if !current.isEmpty { values.append(current) }
+        if !current.isEmpty {
+            values.append(current)
+        }
         return values
     }
 }

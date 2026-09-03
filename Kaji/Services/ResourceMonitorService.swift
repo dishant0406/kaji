@@ -78,7 +78,9 @@ final class ResourceMonitorService {
         now: Date,
         staleAfter: TimeInterval = staleAfter
     ) -> RefreshHealth {
-        if let lastRefreshError { return .failed(lastRefreshError) }
+        if let lastRefreshError {
+            return .failed(lastRefreshError)
+        }
         guard let lastRefreshDate else { return .waiting }
         return now.timeIntervalSince(lastRefreshDate) > staleAfter ? .stale : .healthy
     }

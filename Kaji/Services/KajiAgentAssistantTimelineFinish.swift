@@ -9,7 +9,9 @@ extension KajiAgentAssistantTimelineApplier {
             )
             else { continue }
             KajiAgentTimeline.updateMessage(at: location, turns: &turns) { message in
-                if !part.text.isEmpty { message.detail = part.text }
+                if !part.text.isEmpty {
+                    message.detail = part.text
+                }
                 message.isComplete = true
             }
         }

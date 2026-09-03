@@ -14,31 +14,29 @@ struct NotificationSettingsView: View {
     @State private var editorState: EditorState?
 
     var body: some View {
-        Group {
-            switch editorState {
-            case let .destination(existing):
-                NotificationDestinationModal(
-                    existing: existing,
-                    bearerToken: existing.map { integrations.bearerToken(for: $0.id) } ?? "",
-                    onCancel: { editorState = nil },
-                    onSave: { destination, bearerToken in
-                        integrations.upsertDestination(destination, bearerToken: bearerToken)
-                        editorState = nil
-                    }
-                )
-            case let .route(existing):
-                NotificationRouteModal(
-                    existing: existing,
-                    destinations: integrations.destinations,
-                    onCancel: { editorState = nil },
-                    onSave: { route in
-                        integrations.upsertRoute(route)
-                        editorState = nil
-                    }
-                )
-            case nil:
-                settingsList
-            }
+        switch editorState {
+        case let .destination(existing):
+            NotificationDestinationModal(
+                existing: existing,
+                bearerToken: existing.map { integrations.bearerToken(for: $0.id) } ?? "",
+                onCancel: { editorState = nil },
+                onSave: { destination, bearerToken in
+                    integrations.upsertDestination(destination, bearerToken: bearerToken)
+                    editorState = nil
+                }
+            )
+        case let .route(existing):
+            NotificationRouteModal(
+                existing: existing,
+                destinations: integrations.destinations,
+                onCancel: { editorState = nil },
+                onSave: { route in
+                    integrations.upsertRoute(route)
+                    editorState = nil
+                }
+            )
+        case nil:
+            settingsList
         }
     }
 

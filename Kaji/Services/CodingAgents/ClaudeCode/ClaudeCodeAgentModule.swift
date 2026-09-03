@@ -124,7 +124,9 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
 
     private func readAccessToken() throws -> String {
         let env = ProcessInfo.processInfo.environment
-        if let token = AIUsageTokenReader.fromEnvironment(keys: ["CLAUDE_CODE_OAUTH_TOKEN"], env: env) { return token }
+        if let token = AIUsageTokenReader.fromEnvironment(keys: ["CLAUDE_CODE_OAUTH_TOKEN"], env: env) {
+            return token
+        }
         if let token = try AIUsageTokenReader.fromJSONFile(
             path: Self.credentialsFilePath(env: env),
             nestedKeyPath: ["claudeAiOauth"],
@@ -133,7 +135,9 @@ struct ClaudeCodeAgentModule: CodingAgentModule, AIUsageProvider {
             return token
         }
         let account = env["USER"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let token = Self.keychainAccessToken(account: account) { return token }
+        if let token = Self.keychainAccessToken(account: account) {
+            return token
+        }
         throw AIUsageAuthError.missingCredentials
     }
 

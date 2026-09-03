@@ -47,7 +47,9 @@ struct SpeechInputFooterControl: View {
     }
 
     private var isTahoe: Bool {
-        if #available(macOS 26.0, *) { return true }
+        if #available(macOS 26.0, *) {
+            return true
+        }
         return false
     }
 }

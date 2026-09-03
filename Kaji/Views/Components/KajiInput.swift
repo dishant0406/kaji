@@ -36,7 +36,9 @@ struct KajiInput: View {
     }
 
     private var controlBackground: Color {
-        if effectiveMode == .glass { return KajiTheme.surface.opacity(isFocused ? 0.32 : 0.22) }
+        if effectiveMode == .glass {
+            return KajiTheme.surface.opacity(isFocused ? 0.32 : 0.22)
+        }
         return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.5) : KajiTheme.surface
     }
 

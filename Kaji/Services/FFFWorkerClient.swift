@@ -73,13 +73,17 @@ final class FFFWorkerClient: @unchecked Sendable {
         } catch {
             consecutiveFailures = min(consecutiveFailures + 1, 6)
             invalidateProcess()
-            if error is FFFSearchError { throw error }
+            if error is FFFSearchError {
+                throw error
+            }
             throw FFFSearchError.workerUnavailable
         }
     }
 
     private func ensureProcess() throws {
-        if let process, process.isRunning { return }
+        if let process, process.isRunning {
+            return
+        }
         invalidateProcess(terminate: false)
         if consecutiveFailures > 0 {
             let delay = min(pow(2, Double(consecutiveFailures - 1)) * 0.1, 2)

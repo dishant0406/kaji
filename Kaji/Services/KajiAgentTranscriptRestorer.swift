@@ -64,12 +64,14 @@ struct KajiAgentTranscriptRestorer {
     private mutating func restoreAssistantContent(_ content: KajiAgentJSONValue?) {
         guard let values = content?.arrayValue else {
             let text = KajiAgentTextExtractor.assistantText(from: content)
-            if !text.isEmpty { appendMessage(KajiAgentMessage(
-                id: messageID("assistant", text),
-                kind: .assistant,
-                title: "Kaji",
-                detail: text
-            )) }
+            if !text.isEmpty {
+                appendMessage(KajiAgentMessage(
+                    id: messageID("assistant", text),
+                    kind: .assistant,
+                    title: "Kaji",
+                    detail: text
+                ))
+            }
             return
         }
         for (partIndex, value) in values.enumerated() {
@@ -150,7 +152,9 @@ struct KajiAgentTranscriptRestorer {
     }
 
     private mutating func appendTextMessage(kind: KajiAgentMessageKind, title: String, text: String, key: String) {
-        if !text.isEmpty { appendMessage(KajiAgentMessage(id: messageID("\(kind)", key, text), kind: kind, title: title, detail: text)) }
+        if !text.isEmpty {
+            appendMessage(KajiAgentMessage(id: messageID("\(kind)", key, text), kind: kind, title: title, detail: text))
+        }
     }
 
     private mutating func startTurn(user: KajiAgentMessage) {
@@ -183,7 +187,9 @@ struct KajiAgentTranscriptRestorer {
     }
 
     private mutating func ensureActiveTurn() {
-        if activeTurnIndex() != nil { return }
+        if activeTurnIndex() != nil {
+            return
+        }
         let turn = KajiAgentTurn(id: KajiAgentTranscriptIdentity.uuid("restored-turn", String(turnOrdinal)))
         turnOrdinal += 1
         turns.append(turn)

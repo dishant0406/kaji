@@ -30,7 +30,9 @@ struct AIGatewayPortProcessLister: AIGatewayPortProcessListing {
         if process.terminationStatus != 0 {
             let message = String(data: errorData, encoding: .utf8) ?? ""
             let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
-            if outputData.isEmpty, trimmedMessage.isEmpty { return [] }
+            if outputData.isEmpty, trimmedMessage.isEmpty {
+                return []
+            }
             throw PortProcessListError.commandFailed(trimmedMessage)
         }
 

@@ -64,7 +64,9 @@ extension AskOverlay {
         prompt = parsed.prompt
         applyInlineAnnotations(from: parsed)
 
-        if handleResolvedScriptAnnotation(parsed) { return }
+        if handleResolvedScriptAnnotation(parsed) {
+            return
+        }
 
         if AskMentionParser.activeMention(in: latestFieldText) != nil {
             confirmHighlight()
@@ -72,7 +74,9 @@ extension AskOverlay {
         }
 
         if let activeAnnotation = parsed.activeAnnotation {
-            if handleUtilityAnnotation(activeAnnotation) { return }
+            if handleUtilityAnnotation(activeAnnotation) {
+                return
+            }
             if AskSubmitPolicy.shouldApplyHighlightedEntry(key: activeAnnotation.key) {
                 confirmHighlight()
                 return
@@ -104,7 +108,9 @@ extension AskOverlay {
             return
         }
         if isSlashMode {
-            if handleBookmarkSubmit() { return }
+            if handleBookmarkSubmit() {
+                return
+            }
             confirmHighlight()
             return
         }
@@ -136,7 +142,9 @@ extension AskOverlay {
         }
         let parsed = AskInlineAnnotations.parse(latestFieldText)
         guard parsed.activeAnnotation?.key == .projectAdd else {
-            if handleBookmarkShiftSubmit() { return }
+            if handleBookmarkShiftSubmit() {
+                return
+            }
             handleSubmit(latestFieldText)
             return
         }
@@ -737,7 +745,9 @@ extension AskOverlay {
         switch active.key {
         case .provider:
             let matches = AskProvider.allCases.filter { provider in
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 let normalized = active.value.lowercased()
                 return provider.annotationValue.hasPrefix(normalized) ||
                     provider.rawValue.hasPrefix(normalized) ||
@@ -746,7 +756,9 @@ extension AskOverlay {
             return matches.count == 1 ? matches[0].annotationValue : nil
         case .mode:
             let matches = AskSessionMode.allCases.filter { mode in
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 let normalized = active.value.lowercased()
                 return mode.annotationValue.hasPrefix(normalized) ||
                     mode.rawValue.lowercased().hasPrefix(normalized) ||
@@ -755,34 +767,44 @@ extension AskOverlay {
             return matches.count == 1 ? matches[0].annotationValue : nil
         case .project:
             let matches = projectStore.projects.filter { project in
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 return project.name.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? matches[0].name : nil
         case .worktree:
             let matches = availableWorktrees.filter { worktree in
                 let name = AskSessionCatalog.displayName(for: worktree)
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 return name.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? AskSessionCatalog.displayName(for: matches[0]) : nil
         case .history:
             let matches = historyOptions.filter { option in
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 return option.sessionID.localizedCaseInsensitiveContains(active.value) ||
                     option.title.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? matches[0].sessionID : nil
         case .skill:
             let matches = skillOptions.filter { option in
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 return option.name.localizedCaseInsensitiveContains(active.value) ||
                     option.title.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? matches[0].name : nil
         case .task:
             let matches = taskRecipeStore.recipes(for: projectID).filter { option in
-                if active.value.isEmpty { return true }
+                if active.value.isEmpty {
+                    return true
+                }
                 return option.name.localizedCaseInsensitiveContains(active.value)
             }
             return matches.count == 1 ? matches[0].prompt : nil
@@ -884,7 +906,9 @@ extension AskOverlay {
     }
 
     func targetHasMissingSelection(_ target: AskResolvedTarget, parsed: AskParsedInput) -> Bool {
-        if target.hasInvalidProviderOption { return true }
+        if target.hasInvalidProviderOption {
+            return true
+        }
         return (parsed.annotations[.history] != nil && target.history == nil) ||
             (parsed.annotations[.skill] != nil && target.skill == nil) ||
             (parsed.annotations[.task] != nil && target.task == nil)

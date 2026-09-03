@@ -144,13 +144,17 @@ public final class ClosedLidGuardRuntime {
         }
         while !signalState.received {
             guard parentIsAlive(parentPID) else { return 0 }
-            if session.restoreIfHeartbeatExpired() { return 0 }
+            if session.restoreIfHeartbeatExpired() {
+                return 0
+            }
             do {
                 let frame = try reader.nextFrame(timeout: pollInterval)
                 let request = try JSONDecoder().decode(ClosedLidGuardRequest.self, from: frame)
                 let response = session.handle(request)
                 try output.write(contentsOf: ClosedLidJSONLineCodec.encode(response))
-                if response.shouldExit { return response.selectorResult == KERN_SUCCESS ? 0 : 1 }
+                if response.shouldExit {
+                    return response.selectorResult == KERN_SUCCESS ? 0 : 1
+                }
             } catch ClosedLidGuardProtocolError.timedOut {
                 continue
             } catch ClosedLidGuardProtocolError.endOfFile {
@@ -164,7 +168,9 @@ public final class ClosedLidGuardRuntime {
 
     public static func liveParentIsAlive(_ pid: pid_t) -> Bool {
         guard pid > 1 else { return false }
-        if Darwin.kill(pid, 0) == 0 { return true }
+        if Darwin.kill(pid, 0) == 0 {
+            return true
+        }
         return errno == EPERM
     }
 

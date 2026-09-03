@@ -16,13 +16,17 @@ final class AIGatewayRuntimeController {
     @ObservationIgnored private let portReclaimer = AIGatewayPortReclaimer()
 
     var isRunning: Bool {
-        if case .running = status { return true }
+        if case .running = status {
+            return true
+        }
         return false
     }
 
     func refreshInstallState() {
         if case .installed = AIGatewayClaudeCodeRouterInstaller.state() {
-            if process?.isRunning == true { return }
+            if process?.isRunning == true {
+                return
+            }
             status = .stopped
         } else {
             status = .notInstalled
@@ -38,7 +42,9 @@ final class AIGatewayRuntimeController {
             status = .failed(message)
             return
         }
-        if process?.isRunning == true { return }
+        if process?.isRunning == true {
+            return
+        }
         recentLogs.removeAll()
         let installResult = await Task.detached { AIGatewayClaudeCodeRouterInstaller.ensureCurrent() }.value
         guard case .installed = installResult.state else {
@@ -63,7 +69,9 @@ final class AIGatewayRuntimeController {
             return
         }
         process.terminate()
-        if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+        if process.isRunning {
+            kill(process.processIdentifier, SIGKILL)
+        }
         clearPipes()
         self.process = nil
         status = .stopped
@@ -103,8 +111,12 @@ final class AIGatewayRuntimeController {
 
     private func applyEnabledConnectors(settings: AIGatewaySettings) {
         do {
-            if settings.claudeConnectorEnabled { try AIGatewayClaudeConnector.install(settings: settings) }
-            if settings.codexConnectorEnabled { try AIGatewayCodexConnector.install(settings: settings) }
+            if settings.claudeConnectorEnabled {
+                try AIGatewayClaudeConnector.install(settings: settings)
+            }
+            if settings.codexConnectorEnabled {
+                try AIGatewayCodexConnector.install(settings: settings)
+            }
         } catch {
             appendLog("Failed to refresh AI Gateway client config: \(error.localizedDescription)")
         }
@@ -158,7 +170,9 @@ final class AIGatewayRuntimeController {
     private func appendLog(_ raw: String) {
         let lines = raw.components(separatedBy: .newlines).map(AIGatewayRedactor.redact).filter { !$0.isEmpty }
         recentLogs.append(contentsOf: lines)
-        if recentLogs.count > 80 { recentLogs.removeFirst(recentLogs.count - 80) }
+        if recentLogs.count > 80 {
+            recentLogs.removeFirst(recentLogs.count - 80)
+        }
     }
 
     private func clearPipes() {

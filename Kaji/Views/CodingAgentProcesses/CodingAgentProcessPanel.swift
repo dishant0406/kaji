@@ -175,21 +175,33 @@ struct CodingAgentProcessPanel: View {
     private var pendingKillPresented: Binding<Bool> {
         Binding(
             get: { pendingKill != nil },
-            set: { if !$0 { pendingKill = nil } }
+            set: {
+                if !$0 {
+                    pendingKill = nil
+                }
+            }
         )
     }
 
     private var pendingGroupKillPresented: Binding<Bool> {
         Binding(
             get: { pendingGroupKill != nil },
-            set: { if !$0 { pendingGroupKill = nil } }
+            set: {
+                if !$0 {
+                    pendingGroupKill = nil
+                }
+            }
         )
     }
 
     private var pendingPatternKillPresented: Binding<Bool> {
         Binding(
             get: { pendingPatternKill != nil },
-            set: { if !$0 { pendingPatternKill = nil } }
+            set: {
+                if !$0 {
+                    pendingPatternKill = nil
+                }
+            }
         )
     }
 

@@ -19,7 +19,9 @@ enum KajiAgentAssistantMessageIdentity {
     private static func activeTurnMessages(turns: [KajiAgentTurn], activeTurnID: KajiAgentTurn.ID?) -> [KajiAgentMessage] {
         guard let turnIndex = KajiAgentTimeline.activeTurnIndex(turns: turns, activeTurnID: activeTurnID) else { return [] }
         return turns[turnIndex].blocks.compactMap { block in
-            if case let .message(message) = block { return message }
+            if case let .message(message) = block {
+                return message
+            }
             return nil
         }
     }

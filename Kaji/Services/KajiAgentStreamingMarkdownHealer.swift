@@ -16,7 +16,9 @@ enum KajiAgentStreamingMarkdownHealer {
         var fence: KajiAgentMarkdownFence?
         for line in content.markdownLinesKeepingNewlines() {
             if let active = fence {
-                if active.closes(line) { fence = nil }
+                if active.closes(line) {
+                    fence = nil
+                }
                 continue
             }
             if let next = KajiAgentMarkdownFence(line: line) {
@@ -49,7 +51,9 @@ enum KajiAgentStreamingMarkdownHealer {
                 candidate = index
             } else if character == "]", depth > 0 {
                 depth -= 1
-                if depth == 0 { candidate = nil }
+                if depth == 0 {
+                    candidate = nil
+                }
             }
             index = content.index(after: index)
         }
@@ -91,7 +95,9 @@ enum KajiAgentStreamingMarkdownHealer {
         while index < content.endIndex {
             if content[index] == "`" {
                 let run = content[index...].prefix { $0 == "`" }.count
-                if run == 1 { count += 1 }
+                if run == 1 {
+                    count += 1
+                }
                 index = content.index(index, offsetBy: run)
             } else {
                 index = content.index(after: index)
@@ -106,7 +112,9 @@ enum KajiAgentStreamingMarkdownHealer {
         while index < content.endIndex {
             if content[index] == marker {
                 let run = content[index...].prefix { $0 == marker }.count
-                if run == 1 { count += 1 }
+                if run == 1 {
+                    count += 1
+                }
                 index = content.index(index, offsetBy: run)
             } else {
                 index = content.index(after: index)

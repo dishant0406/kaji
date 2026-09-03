@@ -177,7 +177,9 @@ final class MeetingAudioResampler {
         nonisolated(unsafe) let capturedInput = inputBuffer
         let inputBlock: AVAudioConverterInputBlock = { _, status in
             let alreadyProvided = provided.withLock { state -> Bool in
-                if state { return true }
+                if state {
+                    return true
+                }
                 state = true
                 return false
             }
@@ -245,7 +247,9 @@ final class MeetingAudioResampler {
                     count: Int(outputBuffer.frameLength)
                 ))
             }
-            if status == .endOfStream { break }
+            if status == .endOfStream {
+                break
+            }
             guard outputBuffer.frameLength > 0 else { break }
         }
         let remainingFrames = max(0, expectedOutputFrames(state) - state.emittedFrames)
@@ -264,8 +268,12 @@ final class MeetingAudioResampler {
 
     private func state(for buffer: MeetingOwnedAudioBuffer) throws -> ConverterState {
         let key = ConverterKey(sampleRate: buffer.sampleRate, channelCount: buffer.channelCount)
-        if let state = states[buffer.source], state.key == key { return state }
-        if states[buffer.source] != nil { throw MeetingAudioError.invalidAudioFormat }
+        if let state = states[buffer.source], state.key == key {
+            return state
+        }
+        if states[buffer.source] != nil {
+            throw MeetingAudioError.invalidAudioFormat
+        }
         guard let inputFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: buffer.sampleRate,

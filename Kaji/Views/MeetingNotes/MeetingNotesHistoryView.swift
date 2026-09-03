@@ -54,7 +54,11 @@ struct MeetingNotesHistoryView: View {
     }
 
     private var deletionPresented: Binding<Bool> {
-        Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } })
+        Binding(get: { pendingDeletion != nil }, set: {
+            if !$0 {
+                pendingDeletion = nil
+            }
+        })
     }
 }
 

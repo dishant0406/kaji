@@ -126,7 +126,9 @@ enum MarkdownPreviewAssetStore {
     }
 
     private static func mimeType(for url: URL) -> String {
-        if url.pathExtension == "woff2" { return "font/woff2" }
+        if url.pathExtension == "woff2" {
+            return "font/woff2"
+        }
         return UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
     }
 }

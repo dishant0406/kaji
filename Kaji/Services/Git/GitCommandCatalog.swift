@@ -86,10 +86,14 @@ enum GitCommandCatalog {
     }
 
     private static func branchArgumentsAreReadOnly(_ arguments: [String]) -> Bool {
-        if arguments.count == 1 { return true }
+        if arguments.count == 1 {
+            return true
+        }
         let flags = Set(arguments.dropFirst().filter { $0.hasPrefix("-") })
         let allowed: Set = ["--list", "-l", "-a", "-r", "--all", "--remotes", "--format=%(refname:short)"]
-        if !flags.isSubset(of: allowed) { return false }
+        if !flags.isSubset(of: allowed) {
+            return false
+        }
         return flags.contains("--list") || flags.contains("-l") || arguments.dropFirst().allSatisfy { $0.hasPrefix("-") }
     }
 }

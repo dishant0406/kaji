@@ -43,8 +43,12 @@ struct KajiAgentInspectorItem: Identifiable, Hashable {
 
 extension KajiAgentMessage {
     var kajiAgentToolOutput: String? {
-        if let fullOutput, !fullOutput.isEmpty { return fullOutput }
-        if let preview, !preview.isEmpty { return preview }
+        if let fullOutput, !fullOutput.isEmpty {
+            return fullOutput
+        }
+        if let preview, !preview.isEmpty {
+            return preview
+        }
         return nil
     }
 }

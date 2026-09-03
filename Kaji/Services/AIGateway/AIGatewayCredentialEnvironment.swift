@@ -10,7 +10,9 @@ enum AIGatewayCredentialEnvironment {
         let providers = settings.providers.filter(\.isEnabled)
         for provider in providers where provider.needsAPIKey && !provider.apiKeyEnv.isEmpty {
             let key = credentialStore.load(account: AIGatewayCredentialAccount.providerKey(provider.id))
-            if !key.isEmpty { environment[provider.apiKeyEnv] = key }
+            if !key.isEmpty {
+                environment[provider.apiKeyEnv] = key
+            }
         }
         return environment
     }

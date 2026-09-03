@@ -132,7 +132,9 @@ final class DiffCache {
             let oldest = accessOrder.removeFirst()
             if pinnedPaths.contains(oldest) {
                 accessOrder.append(oldest)
-                if accessOrder.count == previousCount { break }
+                if accessOrder.count == previousCount {
+                    break
+                }
                 continue
             }
             diffsByPath.removeValue(forKey: oldest)

@@ -32,7 +32,9 @@ enum TerminalSelectionActionResolver {
 
     private static func resolvedPath(_ token: String, workingDirectory: String) -> String {
         let expanded = token.replacingOccurrences(of: "~", with: NSHomeDirectory(), options: .anchored)
-        if expanded.hasPrefix("/") { return expanded }
+        if expanded.hasPrefix("/") {
+            return expanded
+        }
         return URL(fileURLWithPath: workingDirectory).appendingPathComponent(expanded).standardized.path
     }
 }

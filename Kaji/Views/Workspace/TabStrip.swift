@@ -278,11 +278,21 @@ private struct TabCell: View {
 
     private var tabBackground: Color {
         if let tabColor {
-            let opacity = if active { 0.14 } else if hovered { 0.08 } else { 0.02 }
+            let opacity = if active {
+                0.14
+            } else if hovered {
+                0.08
+            } else {
+                0.02
+            }
             return tabColor.opacity(opacity)
         }
-        if active { return KajiTheme.surface }
-        if hovered { return KajiTheme.hover }
+        if active {
+            return KajiTheme.surface
+        }
+        if hovered {
+            return KajiTheme.hover
+        }
         return KajiTheme.bg
     }
 
@@ -369,7 +379,9 @@ private struct TabCell: View {
                 hovered = hovering
             }
             .onChange(of: isAnyDragging) { _, dragging in
-                if dragging { hovered = false }
+                if dragging {
+                    hovered = false
+                }
             }
             .animation(KajiMotion.fast, value: active)
             .animation(KajiMotion.hover, value: hovered)
@@ -447,11 +459,14 @@ private struct TabCell: View {
         case .diffViewer: label += ", Diff Viewer"
         case .problems: label += ", Problems"
         case .parentAgent: label += ", KajiCode"
-        case .codeGraph: label += ", Code Graph"
         case .browser: label += ", Browser"
         }
-        if tab.isPinned { label += ", Pinned" }
-        if hasUnread { label += ", Unread" }
+        if tab.isPinned {
+            label += ", Pinned"
+        }
+        if hasUnread {
+            label += ", Unread"
+        }
         return label
     }
 
@@ -471,8 +486,6 @@ private struct TabCell: View {
             KajiIcon(systemName: "exclamationmark.triangle", size: 12)
         } else if tab.kind == .parentAgent {
             KajiLogo(size: 12)
-        } else if tab.kind == .codeGraph {
-            KajiIcon(systemName: "point.3.connected.trianglepath.dotted", size: 12)
         } else if tab.kind == .browser {
             KajiIcon(systemName: "globe", size: 12)
         } else {

@@ -39,7 +39,9 @@ enum AIGatewayClaudeCodeRouterInstaller {
     static func uninstall(fileManager: FileManager = .default) -> AIGatewayInstallResult {
         do {
             let directory = AIGatewayClaudeCodeRouterPaths.packageDirectory()
-            if fileManager.fileExists(atPath: directory.path) { try fileManager.removeItem(at: directory) }
+            if fileManager.fileExists(atPath: directory.path) {
+                try fileManager.removeItem(at: directory)
+            }
             try? fileManager.removeItem(at: AIGatewayClaudeCodeRouterPaths.manifestURL())
             return AIGatewayInstallResult(state: .missing, message: "Uninstalled Claude Code Router.")
         } catch {
@@ -49,7 +51,9 @@ enum AIGatewayClaudeCodeRouterInstaller {
 
     private static func prepareInstallDirectory(fileManager: FileManager) throws {
         let directory = AIGatewayClaudeCodeRouterPaths.packageDirectory()
-        if fileManager.fileExists(atPath: directory.path) { try fileManager.removeItem(at: directory) }
+        if fileManager.fileExists(atPath: directory.path) {
+            try fileManager.removeItem(at: directory)
+        }
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     }
 

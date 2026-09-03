@@ -52,7 +52,9 @@ final class KajiAgentEventLogWriter: @unchecked Sendable {
     }
 
     private func openHandle() -> FileHandle? {
-        if let handle { return handle }
+        if let handle {
+            return handle
+        }
         try? FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true

@@ -31,7 +31,9 @@ enum ProjectTextSearchProcessRunner {
 
             handle.readabilityHandler = { [context] stream in
                 let data = stream.availableData
-                if data.isEmpty { return }
+                if data.isEmpty {
+                    return
+                }
                 guard let chunk = String(data: data, encoding: .utf8) else { return }
                 if context.parser.append(chunk: chunk), context.process?.isRunning == true {
                     context.process?.terminate()
@@ -119,7 +121,9 @@ final class ProjectTextSearchResultParser: @unchecked Sendable {
             buffer.removeSubrange(...newline)
             if let match = makeResult(from: line) {
                 results.append(match)
-                if results.count >= limit { return true }
+                if results.count >= limit {
+                    return true
+                }
             }
         }
         return false

@@ -25,8 +25,7 @@ struct FileTypeIconView: View {
     var body: some View {
         if let icon = resolvedIcon, let image = FileIconImageCache.shared.image(for: icon) {
             Image(nsImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+                .resizable().scaledToFit()
                 .frame(width: size, height: size)
                 .accessibilityHidden(true)
         } else {

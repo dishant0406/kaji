@@ -87,8 +87,12 @@ actor MeetingAudioEventQueue {
 
     func next() async throws -> MeetingAudioQueueEvent? {
         try Task.checkCancellation()
-        if !events.isEmpty { return events.removeFirst() }
-        if isFinished { return nil }
+        if !events.isEmpty {
+            return events.removeFirst()
+        }
+        if isFinished {
+            return nil
+        }
         guard waiter == nil else { throw MeetingAudioQueueError.multipleConsumers }
         let id = UUID()
         return try await withTaskCancellationHandler {
@@ -131,7 +135,9 @@ actor MeetingAudioEventQueue {
 
     private var retainedAudioBufferCount: Int {
         events.reduce(into: 0) { count, event in
-            if case .audio = event { count += 1 }
+            if case .audio = event {
+                count += 1
+            }
         }
     }
 
@@ -172,7 +178,9 @@ actor MeetingAudioEventQueue {
             retainGap(gap)
         case let .failure(failure):
             if let index = events.lastIndex(where: {
-                if case .failure = $0 { return true }
+                if case .failure = $0 {
+                    return true
+                }
                 return false
             }), case let .failure(existing) = events[index] {
                 events[index] = .failure(existing.merging(failure))
@@ -182,9 +190,13 @@ actor MeetingAudioEventQueue {
     }
 
     private func retainGap(_ gap: MeetingAudioGap) {
-        if coalesce(.gap(gap)) { return }
+        if coalesce(.gap(gap)) {
+            return
+        }
         if let index = events.lastIndex(where: {
-            if case .failure = $0 { return true }
+            if case .failure = $0 {
+                return true
+            }
             return false
         }) {
             events[index] = .gap(gap)
@@ -403,7 +415,9 @@ final class MeetingAudioQueueIngress: Sendable {
     ) -> MeetingAudioIngressDisposition {
         if case let .audio(buffer) = event {
             let gap = MeetingAudioGap(buffer: buffer, reason: .backpressure)
-            if coalesce(.gap(gap), into: &state.events) { return .dropped }
+            if coalesce(.gap(gap), into: &state.events) {
+                return .dropped
+            }
             let metadataReserve = min(8, max(1, capacity / 8))
             let audioLimit = capacity - metadataReserve
             if audioCount(state.events) >= audioLimit {
@@ -425,7 +439,9 @@ final class MeetingAudioQueueIngress: Sendable {
                 retainGap(gap, in: &state.events)
             case let .failure(failure):
                 if let index = state.events.lastIndex(where: {
-                    if case .failure = $0 { return true }
+                    if case .failure = $0 {
+                        return true
+                    }
                     return false
                 }), case let .failure(existing) = state.events[index] {
                     state.events[index] = .failure(existing.merging(failure))
@@ -488,7 +504,9 @@ final class MeetingAudioQueueIngress: Sendable {
         _ gap: MeetingAudioGap,
         in events: inout [MeetingAudioQueueEvent]
     ) {
-        if coalesce(.gap(gap), into: &events) { return }
+        if coalesce(.gap(gap), into: &events) {
+            return
+        }
         if let index = events.lastIndex(where: {
             guard case let .audio(buffer) = $0 else { return false }
             return buffer.source == gap.source
@@ -499,7 +517,9 @@ final class MeetingAudioQueueIngress: Sendable {
             return
         }
         if let index = events.lastIndex(where: {
-            if case .failure = $0 { return true }
+            if case .failure = $0 {
+                return true
+            }
             return false
         }) {
             events[index] = .gap(gap)
@@ -533,23 +553,33 @@ final class MeetingAudioQueueIngress: Sendable {
                 guard !state.events.isEmpty else { return nil }
                 return state.events.removeFirst()
             }
-            if let event { return event }
+            if let event {
+                return event
+            }
             let shouldStop = storage.lock.withLock { $0.lifecycle != .open }
-            if shouldStop { return nil }
+            if shouldStop {
+                return nil
+            }
             await withCheckedContinuation { continuation in
                 let shouldResume = storage.lock.withLock { state -> Bool in
-                    if !state.events.isEmpty || state.lifecycle != .open { return true }
+                    if !state.events.isEmpty || state.lifecycle != .open {
+                        return true
+                    }
                     state.wakeContinuation = continuation
                     return false
                 }
-                if shouldResume { continuation.resume() }
+                if shouldResume {
+                    continuation.resume()
+                }
             }
         }
     }
 
     private static func audioCount(_ events: [MeetingAudioQueueEvent]) -> Int {
         events.reduce(into: 0) { count, event in
-            if case .audio = event { count += 1 }
+            if case .audio = event {
+                count += 1
+            }
         }
     }
 }

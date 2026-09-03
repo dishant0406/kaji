@@ -34,10 +34,14 @@ enum AskPaletteEntries {
         case .mode:
             return filteredSessionModes(query: annotation.active.value)
         case .history:
-            if annotation.provider == .terminal { return [] }
+            if annotation.provider == .terminal {
+                return []
+            }
             return filteredHistory(annotation.historyOptions, query: annotation.active.value)
         case .skill:
-            if annotation.provider == .terminal { return [] }
+            if annotation.provider == .terminal {
+                return []
+            }
             return filteredSkills(annotation.skillOptions, query: annotation.active.value)
         case .task:
             return filteredTasks(annotation.taskRecipes, query: annotation.active.value)

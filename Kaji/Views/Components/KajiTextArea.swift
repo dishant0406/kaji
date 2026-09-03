@@ -42,7 +42,9 @@ struct KajiTextArea: View {
     }
 
     private var controlBackground: Color {
-        if effectiveMode == .glass { return KajiTheme.secondaryBackground.opacity(isFocused ? 0.32 : 0.2) }
+        if effectiveMode == .glass {
+            return KajiTheme.secondaryBackground.opacity(isFocused ? 0.32 : 0.2)
+        }
         return effectiveMode.usesSoftSurfaces ? KajiTheme.secondaryBackground.opacity(0.46) : KajiTheme.secondaryBackground
     }
 

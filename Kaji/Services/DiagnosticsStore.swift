@@ -71,9 +71,15 @@ final class DiagnosticsStore {
     }
 
     private static func sortDiagnostics(_ lhs: EditorDiagnostic, _ rhs: EditorDiagnostic) -> Bool {
-        if lhs.severity != rhs.severity { return lhs.severity < rhs.severity }
-        if lhs.relativePath != rhs.relativePath { return lhs.relativePath < rhs.relativePath }
-        if lhs.line != rhs.line { return lhs.line < rhs.line }
+        if lhs.severity != rhs.severity {
+            return lhs.severity < rhs.severity
+        }
+        if lhs.relativePath != rhs.relativePath {
+            return lhs.relativePath < rhs.relativePath
+        }
+        if lhs.line != rhs.line {
+            return lhs.line < rhs.line
+        }
         return lhs.column < rhs.column
     }
 }

@@ -139,13 +139,19 @@ enum AIUsageRowPolicy {
     }
 
     static func isVisible(_ row: AIUsageMetricRow, includeSecondary: Bool) -> Bool {
-        if isPrimary(row) { return true }
-        if includeSecondary, isSecondary(row) { return true }
+        if isPrimary(row) {
+            return true
+        }
+        if includeSecondary, isSecondary(row) {
+            return true
+        }
         return false
     }
 
     private static func matches(_ row: AIUsageMetricRow, prefixes: [String]) -> Bool {
-        if let detail = row.detail, detail.contains("$") { return false }
+        if let detail = row.detail, detail.contains("$") {
+            return false
+        }
         let label = row.label.trimmingCharacters(in: .whitespaces).lowercased()
         return prefixes.contains { label.hasPrefix($0) }
     }

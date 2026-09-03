@@ -32,7 +32,9 @@ struct SpeechModelCatalogSection: View {
                     )
                 }
                 registryActions
-                if let registryError { registryWarning(registryError) }
+                if let registryError {
+                    registryWarning(registryError)
+                }
             }
             .padding(.horizontal, SettingsMetrics.horizontalPadding)
             .padding(.vertical, 8)

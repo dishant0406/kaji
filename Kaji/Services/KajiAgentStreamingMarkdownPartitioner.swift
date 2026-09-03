@@ -43,7 +43,9 @@ enum KajiAgentStreamingMarkdownPartitioner {
         if hasTail {
             appendBlock(live: !isComplete)
         }
-        if isComplete { return blocks.map(\.complete) }
+        if isComplete {
+            return blocks.map(\.complete)
+        }
         return blocks
     }
 }
@@ -83,7 +85,9 @@ extension String {
                 current = ""
             }
         }
-        if !current.isEmpty { lines.append(current) }
+        if !current.isEmpty {
+            lines.append(current)
+        }
         return lines
     }
 }

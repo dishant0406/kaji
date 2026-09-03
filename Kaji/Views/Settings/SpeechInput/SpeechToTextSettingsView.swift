@@ -116,7 +116,9 @@ struct SpeechToTextSettingsView: View {
     }
 
     private func runModelAction(_ model: SpeechInputModel, action: () -> Void) {
-        if store.settings.selectedModelID != model.id { controller.selectModel(id: model.id) }
+        if store.settings.selectedModelID != model.id {
+            controller.selectModel(id: model.id)
+        }
         action()
     }
 

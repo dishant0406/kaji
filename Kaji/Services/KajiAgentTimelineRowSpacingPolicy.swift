@@ -2,8 +2,12 @@ import CoreGraphics
 
 enum KajiAgentTimelineRowSpacingPolicy {
     static func topSpacing(for row: KajiAgentTimelineRow) -> CGFloat {
-        if row.startsTurn { return KajiAgentTranscriptMetrics.turnSpacing }
-        if row.depth > 0 { return 0 }
+        if row.startsTurn {
+            return KajiAgentTranscriptMetrics.turnSpacing
+        }
+        if row.depth > 0 {
+            return 0
+        }
         return switch row.kind {
         case .toolGroupHeader:
             KajiAgentTranscriptMetrics.sameTurnSpacing
@@ -25,7 +29,9 @@ enum KajiAgentTimelineRowSpacingPolicy {
     }
 
     static func bottomSpacing(for row: KajiAgentTimelineRow) -> CGFloat {
-        if row.depth > 0 { return KajiAgentTranscriptMetrics.nestedRowSpacing }
+        if row.depth > 0 {
+            return KajiAgentTranscriptMetrics.nestedRowSpacing
+        }
         return switch row.kind {
         case .toolGroupHeader:
             4

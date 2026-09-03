@@ -33,8 +33,12 @@ struct KajiAgentActivitySummary: Identifiable, Hashable {
     }
 
     var title: String {
-        if let active = actions.last(where: { !$0.isComplete }) { return active.title }
-        if actions.count == 1, let action = actions.first { return action.title }
+        if let active = actions.last(where: { !$0.isComplete }) {
+            return active.title
+        }
+        if actions.count == 1, let action = actions.first {
+            return action.title
+        }
         return "Activity"
     }
 
@@ -43,9 +47,15 @@ struct KajiAgentActivitySummary: Identifiable, Hashable {
         let running = actions.count(where: { !$0.isComplete })
         let output = actions.filter(\.hasOutput).count
         var parts = ["\(actions.count) action\(actions.count == 1 ? "" : "s")"]
-        if running > 0 { parts.append("\(running) running") }
-        if failed > 0 { parts.append("\(failed) failed") }
-        if output > 0 { parts.append("\(output) with output") }
+        if running > 0 {
+            parts.append("\(running) running")
+        }
+        if failed > 0 {
+            parts.append("\(failed) failed")
+        }
+        if output > 0 {
+            parts.append("\(output) with output")
+        }
         return parts.joined(separator: " · ")
     }
 }
@@ -86,7 +96,9 @@ struct KajiAgentActivityAction: Identifiable, Hashable {
         if let arguments = message.toolArguments?.replacingOccurrences(of: "\n", with: " "), !arguments.isEmpty {
             return arguments.count > 140 ? String(arguments.prefix(137)) + "..." : arguments
         }
-        if let preview = message.preview, !preview.isEmpty { return preview.count > 140 ? String(preview.prefix(137)) + "..." : preview }
+        if let preview = message.preview, !preview.isEmpty {
+            return preview.count > 140 ? String(preview.prefix(137)) + "..." : preview
+        }
         return message.isComplete ? "Complete" : "Running"
     }
 }

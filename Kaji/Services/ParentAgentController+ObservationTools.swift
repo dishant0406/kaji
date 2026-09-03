@@ -63,7 +63,9 @@ extension ParentAgentController {
 
     func observedChildRuns(arguments: [String: String]?) -> [ParentAgentChildRunContext] {
         let ids = requestedRunIDs(arguments: arguments, taskID: store.activeTaskID)
-        if ids.isEmpty { return childContexts(for: Array(AgentRunStore.shared.runs.prefix(12))) }
+        if ids.isEmpty {
+            return childContexts(for: Array(AgentRunStore.shared.runs.prefix(12)))
+        }
         return ids.map { stableID in
             if let run = resolveChildRun(stableID) {
                 return childContext(for: run, stableID: stableID)
@@ -83,13 +85,17 @@ extension ParentAgentController {
 
     func observedRuns(arguments: [String: String]?, taskID: UUID?) -> [AgentRun] {
         let ids = requestedRunIDs(arguments: arguments, taskID: taskID)
-        if !ids.isEmpty { return ids.compactMap(resolveChildRun) }
+        if !ids.isEmpty {
+            return ids.compactMap(resolveChildRun)
+        }
         return Array(AgentRunStore.shared.runs.prefix(12))
     }
 
     func requestedRunIDs(arguments: [String: String]?, taskID: UUID?) -> [UUID] {
         let ids = runIDs(from: arguments?["runIDs"])
-        if !ids.isEmpty { return ids }
+        if !ids.isEmpty {
+            return ids
+        }
         guard let taskID,
               let task = store.tasks.first(where: { $0.id == taskID })
         else { return [] }

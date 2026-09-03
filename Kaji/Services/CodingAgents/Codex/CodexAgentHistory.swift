@@ -42,7 +42,9 @@ enum CodexAgentHistory {
                 cwd = payload["cwd"] as? String
             }
             title = title ?? userText(from: object)
-            if id != nil, title != nil { break }
+            if id != nil, title != nil {
+                break
+            }
         }
         guard let id else { return nil }
         return .init(id: id, cwd: cwd, title: CodingAgentHistoryTools.normalizedTitle(title, fallback: "Codex session"), updatedAt: nil)

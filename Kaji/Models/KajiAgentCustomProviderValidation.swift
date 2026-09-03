@@ -27,8 +27,12 @@ struct KajiAgentCustomProviderValidation: Hashable {
 
     var summary: String {
         var parts = [title, message]
-        if let statusCode { parts.append("HTTP \(statusCode)") }
-        if let modelID { parts.append("Model \(modelID)") }
+        if let statusCode {
+            parts.append("HTTP \(statusCode)")
+        }
+        if let modelID {
+            parts.append("Model \(modelID)")
+        }
         return parts.joined(separator: " - ")
     }
 }

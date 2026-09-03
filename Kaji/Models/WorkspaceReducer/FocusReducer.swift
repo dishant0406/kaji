@@ -119,9 +119,15 @@ enum FocusReducer {
         let centerDistance: CGFloat
 
         static func < (lhs: PaneFocusScore, rhs: PaneFocusScore) -> Bool {
-            if lhs.overlapPenalty != rhs.overlapPenalty { return lhs.overlapPenalty < rhs.overlapPenalty }
-            if lhs.axisGap != rhs.axisGap { return lhs.axisGap < rhs.axisGap }
-            if lhs.crossDistance != rhs.crossDistance { return lhs.crossDistance < rhs.crossDistance }
+            if lhs.overlapPenalty != rhs.overlapPenalty {
+                return lhs.overlapPenalty < rhs.overlapPenalty
+            }
+            if lhs.axisGap != rhs.axisGap {
+                return lhs.axisGap < rhs.axisGap
+            }
+            if lhs.crossDistance != rhs.crossDistance {
+                return lhs.crossDistance < rhs.crossDistance
+            }
             return lhs.centerDistance < rhs.centerDistance
         }
     }

@@ -198,8 +198,12 @@ struct MeetingNotesPreflightView: View {
 
     private var sourceSummary: String {
         var sources: [String] = []
-        if settingsStore.settings.includeSystemAudio { sources.append("Selected application audio") }
-        if settingsStore.settings.includeMicrophone { sources.append("Microphone") }
+        if settingsStore.settings.includeSystemAudio {
+            sources.append("Selected application audio")
+        }
+        if settingsStore.settings.includeMicrophone {
+            sources.append("Microphone")
+        }
         return sources.isEmpty ? "No audio source enabled" : sources.joined(separator: " and ")
     }
 
@@ -284,7 +288,9 @@ struct MeetingNotesPreflightView: View {
 
     private var hasRequiredAttestation: Bool {
         guard let required = selectedRetentionPresentation?.requiredAttestation else { return true }
-        if required == .openAIZeroDataRetention, settingsStore.settings.sttMode != .cloudRealtime { return true }
+        if required == .openAIZeroDataRetention, settingsStore.settings.sttMode != .cloudRealtime {
+            return true
+        }
         return settingsStore.settings.sttAccountAttestations.contains { $0.kind == required && $0.isExact }
     }
 

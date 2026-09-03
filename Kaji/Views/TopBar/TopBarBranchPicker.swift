@@ -160,8 +160,12 @@ private struct TopBarBranchRow: View {
     }
 
     private var rowBackground: Color {
-        if isActive { return KajiTheme.accentSoft }
-        if isHighlighted { return KajiTheme.surface }
+        if isActive {
+            return KajiTheme.accentSoft
+        }
+        if isHighlighted {
+            return KajiTheme.surface
+        }
         return .clear
     }
 }

@@ -78,7 +78,9 @@ enum KajiCodeInstaller {
     ) -> KajiCodeInstallResult {
         do {
             let root = KajiCodePaths.root(env: env)
-            if fileManager.fileExists(atPath: root.path) { try fileManager.removeItem(at: root) }
+            if fileManager.fileExists(atPath: root.path) {
+                try fileManager.removeItem(at: root)
+            }
             return .init(state: .missing, message: "Uninstalled KajiCode.")
         } catch {
             return .init(state: .needsRepair(error.localizedDescription), message: error.localizedDescription)

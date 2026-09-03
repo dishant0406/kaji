@@ -72,13 +72,17 @@ struct KajiAgentTurn: Identifiable, Hashable {
 
     var messages: [KajiAgentMessage] {
         let response = blocks.flatMap(\.messages)
-        if let user { return [user] + response }
+        if let user {
+            return [user] + response
+        }
         return response
     }
 
     var toolGroups: [KajiAgentToolGroup] {
         blocks.compactMap {
-            if case let .toolGroup(group) = $0 { return group }
+            if case let .toolGroup(group) = $0 {
+                return group
+            }
             return nil
         }
     }

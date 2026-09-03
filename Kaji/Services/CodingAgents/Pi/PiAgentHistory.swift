@@ -54,7 +54,9 @@ enum PiAgentHistory {
                 updatedAt = isoDate(object["timestamp"] as? String)
             }
             title = title ?? userText(from: object)
-            if id != nil, title != nil { break }
+            if id != nil, title != nil {
+                break
+            }
         }
 
         guard let id else { return nil }
@@ -71,7 +73,9 @@ enum PiAgentHistory {
               let message = object["message"] as? [String: Any],
               message["role"] as? String == "user"
         else { return nil }
-        if let text = message["content"] as? String { return text }
+        if let text = message["content"] as? String {
+            return text
+        }
         return CodingAgentHistoryTools.messageText(from: message["content"])
     }
 

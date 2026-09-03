@@ -20,8 +20,12 @@ extension TermyTerminalNSView {
             lastTitle = terminal.title
             onTitleChange?(terminal.title)
         }
-        if terminal.isExited { handleProcessExit() }
-        if searchVisible { publishSearchState() }
+        if terminal.isExited {
+            handleProcessExit()
+        }
+        if searchVisible {
+            publishSearchState()
+        }
     }
 
     func handleProcessExit() {
@@ -47,8 +51,12 @@ extension TermyTerminalNSView {
 
     func firstFocusableDescendant(in view: NSView) -> NSView? {
         for subview in view.subviews {
-            if subview.acceptsFirstResponder { return subview }
-            if let found = firstFocusableDescendant(in: subview) { return found }
+            if subview.acceptsFirstResponder {
+                return subview
+            }
+            if let found = firstFocusableDescendant(in: subview) {
+                return found
+            }
         }
         return nil
     }

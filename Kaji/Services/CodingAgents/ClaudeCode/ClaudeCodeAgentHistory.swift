@@ -33,14 +33,18 @@ enum ClaudeCodeAgentHistory {
             id = object["sessionId"] as? String ?? id
             cwd = object["cwd"] as? String ?? cwd
             title = title ?? userText(from: object)
-            if title != nil, cwd != nil { break }
+            if title != nil, cwd != nil {
+                break
+            }
         }
         return .init(id: id, cwd: cwd, title: CodingAgentHistoryTools.normalizedTitle(title, fallback: "Claude session"), updatedAt: nil)
     }
 
     private static func userText(from object: [String: Any]) -> String? {
         guard object["type"] as? String == "user", let message = object["message"] as? [String: Any] else { return nil }
-        if let text = message["content"] as? String { return text }
+        if let text = message["content"] as? String {
+            return text
+        }
         return CodingAgentHistoryTools.messageText(from: message["content"])
     }
 }

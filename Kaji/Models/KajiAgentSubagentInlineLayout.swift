@@ -41,7 +41,9 @@ struct KajiAgentSubagentInlineLayout: Hashable {
         agents.sorted {
             let lhsRank = statusRank($0.status)
             let rhsRank = statusRank($1.status)
-            if lhsRank != rhsRank { return lhsRank < rhsRank }
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
             return $0.index < $1.index
         }
     }

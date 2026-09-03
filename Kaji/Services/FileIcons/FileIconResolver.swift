@@ -125,7 +125,9 @@ final class FileIconResolver: @unchecked Sendable {
         }
 
         return candidates.sorted { lhs, rhs in
-            if lhs.count != rhs.count { return lhs.count > rhs.count }
+            if lhs.count != rhs.count {
+                return lhs.count > rhs.count
+            }
             return lhs < rhs
         }
     }

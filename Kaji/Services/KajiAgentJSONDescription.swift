@@ -1,6 +1,8 @@
 extension KajiAgentJSONValue {
     var numberAsInt: Int? {
-        if case let .number(value) = self { return Int(value) }
+        if case let .number(value) = self {
+            return Int(value)
+        }
         return nil
     }
 

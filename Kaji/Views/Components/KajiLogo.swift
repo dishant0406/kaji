@@ -6,8 +6,7 @@ struct KajiLogo: View {
     var body: some View {
         if let image = logoImage {
             Image(nsImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+                .resizable().scaledToFit()
                 .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: max(4, size * 0.22)))
         } else {

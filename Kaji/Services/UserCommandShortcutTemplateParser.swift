@@ -113,11 +113,15 @@ enum UserCommandShortcutTemplateParser {
 
     private static func usesMixedInputStyles(_ variables: [UserCommandShortcutInputVariable]) -> Bool {
         let hasNamed = variables.contains { variable in
-            if case .named = variable.kind { return true }
+            if case .named = variable.kind {
+                return true
+            }
             return false
         }
         let hasPositional = variables.contains { variable in
-            if case .positional = variable.kind { return true }
+            if case .positional = variable.kind {
+                return true
+            }
             return false
         }
         return hasNamed && hasPositional

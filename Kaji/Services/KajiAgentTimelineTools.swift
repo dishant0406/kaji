@@ -44,7 +44,9 @@ extension KajiAgentTimeline {
             return location
         }
         for turnIndex in turns.indices.reversed() {
-            if let location = toolLocation(in: turnIndex, turns: turns, where: predicate) { return location }
+            if let location = toolLocation(in: turnIndex, turns: turns, where: predicate) {
+                return location
+            }
         }
         return nil
     }

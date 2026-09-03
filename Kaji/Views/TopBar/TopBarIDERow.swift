@@ -53,8 +53,12 @@ struct TopBarIDERow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return KajiTheme.accentSoft }
-        if hovered { return KajiTheme.surface }
+        if isSelected {
+            return KajiTheme.accentSoft
+        }
+        if hovered {
+            return KajiTheme.surface
+        }
         return .clear
     }
 }

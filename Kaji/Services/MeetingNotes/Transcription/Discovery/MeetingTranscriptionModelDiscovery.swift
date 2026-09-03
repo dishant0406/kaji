@@ -286,9 +286,15 @@ actor RemoteMeetingTranscriptionModelDiscovery: MeetingTranscriptionModelDiscove
             guard !modes.isEmpty else { return nil }
             let languages = Set((value.languages ?? []).filter(MeetingTranscriptionValidation.isValidLanguageCode))
             var metadata: [String: String] = [:]
-            if let version = value.version { metadata["version"] = version }
-            if let uuid = value.uuid { metadata["uuid"] = uuid }
-            if value.batch == true { metadata["batchAvailable"] = "true" }
+            if let version = value.version {
+                metadata["version"] = version
+            }
+            if let uuid = value.uuid {
+                metadata["uuid"] = uuid
+            }
+            if value.batch == true {
+                metadata["batchAvailable"] = "true"
+            }
             return try MeetingDiscoveredTranscriptionModel(
                 id: value.name,
                 displayName: value.canonicalName ?? value.name,

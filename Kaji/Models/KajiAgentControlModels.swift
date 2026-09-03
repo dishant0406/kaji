@@ -11,7 +11,11 @@ struct KajiAgentToolOption: Identifiable, Hashable {
         self.id = name
         self.name = name
         self.detail = object["description"]?.stringValue ?? ""
-        self.isActive = if case let .bool(value)? = object["active"] { value } else { false }
+        self.isActive = if case let .bool(value)? = object["active"] {
+            value
+        } else {
+            false
+        }
     }
 }
 

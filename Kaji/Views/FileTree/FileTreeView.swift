@@ -347,14 +347,22 @@ private struct FileTreeRow: View {
     }
 
     private var rowOpacity: Double {
-        if isCut { return 0.45 }
+        if isCut {
+            return 0.45
+        }
         return entry.isIgnored ? 0.45 : 1
     }
 
     private var rowBackground: Color {
-        if isDropHighlighted { return KajiTheme.accentSoft }
-        if isSelected { return KajiTheme.accentSoft }
-        if hovered { return KajiTheme.hover }
+        if isDropHighlighted {
+            return KajiTheme.accentSoft
+        }
+        if isSelected {
+            return KajiTheme.accentSoft
+        }
+        if hovered {
+            return KajiTheme.hover
+        }
         return .clear
     }
 
@@ -373,7 +381,9 @@ private struct FileTreeRow: View {
     }
 
     private var textColor: Color {
-        if let statusColor { return statusColor }
+        if let statusColor {
+            return statusColor
+        }
         if entry.isDirectory, state.directoryHasChanges(entry.absolutePath) {
             return KajiTheme.diffHunkFg
         }

@@ -48,7 +48,7 @@ struct KajiCodeHookInstallServiceTests {
     }
 }
 
-private final class RecordingKajiCodeRunner: KajiCodeCLICommandRunning {
+private final class RecordingKajiCodeRunner: KajiCodeCLICommandRunning, @unchecked Sendable {
     struct Call: Equatable {
         let binaryURL: URL
         let arguments: [String]

@@ -108,13 +108,17 @@ struct SpeechInputFooterIcon: View {
 
     private var rotation: Double {
         guard shouldLoop else { return 0 }
-        if case .preparing = state { return looping ? 360 : 0 }
+        if case .preparing = state {
+            return looping ? 360 : 0
+        }
         return 0
     }
 
     private var usesSymbolPulse: Bool {
         guard !reduceMotion, !settings.batteryOptimizedMode else { return false }
-        if case .listening = state { return true }
+        if case .listening = state {
+            return true
+        }
         return false
     }
 

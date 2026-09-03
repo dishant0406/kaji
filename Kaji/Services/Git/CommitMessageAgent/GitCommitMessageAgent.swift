@@ -20,13 +20,7 @@ enum GitCommitMessageAgentError: LocalizedError {
 @MainActor
 enum GitCommitMessageAgent {
     static var isAvailable: Bool {
-        KajiAgentRuntimeLocator.resolveLaunch(
-            projectPath: nil,
-            approvalMode: KajiAgentPermissionMode.readAllow.rawValue,
-            noSession: true,
-            noLSP: true,
-            noTools: true
-        ).readiness.isReady
+        KajiCodeRuntimeLocator.resolve() != nil
     }
 
     static func isAvailable(settings _: GitCommitMessageSettingsSnapshot) -> Bool {
@@ -34,14 +28,7 @@ enum GitCommitMessageAgent {
     }
 
     static func unavailableReason() -> String? {
-        let readiness = KajiAgentRuntimeLocator.resolveLaunch(
-            projectPath: nil,
-            approvalMode: KajiAgentPermissionMode.readAllow.rawValue,
-            noSession: true,
-            noLSP: true,
-            noTools: true
-        ).readiness
-        return readiness.isReady ? nil : readiness.detail
+        isAvailable ? nil : "KajiCode binary is missing. Install KajiCode from Settings."
     }
 
     static func unavailableReason(settings _: GitCommitMessageSettingsSnapshot) -> String? {

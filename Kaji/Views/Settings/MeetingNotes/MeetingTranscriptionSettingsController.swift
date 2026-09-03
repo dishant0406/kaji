@@ -231,7 +231,9 @@ final class MeetingTranscriptionSettingsController: ObservableObject {
     }
 
     var retentionText: String? {
-        if selectedEndpoint?.source == .custom { return "Controlled by endpoint operator" }
+        if selectedEndpoint?.source == .custom {
+            return "Controlled by endpoint operator"
+        }
         guard retentionOptions.count == 1 else { return nil }
         return retentionOptions.first?.title
     }
@@ -329,7 +331,9 @@ final class MeetingTranscriptionSettingsController: ObservableObject {
 
     func setDiarization(_ enabled: Bool) {
         updateSettings { $0.sttDiarizationEnabled = enabled
-            if !enabled { $0.sttMaximumSpeakers = nil }
+            if !enabled {
+                $0.sttMaximumSpeakers = nil
+            }
         }
     }
 
@@ -407,7 +411,9 @@ final class MeetingTranscriptionSettingsController: ObservableObject {
             )
             let originChanged = existing.map { $0.snapshot.originFingerprint != profile.snapshot.originFingerprint } ?? true
             try catalog.endpointStore.saveCustom(profile)
-            if originChanged { catalog.modelCatalogStore.remove(endpointProfileID: profile.id) }
+            if originChanged {
+                catalog.modelCatalogStore.remove(endpointProfileID: profile.id)
+            }
             applyEndpoint(profile, clearsBoundSelection: originChanged)
             endpointEditorState = .hidden
             endpointError = nil
@@ -635,7 +641,9 @@ final class MeetingTranscriptionSettingsController: ObservableObject {
                     endpointProfileID: endpoint.profileID,
                     credentialProfileID: credentialID
                 )
-                if state != .loading { return }
+                if state != .loading {
+                    return
+                }
                 try? await clock.sleep(for: .milliseconds(100))
             }
         }

@@ -46,8 +46,12 @@ extension ProcessResourceSampler {
         } ?? []
         let representativeCandidates = foregroundSamples.isEmpty ? treeSamples : foregroundSamples
         let representative = representativeCandidates.max { lhs, rhs in
-            if lhs.pid == rootPID { return true }
-            if rhs.pid == rootPID { return false }
+            if lhs.pid == rootPID {
+                return true
+            }
+            if rhs.pid == rootPID {
+                return false
+            }
             if lhs.cpuTimeNanos == rhs.cpuTimeNanos {
                 return lhs.memoryBytes < rhs.memoryBytes
             }

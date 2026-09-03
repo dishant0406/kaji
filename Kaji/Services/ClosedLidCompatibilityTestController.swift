@@ -228,7 +228,9 @@ final class ClosedLidCompatibilityTestController {
     }
 
     private func append(_ evidence: ClosedLidStandardSessionEvidence) {
-        if let last = samples.last, last.heartbeatCount == evidence.heartbeatCount { return }
+        if let last = samples.last, last.heartbeatCount == evidence.heartbeatCount {
+            return
+        }
         samples.append(evidence)
     }
 

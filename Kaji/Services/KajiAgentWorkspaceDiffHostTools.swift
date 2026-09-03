@@ -81,7 +81,9 @@ enum KajiAgentWorkspaceDiffHostTools {
 
     private static func relativePathArgument(_ frame: KajiAgentRPCFrame, root: String, required: Bool) throws -> String? {
         guard let rawPath = frame.arguments?["path"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines), !rawPath.isEmpty else {
-            if required { throw HostToolArgumentError.message("path is required.") }
+            if required {
+                throw HostToolArgumentError.message("path is required.")
+            }
             return nil
         }
         guard let path = KajiAgentWorkspaceStateSnapshot.resolveRelativePath(rawPath, root: root) else {

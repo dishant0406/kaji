@@ -16,9 +16,6 @@ struct ExpandedProjectRow: View {
     @Environment(WorktreeStore.self) private var worktreeStore
     @State private var activityStore = AIActivityStore.shared
     @State private var notificationStore = NotificationStore.shared
-    @State private var codeGraphStore = KajiCodeGraphStore.shared
-    @State private var codeGraphRuntime = KajiCodeGraphRuntime.shared
-    @State private var codeGraphAgentCoordinator = KajiCodeGraphAgentCoordinator.shared
 
     @AppStorage(GeneralSettingsKeys.autoExpandWorktreesOnProjectSwitch)
     private var autoExpandWorktrees = false
@@ -48,15 +45,6 @@ struct ExpandedProjectRow: View {
         worktrees.first { $0.id == activeWorktreeID }
     }
 
-    private var codeGraphWorktree: Worktree {
-        activeWorktree ?? worktrees.first(where: \.isPrimary) ?? Worktree(
-            id: project.id,
-            name: "primary",
-            path: project.path,
-            isPrimary: true
-        )
-    }
-
     private var displayLetter: String {
         String(project.name.prefix(1)).uppercased()
     }
@@ -67,18 +55,6 @@ struct ExpandedProjectRow: View {
 
     private var hasRunningAgent: Bool {
         activityStore.hasActiveAgent(projectID: project.id)
-    }
-
-    private var hasCodeGraph: Bool {
-        codeGraphRuntime.hasGraph(projectID: project.id, worktreeID: codeGraphWorktree.id)
-    }
-
-    private var isCodeGraphRunning: Bool {
-        codeGraphRuntime.isRunning(projectID: project.id, worktreeID: codeGraphWorktree.id)
-    }
-
-    private var hasCodeGraphAgentSession: Bool {
-        codeGraphAgentCoordinator.hasSession(projectID: project.id, worktreeID: codeGraphWorktree.id)
     }
 
     var body: some View {
@@ -154,7 +130,9 @@ struct ExpandedProjectRow: View {
             hovered = hovering
         }
         .onChange(of: isAnyDragging) { _, dragging in
-            if dragging { hovered = false }
+            if dragging {
+                hovered = false
+            }
         }
         .animation(KajiMotion.fast, value: isActive)
         .animation(KajiMotion.hover, value: hovered)
@@ -198,11 +176,6 @@ struct ExpandedProjectRow: View {
                 isGitRepo: isGitRepo,
                 canSwitchWorktree: false,
                 isRefreshingWorktrees: isRefreshingWorktrees,
-                isCodeGraphInstalled: codeGraphStore.isInstalled,
-                isCodeGraphEnabled: codeGraphStore.state.isEnabled,
-                hasCodeGraph: hasCodeGraph,
-                isCodeGraphRunning: isCodeGraphRunning,
-                hasCodeGraphAgentSession: hasCodeGraphAgentSession,
                 onSetLogo: {
                     showProjectMenu = false
                     pickLogoImage()
@@ -233,30 +206,6 @@ struct ExpandedProjectRow: View {
                 },
                 onSwitchWorktree: {
                     showProjectMenu = false
-                },
-                onInstallCodeGraph: {
-                    showProjectMenu = false
-                    Task { @MainActor in await KajiCodeGraphInstaller().install(store: codeGraphStore) }
-                },
-                onEnableCodeGraph: {
-                    showProjectMenu = false
-                    codeGraphStore.setEnabled(true)
-                },
-                onBuildCodeGraph: {
-                    showProjectMenu = false
-                    buildCodeGraph(mode: "build")
-                },
-                onUpdateCodeGraph: {
-                    showProjectMenu = false
-                    buildCodeGraph(mode: "update")
-                },
-                onViewCodeGraph: {
-                    showProjectMenu = false
-                    viewCodeGraph()
-                },
-                onShowCodeGraphAgent: {
-                    showProjectMenu = false
-                    showCodeGraphAgent()
                 },
                 onRemoveProject: {
                     showProjectMenu = false
@@ -357,12 +306,18 @@ struct ExpandedProjectRow: View {
     }
 
     private func iconBackground(hasLogo: Bool) -> AnyShapeStyle {
-        if hasLogo { return AnyShapeStyle(Color.clear) }
+        if hasLogo {
+            return AnyShapeStyle(Color.clear)
+        }
         if let tint = ProjectIconColor.color(for: project.iconColor) {
             return AnyShapeStyle(hovered ? tint.opacity(0.88) : tint.opacity(isActive ? 0.84 : 0.72))
         }
-        if isActive { return AnyShapeStyle(KajiTheme.tertiaryBackground) }
-        if hovered { return AnyShapeStyle(KajiTheme.tertiaryBackground) }
+        if isActive {
+            return AnyShapeStyle(KajiTheme.tertiaryBackground)
+        }
+        if hovered {
+            return AnyShapeStyle(KajiTheme.tertiaryBackground)
+        }
         return AnyShapeStyle(KajiTheme.secondaryBackground)
     }
 
@@ -374,16 +329,28 @@ struct ExpandedProjectRow: View {
     }
 
     private var headerBackground: AnyShapeStyle {
-        if isActive { return AnyShapeStyle(KajiTheme.surface) }
-        if hasOpenTerminal { return AnyShapeStyle(KajiTheme.secondaryBackground) }
-        if hovered { return AnyShapeStyle(KajiTheme.hover) }
+        if isActive {
+            return AnyShapeStyle(KajiTheme.surface)
+        }
+        if hasOpenTerminal {
+            return AnyShapeStyle(KajiTheme.secondaryBackground)
+        }
+        if hovered {
+            return AnyShapeStyle(KajiTheme.hover)
+        }
         return AnyShapeStyle(Color.clear)
     }
 
     private var iconBorderColor: Color {
-        if isActive { return KajiTheme.border.opacity(0.7) }
-        if hasOpenTerminal { return KajiTheme.accent.opacity(0.28) }
-        if hovered { return KajiTheme.border.opacity(0.65) }
+        if isActive {
+            return KajiTheme.border.opacity(0.7)
+        }
+        if hasOpenTerminal {
+            return KajiTheme.accent.opacity(0.28)
+        }
+        if hovered {
+            return KajiTheme.border.opacity(0.65)
+        }
         return .clear
     }
 
@@ -492,31 +459,6 @@ struct ExpandedProjectRow: View {
             worktreeStore: worktreeStore,
             isRefreshing: $isRefreshingWorktrees
         )
-    }
-
-    private func buildCodeGraph(mode: String) {
-        let worktree = codeGraphWorktree
-        Task { @MainActor in
-            await codeGraphRuntime.build(KajiCodeGraphRunRequest(
-                projectID: project.id,
-                worktreeID: worktree.id,
-                projectPath: worktree.path,
-                mode: mode
-            ), appState: appState, projectStore: projectStore, worktreeStore: worktreeStore)
-        }
-    }
-
-    private func viewCodeGraph() {
-        appState.openCodeGraphTab(
-            projectID: project.id,
-            worktreeID: codeGraphWorktree.id,
-            worktreePath: codeGraphWorktree.path,
-            graphURL: codeGraphRuntime.kajiGraphURL(projectID: project.id, worktreeID: codeGraphWorktree.id)
-        )
-    }
-
-    private func showCodeGraphAgent() {
-        codeGraphAgentCoordinator.show(projectID: project.id, worktreeID: codeGraphWorktree.id)
     }
 }
 

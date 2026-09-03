@@ -18,7 +18,9 @@ enum KajiCodeInstallState: Equatable {
     case needsRepair(String)
 
     var isInstalled: Bool {
-        if case .installed = self { return true }
+        if case .installed = self {
+            return true
+        }
         return false
     }
 }

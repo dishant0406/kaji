@@ -50,14 +50,22 @@ struct AgentMissionControlButton: View {
     }
 
     private var foreground: Color {
-        if needsAttention { return KajiTheme.diffHunkFg }
-        if hasRunning { return KajiTheme.fg }
+        if needsAttention {
+            return KajiTheme.diffHunkFg
+        }
+        if hasRunning {
+            return KajiTheme.fg
+        }
         return hovered ? KajiTheme.fg : KajiTheme.fgMuted
     }
 
     private var background: Color {
-        if hovered { return KajiTheme.surface }
-        if hasRunning || needsAttention { return KajiTheme.surface.opacity(0.68) }
+        if hovered {
+            return KajiTheme.surface
+        }
+        if hasRunning || needsAttention {
+            return KajiTheme.surface.opacity(0.68)
+        }
         return .clear
     }
 

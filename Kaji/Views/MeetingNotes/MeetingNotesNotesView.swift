@@ -302,8 +302,12 @@ struct MeetingNotesNotesView: View {
     private func saveDraft() {
         guard canSave, let document else { return }
         var operations: [MeetingNotesPatchOperation] = []
-        if titleDraft != document.notes.title { operations.append(.setTitle(titleDraft)) }
-        if summaryDraft != document.notes.summary { operations.append(.setSummary(summaryDraft)) }
+        if titleDraft != document.notes.title {
+            operations.append(.setTitle(titleDraft))
+        }
+        if summaryDraft != document.notes.summary {
+            operations.append(.setSummary(summaryDraft))
+        }
         guard !operations.isEmpty else {
             isDirty = false
             return
@@ -317,7 +321,9 @@ struct MeetingNotesNotesView: View {
         Task {
             await coordinator.updateUserNote(patch)
             isSaving = false
-            if case .failed = coordinator.status { return }
+            if case .failed = coordinator.status {
+                return
+            }
             isDirty = false
         }
     }

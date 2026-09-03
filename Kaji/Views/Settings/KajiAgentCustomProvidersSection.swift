@@ -92,7 +92,11 @@ struct KajiAgentCustomProvidersSection: View {
     }
 
     private var deleteDialogBinding: Binding<Bool> {
-        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
+        Binding(get: { pendingDelete != nil }, set: {
+            if !$0 {
+                pendingDelete = nil
+            }
+        })
     }
 
     private func startNew() {
@@ -106,7 +110,9 @@ struct KajiAgentCustomProvidersSection: View {
 
     private func edit(_ provider: KajiAgentCustomProvider) {
         draft = provider
-        if draft.models.isEmpty { draft.models = [KajiAgentCustomProviderModel()] }
+        if draft.models.isEmpty {
+            draft.models = [KajiAgentCustomProviderModel()]
+        }
         editingID = provider.id
         isCreating = false
         isValidating = false
@@ -163,6 +169,8 @@ struct KajiAgentCustomProvidersSection: View {
         guard let provider = pendingDelete else { return }
         store.deleteCustomProvider(id: provider.id) { _ in }
         pendingDelete = nil
-        if editingID == provider.id { cancel() }
+        if editingID == provider.id {
+            cancel()
+        }
     }
 }

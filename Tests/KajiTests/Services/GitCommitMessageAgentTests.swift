@@ -5,38 +5,25 @@ import Testing
 struct GitCommitMessageAgentTests {
     @MainActor
     @Test
-    func runtimeCommandUsesKajiAgentCommitRPCAndSelectedModel() {
-        let settings = GitCommitMessageSettingsSnapshot(
-            modelSelector: "anthropic/claude-sonnet-4-5",
-            providerID: "anthropic",
-            modelID: "claude-sonnet-4-5",
-            contextLevel: .medium,
-            customInstructions: ""
-        )
-
-        let frame = GitCommitMessageRuntimeClient.commandFrame(settings: settings, prompt: "inventory")
-
-        #expect(frame.type == "generate_commit_message")
-        #expect(frame.provider == "anthropic")
-        #expect(frame.modelId == "claude-sonnet-4-5")
-        #expect(frame.promptMessage == "inventory")
+    func sanitizeKeepsLastNonEmptyLine() {
+        #expect(GitCommitMessageRuntimeClient.sanitize("  draft one  \n\n final message \n") == "final message")
     }
 
     @MainActor
     @Test
-    func runtimeCommandFallsBackToCommitRoleWhenNoModelSelected() {
-        let settings = GitCommitMessageSettingsSnapshot(
-            modelSelector: "",
-            providerID: "",
-            modelID: "",
-            contextLevel: .medium,
-            customInstructions: ""
-        )
+    func sanitizeStripsWrappingQuotes() {
+        #expect(GitCommitMessageRuntimeClient.sanitize("\"quoted message\"") == "quoted message")
+    }
 
-        let frame = GitCommitMessageRuntimeClient.commandFrame(settings: settings, prompt: "inventory")
+    @MainActor
+    @Test
+    func sanitizeReturnsEmptyForBlankOutput() {
+        #expect(GitCommitMessageRuntimeClient.sanitize("   \n  ") == "")
+    }
 
-        #expect(frame.type == "generate_commit_message")
-        #expect(frame.provider == nil)
-        #expect(frame.modelId == nil)
+    @MainActor
+    @Test
+    func sanitizeReturnsEmptyForEmptyOutput() {
+        #expect(GitCommitMessageRuntimeClient.sanitize("") == "")
     }
 }

@@ -15,7 +15,9 @@ enum MCPRuntimeCommandRunner {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: path)
             process.arguments = arguments
-            if let projectPath { process.currentDirectoryURL = URL(fileURLWithPath: projectPath) }
+            if let projectPath {
+                process.currentDirectoryURL = URL(fileURLWithPath: projectPath)
+            }
 
             let output = Pipe()
             let error = Pipe()

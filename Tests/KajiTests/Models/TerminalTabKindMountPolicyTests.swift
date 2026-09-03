@@ -14,6 +14,5 @@ struct TerminalTabKindMountPolicyTests {
         #expect(!TerminalTab.Kind.diffViewer.keepsMountedWhenInactive)
         #expect(!TerminalTab.Kind.vcs.keepsMountedWhenInactive)
         #expect(!TerminalTab.Kind.problems.keepsMountedWhenInactive)
-        #expect(!TerminalTab.Kind.codeGraph.keepsMountedWhenInactive)
     }
 }

@@ -24,7 +24,9 @@ final class SecondaryClickNSView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard let event = NSApp.currentEvent else { return nil }
-        if event.type == .rightMouseDown { return super.hitTest(point) }
+        if event.type == .rightMouseDown {
+            return super.hitTest(point)
+        }
         if event.type == .leftMouseDown, event.modifierFlags.contains(.control) {
             return super.hitTest(point)
         }

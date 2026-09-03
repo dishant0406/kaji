@@ -117,7 +117,9 @@ final class CodexSessionMonitor: @unchecked Sendable {
         let path = fileURL.path
         var state = fileStates[path] ?? FileState(offset: 0, partialLine: "", context: .init())
         let size = (try? fileSize(for: fileURL)) ?? 0
-        if size == state.offset { return }
+        if size == state.offset {
+            return
+        }
         if size < state.offset {
             state.offset = 0
             state.partialLine = ""

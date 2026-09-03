@@ -380,10 +380,14 @@ struct MeetingNotesIntegerControl: View {
         .accessibilityElement(children: .contain)
         .onAppear { draft = String(value) }
         .onChange(of: value) { _, newValue in
-            if !isFocused { draft = String(newValue) }
+            if !isFocused {
+                draft = String(newValue)
+            }
         }
         .onChange(of: isFocused) { _, focused in
-            if !focused { commitDraft() }
+            if !focused {
+                commitDraft()
+            }
         }
     }
 

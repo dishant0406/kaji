@@ -6,11 +6,6 @@ struct ProjectContextMenu: View {
     let isGitRepo: Bool
     let canSwitchWorktree: Bool
     let isRefreshingWorktrees: Bool
-    let isCodeGraphInstalled: Bool
-    let isCodeGraphEnabled: Bool
-    let hasCodeGraph: Bool
-    let isCodeGraphRunning: Bool
-    let hasCodeGraphAgentSession: Bool
     let onSetLogo: () -> Void
     let onRemoveLogo: () -> Void
     let onSetIconColor: () -> Void
@@ -19,12 +14,6 @@ struct ProjectContextMenu: View {
     let onRefreshWorktrees: () -> Void
     let onNewWorktree: () -> Void
     let onSwitchWorktree: () -> Void
-    let onInstallCodeGraph: () -> Void
-    let onEnableCodeGraph: () -> Void
-    let onBuildCodeGraph: () -> Void
-    let onUpdateCodeGraph: () -> Void
-    let onViewCodeGraph: () -> Void
-    let onShowCodeGraphAgent: () -> Void
     let onRemoveProject: () -> Void
 
     var body: some View {
@@ -52,32 +41,6 @@ struct ProjectContextMenu: View {
                 ProjectContextMenuButton(title: "New Workspace...", icon: "plus", action: onNewWorktree)
                 if canSwitchWorktree {
                     ProjectContextMenuButton(title: "Switch Worktree...", icon: "arrow.left.arrow.right", action: onSwitchWorktree)
-                }
-            }
-
-            ProjectContextMenuDivider()
-            if !isCodeGraphInstalled {
-                ProjectContextMenuButton(title: "Install KajiCodeGraph...", icon: "puzzlepiece.extension", action: onInstallCodeGraph)
-            } else if !isCodeGraphEnabled {
-                ProjectContextMenuButton(title: "Enable KajiCodeGraph", icon: "power", action: onEnableCodeGraph)
-            } else {
-                ProjectContextMenuButton(
-                    title: hasCodeGraph ? "Rebuild Code Graph" : "Build Code Graph",
-                    icon: "point.3.connected.trianglepath.dotted",
-                    isBusy: isCodeGraphRunning,
-                    action: onBuildCodeGraph
-                )
-                if hasCodeGraph {
-                    ProjectContextMenuButton(
-                        title: "Update Code Graph",
-                        icon: "arrow.clockwise",
-                        isBusy: isCodeGraphRunning,
-                        action: onUpdateCodeGraph
-                    )
-                    ProjectContextMenuButton(title: "View Code Graph", icon: "eye", action: onViewCodeGraph)
-                }
-                if hasCodeGraphAgentSession {
-                    ProjectContextMenuButton(title: "Show Graph Agent", icon: "sparkles", action: onShowCodeGraphAgent)
                 }
             }
 

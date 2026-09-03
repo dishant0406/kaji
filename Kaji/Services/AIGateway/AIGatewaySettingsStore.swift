@@ -101,8 +101,12 @@ final class AIGatewaySettingsStore {
         }
         let existing = Set(settings.providers.map(\.id))
         settings.providers.append(contentsOf: AIGatewayProviderCatalog.defaults.filter { !existing.contains($0.id) })
-        if settings.port == 4000 { settings.port = AIGatewaySettings.defaults.port }
-        if settings.models.isEmpty { settings.models = AIGatewaySettings.defaults.models }
+        if settings.port == 4000 {
+            settings.port = AIGatewaySettings.defaults.port
+        }
+        if settings.models.isEmpty {
+            settings.models = AIGatewaySettings.defaults.models
+        }
         AIGatewayModelAliasPolicy.sanitize(settings: &settings)
         return settings
     }

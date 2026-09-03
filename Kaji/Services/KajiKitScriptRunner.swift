@@ -24,7 +24,9 @@ final class KajiKitScriptRunner {
     }
 
     var isRunning: Bool {
-        if case .running = status { return true }
+        if case .running = status {
+            return true
+        }
         return false
     }
 

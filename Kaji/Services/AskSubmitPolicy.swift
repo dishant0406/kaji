@@ -7,7 +7,9 @@ enum AskSubmitPolicy {
         canSend: Bool,
         hasActiveAnnotation: Bool
     ) -> Bool {
-        if appliedKey == .history || appliedKey == .skill { return false }
+        if appliedKey == .history || appliedKey == .skill {
+            return false
+        }
         return canSend && !hasActiveAnnotation
     }
 

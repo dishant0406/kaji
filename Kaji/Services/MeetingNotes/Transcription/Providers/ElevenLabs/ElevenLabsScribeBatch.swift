@@ -271,7 +271,9 @@ struct ElevenLabsScribeBatchClient {
             fields.append(("webhook", "false"))
         case let .configuredWebhook(webhookID, metadata):
             fields.append(("webhook", "true"))
-            if let webhookID { fields.append(("webhook_id", webhookID)) }
+            if let webhookID {
+                fields.append(("webhook_id", webhookID))
+            }
             if !metadata.isEmpty {
                 let data = try JSONSerialization.data(withJSONObject: metadata, options: [.sortedKeys])
                 guard let json = String(data: data, encoding: .utf8) else {

@@ -80,7 +80,9 @@ private struct AgentEditCLIProvider: AgentEditProviding {
         if let launcherID = provider.launcherID {
             let saved = CLILauncherSettings.shared.command(for: launcherID)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !saved.isEmpty { return CLILauncherCommandResolver.resolve(saved) }
+            if !saved.isEmpty {
+                return CLILauncherCommandResolver.resolve(saved)
+            }
         }
         return CLILauncherCommandResolver.resolve(provider.definition?.defaultCommand ?? provider.rawValue)
     }
@@ -89,8 +91,12 @@ private struct AgentEditCLIProvider: AgentEditProviding {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.hasPrefix("```") else { return trimmed }
         var lines = trimmed.components(separatedBy: .newlines)
-        if lines.first?.hasPrefix("```") == true { lines.removeFirst() }
-        if lines.last?.trimmingCharacters(in: .whitespacesAndNewlines) == "```" { lines.removeLast() }
+        if lines.first?.hasPrefix("```") == true {
+            lines.removeFirst()
+        }
+        if lines.last?.trimmingCharacters(in: .whitespacesAndNewlines) == "```" {
+            lines.removeLast()
+        }
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

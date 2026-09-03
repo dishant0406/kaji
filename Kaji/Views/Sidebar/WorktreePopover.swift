@@ -150,7 +150,9 @@ private struct WorktreePopoverRow: View {
     @FocusState private var renameFieldFocused: Bool
 
     private var displayName: String {
-        if worktree.isPrimary, worktree.name.isEmpty { return "main" }
+        if worktree.isPrimary, worktree.name.isEmpty {
+            return "main"
+        }
         return worktree.name
     }
 
@@ -240,9 +242,15 @@ private struct WorktreePopoverRow: View {
     }
 
     private var rowBackground: AnyShapeStyle {
-        if selected { return AnyShapeStyle(KajiTheme.accentSoft) }
-        if isHighlighted { return AnyShapeStyle(KajiTheme.surface) }
-        if hovered { return AnyShapeStyle(KajiTheme.hover) }
+        if selected {
+            return AnyShapeStyle(KajiTheme.accentSoft)
+        }
+        if isHighlighted {
+            return AnyShapeStyle(KajiTheme.surface)
+        }
+        if hovered {
+            return AnyShapeStyle(KajiTheme.hover)
+        }
         return AnyShapeStyle(Color.clear)
     }
 
@@ -254,7 +262,9 @@ private struct WorktreePopoverRow: View {
 
     private func commitRename() {
         let trimmed = renameText.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty { onRename(trimmed) }
+        if !trimmed.isEmpty {
+            onRename(trimmed)
+        }
         isRenaming = false
     }
 

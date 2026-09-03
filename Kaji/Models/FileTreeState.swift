@@ -132,7 +132,9 @@ final class FileTreeState {
     }
 
     func entryHasChanges(_ entry: FileTreeEntry) -> Bool {
-        if entry.isDirectory { return dirHasChange.contains(entry.absolutePath) }
+        if entry.isDirectory {
+            return dirHasChange.contains(entry.absolutePath)
+        }
         return statuses[entry.absolutePath] != nil
     }
 
@@ -342,7 +344,9 @@ final class FileTreeState {
 
             var current = (trimmed as NSString).deletingLastPathComponent
             while current.count > normalizedRoot.count {
-                if dirtyDirs.contains(current) { break }
+                if dirtyDirs.contains(current) {
+                    break
+                }
                 dirtyDirs.insert(current)
                 current = (current as NSString).deletingLastPathComponent
             }
@@ -356,7 +360,9 @@ final class FileTreeState {
         var entries = realEntries
         entries.append(contentsOf: syntheticEntries(in: directoryPath, excluding: existingPaths))
         entries.sort { lhs, rhs in
-            if lhs.isDirectory != rhs.isDirectory { return lhs.isDirectory && !rhs.isDirectory }
+            if lhs.isDirectory != rhs.isDirectory {
+                return lhs.isDirectory && !rhs.isDirectory
+            }
             return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
         return entries

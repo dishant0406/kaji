@@ -139,13 +139,19 @@ struct SidebarWorktreeRow: View {
     }
 
     private var detailLabel: String? {
-        if worktree.isPrimary { return "primary" }
+        if worktree.isPrimary {
+            return "primary"
+        }
         return branchLabel
     }
 
     private var rowBackground: Color {
-        if selected { return KajiTheme.surfaceMuted }
-        if hovered { return KajiTheme.hover.opacity(0.7) }
+        if selected {
+            return KajiTheme.surfaceMuted
+        }
+        if hovered {
+            return KajiTheme.hover.opacity(0.7)
+        }
         return .clear
     }
 
@@ -157,7 +163,9 @@ struct SidebarWorktreeRow: View {
 
     private func commitRename() {
         let trimmed = renameText.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty { onRename(trimmed) }
+        if !trimmed.isEmpty {
+            onRename(trimmed)
+        }
         isRenaming = false
     }
 

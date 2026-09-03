@@ -74,7 +74,9 @@ struct BrowserMCPInstallRow: View {
                     onInstall()
                 } label: {
                     HStack(spacing: 6) {
-                        if isInstalling { KajiSpinner(size: 10, lineWidth: 1.4) }
+                        if isInstalling {
+                            KajiSpinner(size: 10, lineWidth: 1.4)
+                        }
                         Text(buttonTitle)
                     }
                 }
@@ -87,12 +89,16 @@ struct BrowserMCPInstallRow: View {
     }
 
     private var buttonTitle: String {
-        if isInstalling { return "Installing" }
+        if isInstalling {
+            return "Installing"
+        }
         return installedAgents.isEmpty ? "Install" : "Repair"
     }
 
     private var statusText: String {
-        if installedAgents.isEmpty { return "Manual MCP install, not injected into agents" }
+        if installedAgents.isEmpty {
+            return "Manual MCP install, not injected into agents"
+        }
         return "Installed for " + installedAgents.map(displayName).joined(separator: ", ")
     }
 

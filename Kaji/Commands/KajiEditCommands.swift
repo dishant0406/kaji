@@ -11,13 +11,17 @@ struct KajiEditCommands: Commands {
                 .keyboardShortcut("x", modifiers: .command)
 
             Button("Copy") {
-                if context.isMainWindowFocused, context.terminalPasteboardCommands.copy() { return }
+                if context.isMainWindowFocused, context.terminalPasteboardCommands.copy() {
+                    return
+                }
                 NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
             }
             .keyboardShortcut("c", modifiers: .command)
 
             Button("Paste") {
-                if context.isMainWindowFocused, context.terminalPasteboardCommands.paste() { return }
+                if context.isMainWindowFocused, context.terminalPasteboardCommands.paste() {
+                    return
+                }
                 NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
             }
             .keyboardShortcut("v", modifiers: .command)

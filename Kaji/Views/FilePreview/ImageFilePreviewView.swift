@@ -6,22 +6,20 @@ struct ImageFilePreviewView: View {
     @State private var scale: CGFloat = 1
 
     var body: some View {
-        Group {
-            if let image = NSImage(contentsOf: url) {
-                ZStack(alignment: .topTrailing) {
-                    ScrollView([.horizontal, .vertical]) {
-                        Image(nsImage: image)
-                            .resizable()
-                            .interpolation(.high)
-                            .frame(width: image.size.width * scale, height: image.size.height * scale)
-                            .padding(32)
-                    }
-                    zoomControls
+        if let image = NSImage(contentsOf: url) {
+            ZStack(alignment: .topTrailing) {
+                ScrollView([.horizontal, .vertical]) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: image.size.width * scale, height: image.size.height * scale)
+                        .padding(32)
                 }
-                .background(KajiTheme.bg)
-            } else {
-                QuickLookFilePreviewView(url: url)
+                zoomControls
             }
+            .background(KajiTheme.bg)
+        } else {
+            QuickLookFilePreviewView(url: url)
         }
     }
 

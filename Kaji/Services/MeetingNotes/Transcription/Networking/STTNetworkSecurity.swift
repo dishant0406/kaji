@@ -130,9 +130,13 @@ enum STTNetworkRedactor {
             return "<redacted-url>"
         }
         var value = "\(scheme)://\(host)"
-        if let port = components.port { value += ":\(port)" }
+        if let port = components.port {
+            value += ":\(port)"
+        }
         let path = components.percentEncodedPath
-        if !path.isEmpty { value += path }
+        if !path.isEmpty {
+            value += path
+        }
         return value
     }
 
@@ -142,8 +146,12 @@ enum STTNetworkRedactor {
     }
 
     static func error(_ error: Error) -> STTNetworkError {
-        if error is CancellationError { return .cancelled }
-        if let networkError = error as? STTNetworkError { return networkError }
+        if error is CancellationError {
+            return .cancelled
+        }
+        if let networkError = error as? STTNetworkError {
+            return networkError
+        }
         if let urlError = error as? URLError {
             switch urlError.code {
             case .cancelled:

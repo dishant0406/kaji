@@ -42,7 +42,9 @@ final class KajiAgentScrollCoordinator {
     }
 
     func detach() {
-        if let observer { NotificationCenter.default.removeObserver(observer) }
+        if let observer {
+            NotificationCenter.default.removeObserver(observer)
+        }
         observer = nil
         pendingBottomScroll?.cancel()
         pendingBottomScroll = nil
@@ -69,7 +71,9 @@ final class KajiAgentScrollCoordinator {
 
     func scrollToBottom(force: Bool) {
         guard scrollView != nil else {
-            if force { pendingInitialBottomScroll = true }
+            if force {
+                pendingInitialBottomScroll = true
+            }
             return
         }
         if force {
@@ -110,7 +114,9 @@ final class KajiAgentScrollCoordinator {
             return
         }
 
-        if Date().timeIntervalSince(lastProgrammaticScrollAt) < programmaticScrollSuppression { return }
+        if Date().timeIntervalSince(lastProgrammaticScrollAt) < programmaticScrollSuppression {
+            return
+        }
         let isScrollingDown = lastObservedOriginY.map { originY > $0 + 0.5 } ?? false
         apply(KajiAgentScrollLockPolicy.observedState(
             distanceFromBottom: distanceFromBottom(scrollView),

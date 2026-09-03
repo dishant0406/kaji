@@ -23,7 +23,9 @@ struct ShortcutActionDispatcher {
     }
 
     func perform(_ action: ShortcutAction, activeProject: Project?, openVCS: (Project) -> Void) -> Bool {
-        if performRegisteredCommand(action) { return true }
+        if performRegisteredCommand(action) {
+            return true
+        }
 
         if let index = action.tabSelectionIndex {
             guard let projectID = appState.activeProjectID else { return false }

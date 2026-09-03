@@ -129,7 +129,9 @@ final class MCPServerConfigStore {
     }
 
     private func isCommandAvailable(_ command: String) -> Bool {
-        if command.hasPrefix("/") { return fileManager.isExecutableFile(atPath: command) }
+        if command.hasPrefix("/") {
+            return fileManager.isExecutableFile(atPath: command)
+        }
         return AIProviderExecutableLocator.resolvePath(
             for: command,
             env: ProcessInfo.processInfo.environment,
@@ -206,8 +208,12 @@ final class MCPServerConfigStore {
         server.authSummary = record.authSummary ?? server.authSummary
         server.toolNames = record.toolNames.isEmpty ? server.toolNames : record.toolNames
         server.runtimeSummary = record.status ?? server.runtimeSummary
-        if server.url.isEmpty, let url = record.url { server.url = url }
-        if server.command.isEmpty, let command = record.command { server.command = command }
+        if server.url.isEmpty, let url = record.url {
+            server.url = url
+        }
+        if server.command.isEmpty, let command = record.command {
+            server.command = command
+        }
         return server
     }
 
@@ -215,7 +221,9 @@ final class MCPServerConfigStore {
         if let id = server?.sourceLocationID, let location = panel.locations.first(where: { $0.id == id }) {
             return location
         }
-        if let location = panel.primaryLocation { return location }
+        if let location = panel.primaryLocation {
+            return location
+        }
         throw MCPServerConfigError.missingProjectPath
     }
 

@@ -136,7 +136,9 @@ final class KajiBrowserControlBroker: @unchecked Sendable {
 
     private func isAuthorized(_ request: KajiBrowserHTTPRequest) -> Bool {
         guard let token = state()?.token else { return false }
-        if request.headers["authorization"] == "Bearer \(token)" { return true }
+        if request.headers["authorization"] == "Bearer \(token)" {
+            return true
+        }
         return request.headers["x-kaji-browser-token"] == token
     }
 

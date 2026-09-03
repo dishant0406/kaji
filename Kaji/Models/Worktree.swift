@@ -53,7 +53,9 @@ struct Worktree: Identifiable, Codable, Hashable {
     }
 
     private static func defaultBackend(isPrimary: Bool, source: WorktreeSource) -> WorktreeBackend {
-        if isPrimary { return .primary }
+        if isPrimary {
+            return .primary
+        }
         return source == .external ? .externalRift : .rift
     }
 

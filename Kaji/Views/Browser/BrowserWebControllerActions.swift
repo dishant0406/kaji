@@ -74,7 +74,9 @@ extension BrowserWebController {
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             let result = try await evaluate(script: KajiBrowserWaitScripts.selector(target: target, selector: selector)) as? [String: Any]
-            if result?["found"] as? Bool == true { return true }
+            if result?["found"] as? Bool == true {
+                return true
+            }
             try await Task.sleep(for: .milliseconds(150))
         }
         return false
@@ -84,7 +86,9 @@ extension BrowserWebController {
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             let found = try await evaluate(script: KajiBrowserWaitScripts.text(text, gone: gone)) as? Bool
-            if found == true { return true }
+            if found == true {
+                return true
+            }
             try await Task.sleep(for: .milliseconds(150))
         }
         return false

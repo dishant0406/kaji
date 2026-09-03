@@ -127,7 +127,9 @@ enum HookEventEmitter {
         for key in keys {
             if let value = object[key] as? String {
                 let cleaned = HookTextSanitizer.clean(value)
-                if !cleaned.isEmpty { return cleaned }
+                if !cleaned.isEmpty {
+                    return cleaned
+                }
             }
         }
         return ""

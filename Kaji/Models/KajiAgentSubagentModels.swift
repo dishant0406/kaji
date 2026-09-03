@@ -30,7 +30,9 @@ struct KajiAgentTaskToolDetails: Hashable {
     }
 
     var visibleAgents: [KajiAgentSubagentProgress] {
-        if !progress.isEmpty { return progress }
+        if !progress.isEmpty {
+            return progress
+        }
         return results.map(KajiAgentSubagentProgress.init(result:))
     }
 }

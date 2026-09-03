@@ -47,7 +47,9 @@ struct WorktreeSwitcherItem: Identifiable {
     var key: WorktreeKey { id }
 
     var displayName: String {
-        if worktree.isPrimary, worktree.name.isEmpty { return "main" }
+        if worktree.isPrimary, worktree.name.isEmpty {
+            return "main"
+        }
         return worktree.name
     }
 

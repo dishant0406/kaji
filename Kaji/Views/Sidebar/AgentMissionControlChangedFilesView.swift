@@ -169,7 +169,9 @@ struct AgentMissionControlChangedFilesView: View {
     }
 
     private func statsText(for file: AgentChangedFile) -> String {
-        if file.isBinary { return "binary" }
+        if file.isBinary {
+            return "binary"
+        }
         let additions = file.additions.map { "+\($0)" } ?? "+?"
         let deletions = file.deletions.map { "-\($0)" } ?? "-?"
         return "\(additions) \(deletions)"

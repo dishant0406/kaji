@@ -369,7 +369,9 @@ private struct EditorBreadcrumb: View {
         let base = state.projectPath
         guard full.hasPrefix(base) else { return state.fileName }
         var rel = String(full.dropFirst(base.count))
-        if rel.hasPrefix("/") { rel = String(rel.dropFirst()) }
+        if rel.hasPrefix("/") {
+            rel = String(rel.dropFirst())
+        }
         return rel
     }
 
@@ -419,8 +421,12 @@ private struct EditorBreadcrumb: View {
 
     private var breadcrumbAccessibilityLabel: String {
         var label = relativePath
-        if state.isModified { label += ", modified" }
-        if state.isReadOnly { label += ", read-only" }
+        if state.isModified {
+            label += ", modified"
+        }
+        if state.isReadOnly {
+            label += ", read-only"
+        }
         label += ", Line \(state.cursorLine), Column \(state.cursorColumn)"
         return label
     }

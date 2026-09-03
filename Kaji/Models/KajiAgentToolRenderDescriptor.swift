@@ -22,17 +22,31 @@ enum KajiAgentToolRenderer {
 
     private static func title(for name: String, args: String) -> String {
         let lower = name.lowercased()
-        if lower == "bash", let command = value(named: "command", in: args) { return command }
-        if ["edit", "multi_edit", "write", "read"].contains(lower), let path = filePath(in: args) { return path }
-        if lower == "todo_write" { return "Update task plan" }
-        if lower == "task" { return "Run subagent task" }
+        if lower == "bash", let command = value(named: "command", in: args) {
+            return command
+        }
+        if ["edit", "multi_edit", "write", "read"].contains(lower), let path = filePath(in: args) {
+            return path
+        }
+        if lower == "todo_write" {
+            return "Update task plan"
+        }
+        if lower == "task" {
+            return "Run subagent task"
+        }
         return name
     }
 
     private static func subtitle(for message: KajiAgentMessage) -> String {
-        if message.isError { return "Failed" }
-        if !message.isComplete { return message.preview == nil ? "Running" : "Streaming output" }
-        if message.taskDetails != nil { return "Task details" }
+        if message.isError {
+            return "Failed"
+        }
+        if !message.isComplete {
+            return message.preview == nil ? "Running" : "Streaming output"
+        }
+        if message.taskDetails != nil {
+            return "Task details"
+        }
         return message.kajiAgentToolOutput == nil ? "Completed" : "Output available"
     }
 

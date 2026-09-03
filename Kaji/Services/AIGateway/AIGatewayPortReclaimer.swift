@@ -78,7 +78,9 @@ struct AIGatewayPortReclaimer {
         for _ in 0 ..< polls {
             try await Task.sleep(nanoseconds: pollIntervalNanoseconds)
             latest = try await lister.list(port: port)
-            if latest.isEmpty { return [] }
+            if latest.isEmpty {
+                return []
+            }
         }
         return latest
     }

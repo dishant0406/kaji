@@ -11,8 +11,12 @@ enum AIGatewaySetupConfigurator {
         if draft.provider.showsEndpoint, draft.trimmedEndpoint.isEmpty {
             return draft.provider == .azure ? "Enter your Azure resource or endpoint." : "Enter the provider endpoint."
         }
-        if draft.trimmedModelID.isEmpty { return "Enter the model or deployment name." }
-        if draft.provider.needsKey, !hasSavedKey, draft.trimmedAPIKey.isEmpty { return "Paste the provider API key." }
+        if draft.trimmedModelID.isEmpty {
+            return "Enter the model or deployment name."
+        }
+        if draft.provider.needsKey, !hasSavedKey, draft.trimmedAPIKey.isEmpty {
+            return "Paste the provider API key."
+        }
         return nil
     }
 

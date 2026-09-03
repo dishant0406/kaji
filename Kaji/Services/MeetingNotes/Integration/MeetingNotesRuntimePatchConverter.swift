@@ -215,7 +215,9 @@ struct MeetingNotesRuntimePatchConverter {
     }
 
     private func nullableString(_ value: KajiAgentJSONValue?, maximum: Int) throws -> String? {
-        if case .null = value { return nil }
+        if case .null = value {
+            return nil
+        }
         return try requiredString(value, maximum: maximum)
     }
 
@@ -245,7 +247,9 @@ struct MeetingNotesRuntimePatchConverter {
     }
 
     private func nullableInt64(_ value: KajiAgentJSONValue?) throws -> Int64? {
-        if case .null = value { return nil }
+        if case .null = value {
+            return nil
+        }
         return try integer64(value)
     }
 

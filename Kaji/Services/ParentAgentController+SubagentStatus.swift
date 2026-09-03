@@ -112,8 +112,12 @@ extension ParentAgentController {
     }
 
     func assignmentChangedFiles(assignment: ParentAgentAssignment, run: AgentRun?) async -> [ParentAgentChangedFileContext] {
-        if let run, !run.changedFiles.isEmpty { return run.changedFiles.map(changedFileContext) }
-        if !assignment.changedFiles.isEmpty { return assignment.changedFiles }
+        if let run, !run.changedFiles.isEmpty {
+            return run.changedFiles.map(changedFileContext)
+        }
+        if !assignment.changedFiles.isEmpty {
+            return assignment.changedFiles
+        }
         guard let path = assignment.worktreePath,
               let files = await AgentChangedFilesSnapshotter.snapshot(repoPath: path)
         else { return [] }
@@ -154,7 +158,9 @@ extension ParentAgentController {
     }
 
     func selectedAssignments(_ message: ParentAgentEnvelope, taskID: UUID) -> [ParentAgentAssignment] {
-        if let assignment = resolveAssignment(message, taskID: taskID) { return [assignment] }
+        if let assignment = resolveAssignment(message, taskID: taskID) {
+            return [assignment]
+        }
         return store.assignments(taskID: taskID)
     }
 

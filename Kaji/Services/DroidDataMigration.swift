@@ -136,7 +136,6 @@ enum DroidDataMigrationMapper {
             .replacingOccurrences(of: "droid-", with: "kaji-")
             .replacingOccurrences(of: "droid_", with: "kaji_")
             .replacingOccurrences(of: "droid.", with: "kaji.")
-            .replacingOccurrences(of: "droidcodegraph", with: "kajicodegraph")
     }
 
     static func mappedValue(_ value: Any) -> Any {

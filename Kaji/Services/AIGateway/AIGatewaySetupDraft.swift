@@ -51,8 +51,12 @@ struct AIGatewaySetupDraft: Equatable {
 
     private static func endpointText(provider: AIGatewaySetupProviderOption, config: AIGatewayProviderConfiguration?) -> String {
         guard let config else { return "" }
-        if provider == .azure { return config.resourceName.isEmpty ? config.baseURL : config.resourceName }
-        if provider.needsCustomEndpoint { return config.baseURL }
+        if provider == .azure {
+            return config.resourceName.isEmpty ? config.baseURL : config.resourceName
+        }
+        if provider.needsCustomEndpoint {
+            return config.baseURL
+        }
         return ""
     }
 }

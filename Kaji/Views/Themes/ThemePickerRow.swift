@@ -46,8 +46,12 @@ struct ThemePickerRow: View {
     }
 
     private var backgroundColor: Color {
-        if isActive { return KajiTheme.secondaryBackground.opacity(0.7) }
-        if hovered { return KajiTheme.hover }
+        if isActive {
+            return KajiTheme.secondaryBackground.opacity(0.7)
+        }
+        if hovered {
+            return KajiTheme.hover
+        }
         return .clear
     }
 }

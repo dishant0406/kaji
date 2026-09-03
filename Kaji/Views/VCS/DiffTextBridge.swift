@@ -179,7 +179,9 @@ struct DiffContentBridge: NSViewRepresentable {
             default: row.newText ?? row.oldText ?? ""
             }
             let count = text.utf16.count
-            if count > maxColumns { maxColumns = count }
+            if count > maxColumns {
+                maxColumns = count
+            }
         }
         return maxColumns
     }

@@ -67,7 +67,9 @@ enum MCPCodexTOMLValue {
                 escaping = true
                 continue
             }
-            if character == "\"" { inString.toggle() }
+            if character == "\"" {
+                inString.toggle()
+            }
             if character == ",", !inString {
                 result.append(current.trimmingCharacters(in: .whitespaces))
                 current = ""
@@ -76,7 +78,9 @@ enum MCPCodexTOMLValue {
             }
         }
         let tail = current.trimmingCharacters(in: .whitespaces)
-        if !tail.isEmpty { result.append(tail) }
+        if !tail.isEmpty {
+            result.append(tail)
+        }
         return result
     }
 }

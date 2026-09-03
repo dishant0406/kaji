@@ -388,7 +388,9 @@ actor URLSessionSTTWebSocketTransport: STTWebSocketTransporting {
 
     func close(code: Int = 1000, reason: String? = nil) async throws {
         guard state == .open || state == .connecting, let task, let generation else {
-            if state == .disconnected { return }
+            if state == .disconnected {
+                return
+            }
             throw STTNetworkError.protocolViolation
         }
         guard code == 1000 || code == 1001 || (3000 ... 4999).contains(code) else {
@@ -476,7 +478,9 @@ actor URLSessionSTTWebSocketTransport: STTWebSocketTransporting {
         generation = nil
         receiveLoopTask = nil
         pendingSendCount = 0
-        if let error { eventChannel.sendControl(.failed(error)) }
+        if let error {
+            eventChannel.sendControl(.failed(error))
+        }
         eventChannel.sendControl(.closed(code: closeCode))
         transition(to: .disconnected)
     }
@@ -581,10 +585,16 @@ private final class STTWebSocketEventChannelStorage: @unchecked Sendable {
                 return
             }
             if queuedControlCount >= maximumControlCount {
-                if case .pong = event, queue.contains(where: { $0.event == .pong }) { return }
+                if case .pong = event, queue.contains(where: { $0.event == .pong }) {
+                    return
+                }
                 if case .stateChanged = event,
                    let index = queue.lastIndex(where: {
-                       if case .stateChanged = $0.event { true } else { false }
+                       if case .stateChanged = $0.event {
+                           true
+                       } else {
+                           false
+                       }
                    })
                 {
                     queue[index] = Entry(event: event, messageBytes: 0)
@@ -665,7 +675,9 @@ private final class STTTimeoutRace<Value: Sendable>: @unchecked Sendable {
             self.result = result
             return true
         }
-        if shouldResume { resumeIfReady() }
+        if shouldResume {
+            resumeIfReady()
+        }
     }
 
     private func resumeIfReady() {

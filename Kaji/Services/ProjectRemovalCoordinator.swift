@@ -7,11 +7,10 @@ struct ProjectRemovalImpact: Equatable {
     let hasUnsavedEditors: Bool
     let hasRunningTerminals: Bool
     let hasRunningAgents: Bool
-    let hasCodeGraphSessions: Bool
     let worktreeCount: Int
 
     var hasRunningWork: Bool {
-        hasRunningTerminals || hasRunningAgents || hasCodeGraphSessions
+        hasRunningTerminals || hasRunningAgents
     }
 }
 
@@ -23,9 +22,6 @@ enum ProjectRemovalCoordinator {
             hasUnsavedEditors: appState.hasUnsavedEditorTabs(projectID: project.id),
             hasRunningTerminals: appState.hasRunningTerminalProcesses(projectID: project.id),
             hasRunningAgents: AIActivityStore.shared.hasActiveAgent(projectID: project.id),
-            hasCodeGraphSessions: worktrees.contains { worktree in
-                KajiCodeGraphAgentCoordinator.shared.hasSession(projectID: project.id, worktreeID: worktree.id)
-            },
             worktreeCount: worktrees.count
         )
     }
@@ -250,8 +246,6 @@ final class ProjectRemovalService {
             .sorted { $0.uuidString < $1.uuidString }
         let staleMessage = "Project was removed from Kaji."
         KajiAgentStoreRegistry.shared.stop(projectID: project.id)
-        KajiCodeGraphAgentCoordinator.shared.close(projectID: project.id)
-        KajiCodeGraphRuntime.shared.clear(projectID: project.id)
         AIActivityStore.shared.markProjectStale(projectID: project.id, message: staleMessage)
         CodingAgentSessionMetadataStore.shared.remove(paneIDs: metadataPaneIDs)
         NotificationStore.shared.remove(projectID: project.id)

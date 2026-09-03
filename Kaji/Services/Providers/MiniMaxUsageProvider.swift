@@ -129,7 +129,9 @@ struct MiniMaxUsageProvider: AIUsageProvider {
 
                 do {
                     let rows = try MiniMaxUsageParser.parseMetricRows(from: data, region: attempt.region)
-                    if !rows.isEmpty { return rows }
+                    if !rows.isEmpty {
+                        return rows
+                    }
                     parsedEmpty = true
                     continue
                 } catch let parserError as MiniMaxUsageParserError {
@@ -145,10 +147,18 @@ struct MiniMaxUsageProvider: AIUsageProvider {
             }
         }
 
-        if authStatusCount > 0, lastStatusCode == nil, !hadNetworkError { throw ClientError.sessionExpired }
-        if let lastStatusCode { throw ClientError.httpStatus(lastStatusCode) }
-        if hadNetworkError { throw ClientError.networkFailure }
-        if parsedEmpty { throw ClientError.noUsageData }
+        if authStatusCount > 0, lastStatusCode == nil, !hadNetworkError {
+            throw ClientError.sessionExpired
+        }
+        if let lastStatusCode {
+            throw ClientError.httpStatus(lastStatusCode)
+        }
+        if hadNetworkError {
+            throw ClientError.networkFailure
+        }
+        if parsedEmpty {
+            throw ClientError.noUsageData
+        }
         throw ClientError.parseFailure
     }
 

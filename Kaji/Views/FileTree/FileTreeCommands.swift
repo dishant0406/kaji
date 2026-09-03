@@ -127,7 +127,9 @@ final class FileTreeCommands {
 
     func deleteAlertKind() -> String {
         let paths = state.pendingDeletePaths
-        if paths.count > 1 { return "\(paths.count) items" }
+        if paths.count > 1 {
+            return "\(paths.count) items"
+        }
         guard let path = paths.first else { return "file" }
         var isDir: ObjCBool = false
         let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDir)

@@ -31,7 +31,9 @@ final class KajiAgentScrollViewportObserver {
     }
 
     func detach() {
-        if let observer { NotificationCenter.default.removeObserver(observer) }
+        if let observer {
+            NotificationCenter.default.removeObserver(observer)
+        }
         observer = nil
         scrollView = nil
         scrollOffset = 0

@@ -94,7 +94,9 @@ enum AIGatewaySetupPlanner {
     }
 
     private static func isInstalled(_ state: AIGatewayInstallState) -> Bool {
-        if case .installed = state { return true }
+        if case .installed = state {
+            return true
+        }
         return false
     }
 }

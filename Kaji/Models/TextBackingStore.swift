@@ -46,7 +46,9 @@ final class TextBackingStore {
     }
 
     func fullText() -> String {
-        if let fullTextCache { return fullTextCache }
+        if let fullTextCache {
+            return fullTextCache
+        }
         let text = lines.joined(separator: "\n")
         fullTextCache = text
         return text
@@ -182,7 +184,9 @@ final class TextBackingStore {
         maximumMatches: Int? = nil
     ) -> [SearchMatch] {
         guard !needle.isEmpty else { return [] }
-        if let maximumMatches, maximumMatches <= 0 { return [] }
+        if let maximumMatches, maximumMatches <= 0 {
+            return []
+        }
         var matches: [SearchMatch] = []
 
         func reachedLimit() -> Bool {
@@ -192,11 +196,15 @@ final class TextBackingStore {
 
         if useRegex {
             var options: NSRegularExpression.Options = [.anchorsMatchLines]
-            if !caseSensitive { options.insert(.caseInsensitive) }
+            if !caseSensitive {
+                options.insert(.caseInsensitive)
+            }
             guard let regex = try? NSRegularExpression(pattern: needle, options: options) else { return [] }
 
             for (lineIndex, line) in lines.enumerated() {
-                if reachedLimit() { break }
+                if reachedLimit() {
+                    break
+                }
                 let nsLine = line as NSString
                 let lineRange = NSRange(location: 0, length: nsLine.length)
                 regex.enumerateMatches(in: line, range: lineRange) { match, _, stop in
@@ -213,10 +221,14 @@ final class TextBackingStore {
             }
         } else {
             var options: NSString.CompareOptions = []
-            if !caseSensitive { options.insert(.caseInsensitive) }
+            if !caseSensitive {
+                options.insert(.caseInsensitive)
+            }
 
             for (lineIndex, line) in lines.enumerated() {
-                if reachedLimit() { break }
+                if reachedLimit() {
+                    break
+                }
                 let nsLine = line as NSString
                 var searchRange = NSRange(location: 0, length: nsLine.length)
                 while searchRange.location < nsLine.length, !reachedLimit() {

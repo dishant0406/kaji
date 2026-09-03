@@ -40,14 +40,22 @@ struct SettingsSidebarButton: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return KajiTheme.accentSoft.opacity(0.72) }
-        if hovered { return KajiTheme.hover.opacity(0.72) }
+        if isSelected {
+            return KajiTheme.accentSoft.opacity(0.72)
+        }
+        if hovered {
+            return KajiTheme.hover.opacity(0.72)
+        }
         return .clear
     }
 
     private var rowBorder: Color {
-        if isSelected { return KajiTheme.accent.opacity(0.32) }
-        if hovered { return KajiTheme.border.opacity(0.5) }
+        if isSelected {
+            return KajiTheme.accent.opacity(0.32)
+        }
+        if hovered {
+            return KajiTheme.border.opacity(0.5)
+        }
         return .clear
     }
 }

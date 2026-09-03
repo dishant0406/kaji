@@ -20,14 +20,12 @@ struct ProviderIconView: View {
             switch style {
             case .colored:
                 Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .resizable().scaledToFit()
                     .frame(width: size, height: size)
             case let .monochrome(color):
                 Image(nsImage: templateImage(from: image))
                     .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .resizable().scaledToFit()
                     .foregroundStyle(color)
                     .frame(width: size, height: size)
             }

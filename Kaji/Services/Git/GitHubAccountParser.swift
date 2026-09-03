@@ -12,8 +12,12 @@ enum GitHubAccountParser {
             .filter { preferredHost == nil || $0.host == preferredHost }
             .filter(\.isUsable)
             .sorted { first, second in
-                if first.isActive != second.isActive { return first.isActive }
-                if first.host != second.host { return first.host.localizedStandardCompare(second.host) == .orderedAscending }
+                if first.isActive != second.isActive {
+                    return first.isActive
+                }
+                if first.host != second.host {
+                    return first.host.localizedStandardCompare(second.host) == .orderedAscending
+                }
                 return first.login.localizedStandardCompare(second.login) == .orderedAscending
             }
     }

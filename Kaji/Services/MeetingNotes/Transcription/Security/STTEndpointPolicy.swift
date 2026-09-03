@@ -139,24 +139,50 @@ struct STTEndpointPolicy {
         guard bytes.count == 4 else { return false }
         let first = bytes[0]
         let second = bytes[1]
-        if first == 0 || first == 10 || first == 127 || first >= 224 { return false }
-        if first == 100, second >= 64, second <= 127 { return false }
-        if first == 169, second == 254 { return false }
-        if first == 172, second >= 16, second <= 31 { return false }
-        if first == 192, second == 168 { return false }
-        if first == 192, second == 0, bytes[2] == 0 { return false }
-        if first == 198, second == 18 || second == 19 { return false }
-        if first == 100, second == 100, bytes[2] == 100, bytes[3] == 200 { return false }
+        if first == 0 || first == 10 || first == 127 || first >= 224 {
+            return false
+        }
+        if first == 100, second >= 64, second <= 127 {
+            return false
+        }
+        if first == 169, second == 254 {
+            return false
+        }
+        if first == 172, second >= 16, second <= 31 {
+            return false
+        }
+        if first == 192, second == 168 {
+            return false
+        }
+        if first == 192, second == 0, bytes[2] == 0 {
+            return false
+        }
+        if first == 198, second == 18 || second == 19 {
+            return false
+        }
+        if first == 100, second == 100, bytes[2] == 100, bytes[3] == 200 {
+            return false
+        }
         return true
     }
 
     static func isPublicIPv6(_ bytes: [UInt8]) -> Bool {
         guard bytes.count == 16 else { return false }
-        if bytes.allSatisfy({ $0 == 0 }) { return false }
-        if bytes.dropLast().allSatisfy({ $0 == 0 }), bytes.last == 1 { return false }
-        if bytes[0] == 0xFC || bytes[0] == 0xFD { return false }
-        if bytes[0] == 0xFE, bytes[1] & 0xC0 == 0x80 { return false }
-        if bytes[0] == 0xFF { return false }
+        if bytes.allSatisfy({ $0 == 0 }) {
+            return false
+        }
+        if bytes.dropLast().allSatisfy({ $0 == 0 }), bytes.last == 1 {
+            return false
+        }
+        if bytes[0] == 0xFC || bytes[0] == 0xFD {
+            return false
+        }
+        if bytes[0] == 0xFE, bytes[1] & 0xC0 == 0x80 {
+            return false
+        }
+        if bytes[0] == 0xFF {
+            return false
+        }
         let mappedPrefix = bytes.prefix(10).allSatisfy { $0 == 0 } && bytes[10] == 0xFF && bytes[11] == 0xFF
         if mappedPrefix {
             return isPublicIPv4(Array(bytes.suffix(4)))

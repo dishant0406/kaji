@@ -50,8 +50,12 @@ struct KajiPill: View {
     }
 
     private var foreground: Color {
-        if disabled { return KajiTheme.fgDim.opacity(0.6) }
-        if selected || hovered { return KajiTheme.fg }
+        if disabled {
+            return KajiTheme.fgDim.opacity(0.6)
+        }
+        if selected || hovered {
+            return KajiTheme.fg
+        }
         return KajiTheme.fgMuted
     }
 

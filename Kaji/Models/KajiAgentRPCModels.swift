@@ -656,22 +656,30 @@ enum KajiAgentJSONValue: Codable, Hashable {
     }
 
     var numberValue: Double? {
-        if case let .number(value) = self { return value }
+        if case let .number(value) = self {
+            return value
+        }
         return nil
     }
 
     var boolValue: Bool? {
-        if case let .bool(value) = self { return value }
+        if case let .bool(value) = self {
+            return value
+        }
         return nil
     }
 
     var objectValue: [String: KajiAgentJSONValue]? {
-        if case let .object(value) = self { return value }
+        if case let .object(value) = self {
+            return value
+        }
         return nil
     }
 
     var arrayValue: [KajiAgentJSONValue]? {
-        if case let .array(value) = self { return value }
+        if case let .array(value) = self {
+            return value
+        }
         return nil
     }
 }

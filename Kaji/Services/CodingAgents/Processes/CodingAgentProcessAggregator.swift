@@ -5,8 +5,12 @@ enum CodingAgentProcessAggregator {
         Dictionary(grouping: matches, by: \.providerID)
             .map { _, processes in
                 let sorted = processes.sorted { lhs, rhs in
-                    if lhs.suspicion != rhs.suspicion { return rank(lhs.suspicion) < rank(rhs.suspicion) }
-                    if lhs.process.cpuPercent != rhs.process.cpuPercent { return lhs.process.cpuPercent > rhs.process.cpuPercent }
+                    if lhs.suspicion != rhs.suspicion {
+                        return rank(lhs.suspicion) < rank(rhs.suspicion)
+                    }
+                    if lhs.process.cpuPercent != rhs.process.cpuPercent {
+                        return lhs.process.cpuPercent > rhs.process.cpuPercent
+                    }
                     return lhs.process.pid < rhs.process.pid
                 }
                 let first = sorted[0]
@@ -19,8 +23,12 @@ enum CodingAgentProcessAggregator {
                 )
             }
             .sorted { lhs, rhs in
-                if lhs.orphanCount != rhs.orphanCount { return lhs.orphanCount > rhs.orphanCount }
-                if lhs.cpuPercent != rhs.cpuPercent { return lhs.cpuPercent > rhs.cpuPercent }
+                if lhs.orphanCount != rhs.orphanCount {
+                    return lhs.orphanCount > rhs.orphanCount
+                }
+                if lhs.cpuPercent != rhs.cpuPercent {
+                    return lhs.cpuPercent > rhs.cpuPercent
+                }
                 return lhs.providerName < rhs.providerName
             }
     }

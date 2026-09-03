@@ -124,7 +124,9 @@ enum AgentInstructionDiscovery {
 
         var paths: [String] = []
         for case let url as URL in enumerator {
-            if shouldSkip(url: url, enumerator: enumerator) { continue }
+            if shouldSkip(url: url, enumerator: enumerator) {
+                continue
+            }
             guard names.contains(url.lastPathComponent), isRegularFile(url: url) else { continue }
             paths.append(url.path)
         }

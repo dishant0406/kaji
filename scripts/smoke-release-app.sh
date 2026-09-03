@@ -22,26 +22,6 @@ fail() {
     exit 1
 }
 
-require_native_addon() {
-    local arch="$1"
-    local addon=""
-    case "$arch" in
-        arm64)
-            addon="pi_natives.darwin-arm64.node"
-            ;;
-        x86_64)
-            addon="pi_natives.darwin-x64-baseline.node"
-            ;;
-        *)
-            return
-            ;;
-    esac
-
-    local path="$APP_BUNDLE/Contents/Resources/native/$addon"
-    [[ -f "$path" ]] || fail "Kaji runtime native addon missing at $path"
-    codesign --verify "$path" >/dev/null 2>&1 || fail "Kaji runtime native addon is not signed: $path"
-}
-
 [[ -n "$APP_BUNDLE" ]] || fail "app bundle path is required"
 [[ -d "$APP_BUNDLE" ]] || fail "app bundle not found at $APP_BUNDLE"
 APP_BUNDLE="$(cd "$APP_BUNDLE" && pwd -P)"
@@ -83,22 +63,6 @@ ROOT_RESOURCE_BUNDLE="$APP_BUNDLE/Kaji_Kaji.bundle"
 RESOURCE_BUNDLE="$APP_BUNDLE/Contents/Resources/Kaji_Kaji.bundle"
 [[ ! -e "$ROOT_RESOURCE_BUNDLE" ]] || fail "Kaji resource bundle must not be placed in the app bundle root"
 [[ -d "$RESOURCE_BUNDLE" ]] || fail "Kaji resource bundle missing at $RESOURCE_BUNDLE"
-RUNTIME_FILE=""
-for candidate in \
-    "$RESOURCE_BUNDLE/kaji-agent-runtime.mjs" \
-    "$RESOURCE_BUNDLE/KajiAgentRuntime/kaji-agent-runtime.mjs"; do
-    if [[ -f "$candidate" ]]; then
-        RUNTIME_FILE="$candidate"
-        break
-    fi
-done
-[[ -n "$RUNTIME_FILE" ]] || fail "Kaji runtime missing from resource bundle"
-RUNTIME_SIZE=$(stat -f%z "$RUNTIME_FILE")
-[[ "$RUNTIME_SIZE" -gt 1000000 ]] || fail "Kaji runtime is unexpectedly small"
-
-for arch in $(lipo -archs "$EXECUTABLE"); do
-    require_native_addon "$arch"
-done
 
 if otool -L "$EXECUTABLE" | grep -q ".dev-support"; then
     fail "Kaji binary links to .dev-support"

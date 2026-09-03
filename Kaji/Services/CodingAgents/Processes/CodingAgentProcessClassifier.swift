@@ -22,7 +22,9 @@ enum CodingAgentProcessClassifier {
     private static func matches(_ process: CodingAgentProcessInfo, definition: CodingAgentDefinition) -> Bool {
         let commandName = process.commandName.lowercased()
         let names = Set((definition.executableNames + definition.processMatchNames).map { $0.lowercased() })
-        if names.contains(commandName) { return true }
+        if names.contains(commandName) {
+            return true
+        }
 
         let commandLine = [process.commandLine, process.executablePath].compactMap(\.self).joined(separator: " ").lowercased()
         let markerMatched = definition.processCommandMarkers.contains { marker in
@@ -48,8 +50,12 @@ enum CodingAgentProcessClassifier {
         for process: CodingAgentProcessInfo,
         activeProcessGroupIDs: Set<Int32>
     ) -> CodingAgentProcessSuspicion {
-        if activeProcessGroupIDs.contains(process.processGroupID) { return .active }
-        if process.parentPID == 1 { return .orphan }
+        if activeProcessGroupIDs.contains(process.processGroupID) {
+            return .active
+        }
+        if process.parentPID == 1 {
+            return .orphan
+        }
         return .detached
     }
 }

@@ -51,7 +51,9 @@ struct OpenAIPCM16AudioRateConverter: OpenAIAudioRateConverting {
         else {
             throw OpenAIMeetingTranscriptionError.invalidPacket
         }
-        if packet.sampleRateHertz == 24000 { return packet.bytes }
+        if packet.sampleRateHertz == 24000 {
+            return packet.bytes
+        }
         let input = packet.bytes.withUnsafeBytes { bytes in
             stride(from: 0, to: bytes.count, by: 2).map { offset in
                 Int16(littleEndian: bytes.loadUnaligned(fromByteOffset: offset, as: Int16.self))

@@ -499,7 +499,9 @@ final class MeetingNotesSettingsStore {
         settings = .defaults
         allowingDestructiveRetention = false
         load()
-        if persistenceError == nil { repairTranscriptionSelection() }
+        if persistenceError == nil {
+            repairTranscriptionSelection()
+        }
     }
 
     var isModelConfigured: Bool { settings.isModelConfigured }

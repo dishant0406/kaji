@@ -179,17 +179,27 @@ struct MCPServerEditorView: View {
                 continue
             }
             if character == "\"" || character == "'" {
-                if quote == character { quote = nil } else if quote == nil { quote = character } else { current.append(character) }
+                if quote == character {
+                    quote = nil
+                } else if quote == nil {
+                    quote = character
+                } else {
+                    current.append(character)
+                }
                 continue
             }
             if character.isWhitespace, quote == nil {
-                if !current.isEmpty { result.append(current) }
+                if !current.isEmpty {
+                    result.append(current)
+                }
                 current = ""
             } else {
                 current.append(character)
             }
         }
-        if !current.isEmpty { result.append(current) }
+        if !current.isEmpty {
+            result.append(current)
+        }
         return result
     }
 }

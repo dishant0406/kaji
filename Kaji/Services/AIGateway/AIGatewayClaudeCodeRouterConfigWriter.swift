@@ -54,8 +54,12 @@ enum AIGatewayClaudeCodeRouterConfigWriter {
                 "models": models,
                 "type": protocolName(provider),
             ]
-            if let baseURL = baseURL(provider) { object["api_base_url"] = baseURL }
-            if provider.needsAPIKey, !provider.apiKeyEnv.isEmpty { object["api_key"] = "$\(provider.apiKeyEnv)" }
+            if let baseURL = baseURL(provider) {
+                object["api_base_url"] = baseURL
+            }
+            if provider.needsAPIKey, !provider.apiKeyEnv.isEmpty {
+                object["api_key"] = "$\(provider.apiKeyEnv)"
+            }
             return object
         }
     }
@@ -132,7 +136,9 @@ enum AIGatewayClaudeCodeRouterConfigWriter {
     }
 
     private static func providerIdentity(_ provider: AIGatewayProviderConfiguration) -> String {
-        if provider.id == "openai" { return provider.id }
+        if provider.id == "openai" {
+            return provider.id
+        }
         return neutralProviderIdentity(provider.id)
     }
 
@@ -162,8 +168,12 @@ enum AIGatewayClaudeCodeRouterConfigWriter {
     }
 
     private static func protocolName(_ provider: AIGatewayProviderConfiguration) -> String {
-        if provider.kind == .customAnthropic || provider.id == "anthropic" { return "anthropic_messages" }
-        if provider.id == "ollama" { return "openai_chat_completions" }
+        if provider.kind == .customAnthropic || provider.id == "anthropic" {
+            return "anthropic_messages"
+        }
+        if provider.id == "ollama" {
+            return "openai_chat_completions"
+        }
         return "openai_responses"
     }
 

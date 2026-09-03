@@ -162,7 +162,9 @@ actor OpenAIRealtimeTranscriptionSession: MeetingTrackTranscriptionSession {
 
     func finish() async throws {
         guard state == .started else {
-            if state == .finished || state == .cancelled { return }
+            if state == .finished || state == .cancelled {
+                return
+            }
             throw OpenAIMeetingTranscriptionError.invalidState
         }
         emitSession(.draining)
@@ -234,7 +236,9 @@ actor OpenAIRealtimeTranscriptionSession: MeetingTrackTranscriptionSession {
 
     private func sendSessionUpdate() async throws {
         var transcription: [String: Any] = ["model": route.modelID]
-        if let language = route.languageCodes.first { transcription["language"] = language }
+        if let language = route.languageCodes.first {
+            transcription["language"] = language
+        }
         var session: [String: Any] = [
             "type": "transcription",
             "audio": [
@@ -473,9 +477,15 @@ actor OpenAIRealtimeTranscriptionSession: MeetingTrackTranscriptionSession {
     }
 
     private func sanitize(_ error: Error) -> OpenAIMeetingTranscriptionError {
-        if error is CancellationError { return .cancelled }
-        if let error = error as? OpenAIMeetingTranscriptionError { return error }
-        if let error = error as? STTNetworkError, error == .cancelled { return .cancelled }
+        if error is CancellationError {
+            return .cancelled
+        }
+        if let error = error as? OpenAIMeetingTranscriptionError {
+            return error
+        }
+        if let error = error as? STTNetworkError, error == .cancelled {
+            return .cancelled
+        }
         return .serviceUnavailable
     }
 }

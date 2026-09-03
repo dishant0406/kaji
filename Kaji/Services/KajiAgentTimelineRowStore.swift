@@ -28,7 +28,9 @@ final class KajiAgentTimelineRowStore {
 
     func setLatestTurnSpacer(turnID: UUID?, height: CGFloat) {
         var nextRows = rows.filter { row in
-            if case .latestTurnSpacer = row.kind { return false }
+            if case .latestTurnSpacer = row.kind {
+                return false
+            }
             return true
         }
         if let turnID, height > 0, let bottomIndex = nextRows.firstIndex(where: { $0.kind == .bottom }) {
@@ -85,30 +87,42 @@ final class KajiAgentTimelineRowStore {
 
     func rowID(forTool id: UUID) -> KajiAgentTimelineRowID? {
         rows.first { row in
-            if case let .tool(message, _) = row.kind { return message.id == id }
+            if case let .tool(message, _) = row.kind {
+                return message.id == id
+            }
             return false
         }?.id
     }
 
     func rowID(forThinking id: UUID) -> KajiAgentTimelineRowID? {
         rows.first { row in
-            if case let .plan(plan, _) = row.kind { return plan.id == id }
-            if case let .thinking(message, _) = row.kind { return message.id == id }
+            if case let .plan(plan, _) = row.kind {
+                return plan.id == id
+            }
+            if case let .thinking(message, _) = row.kind {
+                return message.id == id
+            }
             return false
         }?.id
     }
 
     func rowID(forToolGroup id: UUID) -> KajiAgentTimelineRowID? {
         rows.first { row in
-            if case let .activity(activity, _) = row.kind { return activity.id == id }
-            if case let .toolGroupHeader(group) = row.kind { return group.id == id }
+            if case let .activity(activity, _) = row.kind {
+                return activity.id == id
+            }
+            if case let .toolGroupHeader(group) = row.kind {
+                return group.id == id
+            }
             return false
         }?.id
     }
 
     private func updateToolRow(_ id: UUID) {
         guard let index = rows.firstIndex(where: { row in
-            if case let .tool(message, _) = row.kind { return message.id == id }
+            if case let .tool(message, _) = row.kind {
+                return message.id == id
+            }
             return false
         }), case let .tool(message, _) = rows[index].kind
         else { return }
@@ -119,8 +133,12 @@ final class KajiAgentTimelineRowStore {
 
     private func updateThinkingRow(_ id: UUID) {
         guard let index = rows.firstIndex(where: { row in
-            if case let .plan(plan, _) = row.kind { return plan.id == id }
-            if case let .thinking(message, _) = row.kind { return message.id == id }
+            if case let .plan(plan, _) = row.kind {
+                return plan.id == id
+            }
+            if case let .thinking(message, _) = row.kind {
+                return message.id == id
+            }
             return false
         })
         else { return }
@@ -138,7 +156,9 @@ final class KajiAgentTimelineRowStore {
 
     private func updateActivityRow(_ id: UUID) {
         guard let index = rows.firstIndex(where: { row in
-            if case let .activity(activity, _) = row.kind { return activity.id == id }
+            if case let .activity(activity, _) = row.kind {
+                return activity.id == id
+            }
             return false
         }), case let .activity(activity, _) = rows[index].kind
         else { return }

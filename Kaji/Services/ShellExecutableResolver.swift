@@ -21,7 +21,9 @@ enum ShellExecutableResolver {
             fileManager: fileManager,
             timeout: .seconds(5)
         )
-        if !loginPaths.isEmpty { return loginPaths }
+        if !loginPaths.isEmpty {
+            return loginPaths
+        }
 
         return runLookup(
             shell: shell,

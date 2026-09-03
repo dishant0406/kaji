@@ -152,9 +152,13 @@ enum AgentRunMissionControlSnapshotBuilder {
 
     private static func elapsedTime(from start: Date, to end: Date) -> String {
         let seconds = max(0, Int(end.timeIntervalSince(start)))
-        if seconds < 60 { return "\(seconds)s" }
+        if seconds < 60 {
+            return "\(seconds)s"
+        }
         let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes)m" }
+        if minutes < 60 {
+            return "\(minutes)m"
+        }
         return "\(minutes / 60)h"
     }
 
@@ -213,7 +217,11 @@ enum AgentRunMissionControlSnapshotBuilder {
     }
 
     private static func notificationContextKey(_ notification: KajiNotification) -> String {
-        let providerID = if case let .aiProvider(id) = notification.source { id } else { "" }
+        let providerID = if case let .aiProvider(id) = notification.source {
+            id
+        } else {
+            ""
+        }
         return "\(providerID)|\(notification.projectID.uuidString)|\(notification.worktreeID.uuidString)"
     }
 
@@ -227,7 +235,9 @@ enum AgentRunMissionControlSnapshotBuilder {
 
     private static func matches(run: AgentRun, notification: KajiNotification) -> Bool {
         guard case let .aiProvider(providerID) = notification.source, providerID == run.providerID else { return false }
-        if let paneID = run.paneID, paneID == notification.paneID { return true }
+        if let paneID = run.paneID, paneID == notification.paneID {
+            return true
+        }
         guard let projectID = run.projectID, let worktreeID = run.worktreeID else { return false }
         return notification.projectID == projectID && notification.worktreeID == worktreeID
     }

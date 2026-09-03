@@ -50,22 +50,25 @@ struct ParentAgentTabButton: View {
         .contentShape(RoundedRectangle(cornerRadius: KajiShape.tileRadius))
     }
 
+    @ViewBuilder
     private var iconImage: some View {
-        Group {
-            if let image = Self.logoImage {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .opacity(selected || hovered ? 1 : 0.82)
-            } else {
-                Color.clear
-            }
+        if let image = Self.logoImage {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .opacity(selected || hovered ? 1 : 0.82)
+        } else {
+            Color.clear
         }
     }
 
     private var background: Color {
-        if selected { return KajiTheme.surfaceMuted }
-        if hovered { return KajiTheme.hover }
+        if selected {
+            return KajiTheme.surfaceMuted
+        }
+        if hovered {
+            return KajiTheme.hover
+        }
         return .clear
     }
 

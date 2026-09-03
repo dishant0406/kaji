@@ -44,8 +44,12 @@ enum KajiAgentMarkdownParser {
     private static func block(from lines: [String]) -> KajiAgentMarkdownBlock {
         let trimmed = lines.map { $0.trimmingCharacters(in: .whitespaces) }
         if trimmed.count == 1, let line = trimmed.first {
-            if line == "---" || line == "***" { return .divider }
-            if let heading = heading(line) { return heading }
+            if line == "---" || line == "***" {
+                return .divider
+            }
+            if let heading = heading(line) {
+                return heading
+            }
         }
         if trimmed.allSatisfy(isBullet) {
             return .bullets(trimmed.map { String($0.dropFirst(2)) })

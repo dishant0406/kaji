@@ -64,7 +64,9 @@ struct NativeCommandRunnerView: View {
     }
 
     private var completionFeedback: AnyChangeEffect {
-        if case .succeeded = runner.status { return KajiMotion.successFeedback }
+        if case .succeeded = runner.status {
+            return KajiMotion.successFeedback
+        }
         return KajiMotion.invalidFeedback
     }
 

@@ -11,7 +11,9 @@ struct MediaFilePreviewView: NSViewRepresentable {
     }
 
     func updateNSView(_ view: AVPlayerView, context _: Context) {
-        if (view.player?.currentItem?.asset as? AVURLAsset)?.url == url { return }
+        if (view.player?.currentItem?.asset as? AVURLAsset)?.url == url {
+            return
+        }
         view.player = AVPlayer(url: url)
     }
 }

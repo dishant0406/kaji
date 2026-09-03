@@ -48,7 +48,13 @@ struct AllChangesDiffBody: View {
                         onStash: { state.vcs.stashFile(file.path) },
                         onRevert: { state.vcs.discardFile(file.path) },
                         onComment: onCommentRequest,
-                        comments: state.comments(for: file.path).filter { if case .file = $0.anchor { true } else { false } }
+                        comments: state.comments(for: file.path).filter {
+                            if case .file = $0.anchor {
+                                true
+                            } else {
+                                false
+                            }
+                        }
                     )
                 }
                 .onAppear { state.fileDidAppear(file.path) }
@@ -207,8 +213,12 @@ private struct FileHeaderIconButton: View {
     }
 
     private var backgroundColor: Color {
-        if isHovering { return KajiTheme.surface }
-        if selected { return KajiTheme.accent.opacity(0.14) }
+        if isHovering {
+            return KajiTheme.surface
+        }
+        if selected {
+            return KajiTheme.accent.opacity(0.14)
+        }
         return .clear
     }
 }

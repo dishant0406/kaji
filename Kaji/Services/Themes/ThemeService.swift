@@ -139,7 +139,9 @@ final class ThemeService {
             }
         }
 
-        if importedCount > 0 { return importedCount }
+        if importedCount > 0 {
+            return importedCount
+        }
         throw lastError ?? ThemeServiceError.invalidThemeFile
     }
 

@@ -18,7 +18,9 @@ final class PowerProtectResponseBox<Value: Sendable>: @unchecked Sendable {
     ) async throws -> Value {
         try await withCheckedThrowingContinuation { continuation in
             let pending = lock.withLock { () -> Result<Value, Error>? in
-                if let result { return result }
+                if let result {
+                    return result
+                }
                 self.continuation = continuation
                 return nil
             }

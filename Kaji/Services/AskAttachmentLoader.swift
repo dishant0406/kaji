@@ -16,7 +16,9 @@ enum AskAttachmentLoader {
     static func attachments(from pasteboard: NSPasteboard = .general) -> [AskAttachment] {
         let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] ?? []
         let fileAttachments = fileURLs.map { AskAttachment(url: $0) }
-        if !fileAttachments.isEmpty { return fileAttachments }
+        if !fileAttachments.isEmpty {
+            return fileAttachments
+        }
         guard let image = NSImage(pasteboard: pasteboard), let url = save(image: image) else { return [] }
         return [AskAttachment(url: url)]
     }

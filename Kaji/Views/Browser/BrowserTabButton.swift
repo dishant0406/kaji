@@ -41,7 +41,9 @@ struct BrowserTabButton: View {
             hovered = hovering
         }
         .onChange(of: isAnyDragging) { _, dragging in
-            if dragging { hovered = false }
+            if dragging {
+                hovered = false
+            }
         }
         .animation(KajiMotion.fast, value: selected)
         .animation(KajiMotion.hover, value: hovered)
@@ -93,8 +95,12 @@ struct BrowserTabButton: View {
     }
 
     private var backgroundColor: Color {
-        if selected { return KajiTheme.surface }
-        if hovered { return KajiTheme.hover }
+        if selected {
+            return KajiTheme.surface
+        }
+        if hovered {
+            return KajiTheme.hover
+        }
         return KajiTheme.bg
     }
 }

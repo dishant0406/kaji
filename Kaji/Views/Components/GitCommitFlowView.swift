@@ -120,7 +120,9 @@ struct GitCommitFlowView: View {
     private var detail: String {
         let count = state.selectedPaths.count
         let selection = "\(count) selected file\(count == 1 ? "" : "s")"
-        if let error = state.errorText { return error }
+        if let error = state.errorText {
+            return error
+        }
         return state.statusText ?? selection
     }
 }

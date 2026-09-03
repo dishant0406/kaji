@@ -3,45 +3,48 @@ import Foundation
 @MainActor
 enum GitCommitMessageRuntimeClient {
     static func generate(_ request: GitCommitMessageAgentRequest) async throws -> GitCommitMessageAgentResult {
-        let process = KajiAgentProcess()
-        let resolution = KajiAgentRuntimeLocator.resolveLaunch(
-            projectPath: request.repoPath,
-            approvalMode: KajiAgentPermissionMode.readAllow.rawValue,
-            noSession: true,
-            noLSP: true,
-            noTools: true
-        )
-        guard case let .ready(launch) = resolution else {
-            throw GitCommitMessageAgentError.unavailable(resolution.readiness.detail)
+        guard let resolution = KajiCodeRuntimeLocator.resolve() else {
+            throw GitCommitMessageAgentError.unavailable(KajiCodeSetupError.binaryMissing.localizedDescription)
         }
-        process.projectPath = request.repoPath
-        process.approvalMode = KajiAgentPermissionMode.readAllow.rawValue
-        process.launch = launch
-        let frame = commandFrame(settings: request.settings, prompt: GitCommitMessageAgentPrompt.make(request))
-        let box = GitCommitMessageRuntimeResponseBox(process: process, commandID: frame.id ?? UUID().uuidString)
-        process.onMessage = { frame in box.handle(frame) }
-        process.onError = { message in box.fail(message) }
-        return try await withTaskCancellationHandler {
-            let timeout = Task { @MainActor in
-                try await Task.sleep(for: .seconds(120))
-                box.fail(GitCommitMessageAgentError.failed("Commit message runtime timed out while generating the message."))
+        let runner = KajiCodeCLICommandRunner()
+        let prompt = GitCommitMessageAgentPrompt.make(request)
+        let environment = ShellExecutionEnvironmentResolver.resolve()
+        let arguments = ["-p", prompt]
+        let binaryURL = resolution.binaryURL
+        let result = try await Task.detached(priority: .userInitiated) {
+            try runner.run(
+                binaryURL: binaryURL,
+                arguments: arguments,
+                environment: environment,
+                timeout: 120
+            )
+        }.value
+        let message = sanitize(result.output)
+        guard !message.isEmpty else {
+            if result.exitCode == 0 {
+                throw GitCommitMessageAgentError.emptyResponse
             }
-            defer { timeout.cancel() }
-            return try await box.run {
-                process.send(frame)
-            }
-        } onCancel: {
-            Task { @MainActor in process.stop() }
+            throw GitCommitMessageAgentError.failed("kajicode exited with code \(result.exitCode).")
         }
+        return GitCommitMessageAgentResult(message: message, modelLabel: modelLabel(for: request))
     }
 
-    static func commandFrame(settings: GitCommitMessageSettingsSnapshot, prompt: String) -> KajiAgentRPCFrame {
-        KajiAgentRPCFrame(
-            id: UUID().uuidString,
-            type: "generate_commit_message",
-            provider: settings.providerID.nilIfEmpty,
-            modelId: settings.modelID.nilIfEmpty,
-            promptMessage: prompt
-        )
+    static func sanitize(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        let lines = trimmed
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard var line = lines.last else { return "" }
+        if line.hasPrefix("\""), line.hasSuffix("\""), line.count >= 2 {
+            line = String(line.dropFirst().dropLast())
+        }
+        return line
+    }
+
+    private static func modelLabel(for request: GitCommitMessageAgentRequest) -> String? {
+        let modelID = request.settings.modelID
+        return modelID.isEmpty ? nil : modelID
     }
 }

@@ -150,7 +150,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard MeetingNotesCoordinator.shared.requiresTerminationDrain else { return resolveEditorTermination() }
         let unsaved = hasUnsavedEditorTabs?() ?? []
-        if !unsaved.isEmpty { return resolveCombinedTermination(unsaved: unsaved) }
+        if !unsaved.isEmpty {
+            return resolveCombinedTermination(unsaved: unsaved)
+        }
         guard confirmsMeetingTermination() else { return .terminateCancel }
         Task { @MainActor in await finishMeetingTermination() }
         return .terminateLater
@@ -450,7 +452,11 @@ struct WindowConfigurator: NSViewRepresentable {
     }
 
     static func repositionTrafficLights(in window: NSWindow) {
-        let isTahoe = if #available(macOS 26.0, *) { true } else { false }
+        let isTahoe = if #available(macOS 26.0, *) {
+            true
+        } else {
+            false
+        }
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
             guard let btn = window.standardWindowButton(button) else { continue }
             btn.frame = WindowTrafficLightLayout.frame(for: button, currentFrame: btn.frame, isTahoe: isTahoe)

@@ -40,7 +40,7 @@ final class TabArea: Identifiable {
     }
 
     func snapshot() -> TabAreaSnapshot {
-        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .problems && $0.kind != .codeGraph && $0.kind != .browser }
+        let persistedTabs = tabs.filter { $0.kind != .diffViewer && $0.kind != .problems && $0.kind != .browser }
         let activeIndex = persistedTabs.firstIndex(where: { $0.id == activeTabID })
         return TabAreaSnapshot(
             id: id,
@@ -118,15 +118,6 @@ final class TabArea: Identifiable {
 
     func createVCSTab() {
         insertTab(TerminalTab(vcsState: VCSTabState(projectPath: projectPath)))
-    }
-
-    func createCodeGraphTab(projectID: UUID, worktreeID: UUID, graphURL: URL) {
-        insertTab(TerminalTab(codeGraphState: KajiCodeGraphTabState(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            projectPath: projectPath,
-            graphURL: graphURL
-        )))
     }
 
     func createBrowserTab(url: String = "https://www.google.com") {

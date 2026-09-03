@@ -12,45 +12,43 @@ struct TranslucentSurface: View {
     @Environment(\.kajiAppearanceContext) private var appearanceContext
 
     var body: some View {
-        Group {
-            if effectiveMode == .glass {
-                if #available(macOS 26.0, *) {
-                    ZStack {
-                        base
-                        KajiTheme.bg.opacity(0.4)
-                    }
-                    .glassEffect(.regular, in: .rect(cornerRadius: glassCornerRadius))
-                } else {
-                    ZStack {
-                        base
-                        KajiTheme.bg.opacity(0.5)
-                    }
-                }
-            } else if effectiveMode == .translucent {
+        if effectiveMode == .glass {
+            if #available(macOS 26.0, *) {
                 ZStack {
-                    MaterialBackgroundView(
-                        material: material,
-                        blendingMode: blendingMode,
-                        isEmphasized: isEmphasized
-                    )
-                    Rectangle().fill(base.opacity(adjustedTintOpacity))
-                    if gradientOpacity > 0 {
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        base.opacity(adjustedGradientOpacity),
-                                        base.opacity(adjustedGradientOpacity * 0.35),
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                    }
+                    base
+                    KajiTheme.bg.opacity(0.4)
                 }
+                .glassEffect(.regular, in: .rect(cornerRadius: glassCornerRadius))
             } else {
-                base
+                ZStack {
+                    base
+                    KajiTheme.bg.opacity(0.5)
+                }
             }
+        } else if effectiveMode == .translucent {
+            ZStack {
+                MaterialBackgroundView(
+                    material: material,
+                    blendingMode: blendingMode,
+                    isEmphasized: isEmphasized
+                )
+                Rectangle().fill(base.opacity(adjustedTintOpacity))
+                if gradientOpacity > 0 {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    base.opacity(adjustedGradientOpacity),
+                                    base.opacity(adjustedGradientOpacity * 0.35),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+            }
+        } else {
+            base
         }
     }
 

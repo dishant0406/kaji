@@ -52,7 +52,9 @@ struct CodingAgentProcessTopBarButton: View {
     }
 
     private var iconColor: Color {
-        if service.orphanCount > 0 { return KajiTheme.diffRemoveFg }
+        if service.orphanCount > 0 {
+            return KajiTheme.diffRemoveFg
+        }
         return active ? KajiTheme.fg : KajiTheme.fgMuted
     }
 
@@ -61,7 +63,9 @@ struct CodingAgentProcessTopBarButton: View {
     }
 
     private var isTahoe: Bool {
-        if #available(macOS 26.0, *) { return true }
+        if #available(macOS 26.0, *) {
+            return true
+        }
         return false
     }
 }

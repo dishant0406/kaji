@@ -7,7 +7,9 @@ enum FFFSearchBinaryStore {
     static func libraryURL(fileManager: FileManager = .default) throws -> URL {
         let directory = try installDirectory(fileManager: fileManager)
         let url = directory.appendingPathComponent("libfff_c.dylib")
-        if try hasExpectedLibraryDigest(url: url, fileManager: fileManager) { return url }
+        if try hasExpectedLibraryDigest(url: url, fileManager: fileManager) {
+            return url
+        }
         try installLibrary(to: url, fileManager: fileManager)
         guard try hasExpectedLibraryDigest(url: url, fileManager: fileManager) else {
             throw FFFSearchError.processFailed("FFF library integrity verification failed")

@@ -64,8 +64,12 @@ final class ScreenCaptureMeetingAudioCapture: NSObject, MeetingAudioCaptureSessi
             try await stream.startCapture()
             isCapturing = true
         } catch {
-            if let systemAudioOutput { try? stream.removeStreamOutput(systemAudioOutput, type: .audio) }
-            if let microphoneOutput { try? stream.removeStreamOutput(microphoneOutput, type: .microphone) }
+            if let systemAudioOutput {
+                try? stream.removeStreamOutput(systemAudioOutput, type: .audio)
+            }
+            if let microphoneOutput {
+                try? stream.removeStreamOutput(microphoneOutput, type: .microphone)
+            }
             throw MeetingAudioError.streamSetupFailed(String(describing: error))
         }
     }

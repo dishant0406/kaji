@@ -84,7 +84,9 @@ struct MeetingNotesTranscriptView: View {
             )
         }
         return (segmentEntries + gapEntries + transcriptionGapEntries).sorted {
-            if $0.startMilliseconds == $1.startMilliseconds { return $0.id.uuidString < $1.id.uuidString }
+            if $0.startMilliseconds == $1.startMilliseconds {
+                return $0.id.uuidString < $1.id.uuidString
+            }
             return $0.startMilliseconds < $1.startMilliseconds
         }
     }
@@ -153,7 +155,9 @@ private struct MeetingTranscriptSegmentRow: View {
 
     private func provenance(_ metadata: MeetingCommittedTranscriptMetadata) -> String {
         var values = [metadata.providerID, metadata.modelID]
-        if let language = metadata.language?.code { values.append(language) }
+        if let language = metadata.language?.code {
+            values.append(language)
+        }
         return values.joined(separator: " · ")
     }
 

@@ -40,12 +40,16 @@ struct AIGatewayOverviewSection: View {
     }
 
     private var running: Bool {
-        if case .running = status { return true }
+        if case .running = status {
+            return true
+        }
         return false
     }
 
     private var statusColor: Color {
-        if case .failed = status { return KajiTheme.diffRemoveFg }
+        if case .failed = status {
+            return KajiTheme.diffRemoveFg
+        }
         return running ? KajiTheme.diffAddFg : KajiTheme.fgDim
     }
 

@@ -51,7 +51,9 @@ struct KajiCLICommandSettingsSection: View {
     }
 
     private var statusText: String {
-        if isWorking { return "Updating command..." }
+        if isWorking {
+            return "Updating command..."
+        }
         switch installState {
         case .installed:
             return "Installed at /usr/local/bin/kaji"
@@ -74,7 +76,9 @@ struct KajiCLICommandSettingsSection: View {
     }
 
     private var primaryButtonTitle: String {
-        if isWorking { return "Working" }
+        if isWorking {
+            return "Working"
+        }
         switch installState {
         case .installed:
             return "Reinstall"

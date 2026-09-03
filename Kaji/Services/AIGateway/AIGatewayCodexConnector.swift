@@ -17,7 +17,9 @@ enum AIGatewayCodexConnector {
         while lines.last?.isEmpty == true {
             lines.removeLast()
         }
-        if !lines.isEmpty { lines.append("") }
+        if !lines.isEmpty {
+            lines.append("")
+        }
         lines.append("model = \"\(escape(AIGatewayClientModelName.first(in: settings)))\"")
         lines.append("model_provider = \"kaji_gateway\"")
         lines.append("")
@@ -41,7 +43,9 @@ enum AIGatewayCodexConnector {
             if skipping, trimmed.hasPrefix("["), trimmed.hasSuffix("]") {
                 skipping = false
             }
-            if !skipping { output.append(line) }
+            if !skipping {
+                output.append(line)
+            }
         }
         return output
     }

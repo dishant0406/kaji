@@ -36,7 +36,9 @@ struct KajiCodeVersion: Comparable, Equatable {
         for index in 0 ..< count {
             let left = index < lhs.parts.count ? lhs.parts[index] : 0
             let right = index < rhs.parts.count ? rhs.parts[index] : 0
-            if left != right { return left < right }
+            if left != right {
+                return left < right
+            }
         }
         return lhs.rawValue < rhs.rawValue
     }

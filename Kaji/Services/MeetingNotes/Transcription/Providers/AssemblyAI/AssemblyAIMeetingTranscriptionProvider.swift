@@ -262,9 +262,15 @@ actor AssemblyAIMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSessi
         while state == .connecting, clock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }
-        if state == .ready { return }
-        if state == .cancelled { throw AssemblyAIMeetingTranscriptionError.cancelled }
-        if state == .failed { throw terminalError ?? AssemblyAIMeetingTranscriptionError.serviceUnavailable }
+        if state == .ready {
+            return
+        }
+        if state == .cancelled {
+            throw AssemblyAIMeetingTranscriptionError.cancelled
+        }
+        if state == .failed {
+            throw terminalError ?? AssemblyAIMeetingTranscriptionError.serviceUnavailable
+        }
         terminalError = .timedOut
         emitFailure(code: "begin-timeout", classification: .transient)
         state = .failed
@@ -381,9 +387,13 @@ actor AssemblyAIMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSessi
     }
 
     func finish() async throws {
-        if state == .completed || state == .cancelled { return }
+        if state == .completed || state == .cancelled {
+            return
+        }
         guard state == .ready else {
-            if state == .failed { throw AssemblyAIMeetingTranscriptionError.serviceUnavailable }
+            if state == .failed {
+                throw AssemblyAIMeetingTranscriptionError.serviceUnavailable
+            }
             throw AssemblyAIMeetingTranscriptionError.invalidState
         }
         state = .draining
@@ -400,9 +410,15 @@ actor AssemblyAIMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSessi
         while state == .draining, clock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }
-        if state == .completed { return }
-        if state == .cancelled { throw AssemblyAIMeetingTranscriptionError.cancelled }
-        if state == .failed { throw AssemblyAIMeetingTranscriptionError.serviceUnavailable }
+        if state == .completed {
+            return
+        }
+        if state == .cancelled {
+            throw AssemblyAIMeetingTranscriptionError.cancelled
+        }
+        if state == .failed {
+            throw AssemblyAIMeetingTranscriptionError.serviceUnavailable
+        }
         emitFailure(code: "termination-timeout", classification: .transient)
         state = .failed
         await transport.cancel()
@@ -502,7 +518,9 @@ actor AssemblyAIMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSessi
             return
         }
         if let existing = turns[turn.turnOrder] {
-            if existing.signature == signature || existing.isFinal { return }
+            if existing.signature == signature || existing.isFinal {
+                return
+            }
         } else {
             highestTurnOrder = turn.turnOrder
         }
@@ -678,7 +696,9 @@ actor AssemblyAIMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSessi
     }
 
     private func handleClose(code: Int?) async {
-        if state == .completed || state == .cancelled || state == .failed { return }
+        if state == .completed || state == .cancelled || state == .failed {
+            return
+        }
         if code == 1008 {
             emitFailure(code: "authentication-failed", classification: .authentication)
             terminalError = .authenticationFailed
@@ -726,8 +746,12 @@ actor AssemblyAIMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSessi
     }
 
     private func sanitize(_ error: Error) -> AssemblyAIMeetingTranscriptionError {
-        if error is CancellationError { return .cancelled }
-        if let error = error as? AssemblyAIMeetingTranscriptionError { return error }
+        if error is CancellationError {
+            return .cancelled
+        }
+        if let error = error as? AssemblyAIMeetingTranscriptionError {
+            return error
+        }
         if let error = error as? STTNetworkError {
             switch error {
             case .responseTooLarge: return .responseTooLarge

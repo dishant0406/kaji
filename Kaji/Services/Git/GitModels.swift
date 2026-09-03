@@ -64,7 +64,9 @@ struct GitStatusFile: Identifiable, Hashable {
     }
 
     var statSummaryText: String {
-        if isBinary { return "Binary" }
+        if isBinary {
+            return "Binary"
+        }
         let additionsText = additions.map { "+\($0)" }
         let deletionsText = deletions.map { "-\($0)" }
         return [additionsText, deletionsText].compactMap(\.self).joined(separator: " ")

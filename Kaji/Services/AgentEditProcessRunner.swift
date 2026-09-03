@@ -67,7 +67,9 @@ enum AgentEditProcessRunner {
             process.waitUntilExit()
         }
 
-        if processBox.isCancelled { throw CancellationError() }
+        if processBox.isCancelled {
+            throw CancellationError()
+        }
         return AgentEditProcessResult(
             status: process.terminationStatus,
             stdout: String(data: stdoutData, encoding: .utf8) ?? "",
@@ -84,7 +86,9 @@ private final class AgentEditProcessBox: @unchecked Sendable {
     func set(_ process: Process) {
         lock.withLock {
             self.process = process
-            if isCancelled { process.terminate() }
+            if isCancelled {
+                process.terminate()
+            }
         }
     }
 

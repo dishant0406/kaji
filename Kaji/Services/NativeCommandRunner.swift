@@ -18,7 +18,9 @@ final class NativeCommandRunner {
     private(set) var plan: NativeCommandRunPlan?
 
     var isRunning: Bool {
-        if case .running = status { return true }
+        if case .running = status {
+            return true
+        }
         return false
     }
 

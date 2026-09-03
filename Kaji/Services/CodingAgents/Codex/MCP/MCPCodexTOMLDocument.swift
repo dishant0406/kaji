@@ -46,7 +46,9 @@ struct MCPCodexTOMLDocument {
         for range in tableRanges(in: lines).reversed() {
             lines.removeSubrange(range)
         }
-        if !lines.isEmpty { lines.append("") }
+        if !lines.isEmpty {
+            lines.append("")
+        }
         lines.append(contentsOf: serialize(servers))
         return lines.joined(separator: "\n") + "\n"
     }
@@ -129,7 +131,9 @@ struct MCPCodexTOMLDocument {
             index += 1
             while index < lines.count {
                 let next = lines[index].trimmingCharacters(in: .whitespaces)
-                if MCPCodexTOMLValue.tableName(from: next) != nil { break }
+                if MCPCodexTOMLValue.tableName(from: next) != nil {
+                    break
+                }
                 index += 1
             }
             ranges.append(start ..< index)
@@ -157,7 +161,9 @@ struct MCPCodexTOMLDocument {
                     lines.append("cwd = \"\(MCPCodexTOMLValue.escape(cwd))\"")
                 }
             }
-            if !server.enabled { lines.append("enabled = false") }
+            if !server.enabled {
+                lines.append("enabled = false")
+            }
             lines.append("")
             return lines
         }

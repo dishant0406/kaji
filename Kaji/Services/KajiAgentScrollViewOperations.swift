@@ -27,9 +27,13 @@ enum KajiAgentScrollViewOperations {
     }
 
     static func findView(withIdentifier identifier: String, in view: NSView) -> NSView? {
-        if view.identifier?.rawValue == identifier { return view }
+        if view.identifier?.rawValue == identifier {
+            return view
+        }
         for subview in view.subviews {
-            if let found = findView(withIdentifier: identifier, in: subview) { return found }
+            if let found = findView(withIdentifier: identifier, in: subview) {
+                return found
+            }
         }
         return nil
     }

@@ -8,8 +8,7 @@ struct ExternalIDEAppIcon: View {
     var body: some View {
         if let image = ExternalIDEAppIconCache.shared.image(for: path) {
             Image(nsImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+                .resizable().scaledToFit()
                 .frame(width: size, height: size)
                 .accessibilityHidden(true)
         }

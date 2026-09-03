@@ -95,10 +95,18 @@ enum KimiUsageParser {
             return nil
         }
         let unit = (AIUsageParserSupport.string(in: window, keys: ["timeUnit", "time_unit"]) ?? "").uppercased()
-        if unit.contains("MINUTE") { return duration * 60000 }
-        if unit.contains("HOUR") { return duration * 3_600_000 }
-        if unit.contains("DAY") { return duration * 86_400_000 }
-        if unit.contains("SECOND") { return duration * 1000 }
+        if unit.contains("MINUTE") {
+            return duration * 60000
+        }
+        if unit.contains("HOUR") {
+            return duration * 3_600_000
+        }
+        if unit.contains("DAY") {
+            return duration * 86_400_000
+        }
+        if unit.contains("SECOND") {
+            return duration * 1000
+        }
         return nil
     }
 

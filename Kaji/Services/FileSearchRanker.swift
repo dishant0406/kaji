@@ -31,7 +31,9 @@ enum FileSearchRanker {
 
         return scored
             .sorted { lhs, rhs in
-                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                if lhs.1 != rhs.1 {
+                    return lhs.1 > rhs.1
+                }
                 if lhs.0.relativePath.count != rhs.0.relativePath.count {
                     return lhs.0.relativePath.count < rhs.0.relativePath.count
                 }
@@ -138,8 +140,12 @@ private enum FileSearchScorer {
         var firstMatchIndex = -1
 
         for targetIndex in 0 ..< targetLower.count {
-            if queryIndex >= queryLower.count { break }
-            if targetLower[targetIndex] != queryLower[queryIndex] { continue }
+            if queryIndex >= queryLower.count {
+                break
+            }
+            if targetLower[targetIndex] != queryLower[queryIndex] {
+                continue
+            }
 
             if firstMatchIndex < 0 {
                 firstMatchIndex = targetIndex

@@ -325,8 +325,12 @@ final class AIActivityStore {
     }
 
     private func matches(activity: Activity, sessionID: String?, turnID: String?) -> Bool {
-        if let sessionID, let activeSessionID = activity.sessionID, sessionID != activeSessionID { return false }
-        if let turnID, let activeTurnID = activity.turnID, turnID != activeTurnID { return false }
+        if let sessionID, let activeSessionID = activity.sessionID, sessionID != activeSessionID {
+            return false
+        }
+        if let turnID, let activeTurnID = activity.turnID, turnID != activeTurnID {
+            return false
+        }
         return true
     }
 

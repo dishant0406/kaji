@@ -28,7 +28,9 @@ final class MeetingTranscriptionEndpointStore {
 
     func profiles(providerID: String) -> [MeetingTranscriptionEndpointProfile] {
         profiles.filter { $0.providerID == providerID }.sorted { left, right in
-            if left.source != right.source { return left.source == .builtIn }
+            if left.source != right.source {
+                return left.source == .builtIn
+            }
             return left.displayName.localizedCaseInsensitiveCompare(right.displayName) == .orderedAscending
         }
     }
@@ -40,7 +42,9 @@ final class MeetingTranscriptionEndpointStore {
 
     func defaultProfile(providerID: String, regionID: String? = nil) -> MeetingTranscriptionEndpointProfile? {
         let matches = profiles(providerID: providerID)
-        if let regionID, let exact = matches.first(where: { $0.regionID == regionID }) { return exact }
+        if let regionID, let exact = matches.first(where: { $0.regionID == regionID }) {
+            return exact
+        }
         return matches.first
     }
 
@@ -153,8 +157,12 @@ final class MeetingTranscriptionEndpointStore {
 
     private static func sorted(_ profiles: [MeetingTranscriptionEndpointProfile]) -> [MeetingTranscriptionEndpointProfile] {
         profiles.sorted { left, right in
-            if left.providerID != right.providerID { return left.providerID < right.providerID }
-            if left.source != right.source { return left.source == .builtIn }
+            if left.providerID != right.providerID {
+                return left.providerID < right.providerID
+            }
+            if left.source != right.source {
+                return left.source == .builtIn
+            }
             return left.displayName.localizedCaseInsensitiveCompare(right.displayName) == .orderedAscending
         }
     }

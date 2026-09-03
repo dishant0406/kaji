@@ -50,8 +50,12 @@ enum TabContentMountPolicy {
     }
 
     private static func shouldAlwaysMount(_ snapshot: TabContentMountSnapshot) -> Bool {
-        if snapshot.isActive { return true }
-        if snapshot.kind.keepsMountedWhenInactive { return true }
+        if snapshot.isActive {
+            return true
+        }
+        if snapshot.kind.keepsMountedWhenInactive {
+            return true
+        }
         return snapshot.kind == .editor && snapshot.isModified
     }
 

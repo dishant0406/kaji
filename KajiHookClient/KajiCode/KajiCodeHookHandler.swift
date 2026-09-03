@@ -24,7 +24,9 @@ enum KajiCodeHookHandler {
 
     private static func resolvedEvent(event: String, input: String) -> String {
         let trimmed = event.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { return trimmed }
+        if !trimmed.isEmpty {
+            return trimmed
+        }
         guard let object = HookJSONExtractor.object(from: input),
               let value = object["event"] as? String
         else { return "" }

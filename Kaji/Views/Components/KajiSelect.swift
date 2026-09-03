@@ -99,13 +99,19 @@ struct KajiSelect<Value: Hashable>: View {
     }
 
     private var controlBackground: Color {
-        if variant == .plain { return .clear }
-        if effectiveMode == .glass { return KajiTheme.surface.opacity(isPresented ? 0.32 : 0.22) }
+        if variant == .plain {
+            return .clear
+        }
+        if effectiveMode == .glass {
+            return KajiTheme.surface.opacity(isPresented ? 0.32 : 0.22)
+        }
         return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.5) : KajiTheme.surface
     }
 
     private var controlBorder: Color {
-        if variant == .plain { return isPresented ? KajiTheme.border.opacity(0.7) : .clear }
+        if variant == .plain {
+            return isPresented ? KajiTheme.border.opacity(0.7) : .clear
+        }
         return isPresented ? KajiTheme.accent.opacity(0.6) : KajiTheme.border
     }
 
@@ -152,14 +158,26 @@ private struct KajiSelectRow: View {
 
     private var rowBackground: Color {
         if effectiveMode == .glass {
-            if isSelected { return KajiTheme.accentSoft.opacity(0.42) }
-            if isHighlighted { return KajiTheme.surface.opacity(0.28) }
-            if hovered { return KajiTheme.hover.opacity(0.28) }
+            if isSelected {
+                return KajiTheme.accentSoft.opacity(0.42)
+            }
+            if isHighlighted {
+                return KajiTheme.surface.opacity(0.28)
+            }
+            if hovered {
+                return KajiTheme.hover.opacity(0.28)
+            }
             return .clear
         }
-        if isSelected { return effectiveMode.usesSoftSurfaces ? KajiTheme.accentSoft.opacity(0.7) : KajiTheme.accentSoft }
-        if isHighlighted { return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.44) : KajiTheme.surface }
-        if hovered { return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover }
+        if isSelected {
+            return effectiveMode.usesSoftSurfaces ? KajiTheme.accentSoft.opacity(0.7) : KajiTheme.accentSoft
+        }
+        if isHighlighted {
+            return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.44) : KajiTheme.surface
+        }
+        if hovered {
+            return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover
+        }
         return .clear
     }
 

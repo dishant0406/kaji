@@ -52,7 +52,9 @@ final class KajiCodeLineNumberRuler: NSRulerView {
         var line = 1
         var index = 0
         while index < min(location, text.length) {
-            if text.character(at: index) == 10 { line += 1 }
+            if text.character(at: index) == 10 {
+                line += 1
+            }
             index += 1
         }
         return line

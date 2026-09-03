@@ -19,7 +19,9 @@ final class ChildAgentFeedStore {
         let trimmed = normalized(text, lineLimit: kind == .terminal ? 40 : 12)
         guard !trimmed.isEmpty else { return }
         var feed = feeds[runID] ?? ChildAgentFeed(id: runID)
-        if feed.entries.last?.text == trimmed { return }
+        if feed.entries.last?.text == trimmed {
+            return
+        }
         feed.entries = Array((feed.entries + [ChildAgentFeedEntry(kind: kind, text: trimmed)]).suffix(maxEntries))
         if kind == .final {
             feed.finalAnswer = trimmed

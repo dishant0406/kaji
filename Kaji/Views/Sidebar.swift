@@ -185,7 +185,7 @@ struct Sidebar: View {
         if impact.hasRunningTerminals {
             lines.append("Running terminal processes in this project will be stopped.")
         }
-        if impact.hasRunningAgents || impact.hasCodeGraphSessions {
+        if impact.hasRunningAgents {
             lines.append("Running agent work for this project will be stopped and marked stale.")
         }
         return lines.joined(separator: "\n\n")

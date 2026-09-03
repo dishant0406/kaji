@@ -36,13 +36,6 @@ final class AppState {
         }
     }
 
-    struct CodeGraphTabRequest {
-        let projectID: UUID
-        let worktreeID: UUID
-        let worktreePath: String
-        let graphURL: URL
-    }
-
     private struct ParentAgentTabMatch {
         let workspaceTabID: UUID
         let area: TabArea
@@ -69,7 +62,6 @@ final class AppState {
         case createParentAgentTab(projectID: UUID, areaID: UUID?)
         case createParentAgentSessionTab(projectID: UUID, sessionPath: String, agentID: UUID?)
         case createParentAgentSplit(projectID: UUID)
-        case createCodeGraphTab(CodeGraphTabRequest)
         case createBrowserSplit(projectID: UUID)
         case createEditorTab(projectID: UUID, areaID: UUID?, filePath: String)
         case createFilePreviewTab(projectID: UUID, areaID: UUID?, filePath: String, kind: FilePreviewKind)
@@ -347,15 +339,6 @@ final class AppState {
         let command = KajiCodeLaunchCommand.split()
         guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         dispatch(.createCommandSplit(projectID: projectID, title: "KajiCode", command: command))
-    }
-
-    func openCodeGraphTab(projectID: UUID, worktreeID: UUID, worktreePath: String, graphURL: URL) {
-        dispatch(.createCodeGraphTab(CodeGraphTabRequest(
-            projectID: projectID,
-            worktreeID: worktreeID,
-            worktreePath: worktreePath,
-            graphURL: graphURL
-        )))
     }
 
     func openProblemsTab(projectID: UUID) {

@@ -33,8 +33,12 @@ enum KajiAgentToolOutputPreview {
     }
 
     private static func summary(for output: String, lineCount: Int, complete: Bool) -> String {
-        if lineCount > 1 { return complete ? "\(lineCount) lines" : "Streaming \(lineCount) lines" }
-        if !complete { return output.isEmpty ? "Streaming" : "Streaming result" }
+        if lineCount > 1 {
+            return complete ? "\(lineCount) lines" : "Streaming \(lineCount) lines"
+        }
+        if !complete {
+            return output.isEmpty ? "Streaming" : "Streaming result"
+        }
         return output.count > 120 ? "\(output.count) characters" : "1 line"
     }
 

@@ -37,7 +37,9 @@ enum KajiAgentTimeline {
     }
 
     static func ensureActiveTurn(turns: inout [KajiAgentTurn], activeTurnID: inout KajiAgentTurn.ID?) {
-        if activeTurnIndex(turns: turns, activeTurnID: activeTurnID) != nil { return }
+        if activeTurnIndex(turns: turns, activeTurnID: activeTurnID) != nil {
+            return
+        }
         let turn = KajiAgentTurn(user: nil)
         turns.append(turn)
         activeTurnID = turn.id
@@ -55,7 +57,9 @@ enum KajiAgentTimeline {
     ) -> KajiAgentResponseLocation? {
         if let activeIndex = activeTurnIndex(turns: turns, activeTurnID: activeTurnID),
            let blockIndex = turns[activeIndex].blocks.lastIndex(where: { block in
-               if case let .message(message) = block { return predicate(message) }
+               if case let .message(message) = block {
+                   return predicate(message)
+               }
                return false
            })
         {
@@ -63,7 +67,9 @@ enum KajiAgentTimeline {
         }
         for turnIndex in turns.indices.reversed() {
             if let blockIndex = turns[turnIndex].blocks.lastIndex(where: { block in
-                if case let .message(message) = block { return predicate(message) }
+                if case let .message(message) = block {
+                    return predicate(message)
+                }
                 return false
             }) {
                 return KajiAgentResponseLocation(turn: turnIndex, block: blockIndex)

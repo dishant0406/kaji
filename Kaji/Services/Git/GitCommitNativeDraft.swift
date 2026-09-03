@@ -20,9 +20,15 @@ enum GitCommitNativeDraft {
         let added = files.count(where: { $0.status == "A" || $0.status == "U" })
         let deleted = files.count(where: { $0.status == "D" })
         let modified = files.count - added - deleted
-        if added > 0, modified == 0, deleted == 0 { return "Add" }
-        if deleted > 0, modified == 0, added == 0 { return "Remove" }
-        if added > modified, deleted == 0 { return "Add" }
+        if added > 0, modified == 0, deleted == 0 {
+            return "Add"
+        }
+        if deleted > 0, modified == 0, added == 0 {
+            return "Remove"
+        }
+        if added > modified, deleted == 0 {
+            return "Add"
+        }
         return "Update"
     }
 

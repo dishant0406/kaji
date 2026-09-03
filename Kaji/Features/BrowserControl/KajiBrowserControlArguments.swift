@@ -4,33 +4,51 @@ struct KajiBrowserControlArguments {
     let values: [String: Any]
 
     func string(_ key: String) -> String? {
-        if let value = values[key] as? String { return value }
-        if let number = values[key] as? NSNumber { return number.stringValue }
+        if let value = values[key] as? String {
+            return value
+        }
+        if let number = values[key] as? NSNumber {
+            return number.stringValue
+        }
         return nil
     }
 
     func string(_ keys: String...) -> String? {
         for key in keys {
-            if let value = string(key), !value.isEmpty { return value }
+            if let value = string(key), !value.isEmpty {
+                return value
+            }
         }
         return nil
     }
 
     func bool(_ key: String) -> Bool? {
-        if let value = values[key] as? Bool { return value }
-        if let value = values[key] as? String { return Bool(value) }
+        if let value = values[key] as? Bool {
+            return value
+        }
+        if let value = values[key] as? String {
+            return Bool(value)
+        }
         return (values[key] as? NSNumber)?.boolValue
     }
 
     func int(_ key: String) -> Int? {
-        if let value = values[key] as? Int { return value }
-        if let value = values[key] as? String { return Int(value) }
+        if let value = values[key] as? Int {
+            return value
+        }
+        if let value = values[key] as? String {
+            return Int(value)
+        }
         return (values[key] as? NSNumber)?.intValue
     }
 
     func double(_ key: String) -> Double? {
-        if let value = values[key] as? Double { return value }
-        if let value = values[key] as? String { return Double(value) }
+        if let value = values[key] as? Double {
+            return value
+        }
+        if let value = values[key] as? String {
+            return Double(value)
+        }
         return (values[key] as? NSNumber)?.doubleValue
     }
 
@@ -44,8 +62,12 @@ struct KajiBrowserControlArguments {
 
     func strings(_ key: String) -> [String] {
         array(key)?.compactMap { item in
-            if let value = item as? String { return value }
-            if let number = item as? NSNumber { return number.stringValue }
+            if let value = item as? String {
+                return value
+            }
+            if let number = item as? NSNumber {
+                return number.stringValue
+            }
             return nil
         } ?? []
     }

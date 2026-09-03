@@ -40,7 +40,9 @@ struct AIGatewayProviderConfiguration: Codable, Equatable, Identifiable {
     var needsAPIKey: Bool { id != "ollama" }
     var isCustom: Bool { kind == .customOpenAI || kind == .customAnthropic }
     var azureOpenAIBaseURL: String {
-        if !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return baseURL }
+        if !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return baseURL
+        }
         let resource = resourceName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !resource.isEmpty else { return "" }
         return "https://\(resource).openai.azure.com/openai/v1"

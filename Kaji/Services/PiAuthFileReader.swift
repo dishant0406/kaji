@@ -8,7 +8,9 @@ enum PiAuthFileReader {
               !key.isEmpty
         else { return nil }
 
-        if key.hasPrefix("!") { return nil }
+        if key.hasPrefix("!") {
+            return nil
+        }
         if let environmentValue = ProcessInfo.processInfo.environment[key], !environmentValue.isEmpty {
             return environmentValue
         }

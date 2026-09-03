@@ -29,10 +29,18 @@ struct AskAttachment: Identifiable, Hashable {
             return .folder
         }
         guard let type = UTType(filenameExtension: url.pathExtension) else { return .file }
-        if type.conforms(to: .image) { return .image }
-        if type.conforms(to: .pdf) { return .pdf }
-        if type.conforms(to: .plainText) || type.conforms(to: .sourceCode) || type.conforms(to: .json) { return .text }
-        if type.conforms(to: .archive) { return .archive }
+        if type.conforms(to: .image) {
+            return .image
+        }
+        if type.conforms(to: .pdf) {
+            return .pdf
+        }
+        if type.conforms(to: .plainText) || type.conforms(to: .sourceCode) || type.conforms(to: .json) {
+            return .text
+        }
+        if type.conforms(to: .archive) {
+            return .archive
+        }
         return .file
     }
 }

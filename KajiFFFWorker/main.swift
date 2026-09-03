@@ -222,7 +222,9 @@ private final class WorkerServer {
                 let data = try reader.nextFrame()
                 let request = try JSONDecoder().decode(FFFWorkerRequest.self, from: data)
                 let shouldExit = try respond(to: request)
-                if shouldExit { return 0 }
+                if shouldExit {
+                    return 0
+                }
             } catch FFFWorkerProtocolError.endOfFile {
                 return 0
             } catch {
@@ -277,7 +279,9 @@ private final class WorkerServer {
     }
 
     private func index(projectPath: String, databasePath: String) throws -> FFFIndex {
-        if let index = indexes[projectPath] { return index }
+        if let index = indexes[projectPath] {
+            return index
+        }
         let index = try FFFIndex(projectPath: projectPath, databasePath: databasePath, library: library)
         indexes[projectPath] = index
         return index

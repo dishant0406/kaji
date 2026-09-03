@@ -11,7 +11,9 @@ final class KajiAgentStoreRegistry {
 
     func store(for scope: KajiAgentScope) -> KajiAgentStore {
         let key = KajiAgentStoreKey(scope: scope)
-        if let store = stores[key] { return store }
+        if let store = stores[key] {
+            return store
+        }
         let store = KajiAgentStore(scope: scope)
         stores[key] = store
         return store

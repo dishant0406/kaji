@@ -1,7 +1,5 @@
 enum KajiAgentReadiness: Equatable {
     case checking
-    case missingBun
-    case unsupportedBunVersion(String?)
     case missingRuntime
     case ready
 
@@ -10,13 +8,9 @@ enum KajiAgentReadiness: Equatable {
     var title: String {
         switch self {
         case .checking:
-            "Checking runtime"
-        case .missingBun:
-            "Bun required"
-        case .unsupportedBunVersion:
-            "Update Bun"
+            "Checking KajiCode"
         case .missingRuntime:
-            "Runtime missing"
+            "KajiCode missing"
         case .ready:
             "Ready"
         }
@@ -25,19 +19,11 @@ enum KajiAgentReadiness: Equatable {
     var detail: String {
         switch self {
         case .checking:
-            "Checking Kaji runtime and Bun."
-        case .missingBun:
-            "Install Bun 1.3.14 or newer, then retry runtime setup."
-        case let .unsupportedBunVersion(version):
-            if let version, !version.isEmpty {
-                "Install Bun 1.3.14 or newer. Found Bun \(version)."
-            } else {
-                "Install Bun 1.3.14 or newer."
-            }
+            "Checking for the KajiCode binary."
         case .missingRuntime:
-            "The Kaji runtime is missing from the app bundle."
+            "Install KajiCode from Settings to enable runtime-backed features."
         case .ready:
-            "Kaji runtime is ready."
+            "KajiCode is ready."
         }
     }
 }

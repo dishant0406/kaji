@@ -24,8 +24,12 @@ extension ParentAgentController {
     }
 
     func shouldFinishWaiting(runs: [AgentRun], taskID: UUID?) -> Bool {
-        if runs.contains(where: { $0.status == .needsAttention || $0.status == .failed }) { return true }
-        if !runs.isEmpty { return runs.allSatisfy(hasSettledClosedState) }
+        if runs.contains(where: { $0.status == .needsAttention || $0.status == .failed }) {
+            return true
+        }
+        if !runs.isEmpty {
+            return runs.allSatisfy(hasSettledClosedState)
+        }
         guard let taskID,
               let task = store.tasks.first(where: { $0.id == taskID })
         else { return true }
@@ -34,12 +38,16 @@ extension ParentAgentController {
 
     func hasSettledClosedState(_ run: AgentRun) -> Bool {
         guard isClosed(run) else { return false }
-        if hasMeaningfulCompletion(run) { return true }
+        if hasMeaningfulCompletion(run) {
+            return true
+        }
         return Date().timeIntervalSince(run.lastEventAt) > 8
     }
 
     func hasMeaningfulCompletion(_ run: AgentRun) -> Bool {
-        if ChildAgentFeedStore.shared.finalAnswer(runID: run.id) != nil { return true }
+        if ChildAgentFeedStore.shared.finalAnswer(runID: run.id) != nil {
+            return true
+        }
         guard let event = run.events.last(where: { $0.kind == .completed || $0.kind == .transcript }) else { return false }
         let text = event.text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !text.isEmpty else { return false }

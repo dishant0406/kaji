@@ -269,7 +269,9 @@ actor ElevenLabsScribeBatchSession: MeetingTrackTranscriptionSession {
 
     func finish() async throws {
         guard state == .started else {
-            if state == .finished || state == .cancelled { return }
+            if state == .finished || state == .cancelled {
+                return
+            }
             throw ElevenLabsScribeError.invalidState
         }
         try emitSession(.draining)

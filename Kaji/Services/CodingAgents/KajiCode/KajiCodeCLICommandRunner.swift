@@ -5,7 +5,7 @@ struct KajiCodeCLICommandResult: Equatable {
     let output: String
 }
 
-protocol KajiCodeCLICommandRunning {
+protocol KajiCodeCLICommandRunning: Sendable {
     func run(
         binaryURL: URL,
         arguments: [String],

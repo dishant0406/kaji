@@ -5,9 +5,15 @@ enum MonacoLanguageMapper {
         let url = URL(fileURLWithPath: filePath)
         let ext = url.pathExtension.lowercased()
         let fileName = url.lastPathComponent.lowercased()
-        if fileName == "dockerfile" { return "dockerfile" }
-        if fileName == "makefile" || fileName.hasPrefix("makefile.") { return "makefile" }
-        if fileName == ".gitignore" { return "ignore" }
+        if fileName == "dockerfile" {
+            return "dockerfile"
+        }
+        if fileName == "makefile" || fileName.hasPrefix("makefile.") {
+            return "makefile"
+        }
+        if fileName == ".gitignore" {
+            return "ignore"
+        }
         return switch ext {
         case "swift": "swift"
         case "m",

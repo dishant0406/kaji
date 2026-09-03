@@ -112,7 +112,9 @@ struct ExternalIDEOpenService {
             }
             throw ExternalIDEOpenError.applicationMissing(ide.displayName)
         } catch {
-            if (error as? ExternalIDEOpenError) != nil { throw error }
+            if (error as? ExternalIDEOpenError) != nil {
+                throw error
+            }
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             throw ExternalIDEOpenError.launchFailed(message)
         }

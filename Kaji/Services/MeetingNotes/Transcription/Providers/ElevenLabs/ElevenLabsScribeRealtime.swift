@@ -147,19 +147,25 @@ actor ElevenLabsScribeRealtimeSession: MeetingTrackTranscriptionSession {
             do {
                 try await transport.send(.text(message))
             } catch {
-                if let committedSegment { removePending(id: committedSegment.id) }
+                if let committedSegment {
+                    removePending(id: committedSegment.id)
+                }
                 let wrapped = Self.networkError(error)
                 await fail(wrapped)
                 throw wrapped
             }
-            if shouldCommit { resetActiveSegment() }
+            if shouldCommit {
+                resetActiveSegment()
+            }
             frameOffset += chunkFrames
         }
     }
 
     func finish() async throws {
         guard state == .started else {
-            if state == .finished || state == .cancelled { return }
+            if state == .finished || state == .cancelled {
+                return
+            }
             throw ElevenLabsScribeError.invalidState
         }
         state = .draining
@@ -595,11 +601,13 @@ actor ElevenLabsScribeRealtimeSession: MeetingTrackTranscriptionSession {
             try await clock.sleep(for: .milliseconds(10))
         }
         guard state == .started else {
-            if state == .failed { throw ElevenLabsScribeError.providerFailure(
-                code: "session-start-failed",
-                classification: .unavailable,
-                retryAfterMilliseconds: nil
-            ) }
+            if state == .failed {
+                throw ElevenLabsScribeError.providerFailure(
+                    code: "session-start-failed",
+                    classification: .unavailable,
+                    retryAfterMilliseconds: nil
+                )
+            }
             throw ElevenLabsScribeError.providerFailure(
                 code: "session-start-timeout",
                 classification: .transient,
@@ -756,7 +764,9 @@ actor ElevenLabsScribeRealtimeSession: MeetingTrackTranscriptionSession {
     }
 
     private static func networkError(_ error: Error) -> ElevenLabsScribeError {
-        if let error = error as? ElevenLabsScribeError { return error }
+        if let error = error as? ElevenLabsScribeError {
+            return error
+        }
         if error is CancellationError {
             return .providerFailure(code: "cancelled", classification: .cancelled, retryAfterMilliseconds: nil)
         }

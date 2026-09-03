@@ -56,12 +56,16 @@ struct SegmentedPicker<T: Hashable>: View {
     }
 
     private var activeSegmentBackground: Color {
-        if effectiveMode == .glass { return KajiTheme.surface.opacity(0.28) }
+        if effectiveMode == .glass {
+            return KajiTheme.surface.opacity(0.28)
+        }
         return effectiveMode.usesSoftSurfaces ? KajiTheme.surface.opacity(0.54) : KajiTheme.surface
     }
 
     private var containerBackground: Color {
-        if effectiveMode == .glass { return KajiTheme.hover.opacity(0.22) }
+        if effectiveMode == .glass {
+            return KajiTheme.hover.opacity(0.22)
+        }
         return effectiveMode.usesSoftSurfaces ? KajiTheme.hover.opacity(0.5) : KajiTheme.hover
     }
 

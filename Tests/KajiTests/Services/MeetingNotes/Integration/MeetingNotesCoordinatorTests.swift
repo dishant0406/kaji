@@ -686,35 +686,6 @@ struct MeetingNotesCoordinatorTests {
         #expect(MeetingNotesTimeFormatter.transcript(100, relativeTo: 200) == "00:00")
     }
 
-    @Test("response cancellation before continuation installation completes immediately")
-    func responseCancellationBeforeContinuation() async throws {
-        let sessionID = UUID()
-        let notes = MeetingNotesSnapshot.empty(sessionID: sessionID, title: "Meeting", createdAtMilliseconds: 1_000)
-        let request = MeetingNotesSynthesisRequest(
-            sessionID: sessionID,
-            transcriptRevision: 1,
-            transcriptSegments: [try MeetingNotesTestFixtures.segment()],
-            currentNotes: notes,
-            projectContext: nil
-        )
-        let response = KajiMeetingNotesResponseBox(
-            process: KajiAgentProcess(),
-            commandID: "command",
-            request: request
-        )
-        var actionRan = false
-        response.fail(KajiMeetingNotesAgentError.failed)
-
-        do {
-            _ = try await response.run { actionRan = true }
-            Issue.record("Expected cancellation failure")
-        } catch let error as KajiMeetingNotesAgentError {
-            #expect(error == .failed)
-        }
-
-        #expect(!actionRan)
-    }
-
     private func segment(
         source: MeetingAudioSourceIdentity,
         startFrame: Int64,

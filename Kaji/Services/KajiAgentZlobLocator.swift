@@ -16,7 +16,9 @@ enum KajiAgentZlobLocator {
             if !FileManager.default.isExecutableFile(atPath: candidate.path) {
                 try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: candidate.path)
             }
-            if FileManager.default.isExecutableFile(atPath: candidate.path) { return candidate }
+            if FileManager.default.isExecutableFile(atPath: candidate.path) {
+                return candidate
+            }
         }
         return nil
     }

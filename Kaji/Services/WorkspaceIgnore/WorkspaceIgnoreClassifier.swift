@@ -29,11 +29,15 @@ struct WorkspaceIgnoreClassifier {
 
     static func relativePath(path: String, root: String) -> String? {
         let normalizedRoot = root.hasSuffix("/") ? String(root.dropLast()) : root
-        if path == normalizedRoot { return "" }
+        if path == normalizedRoot {
+            return ""
+        }
         if path.hasPrefix(normalizedRoot + "/") {
             return String(path.dropFirst(normalizedRoot.count + 1))
         }
-        if path.hasPrefix("/") { return nil }
+        if path.hasPrefix("/") {
+            return nil
+        }
         return path
     }
 }

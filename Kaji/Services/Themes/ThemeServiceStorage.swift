@@ -65,8 +65,12 @@ extension ThemeService {
     nonisolated private static func sortThemes(_ lhs: ThemePreview, _ rhs: ThemePreview) -> Bool {
         let pinned0 = pinnedThemeNames.contains(lhs.identifier)
         let pinned1 = pinnedThemeNames.contains(rhs.identifier)
-        if pinned0 != pinned1 { return pinned0 }
-        if pinned0, pinned1 { return lhs.name < rhs.name }
+        if pinned0 != pinned1 {
+            return pinned0
+        }
+        if pinned0, pinned1 {
+            return lhs.name < rhs.name
+        }
         return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
     }
 

@@ -293,7 +293,9 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
 
     func finish() async throws {
         guard state == .started else {
-            if state == .finished || state == .cancelled { return }
+            if state == .finished || state == .cancelled {
+                return
+            }
             throw DeepgramMeetingTranscriptionError.invalidState
         }
         state = .draining
@@ -453,7 +455,9 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
             channelIndex: result.channelIndex,
             streamStartFrame: resultStreamStart
         )
-        if revisions[key]?.isFinal == true { return }
+        if revisions[key]?.isFinal == true {
+            return
+        }
         let canonicalStart = try canonicalFrame(for: streamStart, preferPreviousBoundary: false)
         let canonicalEnd = try canonicalFrame(for: streamEnd, preferPreviousBoundary: true)
         let sampleRange = try MeetingCanonicalSampleRange(
@@ -479,8 +483,12 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
             language: language
         ))
         let previous = revisions[key]
-        if let previous, previous.isFinal { return }
-        if let previous, previous.fingerprint == fingerprint, previous.isFinal == result.isFinal { return }
+        if let previous, previous.isFinal {
+            return
+        }
+        if let previous, previous.fingerprint == fingerprint, previous.isFinal == result.isFinal {
+            return
+        }
         let revision = previous.map { value in
             value.fingerprint == fingerprint ? value.revision : value.revision + 1
         } ?? 0
@@ -572,7 +580,9 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
         guard !speakerWords.isEmpty else { return nil }
         let grouped = Dictionary(grouping: speakerWords, by: { $0.0 })
         guard let dominant = grouped.max(by: { left, right in
-            if left.value.count != right.value.count { return left.value.count < right.value.count }
+            if left.value.count != right.value.count {
+                return left.value.count < right.value.count
+            }
             return left.key > right.key
         })
         else { return nil }
@@ -816,7 +826,9 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
                 result.append("-")
                 lastWasSeparator = true
             }
-            if result.utf8.count >= 96 { break }
+            if result.utf8.count >= 96 {
+                break
+            }
         }
         result = result.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
         return result.isEmpty ? fallback : result
@@ -827,12 +839,24 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
         code: String
     ) -> MeetingTranscriptionFailureClassification {
         let normalizedCode = sanitizedCode(code, fallback: "provider-error")
-        if normalizedCode.contains("insufficient-permissions") { return .authorization }
-        if normalizedCode.contains("invalid-auth") || normalizedCode.contains("unauthorized") { return .authentication }
-        if normalizedCode.contains("too-many-requests") || normalizedCode.contains("rate-limit") { return .rateLimited }
-        if normalizedCode.contains("payment-required") || normalizedCode.contains("quota") { return .quotaExceeded }
-        if normalizedCode.hasPrefix("net-") { return .transient }
-        if normalizedCode.hasPrefix("data-") { return .invalidRequest }
+        if normalizedCode.contains("insufficient-permissions") {
+            return .authorization
+        }
+        if normalizedCode.contains("invalid-auth") || normalizedCode.contains("unauthorized") {
+            return .authentication
+        }
+        if normalizedCode.contains("too-many-requests") || normalizedCode.contains("rate-limit") {
+            return .rateLimited
+        }
+        if normalizedCode.contains("payment-required") || normalizedCode.contains("quota") {
+            return .quotaExceeded
+        }
+        if normalizedCode.hasPrefix("net-") {
+            return .transient
+        }
+        if normalizedCode.hasPrefix("data-") {
+            return .invalidRequest
+        }
         guard let statusCode else { return .permanent }
         switch statusCode {
         case 401: return .authentication
@@ -848,8 +872,12 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
     }
 
     private static func sessionError(_ error: Error) -> DeepgramMeetingTranscriptionError {
-        if let error = error as? DeepgramMeetingTranscriptionError { return error }
-        if error is CancellationError { return .providerRejected(.cancelled) }
+        if let error = error as? DeepgramMeetingTranscriptionError {
+            return error
+        }
+        if error is CancellationError {
+            return .providerRejected(.cancelled)
+        }
         if let error = error as? STTNetworkError {
             switch error {
             case .cancelled:
@@ -913,7 +941,9 @@ actor DeepgramMeetingTrackTranscriptionSession: MeetingTrackTranscriptionSession
     }
 
     private static func retryAfterMilliseconds(from error: DeepgramMeetingTranscriptionError) -> Int64? {
-        if case .providerRejected(.rateLimited) = error { return nil }
+        if case .providerRejected(.rateLimited) = error {
+            return nil
+        }
         return nil
     }
 

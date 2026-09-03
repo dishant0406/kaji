@@ -35,7 +35,9 @@ extension ParentAgentController {
     }
 
     func effectiveAssignmentStatus(_ assignment: ParentAgentAssignment, run: AgentRun?) -> ParentAgentAssignmentStatus {
-        if assignment.status == .blocked || assignment.status == .requiresIsolation { return assignment.status }
+        if assignment.status == .blocked || assignment.status == .requiresIsolation {
+            return assignment.status
+        }
         guard let run else { return assignment.runID == nil ? assignment.status : .stale }
         switch run.status {
         case .running:

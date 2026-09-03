@@ -45,7 +45,9 @@ enum ParentAgentRuntimeLocator {
     }
 
     static func nodeExecutablePath() -> String? {
-        if let cached = cache.nodeExecutablePath(ttl: nodeLookupTTL) { return cached }
+        if let cached = cache.nodeExecutablePath(ttl: nodeLookupTTL) {
+            return cached
+        }
         guard let path = AIProviderExecutableLocator.resolvePath(for: "node"),
               nodeVersion(at: path).supportsParentAgentRuntime
         else {
@@ -159,8 +161,12 @@ private struct ParentAgentNodeVersion: Comparable {
     }
 
     static func < (lhs: ParentAgentNodeVersion, rhs: ParentAgentNodeVersion) -> Bool {
-        if lhs.major != rhs.major { return lhs.major < rhs.major }
-        if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }
+        if lhs.major != rhs.major {
+            return lhs.major < rhs.major
+        }
+        if lhs.minor != rhs.minor {
+            return lhs.minor < rhs.minor
+        }
         return lhs.patch < rhs.patch
     }
 }

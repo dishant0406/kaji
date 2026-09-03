@@ -132,7 +132,9 @@ final class KeychainMeetingPersistenceKeyStore: MeetingPersistenceKeyStoring, @u
 
     func loadOrCreateKey() throws -> MeetingPersistenceKeyMaterial {
         try lock.withLock {
-            if let cachedMaterial { return cachedMaterial }
+            if let cachedMaterial {
+                return cachedMaterial
+            }
             let loaded = keychain.load(query: loadQuery)
             if loaded.status == errSecSuccess, let data = loaded.data {
                 return try remember(decode(data))
@@ -148,7 +150,9 @@ final class KeychainMeetingPersistenceKeyStore: MeetingPersistenceKeyStoring, @u
                 key: randomData(byteCount: 32)
             )
             let status = save(encode(material))
-            if status == errSecSuccess { return remember(material) }
+            if status == errSecSuccess {
+                return remember(material)
+            }
             if status == errSecMissingEntitlement {
                 return try remember(developmentFallback.loadOrCreateKey())
             }
@@ -227,7 +231,9 @@ final class InMemoryMeetingPersistenceKeyStore: MeetingPersistenceKeyStoring, @u
 
     func loadOrCreateKey() throws -> MeetingPersistenceKeyMaterial {
         try lock.withLock {
-            if let material { return material }
+            if let material {
+                return material
+            }
             let generated = try MeetingPersistenceKeyMaterial(
                 id: Data(SHA256.hash(data: Data(UUID().uuidString.utf8)).prefix(16)),
                 key: Data(SHA256.hash(data: Data((UUID().uuidString + UUID().uuidString).utf8)))

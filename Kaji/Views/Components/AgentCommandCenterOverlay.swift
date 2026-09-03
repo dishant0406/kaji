@@ -80,7 +80,9 @@ struct AgentCommandCenterOverlay: View {
     }
 
     private var placeholder: String {
-        if let replyTarget { return "Reply to \(replyTarget.title)" }
+        if let replyTarget {
+            return "Reply to \(replyTarget.title)"
+        }
         return "Search agent actions"
     }
 
@@ -163,7 +165,8 @@ struct AgentCommandCenterOverlay: View {
     }
 
     private func escape() {
-        if replyTarget != nil { replyTarget = nil
+        if replyTarget != nil {
+            replyTarget = nil
             query = ""
             return
         }

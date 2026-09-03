@@ -86,7 +86,9 @@ private struct AIGatewayProviderRow: View {
                 .padding(.bottom, SettingsMetrics.rowVerticalPadding + 4)
             }
 
-            if !isLast { Divider().padding(.horizontal, SettingsMetrics.horizontalPadding) }
+            if !isLast {
+                Divider().padding(.horizontal, SettingsMetrics.horizontalPadding)
+            }
         }
         .onChange(of: provider) { _, value in draft = value }
     }
@@ -112,8 +114,12 @@ private struct AIGatewayProviderRow: View {
     }
 
     private var statusText: String {
-        if provider.id == "ollama" { return draft.isEnabled ? "Enabled, local provider" : "Disabled" }
-        if hasKey { return draft.isEnabled ? "Enabled, key saved" : "Key saved" }
+        if provider.id == "ollama" {
+            return draft.isEnabled ? "Enabled, local provider" : "Disabled"
+        }
+        if hasKey {
+            return draft.isEnabled ? "Enabled, key saved" : "Key saved"
+        }
         return draft.isEnabled ? "Enabled, key missing" : "No key saved"
     }
 

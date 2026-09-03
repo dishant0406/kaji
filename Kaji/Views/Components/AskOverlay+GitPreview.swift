@@ -37,8 +37,12 @@ extension AskOverlay {
             return
         }
         let key = GitCommandPreviewKey(worktreePath: selectedWorktree.path, displayCommand: request.displayCommand)
-        if case let .loaded(result) = gitPreviewStatus, result.key == key { return }
-        if case let .loading(loadingKey) = gitPreviewStatus, loadingKey == key { return }
+        if case let .loaded(result) = gitPreviewStatus, result.key == key {
+            return
+        }
+        if case let .loading(loadingKey) = gitPreviewStatus, loadingKey == key {
+            return
+        }
         gitPreviewTask?.cancel()
         gitPreviewStatus = .loading(key)
         gitPreviewTask = Task { @MainActor in

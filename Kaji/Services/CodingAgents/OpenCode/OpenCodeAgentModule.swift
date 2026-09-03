@@ -67,7 +67,9 @@ struct OpenCodeAgentModule: CodingAgentModule {
                 atPath: (pluginPath as NSString).deletingLastPathComponent,
                 withIntermediateDirectories: true
             )
-            if fileManager.fileExists(atPath: pluginPath) { try fileManager.removeItem(atPath: pluginPath) }
+            if fileManager.fileExists(atPath: pluginPath) {
+                try fileManager.removeItem(atPath: pluginPath)
+            }
             try fileManager.copyItem(atPath: sourcePlugin, toPath: pluginPath)
         }
         try ensureConfigReferencesPlugin(pluginPath: pluginPaths[0], homeDirectory: homeDirectory, fileManager: fileManager)
@@ -93,7 +95,9 @@ struct OpenCodeAgentModule: CodingAgentModule {
             named: "opencode-kaji-plugin",
             extension: "js",
             subdirectory: "CodingAgents/OpenCode"
-        ) { return bundled }
+        ) {
+            return bundled
+        }
         let candidate = ((hookClientPath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(pluginScriptName)
         return FileManager.default.fileExists(atPath: candidate) ? candidate : nil
     }

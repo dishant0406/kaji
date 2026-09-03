@@ -77,7 +77,9 @@ struct AgentRunPersistenceDiskWriter {
     }
 
     private func writeIfChanged(_ data: Data, to url: URL) throws {
-        if (try? Data(contentsOf: url)) == data { return }
+        if (try? Data(contentsOf: url)) == data {
+            return
+        }
         try data.write(to: url, options: .atomic)
     }
 

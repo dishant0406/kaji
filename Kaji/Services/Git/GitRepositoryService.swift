@@ -341,7 +341,9 @@ struct GitRepositoryService {
             if value.hasPrefix("origin/") {
                 return String(value.dropFirst("origin/".count))
             }
-            if !value.isEmpty { return value }
+            if !value.isEmpty {
+                return value
+            }
         }
 
         if let ghPath = GitProcessRunner.resolveExecutable("gh") {
@@ -352,7 +354,9 @@ struct GitRepositoryService {
             )
             if let result, result.status == 0 {
                 let trimmed = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty { return trimmed }
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
             }
         }
 
@@ -678,7 +682,9 @@ struct GitRepositoryService {
         guard let data = FileManager.default.contents(atPath: fullPath),
               let content = String(data: data, encoding: .utf8)
         else { return nil }
-        if content.isEmpty { return 0 }
+        if content.isEmpty {
+            return 0
+        }
         return content.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).count
     }
 

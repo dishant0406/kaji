@@ -195,7 +195,9 @@ actor MeetingSessionStore {
                 failed = true
             }
         }
-        if failed { throw MeetingPersistenceError.writeFailed }
+        if failed {
+            throw MeetingPersistenceError.writeFailed
+        }
         return true
     }
 
@@ -278,7 +280,9 @@ actor MeetingSessionStore {
             let hadAudio = state.audioIDs.contains(id) || itemExists(audioDirectory(for: id))
             if cleanupArtifacts(for: id) {
                 cleanedDeletionIDs.insert(id)
-                if hadAudio { rawAudioDeletedIDs.insert(id) }
+                if hadAudio {
+                    rawAudioDeletedIDs.insert(id)
+                }
             } else {
                 failed = true
             }
@@ -290,7 +294,9 @@ actor MeetingSessionStore {
                 let audioDirectoryExists = itemExists(audioDirectory(for: id))
                 do {
                     try removeIfPresent(audioDirectory(for: id))
-                    if audioDirectoryExists { rawAudioDeletedIDs.insert(id) }
+                    if audioDirectoryExists {
+                        rawAudioDeletedIDs.insert(id)
+                    }
                     var changed = false
                     for chunkIndex in retained[index].audioChunks.indices
                         where retained[index].audioChunks[chunkIndex].storageState == .stored
@@ -323,7 +329,9 @@ actor MeetingSessionStore {
                 }
             }
         }
-        if failed { throw MeetingPersistenceError.writeFailed }
+        if failed {
+            throw MeetingPersistenceError.writeFailed
+        }
         return MeetingRetentionResult(
             deletedSessionIDs: cleanedDeletionIDs.sorted { $0.uuidString < $1.uuidString },
             protectedSessionIDs: protectedIDs.sorted { $0.uuidString < $1.uuidString },

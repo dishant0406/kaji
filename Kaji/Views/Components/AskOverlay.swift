@@ -171,18 +171,34 @@ struct AskOverlay: View {
     }
 
     private var modalWidth: CGFloat {
-        if nativeCommandRunner.plan != nil { return 780 }
-        if pendingGitCommand != nil { return 580 }
-        if isScriptFormVisible || scriptPlan != nil { return 780 }
+        if nativeCommandRunner.plan != nil {
+            return 780
+        }
+        if pendingGitCommand != nil {
+            return 580
+        }
+        if isScriptFormVisible || scriptPlan != nil {
+            return 780
+        }
         return 580
     }
 
     private var modalHeight: CGFloat {
-        if nativeCommandRunner.plan != nil { return 520 }
-        if pendingGitCommand != nil { return 220 }
-        if let commitFlow, !commitFlow.showsSearchField { return 430 }
-        if isScriptFormVisible { return 700 }
-        if scriptPlan != nil { return 520 }
+        if nativeCommandRunner.plan != nil {
+            return 520
+        }
+        if pendingGitCommand != nil {
+            return 220
+        }
+        if let commitFlow, !commitFlow.showsSearchField {
+            return 430
+        }
+        if isScriptFormVisible {
+            return 700
+        }
+        if scriptPlan != nil {
+            return 520
+        }
         return 420
     }
 

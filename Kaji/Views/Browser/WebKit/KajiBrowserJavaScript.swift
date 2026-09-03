@@ -10,17 +10,29 @@ enum KajiBrowserJavaScript {
     @MainActor
     static func string(_ script: String, in webView: WKWebView) async throws -> String {
         let value = try await evaluate(script, in: webView)
-        if value is NSNull { return "" }
+        if value is NSNull {
+            return ""
+        }
         return value as? String ?? value.map { String(describing: $0) } ?? ""
     }
 
     static func json(_ value: Any?) -> Any {
         guard let value else { return NSNull() }
-        if value is NSNull { return NSNull() }
-        if let value = value as? String { return value }
-        if let value = value as? NSNumber { return value }
-        if let value = value as? [Any] { return value.map(json) }
-        if let value = value as? [String: Any] { return value.mapValues(json) }
+        if value is NSNull {
+            return NSNull()
+        }
+        if let value = value as? String {
+            return value
+        }
+        if let value = value as? NSNumber {
+            return value
+        }
+        if let value = value as? [Any] {
+            return value.map(json)
+        }
+        if let value = value as? [String: Any] {
+            return value.mapValues(json)
+        }
         return String(describing: value)
     }
 

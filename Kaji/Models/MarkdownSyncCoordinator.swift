@@ -101,7 +101,9 @@ final class MarkdownSyncCoordinator {
 
     private func shouldAcceptUpdate(from incoming: Driver, timestamp: TimeInterval, incoming value: CGFloat) -> Bool {
         guard let driver else { return true }
-        if driver == incoming { return true }
+        if driver == incoming {
+            return true
+        }
 
         if isEcho(from: incoming, value: value) {
             return false

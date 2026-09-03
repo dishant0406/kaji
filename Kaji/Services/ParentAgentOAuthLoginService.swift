@@ -141,7 +141,9 @@ final class ParentAgentOAuthLoginService {
     }
 
     private func cleanupProcess(id: UUID? = nil) {
-        if let id, processID != id { return }
+        if let id, processID != id {
+            return
+        }
         outputPipe?.fileHandleForReading.readabilityHandler = nil
         errorPipe?.fileHandleForReading.readabilityHandler = nil
         process?.terminationHandler = nil

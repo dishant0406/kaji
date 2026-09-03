@@ -118,17 +118,27 @@ final class VCSTabState {
     }
 
     var prLaunchState: PRLaunchState {
-        if !isGhInstalled { return .ghMissing }
-        if branchName == nil || !hasFetchedPullRequestInfo { return .hidden }
-        if let info = pullRequestInfo { return .hasPR(info) }
+        if !isGhInstalled {
+            return .ghMissing
+        }
+        if branchName == nil || !hasFetchedPullRequestInfo {
+            return .hidden
+        }
+        if let info = pullRequestInfo {
+            return .hasPR(info)
+        }
         guard canCreatePR else { return .hidden }
         return .canCreate
     }
 
     var canCreatePR: Bool {
         guard branchName != nil, pullRequestInfo == nil else { return false }
-        if hasAnyChanges { return true }
-        if isOnDefaultBranch { return false }
+        if hasAnyChanges {
+            return true
+        }
+        if isOnDefaultBranch {
+            return false
+        }
         return true
     }
 
@@ -805,7 +815,11 @@ final class VCSTabState {
         prInfoTask?.cancel()
         prInfoTask = Task { [weak self] in
             guard let self else { return }
-            defer { if policy.forceFresh { isRefreshingPullRequest = false } }
+            defer {
+                if policy.forceFresh {
+                    isRefreshingPullRequest = false
+                }
+            }
             async let ghInstalledValue = git.isGhInstalled()
             async let defaultBranchValue = git.defaultBranch(repoPath: projectPath)
             let ghInstalled = await ghInstalledValue
@@ -954,7 +968,9 @@ final class VCSTabState {
             baseBranch: request.baseBranch
         )
 
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         try await stageAndCommitForPR(
             includeMode: request.includeMode,
@@ -962,11 +978,15 @@ final class VCSTabState {
             body: request.body
         )
 
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         try await git.pushSetUpstream(repoPath: projectPath, branch: targetBranch)
 
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         let info = try await git.createPullRequest(
             repoPath: projectPath,
@@ -978,7 +998,9 @@ final class VCSTabState {
             account: request.githubAccount
         )
 
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         let head = await git.headSha(repoPath: projectPath)
         preferredGitHubAccount = request.githubAccount
@@ -1025,7 +1047,9 @@ final class VCSTabState {
             break
         }
 
-        if includeMode == .none { return }
+        if includeMode == .none {
+            return
+        }
 
         let status = try await git.changedFiles(repoPath: projectPath)
         if status.contains(where: \.isStaged) {
@@ -1130,7 +1154,9 @@ final class VCSTabState {
 
     func applyPullRequestStateEvent(_ event: PullRequestStateEvent) {
         guard event.repoPath == projectPath else { return }
-        if let branchName, branchName != event.branch { return }
+        if let branchName, branchName != event.branch {
+            return
+        }
         preferredGitHubAccount = event.account
         pullRequestInfo = event.info
         hasFetchedPullRequestInfo = true
